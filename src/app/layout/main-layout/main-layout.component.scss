@@ -1,0 +1,178 @@
+:host {
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ─── Module navbar (sous la toolbar) ──────────────────────
+.module-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 52px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-nav);
+  z-index: 100;
+  position: relative;
+}
+
+.module-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.module-tab {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 16px;
+  height: 100%;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s;
+  position: relative;
+  white-space: nowrap;
+  min-width: 72px;
+
+  &:hover:not(.active) {
+    background: var(--surface-hover);
+    border-bottom-color: var(--border);
+  }
+
+  &.active {
+    border-bottom-color: var(--tab-color, #1976D2);
+    background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, var(--tab-color, #1976D2) 8%, transparent));
+  }
+}
+
+.tab-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  background: var(--surface-hover);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--on-surface-3);
+    transition: color 0.2s;
+  }
+}
+
+.module-tab.active .tab-icon mat-icon {
+  color: #fff;
+}
+
+.module-tab:hover:not(.active) .tab-icon {
+  background: var(--border);
+}
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--on-surface-3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.module-tab.active .tab-label {
+  color: var(--tab-color, #1976D2);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  right: 16px;
+}
+
+.nav-home-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--on-surface-2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  text-decoration: none;
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--on-surface);
+  }
+}
+
+// ─── Sidenav container ────────────────────────────────────
+.sidenav-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.left-sidenav {
+  width: auto;
+  border-right: none;
+  overflow: visible;
+  box-shadow: var(--shadow-sidenav);
+}
+
+.right-sidenav {
+  width: 280px;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.12);
+}
+
+.main-content {
+  background: var(--app-bg);
+  overflow-y: auto;
+}
+
+.page-wrapper {
+  min-height: 100%;
+  padding: 24px;
+}
+
+// Responsive
+@media (max-width: 900px) {
+  .module-tab { padding: 0 12px; min-width: 60px; }
+  .nav-home-link span { display: none; }
+}
+
+@media (max-width: 480px) {
+  .module-tab { padding: 0 8px; min-width: 52px; }
+  .tab-icon { width: 28px; height: 28px; border-radius: 8px;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+  .tab-label { font-size: 9px; }
+}
+
+@media (max-width: 600px) {
+  .page-wrapper { padding: 16px; }
+}

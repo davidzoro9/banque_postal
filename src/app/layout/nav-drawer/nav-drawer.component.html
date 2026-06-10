@@ -1,0 +1,70 @@
+@if (activeModule) {
+  <div class="drawer-container">
+
+    <!-- En-tête coloré du module -->
+    <div class="drawer-header"
+         [style.background]="'linear-gradient(135deg, ' + activeModule.gradientFrom + ', ' + activeModule.gradientTo + ')'">
+      <div class="dh-icon">
+        <mat-icon>{{ activeModule.icon }}</mat-icon>
+      </div>
+      <div class="dh-info">
+        <span class="dh-name">{{ activeModule.name }}</span>
+      </div>
+      <button mat-icon-button class="dh-toggle" (click)="moduleNav.toggleDrawer()"
+              matTooltip="Réduire">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+    </div>
+
+    <!-- Arbre de menus -->
+    <div class="drawer-menu">
+      @for (item of menuItems; track item.id) {
+        @if (item.children && item.children.length > 0) {
+
+          <!-- Groupe avec enfants -->
+          <div class="menu-group">
+            <button class="group-header" (click)="toggleItem(item)">
+              <mat-icon class="group-icon">{{ item.icon }}</mat-icon>
+              <span class="group-label">{{ item.label }}</span>
+              <mat-icon class="expand-icon" [class.rotated]="isExpanded(item)">
+                expand_more
+              </mat-icon>
+            </button>
+            <div class="group-children" [class.open]="isExpanded(item)">
+              @for (child of item.children; track child.id) {
+                <button class="child-item"
+                        [class.active]="isActiveRoute(child.route)"
+                        [class.ctx-disabled]="isFicheItem(child) && !currentEmpId"
+                        [matTooltip]="isFicheItem(child) && !currentEmpId ? 'Ouvrez d\'abord une fiche employé' : ''"
+                        (click)="navigateChild(child.route)">
+                  <mat-icon class="child-icon">{{ child.icon }}</mat-icon>
+                  <span class="child-label">{{ child.label }}</span>
+                  @if (child.badge) {
+                    <span class="child-badge">{{ child.badge }}</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+        } @else {
+
+          <!-- Élément simple -->
+          <button class="leaf-item"
+                  [class.active]="isActiveRoute(item.route)"
+                  (click)="navigate(item.route)">
+            <mat-icon class="leaf-icon">{{ item.icon }}</mat-icon>
+            <span class="leaf-label">{{ item.label }}</span>
+          </button>
+
+        }
+      }
+    </div>
+
+  </div>
+} @else {
+  <div class="empty-drawer">
+    <mat-icon>apps</mat-icon>
+    <span>Sélectionnez un module</span>
+  </div>
+}

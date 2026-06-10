@@ -1,0 +1,218 @@
+// ─── Wrapper plein écran ──────────────────────────────────
+.login-wrapper {
+  min-height: 100vh;
+  background: #091628;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+// Orbes décoratifs
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.orb-1 {
+  width: 600px; height: 600px;
+  top: -200px; left: -200px;
+  background: radial-gradient(circle, rgba(21,56,101,0.6) 0%, transparent 70%);
+}
+.orb-2 {
+  width: 500px; height: 500px;
+  bottom: -180px; right: -150px;
+  background: radial-gradient(circle, rgba(21,56,101,0.5) 0%, transparent 70%);
+}
+.orb-3 {
+  width: 300px; height: 300px;
+  top: 40%; left: 60%;
+  background: radial-gradient(circle, rgba(212,160,23,0.06) 0%, transparent 70%);
+}
+
+// ─── Carte centrale ───────────────────────────────────────
+.login-card {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 40px 40px 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// ─── Badge logo ───────────────────────────────────────────
+.logo-badge {
+  background: #FFB300;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 6px 20px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(212, 160, 23, 0.35);
+}
+
+// ─── En-tête de la carte ─────────────────────────────────
+.card-header {
+  text-align: center;
+  margin-bottom: 28px;
+  h1 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #091628;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+  p {
+    font-size: 12px;
+    color: #7a8699;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+// ─── Formulaire ───────────────────────────────────────────
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4660;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.field-input {
+  width: 100%;
+  height: 44px;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #091628;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+
+  &::placeholder { color: #b0bac8; }
+
+  &:focus {
+    border-color: #163059;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(22, 48, 89, 0.1);
+  }
+}
+
+.pw-wrapper .field-input {
+  padding-right: 44px;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #7a8699;
+  display: flex;
+  align-items: center;
+  &:hover { color: #163059; }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+// ─── Message d'erreur ─────────────────────────────────────
+.error-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff0f0;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #c62828;
+  font-size: 13px;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+}
+
+// ─── Bouton de soumission ─────────────────────────────────
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  background: #163059;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  font-family: inherit;
+  margin-top: 4px;
+  box-shadow: 0 4px 14px rgba(22, 48, 89, 0.35);
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &:hover:not(:disabled) {
+    background: #1B3A6B;
+    box-shadow: 0 6px 18px rgba(22, 48, 89, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) { transform: translateY(0); }
+
+  &:disabled {
+    background: #9baabd;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.spin-icon {
+  display: flex;
+  mat-icon { animation: spin 1s linear infinite; font-size: 18px; width: 18px; height: 18px; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ─── Pied de carte ────────────────────────────────────────
+.card-footer {
+  margin-top: 20px;
+  font-size: 11px;
+  color: #b0bac8;
+  text-align: center;
+}
+
+// ─── Responsive ───────────────────────────────────────────
+@media (max-width: 480px) {
+  .login-card { padding: 28px 24px 24px; }
+  .card-header h1 { font-size: 18px; }
+}

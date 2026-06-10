@@ -1,0 +1,43 @@
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.doc-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.doc-count { font-size: 14px; font-weight: 600; color: var(--on-surface-2); }
+
+.add-doc-form {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  background: var(--surface-variant); border-radius: 10px;
+  padding: 16px; margin-bottom: 16px;
+}
+
+.empty-docs {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 60px 20px; gap: 8px;
+  mat-icon { font-size: 48px; width: 48px; height: 48px; color: var(--on-surface-3); }
+  p { font-size: 15px; font-weight: 600; color: var(--on-surface-2); margin: 0; }
+  span { font-size: 13px; color: var(--on-surface-3); }
+}
+
+.doc-list { display: flex; flex-direction: column; gap: 8px; }
+
+.doc-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  transition: box-shadow 0.15s;
+  &:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+}
+.doc-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(22,48,89,0.08);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  mat-icon { color: #163059; font-size: 20px; width: 20px; height: 20px; }
+}
+.doc-body { flex: 1; min-width: 0; }
+.doc-libelle { font-size: 13px; font-weight: 600; color: var(--on-surface); display: block; }
+.doc-meta { display: flex; gap: 10px; margin-top: 2px; }
+.doc-cat { font-size: 11px; color: #163059; font-weight: 600; background: rgba(22,48,89,0.1); padding: 1px 8px; border-radius: 10px; }
+.doc-date { font-size: 11px; color: var(--on-surface-3); }

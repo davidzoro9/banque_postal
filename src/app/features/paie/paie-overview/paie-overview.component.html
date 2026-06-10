@@ -1,0 +1,68 @@
+<div class="module-overview">
+  <div class="page-header"
+       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+      <div>
+        <h1>{{ module.name }}</h1>
+        <p>{{ module.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    @for (kpi of kpis; track kpi.label) {
+      <mat-card class="kpi-card">
+        <mat-card-content>
+          <div class="kpi-icon" [style.background-color]="kpi.color + '1A'" [style.color]="kpi.color">
+            <mat-icon>{{ kpi.icon }}</mat-icon>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ kpi.value }}</span>
+            <span class="kpi-label">{{ kpi.label }}</span>
+            <span class="kpi-sub">{{ kpi.sub }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <div class="section-title">Actions rapides</div>
+  <div class="quick-actions-row">
+    @for (qa of quickActions; track qa.route) {
+      <button mat-raised-button class="qa-pill"
+              [style.background-color]="qa.color"
+              (click)="navigate(qa.route)">
+        <mat-icon>{{ qa.icon }}</mat-icon>{{ qa.label }}
+      </button>
+    }
+  </div>
+
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Derniers bulletins générés</mat-card-title>
+      <button mat-button color="primary" (click)="navigate('/paie/bulletins/historique')" class="see-all-btn">
+        Tout l'historique <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <table class="data-table">
+        <thead>
+          <tr><th>Employé</th><th>Poste</th><th>Salaire net</th><th>Salaire brut</th><th>Mois</th><th>État</th></tr>
+        </thead>
+        <tbody>
+          @for (b of recentBulletins; track b.employe) {
+            <tr>
+              <td><strong>{{ b.employe }}</strong></td>
+              <td>{{ b.poste }}</td>
+              <td class="amount">{{ b.net }}</td>
+              <td class="amount muted">{{ b.brut }}</td>
+              <td>{{ b.mois }}</td>
+              <td><span class="etat-badge" [class.sent]="b.etat === 'Envoyé'">{{ b.etat }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>

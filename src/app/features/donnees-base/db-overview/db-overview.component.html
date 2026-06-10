@@ -1,0 +1,58 @@
+<div class="module-overview">
+  <div class="page-header"
+       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+      <div>
+        <h1>{{ module.name }}</h1>
+        <p>{{ module.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    @for (kpi of kpis; track kpi.label) {
+      <mat-card class="kpi-card">
+        <mat-card-content>
+          <div class="kpi-icon" [style.background-color]="kpi.color + '1A'" [style.color]="kpi.color">
+            <mat-icon>{{ kpi.icon }}</mat-icon>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ kpi.value }}</span>
+            <span class="kpi-label">{{ kpi.label }}</span>
+            <span class="kpi-sub">{{ kpi.sub }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <div class="section-title">Actions rapides</div>
+  <div class="quick-actions-row">
+    @for (qa of quickActions; track qa.route) {
+      <button mat-raised-button class="qa-pill"
+              [style.background-color]="qa.color"
+              (click)="navigate(qa.route)">
+        <mat-icon>{{ qa.icon }}</mat-icon>{{ qa.label }}
+      </button>
+    }
+  </div>
+
+  <div class="section-title">Espaces de configuration</div>
+  <div class="config-grid">
+    @for (c of configuration; track c.section) {
+      <mat-card class="config-card" (click)="navigate('/donnees-base')" matRipple>
+        <mat-card-content>
+          <div class="cfg-icon" [style.background-color]="c.color + '1A'" [style.color]="c.color">
+            <mat-icon>{{ c.icon }}</mat-icon>
+          </div>
+          <div class="cfg-info">
+            <h3>{{ c.section }}</h3>
+            <p>{{ c.desc }}</p>
+          </div>
+          <div class="cfg-count" [style.color]="c.color">{{ c.items }}</div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+</div>

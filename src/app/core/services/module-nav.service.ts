@@ -1,0 +1,232 @@
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { AppModule, APP_MODULES } from '../models/app-module.model';
+import { MenuItem } from '../models/menu-item.model';
+
+export const MODULE_MENUS: Record<string, MenuItem[]> = {
+  grh: [
+    {
+      id: 'employes',
+      label: 'Employés',
+      icon: 'badge',
+      children: [
+        { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '/grh/employes'           },
+        { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
+        { id: 'fiche-infos-pro',    label: 'Info. professionnelles',  icon: 'work',                   route: '__emp__/infos-pro'       },
+        { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
+        { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                   route: '__emp__/indemnites'      },
+        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',           route: '__emp__/exonerations'    },
+        { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
+        { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
+        { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },
+      ]
+    },
+    {
+      id: 'presence',
+      label: 'Présence & Absences',
+      icon: 'event_available',
+      children: [
+        { id: 'conges', label: 'Congés', icon: 'beach_access', route: '/grh/conges', badge: 5 },
+        { id: 'absences', label: 'Absences', icon: 'event_busy', route: '/grh/absences' }
+      ]
+    },
+    {
+      id: 'contrats',
+      label: 'Contrats',
+      icon: 'article',
+      children: [
+        { id: 'liste-contrats', label: 'Liste des contrats', icon: 'list_alt', route: '/grh/contrats' },
+        { id: 'renouvellements', label: 'Renouvellements', icon: 'autorenew', route: '/grh/contrats/renouvellements', badge: 3 }
+      ]
+    },
+  ],
+  carrieres: [
+    {
+      id: 'competences',
+      label: 'Compétences',
+      icon: 'psychology',
+      children: [
+        { id: 'referentiel', label: 'Référentiel', icon: 'menu_book', route: '/carrieres/competences/referentiel' },
+        { id: 'evaluation-comp', label: 'Évaluations', icon: 'assessment', route: '/carrieres/competences/evaluation' }
+      ]
+    },
+    {
+      id: 'formations',
+      label: 'Formations',
+      icon: 'school',
+      children: [
+        { id: 'catalogue', label: 'Catalogue', icon: 'library_books', route: '/carrieres/formations/catalogue' },
+        { id: 'plan', label: 'Plan de formation', icon: 'event_note', route: '/carrieres/formations/plan' },
+        { id: 'suivi', label: 'Suivi des formations', icon: 'track_changes', route: '/carrieres/formations/suivi' }
+      ]
+    },
+    {
+      id: 'evaluations',
+      label: 'Évaluations',
+      icon: 'star_rate',
+      children: [
+        { id: 'entretiens-annuels', label: 'Entretiens annuels', icon: 'forum', route: '/carrieres/evaluations/entretiens' },
+        { id: 'objectifs', label: 'Objectifs', icon: 'flag', route: '/carrieres/evaluations/objectifs' }
+      ]
+    },
+    {
+      id: 'mobilite',
+      label: 'Mobilité interne',
+      icon: 'transfer_within_a_station',
+      route: '/carrieres/mobilite'
+    }
+  ],
+  paie: [
+    {
+      id: 'bulletins',
+      label: 'Bulletins de paie',
+      icon: 'receipt_long',
+      children: [
+        { id: 'generer', label: 'Générer les bulletins', icon: 'add_circle_outline', route: '/paie/bulletins/generer' },
+        { id: 'historique', label: 'Historique', icon: 'history', route: '/paie/bulletins/historique' }
+      ]
+    },
+    {
+      id: 'elements',
+      label: 'Éléments de paie',
+      icon: 'calculate',
+      children: [
+        { id: 'rubriques', label: 'Rubriques de paie', icon: 'list', route: '/paie/elements/rubriques' },
+        { id: 'cotisations', label: 'Cotisations', icon: 'percent', route: '/paie/elements/cotisations' }
+      ]
+    },
+    {
+      id: 'declarations',
+      label: 'Déclarations sociales',
+      icon: 'send',
+      children: [
+        { id: 'dsn', label: 'DSN', icon: 'description', route: '/paie/declarations/dsn' },
+        { id: 'urssaf', label: 'URSSAF', icon: 'account_balance', route: '/paie/declarations/urssaf' }
+      ]
+    },
+    {
+      id: 'parametrage-paie',
+      label: 'Paramétrage paie',
+      icon: 'tune',
+      route: '/paie/parametrage'
+    }
+  ],
+  'donnees-base': [
+    {
+      id: 'gestion-admin',
+      label: 'Gestion administrative',
+      icon: 'admin_panel_settings',
+      children: [
+        { id: 'emploi',           label: 'Emploi',              icon: 'work',                route: '/donnees-base/admin/emploi'           },
+        { id: 'fonction',         label: 'Fonction',            icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+        { id: 'departement',      label: 'Département',         icon: 'domain',              route: '/donnees-base/admin/departement'      },
+        { id: 'direction',        label: 'Direction',           icon: 'business',            route: '/donnees-base/admin/direction'        },
+        { id: 'service',          label: 'Service',             icon: 'group_work',          route: '/donnees-base/admin/service'          },
+        { id: 'grille-salariale', label: 'Grille salariale',    icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
+        { id: 'agence',           label: 'Agence',              icon: 'store',               route: '/donnees-base/admin/agence'           },
+        { id: 'type-indemnite',   label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
+        { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
+        { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       }
+      ]
+    },
+    {
+      id: 'gestion-carriere',
+      label: 'Gestion de carrière et compétence',
+      icon: 'trending_up',
+      children: [
+        { id: 'categorie',        label: 'Catégorie professionnelle', icon: 'category',          route: '/donnees-base/carriere/categorie'     },
+        { id: 'grade',            label: 'Grade',                    icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+        { id: 'echelon',          label: 'Échelon / Niveau',         icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
+        { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
+        { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
+        { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',          route: '/donnees-base/carriere/type-evaluation'}
+      ]
+    },
+    {
+      id: 'gestion-paie',
+      label: 'Gestion paie',
+      icon: 'payments',
+      children: [
+        { id: 'rubrique',         label: 'Rubrique de paie',     icon: 'receipt_long',  route: '/donnees-base/paie/rubrique'       },
+        { id: 'cotisation',       label: 'Type de cotisation',   icon: 'percent',       route: '/donnees-base/paie/cotisation'    },
+        { id: 'bareme',           label: 'Barème fiscal',        icon: 'calculate',     route: '/donnees-base/paie/bareme'        },
+        { id: 'mode-paiement',    label: 'Mode de paiement',     icon: 'payments',      route: '/donnees-base/paie/mode-paiement' },
+        { id: 'calendrier-paie',  label: 'Calendrier de paie',   icon: 'calendar_month',route: '/donnees-base/paie/calendrier'    }
+      ]
+    }
+  ]
+};
+
+export interface QuickLink {
+  label: string;
+  icon: string;
+  route: string;
+  color: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class ModuleNavService {
+  private activeModuleSubject = new BehaviorSubject<AppModule | null>(null);
+  private drawerOpenSubject = new BehaviorSubject<boolean>(true);
+  private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
+
+  activeModule$: Observable<AppModule | null> = this.activeModuleSubject.asObservable();
+  drawerOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
+  sidebarOpen$: Observable<boolean> = this.sidebarOpenSubject.asObservable();
+
+  readonly quickLinks: QuickLink[] = [
+    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',                        color: '#163059' },
+    { label: 'Congés',      icon: 'beach_access',  route: '/grh/conges',                          color: '#1565C0' },
+    { label: 'Bulletins',   icon: 'receipt_long',  route: '/paie/bulletins/historique',            color: '#1B3A6B' },
+    { label: 'Formations',  icon: 'school',        route: '/carrieres/formations/catalogue',       color: '#FFB300' },
+    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',                    color: '#091628' }
+  ];
+
+  get modules(): AppModule[] {
+    return APP_MODULES;
+  }
+
+  get activeModule(): AppModule | null {
+    return this.activeModuleSubject.value;
+  }
+
+  get drawerOpen(): boolean {
+    return this.drawerOpenSubject.value;
+  }
+
+  get sidebarOpen(): boolean {
+    return this.sidebarOpenSubject.value;
+  }
+
+  selectModule(module: AppModule): void {
+    this.activeModuleSubject.next(module);
+    if (!this.drawerOpenSubject.value) {
+      this.drawerOpenSubject.next(true);
+    }
+  }
+
+  getMenuForActiveModule(): MenuItem[] {
+    const id = this.activeModuleSubject.value?.id;
+    return id ? (MODULE_MENUS[id] ?? []) : [];
+  }
+
+  toggleDrawer(): void {
+    this.drawerOpenSubject.next(!this.drawerOpenSubject.value);
+  }
+
+  openDrawer(): void {
+    this.drawerOpenSubject.next(true);
+  }
+
+  closeDrawer(): void {
+    this.drawerOpenSubject.next(false);
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpenSubject.next(!this.sidebarOpenSubject.value);
+  }
+
+  clearModule(): void {
+    this.activeModuleSubject.next(null);
+  }
+}

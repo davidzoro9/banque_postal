@@ -1,0 +1,23 @@
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e3f2fd;
+  border-left: 4px solid #1976D2;
+  border-radius: 4px;
+  padding: 10px 16px;
+  margin: 0 0 20px;
+  color: #1565c0;
+  font-size: 14px;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.form-grid-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}

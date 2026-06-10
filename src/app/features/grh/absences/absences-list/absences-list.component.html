@@ -1,0 +1,113 @@
+<div class="list-page">
+
+  <div class="page-header" [style.background]="'linear-gradient(135deg,' + module.gradientFrom + ',' + module.gradientTo + ')'">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>event_busy</mat-icon></div>
+      <div>
+        <h1>Absences</h1>
+        <p>Suivi des absences du personnel</p>
+      </div>
+    </div>
+    <button mat-raised-button class="btn-new" (click)="nouvelleAbsence()">
+      <mat-icon>add</mat-icon> Enregistrer une absence
+    </button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-chip">
+      <mat-icon style="color:#2e7d32">check_circle</mat-icon>
+      <span class="kpi-val">{{ totalJustifiees }}</span>
+      <span class="kpi-lbl">Justifiées</span>
+    </div>
+    <div class="kpi-chip">
+      <mat-icon style="color:#c62828">cancel</mat-icon>
+      <span class="kpi-val">{{ totalInjustifiees }}</span>
+      <span class="kpi-lbl">Injustifiées</span>
+    </div>
+    <div class="kpi-chip">
+      <mat-icon style="color:#e65100">hourglass_top</mat-icon>
+      <span class="kpi-val">{{ totalEnAttente }}</span>
+      <span class="kpi-lbl">En attente</span>
+    </div>
+  </div>
+
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher...</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
+               placeholder="Employé, type, motif…">
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" matSort>
+
+          <ng-container matColumnDef="employe">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Employé</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.employe }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+            <td mat-cell *matCellDef="let row">{{ row.type }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+            <td mat-cell *matCellDef="let row">{{ row.date | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="duree">
+            <th mat-header-cell *matHeaderCellDef>Durée</th>
+            <td mat-cell *matCellDef="let row">{{ row.duree }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="motif">
+            <th mat-header-cell *matHeaderCellDef>Motif</th>
+            <td mat-cell *matCellDef="let row">{{ row.motif }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="statut-badge"
+                    [style.background]="statutStyle(row.statut).background"
+                    [style.color]="statutStyle(row.statut).color">
+                {{ row.statut }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button color="primary" matTooltip="Voir">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Modifier">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td [attr.colspan]="displayedColumns.length" class="no-data">
+              <mat-icon>search_off</mat-icon>
+              <span>Aucune absence trouvée</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" pageSize="10" showFirstLastButtons></mat-paginator>
+    </mat-card-content>
+  </mat-card>
+
+</div>

@@ -1,0 +1,143 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Exonérations</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">receipt_long</mat-icon>
+      <mat-card-title>Exonérations</mat-card-title>
+      <mat-card-subtitle>Exonérations fiscales, sociales et avantages particuliers</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Exonérations fiscales</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ fiscales.length }} exonération(s) fiscale(s)</span>
+              <button mat-stroked-button type="button" (click)="addFiscale()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="exonerationsFiscales">
+              @if (fiscales.length === 0) {
+                <p class="arr-empty">Aucune exonération fiscale</p>
+              }
+              @for (item of fiscales.controls; track $index) {
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline" style="flex:2">
+                    <mat-label>Libellé *</mat-label>
+                    <input matInput formControlName="libelle" placeholder="Ex: Exonération IRVM">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Montant (FCFA) *</mat-label>
+                    <input matInput formControlName="montant" type="number" min="0">
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removeFiscale($index)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <p class="form-section-label">Exonérations sociales</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ sociales.length }} exonération(s) sociale(s)</span>
+              <button mat-stroked-button type="button" (click)="addSociale()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="exonerationsSociales">
+              @if (sociales.length === 0) {
+                <p class="arr-empty">Aucune exonération sociale</p>
+              }
+              @for (item of sociales.controls; track $index) {
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline" style="flex:2">
+                    <mat-label>Libellé *</mat-label>
+                    <input matInput formControlName="libelle" placeholder="Ex: Exonération CNSS">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Montant (FCFA) *</mat-label>
+                    <input matInput formControlName="montant" type="number" min="0">
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removeSociale($index)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <p class="form-section-label">Avantages particuliers</p>
+          <div class="avantages-input">
+            <mat-form-field appearance="outline" style="flex:1">
+              <mat-label>Libellé de l'avantage</mat-label>
+              <input matInput [(ngModel)]="newAvantage" [ngModelOptions]="{standalone:true}"
+                     placeholder="Ex: Véhicule de fonction"
+                     (keydown.enter)="$event.preventDefault(); addAvantage()">
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="addAvantage()" [disabled]="!newAvantage.trim()">
+              <mat-icon>add</mat-icon> Ajouter
+            </button>
+          </div>
+          <div class="chips-list">
+            @for (av of avantages.controls; track $index) {
+              <mat-chip-row (removed)="removeAvantage($index)">
+                {{ av.value }}
+                <button matChipRemove><mat-icon>cancel</mat-icon></button>
+              </mat-chip-row>
+            }
+            @if (avantages.length === 0) {
+              <span class="arr-empty" style="margin:0">Aucun avantage particulier</span>
+            }
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('salaire')" [disabled]="saving">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

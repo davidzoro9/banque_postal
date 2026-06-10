@@ -1,0 +1,184 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Informations personnelles</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">person</mat-icon>
+      <mat-card-title>Informations personnelles</mat-card-title>
+      <mat-card-subtitle>État civil, coordonnées et contacts d'urgence</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">État civil</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom *</mat-label>
+              <input matInput formControlName="nom">
+              @if (form.get('nom')?.invalid && form.get('nom')?.touched) {
+                <mat-error>Requis</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Prénom *</mat-label>
+              <input matInput formControlName="prenom">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nom de jeune fille</mat-label>
+              <input matInput formControlName="nomJeuneFille" placeholder="Optionnel">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Sexe *</mat-label>
+              <mat-select formControlName="sexe">
+                @for (s of sexes; track s.value) {
+                  <mat-option [value]="s.value">{{ s.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date de naissance *</mat-label>
+              <input matInput formControlName="dateNaissance" type="date">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Lieu de naissance *</mat-label>
+              <input matInput formControlName="lieuNaissance">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nationalité *</mat-label>
+              <input matInput formControlName="nationalite">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>N° CNI / Pièce d'identité *</mat-label>
+              <input matInput formControlName="numeroCNI">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Coordonnées</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Adresse *</mat-label>
+              <input matInput formControlName="adresse">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ville *</mat-label>
+              <input matInput formControlName="ville">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Code postal</mat-label>
+              <input matInput formControlName="codePostal">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Pays *</mat-label>
+              <input matInput formControlName="pays">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Téléphone *</mat-label>
+              <input matInput formControlName="telephone" placeholder="+226 70 00 00 00">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Email professionnel *</mat-label>
+              <input matInput formControlName="email" type="email">
+              @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
+                <mat-error>Email invalide</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Contacts d'urgence</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ contacts.length }} contact(s)</span>
+              <button mat-stroked-button type="button" (click)="addContact()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="contactsUrgence">
+              @for (c of contacts.controls; track $index) {
+                @if (contacts.length === 0) {
+                  <p class="arr-empty">Aucun contact d'urgence</p>
+                }
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nom *</mat-label>
+                    <input matInput formControlName="nom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Prénom *</mat-label>
+                    <input matInput formControlName="prenom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Lien *</mat-label>
+                    <input matInput formControlName="lien" placeholder="Père, Épouse…">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Téléphone *</mat-label>
+                    <input matInput formControlName="telephone">
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removeContact($index)"
+                          [disabled]="contacts.length === 1">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('famille')" [disabled]="saving || form.invalid">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

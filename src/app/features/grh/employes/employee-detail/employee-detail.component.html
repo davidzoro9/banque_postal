@@ -1,0 +1,77 @@
+<div class="profile-page">
+
+  @if (loading) {
+    <div class="loading"><mat-icon class="spin-icon">sync</mat-icon><span>Chargement...</span></div>
+  }
+
+  @if (!loading && !employee) {
+    <div class="loading">
+      <mat-icon>person_off</mat-icon><span>Employé introuvable</span>
+      <button mat-raised-button color="primary" (click)="back()">Retour</button>
+    </div>
+  }
+
+  @if (!loading && employee) {
+
+    <!-- En-tête employé -->
+    <div class="profile-header" [style.background]="'linear-gradient(135deg,' + module.gradientFrom + ',' + module.gradientTo + ')'">
+      <div class="ph-left">
+        <button mat-icon-button class="back-btn" (click)="back()">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <div class="ph-avatar" [style.background]="getAvatarColor()">{{ getInitials() }}</div>
+        <div class="ph-info">
+          <h1>{{ employee.prenom }} {{ employee.nom }}</h1>
+          <div class="ph-sub">
+            <span class="ph-mat-id">{{ employee.matricule }}</span>
+            <span class="ph-sep">·</span>
+            <span>{{ employee.poste }}</span>
+            <span class="ph-sep">·</span>
+            <span>{{ employee.service }}</span>
+          </div>
+        </div>
+        <span class="statut-badge"
+              [style.background]="getStatutStyle(employee.statut).background"
+              [style.color]="getStatutStyle(employee.statut).color">
+          {{ employee.statut }}
+        </span>
+      </div>
+      <div class="ph-right">
+        <div class="progress-box">
+          <span class="prog-val">{{ completedCount }}/{{ sections.length }}</span>
+          <span class="prog-lbl">sections complétées</span>
+          <div class="prog-bar"><div class="prog-fill" [style.width.%]="progressPercent"></div></div>
+        </div>
+        <button mat-raised-button class="btn-print" matTooltip="Imprimer la fiche">
+          <mat-icon>print</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Grille des sections -->
+    <div class="sections-grid">
+      @for (sec of sections; track sec.id; let i = $index) {
+        <div class="section-tile" [class.complete]="sec.isComplete(employee)" (click)="navigateTo(sec.route)">
+          <div class="tile-left">
+            <div class="tile-num">{{ i + 1 }}</div>
+            <div class="tile-icon" [class.done]="sec.isComplete(employee)">
+              <mat-icon>{{ sec.icon }}</mat-icon>
+            </div>
+          </div>
+          <div class="tile-body">
+            <span class="tile-title">{{ sec.title }}</span>
+            <span class="tile-sub">{{ sec.subtitle }}</span>
+            <span class="tile-status" [class.done]="sec.isComplete(employee)">
+              <mat-icon>{{ sec.isComplete(employee) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+              {{ sec.isComplete(employee) ? 'Complété' : 'À compléter' }}
+            </span>
+          </div>
+          <button mat-icon-button class="tile-btn" matTooltip="Ouvrir">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+
+  }
+</div>

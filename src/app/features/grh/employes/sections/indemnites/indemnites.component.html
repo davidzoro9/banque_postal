@@ -1,0 +1,112 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Indemnités</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">paid</mat-icon>
+      <mat-card-title>Indemnités</mat-card-title>
+      <mat-card-subtitle>Primes et autres indemnités</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Primes fixes</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Prime de logement (FCFA)</mat-label>
+              <input matInput formControlName="primeLogement" type="number" min="0">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Prime de transport (FCFA)</mat-label>
+              <input matInput formControlName="primeTransport" type="number" min="0">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Prime de responsabilité (FCFA)</mat-label>
+              <input matInput formControlName="primeResponsabilite" type="number" min="0">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Autres indemnités</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ autres.length }} indemnité(s) additionnelle(s)</span>
+              <button mat-stroked-button type="button" (click)="addAutre()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="autresIndemnites">
+              @if (autres.length === 0) {
+                <p class="arr-empty">Aucune indemnité additionnelle</p>
+              }
+              @for (item of autres.controls; track $index) {
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline" style="flex:2">
+                    <mat-label>Libellé *</mat-label>
+                    <input matInput formControlName="libelle" placeholder="Ex: Prime de risque">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Montant (FCFA) *</mat-label>
+                    <input matInput formControlName="montant" type="number" min="0">
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removeAutre($index)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="total-box">
+            <span class="total-lbl">Total indemnités</span>
+            <span class="total-val">{{ totalIndemnites | number:'1.0-0' }} FCFA</span>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('exonerations')" [disabled]="saving || form.invalid">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

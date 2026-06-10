@@ -1,0 +1,115 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Dossier individuel</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">folder_open</mat-icon>
+      <mat-card-title>Dossier individuel</mat-card-title>
+      <mat-card-subtitle>Contrats, diplômes et pièces administratives</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+
+        <div class="doc-toolbar">
+          <span class="doc-count">{{ documents.length }} document(s)</span>
+          <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
+            <mat-icon>add</mat-icon> Ajouter un document
+          </button>
+        </div>
+
+        @if (showAddForm) {
+          <div class="add-doc-form">
+            <mat-form-field appearance="outline" style="flex:2">
+              <mat-label>Libellé du document *</mat-label>
+              <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Catégorie *</mat-label>
+              <mat-select [(ngModel)]="newDoc.categorie">
+                @for (cat of categories; track cat) {
+                  <mat-option [value]="cat">{{ cat }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="addDoc()" [disabled]="!newDoc.libelle.trim()">
+              <mat-icon>check</mat-icon> Valider
+            </button>
+            <button mat-icon-button (click)="showAddForm = false">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+
+        @if (documents.length === 0 && !showAddForm) {
+          <div class="empty-docs">
+            <mat-icon>folder_open</mat-icon>
+            <p>Aucun document dans ce dossier</p>
+            <span>Cliquez sur "Ajouter un document" pour commencer</span>
+          </div>
+        }
+
+        <div class="doc-list">
+          @for (doc of documents; track doc.id) {
+            <div class="doc-item">
+              <div class="doc-icon">
+                <mat-icon>{{ getCatIcon(doc.categorie) }}</mat-icon>
+              </div>
+              <div class="doc-body">
+                <span class="doc-libelle">{{ doc.libelle }}</span>
+                <div class="doc-meta">
+                  <span class="doc-cat">{{ doc.categorie }}</span>
+                  <span class="doc-date">{{ doc.dateAjout }}</span>
+                </div>
+              </div>
+              <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('notes-rh')" [disabled]="saving">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

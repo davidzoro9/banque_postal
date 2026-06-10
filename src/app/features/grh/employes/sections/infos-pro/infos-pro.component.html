@@ -1,0 +1,113 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Informations professionnelles</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">work</mat-icon>
+      <mat-card-title>Informations professionnelles</mat-card-title>
+      <mat-card-subtitle>Poste, service, contrat et statut</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Identité professionnelle</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Matricule</mat-label>
+              <input matInput [value]="employee.matricule" readonly>
+              <mat-hint>Généré automatiquement</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Statut *</mat-label>
+              <mat-select formControlName="statut">
+                @for (s of statuts; track s) {
+                  <mat-option [value]="s">{{ s }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Poste occupé *</mat-label>
+              <input matInput formControlName="poste" placeholder="Ex: Responsable RH">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Service *</mat-label>
+              <mat-select formControlName="service">
+                @for (srv of services; track srv) {
+                  <mat-option [value]="srv">{{ srv }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Direction / Département</mat-label>
+              <input matInput formControlName="direction" placeholder="Ex: Direction Générale">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Contrat</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Type de contrat *</mat-label>
+              <mat-select formControlName="typeContrat">
+                @for (c of contrats; track c) {
+                  <mat-option [value]="c">{{ c }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date d'embauche *</mat-label>
+              <input matInput formControlName="dateEmbauche" type="date">
+            </mat-form-field>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('categorie')" [disabled]="saving || form.invalid">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

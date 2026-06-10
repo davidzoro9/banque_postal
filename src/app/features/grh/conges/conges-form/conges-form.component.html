@@ -1,0 +1,93 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="cancel()">Congés</span>
+    <span class="sep">›</span>
+    <span class="current">Nouvelle demande de congé</span>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">beach_access</mat-icon>
+      <mat-card-title>Demande de congé</mat-card-title>
+      <mat-card-subtitle>Remplissez le formulaire pour soumettre une demande de congé.</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="form">
+
+        <p class="form-section-label">Informations du congé</p>
+        <div class="form-grid-2">
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Type de congé *</mat-label>
+            <mat-select formControlName="typeConge">
+              @for (t of typesConge; track t.value) {
+                <mat-option [value]="t.value">{{ t.label }}</mat-option>
+              }
+            </mat-select>
+            @if (form.get('typeConge')?.invalid && form.get('typeConge')?.touched) {
+              <mat-error>Requis</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de début *</mat-label>
+            <input matInput formControlName="dateDebut" type="date">
+            @if (form.get('dateDebut')?.invalid && form.get('dateDebut')?.touched) {
+              <mat-error>Requis</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de fin *</mat-label>
+            <input matInput formControlName="dateFin" type="date">
+            @if (form.get('dateFin')?.invalid && form.get('dateFin')?.touched) {
+              <mat-error>Requis</mat-error>
+            }
+          </mat-form-field>
+
+        </div>
+
+        @if (nbJours > 0) {
+          <div class="info-banner">
+            <mat-icon>info</mat-icon>
+            <span>Durée : <strong>{{ nbJours }} jour(s)</strong></span>
+          </div>
+        }
+
+        <p class="form-section-label">Motif et justificatif</p>
+        <div class="form-grid-1">
+
+          <mat-form-field appearance="outline">
+            <mat-label>Motif</mat-label>
+            <textarea matInput formControlName="motif" rows="3"
+                      placeholder="Décrivez brièvement le motif du congé…"></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Référence justificatif</mat-label>
+            <input matInput formControlName="justificatif"
+                   placeholder="N° de document médical, référence pièce jointe…">
+            <mat-hint>Facultatif — à compléter si un document est requis</mat-hint>
+          </mat-form-field>
+
+        </div>
+
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="cancel()">Annuler</button>
+        <button mat-raised-button color="primary" (click)="save()"
+                [disabled]="saving || form.invalid">
+          @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+          @else { <mat-icon>send</mat-icon> }
+          Soumettre la demande
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

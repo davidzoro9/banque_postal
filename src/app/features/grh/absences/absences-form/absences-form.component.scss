@@ -1,0 +1,17 @@
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.duree-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  .duree-field { flex: 2; }
+  .unite-field { flex: 1; }
+}
+
+.form-grid-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}

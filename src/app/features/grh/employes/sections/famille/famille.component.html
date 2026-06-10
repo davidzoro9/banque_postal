@@ -1,0 +1,162 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Famille</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">family_restroom</mat-icon>
+      <mat-card-title>Famille</mat-card-title>
+      <mat-card-subtitle>Conjoint, enfants et personnes à charge</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Conjoint / Conjointe</p>
+          <div style="margin-bottom:12px">
+            <mat-slide-toggle [(ngModel)]="hasConjoint" [ngModelOptions]="{standalone:true}">
+              {{ hasConjoint ? 'Marié(e) — renseigner les infos du conjoint' : 'Célibataire / pas de conjoint' }}
+            </mat-slide-toggle>
+          </div>
+          @if (hasConjoint) {
+            <div class="form-grid-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Nom du conjoint *</mat-label>
+                <input matInput formControlName="conjointNom">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Prénom du conjoint *</mat-label>
+                <input matInput formControlName="conjointPrenom">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Date de naissance</mat-label>
+                <input matInput formControlName="conjointDateNaiss" type="date">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Profession</mat-label>
+                <input matInput formControlName="conjointProfession">
+              </mat-form-field>
+            </div>
+          }
+
+          <p class="form-section-label">Enfants</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ enfants.length }} enfant(s)</span>
+              <button mat-stroked-button type="button" (click)="addEnfant()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="enfants">
+              @if (enfants.length === 0) {
+                <p class="arr-empty">Aucun enfant enregistré</p>
+              }
+              @for (enf of enfants.controls; track $index) {
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nom *</mat-label>
+                    <input matInput formControlName="nom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Prénom *</mat-label>
+                    <input matInput formControlName="prenom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Date de naissance *</mat-label>
+                    <input matInput formControlName="dateNaissance" type="date">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Sexe *</mat-label>
+                    <mat-select formControlName="sexe">
+                      @for (s of sexes; track s.value) {
+                        <mat-option [value]="s.value">{{ s.label }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removeEnfant($index)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <p class="form-section-label">Personnes à charge</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ personnesCharge.length }} personne(s) à charge</span>
+              <button mat-stroked-button type="button" (click)="addPersonne()">
+                <mat-icon>add</mat-icon> Ajouter
+              </button>
+            </div>
+            <div formArrayName="personnesCharge">
+              @if (personnesCharge.length === 0) {
+                <p class="arr-empty">Aucune personne à charge</p>
+              }
+              @for (p of personnesCharge.controls; track $index) {
+                <div [formGroupName]="$index" class="arr-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nom *</mat-label>
+                    <input matInput formControlName="nom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Prénom *</mat-label>
+                    <input matInput formControlName="prenom">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Lien *</mat-label>
+                    <input matInput formControlName="lien" placeholder="Père, Mère, Frère…">
+                  </mat-form-field>
+                  <button mat-icon-button color="warn" type="button" (click)="removePersonne($index)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('infos-pro')" [disabled]="saving">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

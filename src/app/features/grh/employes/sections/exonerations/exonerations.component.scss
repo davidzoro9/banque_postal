@@ -1,0 +1,11 @@
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.avantages-input {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 12px;
+}
+
+.chips-list {
+  display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px;
+  align-items: center; padding: 8px 0;
+}

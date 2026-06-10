@@ -1,0 +1,73 @@
+<div class="module-overview">
+  <div class="page-header"
+       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+      <div>
+        <h1>{{ module.name }}</h1>
+        <p>{{ module.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    @for (kpi of kpis; track kpi.label) {
+      <mat-card class="kpi-card">
+        <mat-card-content>
+          <div class="kpi-icon" [style.background-color]="kpi.color + '1A'" [style.color]="kpi.color">
+            <mat-icon>{{ kpi.icon }}</mat-icon>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ kpi.value }}</span>
+            <span class="kpi-label">{{ kpi.label }}</span>
+            <span class="kpi-sub">{{ kpi.sub }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <div class="section-title">Actions rapides</div>
+  <div class="quick-actions-row">
+    @for (qa of quickActions; track qa.route) {
+      <button mat-raised-button class="qa-pill"
+              [style.background-color]="qa.color"
+              (click)="navigate(qa.route)">
+        <mat-icon>{{ qa.icon }}</mat-icon>{{ qa.label }}
+      </button>
+    }
+  </div>
+
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Formations à venir</mat-card-title>
+      <button mat-button color="primary" (click)="navigate('/carrieres/formations/catalogue')" class="see-all-btn">
+        Catalogue <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <table class="data-table">
+        <thead>
+          <tr><th>Formation</th><th>Date</th><th>Participants</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          @for (f of upcomingFormations; track f.titre) {
+            <tr>
+              <td><strong>{{ f.titre }}</strong></td>
+              <td>{{ f.date }}</td>
+              <td>
+                <div class="participants-bar">
+                  <span>{{ f.participants }}</span>
+                  <mat-icon style="font-size:14px;width:14px;height:14px;color:#9e9e9e">person</mat-icon>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" [class.confirmed]="f.statut === 'Confirmée'">{{ f.statut }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>

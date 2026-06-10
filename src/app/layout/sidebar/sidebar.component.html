@@ -1,0 +1,62 @@
+<div class="sidebar-container">
+  <div class="sidebar-header">
+    <span class="sidebar-title">Raccourcis</span>
+    <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="sidebar-section">
+    <div class="section-label">Accès rapide</div>
+    <div class="quick-links-grid">
+      @for (link of moduleNav.quickLinks; track link.route) {
+        <button class="quick-link-btn" (click)="navigate(link.route)" [matTooltip]="link.label">
+          <div class="ql-icon" [style.background-color]="link.color + '1A'" [style.color]="link.color">
+            <mat-icon>{{ link.icon }}</mat-icon>
+          </div>
+          <span class="ql-label">{{ link.label }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="sidebar-section">
+    <div class="section-label">Modules</div>
+    <div class="modules-list">
+      @for (mod of moduleNav.modules; track mod.id) {
+        <button class="module-shortcut" [style.--mod-color]="mod.color" (click)="navigate(mod.route)">
+          <div class="ms-icon"
+               [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + ', ' + mod.gradientTo + ')'">
+            <mat-icon>{{ mod.icon }}</mat-icon>
+          </div>
+          <div class="ms-info">
+            <span class="ms-name">{{ mod.name }}</span>
+            <span class="ms-desc">{{ mod.description }}</span>
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="sidebar-section">
+    <div class="section-label">Tableau de bord</div>
+    <button class="action-link" (click)="navigate('/dashboard')">
+      <mat-icon>dashboard</mat-icon>
+      <span>Vue d'ensemble</span>
+    </button>
+    <button class="action-link">
+      <mat-icon>bar_chart</mat-icon>
+      <span>Rapports & analyses</span>
+    </button>
+    <button class="action-link">
+      <mat-icon>help_outline</mat-icon>
+      <span>Aide & documentation</span>
+    </button>
+  </div>
+</div>

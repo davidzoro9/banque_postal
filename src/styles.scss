@@ -1,0 +1,188 @@
+@use '@angular/material' as mat;
+
+// ─── Thème clair (défaut) ─────────────────────────────────
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+
+  // CSS custom properties – thème clair
+  --app-bg:          #f0f2f5;
+  --surface:         #ffffff;
+  --surface-variant: #f4f6f9;
+  --surface-hover:   #eef1f6;
+  --border:          #dde2ed;
+  --on-surface:      #091628;
+  --on-surface-2:    #3a4660;
+  --on-surface-3:    #7a8699;
+  --active-bg:       rgba(22, 48, 89, 0.08);
+  --active-color:    #163059;
+  --brand-gold:      #FFB300;
+  --toolbar-bg:      linear-gradient(135deg, #091628 0%, #163059 100%);
+  --shadow-nav:      0 1px 4px rgba(9, 22, 40, 0.08);
+  --shadow-card:     0 2px 8px rgba(9, 22, 40, 0.08);
+  --shadow-sidenav:  2px 0 8px rgba(9, 22, 40, 0.08);
+  --badge-bg:        #FFB300;
+  --nav-bg:          #ffffff;
+}
+
+// ─── Thème sombre ─────────────────────────────────────────
+html.dark-theme {
+  color-scheme: dark;
+
+  @include mat.theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+
+  // CSS custom properties – thème sombre
+  --app-bg:          #060f1e;
+  --surface:         #0e1e35;
+  --surface-variant: #0a1728;
+  --surface-hover:   #152540;
+  --border:          #1e3152;
+  --on-surface:      #e8eef8;
+  --on-surface-2:    #8ea4c0;
+  --on-surface-3:    #4e6a8a;
+  --active-bg:       rgba(212, 160, 23, 0.15);
+  --active-color:    #FFB300;
+  --brand-gold:      #FFB300;
+  --toolbar-bg:      linear-gradient(135deg, #040c18 0%, #091628 100%);
+  --shadow-nav:      0 1px 4px rgba(0, 0, 0, 0.5);
+  --shadow-card:     0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-sidenav:  2px 0 12px rgba(0, 0, 0, 0.5);
+  --badge-bg:        #FFB300;
+  --nav-bg:          #0e1e35;
+}
+
+// ─── Reset & base ─────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+  background: var(--app-bg);
+  color: var(--on-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+// ─── Typography ───────────────────────────────────────────
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-weight: 700;
+  margin: 0;
+}
+
+// ─── Scrollbar ────────────────────────────────────────────
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+  &:hover { background: var(--on-surface-3); }
+}
+
+// ─── Shared section form styles ───────────────────────────
+.section-page { max-width: 900px; margin: 0 auto; }
+
+.sec-breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; margin-bottom: 14px; padding: 6px 0;
+  .link { cursor: pointer; color: var(--on-surface-3); &:hover { color: var(--active-color); } }
+  .sep { color: var(--on-surface-3); }
+  .current { color: var(--on-surface); font-weight: 600; }
+}
+
+.emp-ctx {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-card);
+}
+.emp-ctx-avatar {
+  width: 36px; height: 36px; border-radius: 50%; color: #fff;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.emp-ctx-name { font-size: 14px; font-weight: 600; color: var(--on-surface); display: block; }
+.emp-ctx-sub  { font-size: 11px; color: var(--on-surface-3); }
+
+.section-card {
+  border-radius: 16px !important; border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+  mat-card-header { padding: 16px 20px 0; }
+  mat-card-content { padding: 20px !important; }
+  mat-card-actions { padding: 12px 16px 16px !important; gap: 8px; display: flex !important; }
+}
+
+.form-section-label {
+  font-size: 11px; font-weight: 700; color: var(--on-surface-3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  &:first-child { margin-top: 0; }
+}
+
+.form-grid-2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;
+  mat-form-field { width: 100%; }
+  .span-2 { grid-column: 1 / -1; }
+  @media (max-width: 600px) { grid-template-columns: 1fr; .span-2 { grid-column: 1; } }
+}
+
+.form-grid-4 {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px;
+  mat-form-field { width: 100%; }
+  @media (max-width: 768px) { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.array-block {
+  background: var(--surface-variant); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; margin-bottom: 12px;
+}
+.array-block-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  span { font-size: 13px; font-weight: 600; color: var(--on-surface-2); }
+  button { height: 32px; font-size: 12px; }
+}
+.arr-row {
+  display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; margin-bottom: 8px;
+  mat-form-field { min-width: 140px; flex: 1; }
+  &:last-child { margin-bottom: 0; }
+}
+.arr-empty { font-size: 13px; color: var(--on-surface-3); font-style: italic; text-align: center; padding: 8px 0; }
+
+.sec-actions {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8px; width: 100%;
+}
+.sec-right { display: flex; gap: 8px; }
+.btn-next { background-color: var(--active-color) !important; color: #fff !important; }
+
+// ─── Material drawer container ────────────────────────────
+.mat-drawer-container { background: transparent !important; }
+.mat-drawer { background: transparent !important; }
+
+// ─── Transitions globales ─────────────────────────────────
+mat-card, mat-toolbar, mat-sidenav, .module-navbar,
+.drawer-container, .sidebar-container {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}

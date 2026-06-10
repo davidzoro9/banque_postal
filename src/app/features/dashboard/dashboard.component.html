@@ -1,0 +1,19 @@
+<div class="dashboard">
+  <div class="modules-grid">
+    @for (mod of moduleNav.modules; track mod.id) {
+      <mat-card class="module-card" (click)="openModule(mod)" matRipple>
+        <mat-card-content>
+          <div class="module-icon"
+               [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + ', ' + mod.gradientTo + ')'">
+            <mat-icon>{{ mod.icon }}</mat-icon>
+          </div>
+          <div class="module-info">
+            <h3>{{ mod.name }}</h3>
+            <p>{{ mod.description }}</p>
+          </div>
+          <mat-icon class="arrow">arrow_forward</mat-icon>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+</div>

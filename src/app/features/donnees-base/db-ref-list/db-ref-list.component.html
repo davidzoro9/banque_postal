@@ -1,0 +1,114 @@
+<div class="ref-page">
+
+  <!-- En-tête -->
+  <div class="page-header"
+       [style.background]="'linear-gradient(135deg,' + module.gradientFrom + ',' + module.gradientTo + ')'">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>{{ icon }}</mat-icon></div>
+      <div>
+        <h1>{{ title }}</h1>
+        <p>{{ dataSource.data.length }} entrée(s) enregistrée(s)</p>
+      </div>
+    </div>
+    <button mat-raised-button class="btn-new">
+      <mat-icon>add</mat-icon> Nouveau
+    </button>
+  </div>
+
+  <!-- KPIs rapides -->
+  <div class="kpi-row">
+    <div class="kpi-chip">
+      <mat-icon style="color:#2e7d32">check_circle</mat-icon>
+      <span class="kpi-val">{{ totalActifs }}</span>
+      <span class="kpi-lbl">Actifs</span>
+    </div>
+    <div class="kpi-chip">
+      <mat-icon style="color:#9e9e9e">cancel</mat-icon>
+      <span class="kpi-val">{{ totalInactifs }}</span>
+      <span class="kpi-lbl">Inactifs</span>
+    </div>
+    <div class="kpi-chip">
+      <mat-icon style="color:#163059">list</mat-icon>
+      <span class="kpi-val">{{ dataSource.data.length }}</span>
+      <span class="kpi-lbl">Total</span>
+    </div>
+  </div>
+
+  <!-- Filtre -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher…</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
+               placeholder="Code, libellé, description…">
+        @if (searchQuery) {
+          <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" matSort>
+
+          <ng-container matColumnDef="code">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Code</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="code-chip">{{ row.code }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="libelle">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Libellé</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.libelle }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Description</th>
+            <td mat-cell *matCellDef="let row" class="desc-cell">{{ row.description }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actif">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="statut-badge" [class.actif]="row.actif" [class.inactif]="!row.actif">
+                <mat-icon>{{ row.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                {{ row.actif ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button color="primary" matTooltip="Modifier">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}">
+                <mat-icon>{{ row.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td [attr.colspan]="displayedColumns.length" class="no-data">
+              <mat-icon>search_off</mat-icon>
+              <span>Aucune entrée trouvée</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" pageSize="10" showFirstLastButtons></mat-paginator>
+    </mat-card-content>
+  </mat-card>
+
+</div>

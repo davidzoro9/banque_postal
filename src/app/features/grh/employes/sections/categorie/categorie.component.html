@@ -1,0 +1,100 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Catégorie</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#163059">military_tech</mat-icon>
+      <mat-card-title>Catégorie professionnelle</mat-card-title>
+      <mat-card-subtitle>Catégorie, grade, échelon et niveau</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Classification</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Catégorie professionnelle *</mat-label>
+              <mat-select formControlName="categoriePro">
+                @for (cat of categories; track cat) {
+                  <mat-option [value]="cat">{{ cat }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Échelon *</mat-label>
+              <mat-select formControlName="echelon">
+                @for (e of echelons; track e) {
+                  <mat-option [value]="e">Échelon {{ e }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Grade *</mat-label>
+              <input matInput formControlName="grade" placeholder="Ex: Ingénieur principal">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Niveau</mat-label>
+              <mat-select formControlName="niveau">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (n of niveaux; track n) {
+                  <mat-option [value]="n">{{ n }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="info-banner">
+            <mat-icon>info_outline</mat-icon>
+            <span>La catégorie professionnelle détermine la grille salariale applicable à cet employé.</span>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="goBack()">Annuler</button>
+        <div class="sec-right">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+            Enregistrer
+          </button>
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('indemnites')" [disabled]="saving || form.invalid">
+            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+            Enregistrer et continuer
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
