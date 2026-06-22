@@ -3,6 +3,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
+import { CongeService } from '../services/conge.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-conges-form',
@@ -16,13 +18,13 @@ export class CongesFormComponent implements OnInit {
   saving = false;
 
   readonly typesConge = [
-    { value: 'annuel',      label: 'Congé annuel' },
-    { value: 'maladie',     label: 'Congé maladie' },
-    { value: 'maternite',   label: 'Congé maternité' },
-    { value: 'paternite',   label: 'Congé paternité' },
-    { value: 'sans-solde',  label: 'Congé sans solde' },
-    { value: 'exceptionnel',label: 'Congé exceptionnel' },
-    { value: 'autre',       label: 'Autre' }
+    { value: 'Congé annuel',      label: 'Congé annuel' },
+    { value: 'Congé maladie',     label: 'Congé maladie' },
+    { value: 'Congé maternité',   label: 'Congé maternité' },
+    { value: 'Congé paternité',   label: 'Congé paternité' },
+    { value: 'Congé sans solde',  label: 'Congé sans solde' },
+    { value: 'Congé exceptionnel',label: 'Congé exceptionnel' },
+    { value: 'Autre',             label: 'Autre' }
   ];
 
   get nbJours(): number {
@@ -38,13 +40,15 @@ export class CongesFormComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private moduleNav: ModuleNavService
+    private moduleNav: ModuleNavService,
+    private congeService: CongeService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
     this.form = this.fb.group({
-      typeConge:  ['annuel', Validators.required],
+      typeConge:  ['Congé annuel', Validators.required],
       dateDebut:  ['', Validators.required],
       dateFin:    ['', Validators.required],
       motif:      [''],
@@ -55,10 +59,30 @@ export class CongesFormComponent implements OnInit {
   save(): void {
     if (this.form.invalid) return;
     this.saving = true;
-    setTimeout(() => {
-      this.saving = false;
-      this.router.navigate(['/grh/conges']);
-    }, 800);
+    
+    const val = this.form.value;
+    const user = this.authService.currentUser;
+    const empName = user ? `${user.prenom} ${user.nom}` : 'Collaborateur';
+
+    const congeData = {
+      employe: empName,
+      type: val.typeConge,
+      dateDebut: val.dateDebut,
+      dateFin: val.dateFin,
+      nbJours: this.nbJours,
+      statut: 'En attente' as const
+    };
+
+    this.congeService.create(congeData).subscribe({
+      next: () => {
+        this.saving = false;
+        this.router.navigate(['/grh/conges']);
+      },
+      error: (err) => {
+        this.saving = false;
+        alert(err.message || 'Une erreur est survenue lors de la soumission de la demande.');
+      }
+    });
   }
 
   cancel(): void { this.router.navigate(['/grh/conges']); }

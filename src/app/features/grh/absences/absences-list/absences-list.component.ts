@@ -5,24 +5,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
-
-interface Absence {
-  id: string;
-  employe: string;
-  type: string;
-  date: string;
-  duree: string;
-  motif: string;
-  statut: 'Justifiée' | 'Injustifiée' | 'En attente';
-}
-
-const MOCK_ABSENCES: Absence[] = [
-  { id: '1', employe: 'Sophie Martin',  type: 'Maladie',            date: '2026-06-05', duree: '2 jours',  motif: 'Grippe',            statut: 'Justifiée' },
-  { id: '2', employe: 'Thomas Bernard', type: 'Absence injustifiée', date: '2026-06-03', duree: '1 jour',   motif: '-',                 statut: 'Injustifiée' },
-  { id: '3', employe: 'Marc Leroy',     type: 'Retard',             date: '2026-06-07', duree: '3 heures', motif: 'Embouteillages',    statut: 'Justifiée' },
-  { id: '4', employe: 'Alice Traoré',   type: 'Absence justifiée',  date: '2026-06-08', duree: '1 jour',   motif: 'Démarche admin.',   statut: 'En attente' },
-  { id: '5', employe: 'Claire Dubois',  type: 'Accident de travail',date: '2026-05-28', duree: '5 jours',  motif: 'Accident bureau',   statut: 'Justifiée' },
-];
+import { AbsenceService, Absence } from '../services/absence.service';
 
 @Component({
   selector: 'app-absences-list',
@@ -36,25 +19,49 @@ export class AbsencesListComponent implements OnInit {
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
   displayedColumns = ['employe', 'type', 'date', 'duree', 'motif', 'statut', 'actions'];
-  dataSource = new MatTableDataSource<Absence>(MOCK_ABSENCES);
+  dataSource = new MatTableDataSource<Absence>([]);
   searchQuery = '';
+  absences: Absence[] = [];
 
-  constructor(private router: Router, private moduleNav: ModuleNavService) {}
+  constructor(
+    private router: Router, 
+    private moduleNav: ModuleNavService,
+    private absenceService: AbsenceService
+  ) {}
 
-  ngOnInit(): void { this.moduleNav.selectModule(this.module); }
+  ngOnInit(): void {
+    this.moduleNav.selectModule(this.module);
+    this.loadAbsences();
+  }
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
   }
 
-  applyFilter(): void { this.dataSource.filter = this.searchQuery.trim().toLowerCase(); }
+  loadAbsences(): void {
+    this.absenceService.getAll().subscribe({
+      next: (list) => {
+        this.absences = list;
+        this.dataSource.data = list;
+      },
+      error: (err) => {
+        console.error('Error loading absences:', err);
+      }
+    });
+  }
 
-  nouvelleAbsence(): void { this.router.navigate(['/grh/absences/nouveau']); }
+  applyFilter(): void {
+    this.dataSource.filter = this.searchQuery.trim().toLowerCase();
+  }
 
-  get totalJustifiees(): number  { return MOCK_ABSENCES.filter(a => a.statut === 'Justifiée').length; }
-  get totalInjustifiees(): number { return MOCK_ABSENCES.filter(a => a.statut === 'Injustifiée').length; }
-  get totalEnAttente(): number   { return MOCK_ABSENCES.filter(a => a.statut === 'En attente').length; }
+  nouvelleAbsence(): void {
+    this.router.navigate(['/grh/absences/nouveau']);
+  }
+
+  get totalJustifiees(): number  { return this.absences.filter(a => a.statut === 'Justifiée').length; }
+  get totalInjustifiees(): number { return this.absences.filter(a => a.statut === 'Injustifiée').length; }
+  get totalEnAttente(): number   { return this.absences.filter(a => a.statut === 'En attente').length; }
 
   statutStyle(statut: string): { background: string; color: string } {
     const map: Record<string, { background: string; color: string }> = {
