@@ -23,7 +23,7 @@ export class SalaireComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private employeeService: EmployeeService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
@@ -37,30 +37,21 @@ export class SalaireComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      salaireBase: [0, [Validators.required, Validators.min(1)]],
-      salaireBrut: [0, [Validators.required, Validators.min(1)]],
-      modePaiement: ['Virement bancaire', Validators.required],
-      banque: [''],
-      iban: [''],
-      bonusAnnuel: [0, [Validators.min(0)]],
-      classe: ['', []],
-      categorie: ['', []],
-      echelle: ['', []],
-      echellon: ['', []]
+      salaireBase:   [0, [Validators.required, Validators.min(1)]],
+      salaireBrut:   [0, [Validators.required, Validators.min(1)]],
+      modePaiement:  ['Virement bancaire', Validators.required],
+      banque:        [''],
+      iban:          ['']
     });
   }
+
   private patch(e: Employee): void {
     this.form.patchValue({
-      salaireBase: e.salaireBase,
-      salaireBrut: e.salaireBrut,
+      salaireBase:  e.salaireBase,
+      salaireBrut:  e.salaireBrut,
       modePaiement: e.modePaiement,
-      banque: e.banque || '',
-      iban: e.iban || '',
-      bonusAnnuel: e['bonusAnnuel'] ?? 0,
-      classe: e.classe || '',
-      categorie: e.categorie || '',
-      echelle: e.echelle || '',
-      echellon: e.echellon || ''
+      banque:       e.banque || '',
+      iban:         e.iban || ''
     });
   }
 
@@ -78,16 +69,11 @@ export class SalaireComponent implements OnInit {
     this.saving = true;
     const v = this.form.value;
     this.employeeService.update(this.empId, {
-      salaireBase: +v.salaireBase,
-      salaireBrut: +v.salaireBrut,
+      salaireBase:  +v.salaireBase,
+      salaireBrut:  +v.salaireBrut,
       modePaiement: v.modePaiement,
-      banque: v.banque,
-      iban: v.iban,
-      bonusAnnuel: +v.bonusAnnuel,
-      classe: v.classe,
-      categorie: v.categorie,
-      echelle: v.echelle,
-      echellon: v.echellon
+      banque:       v.banque,
+      iban:         v.iban
     }).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);

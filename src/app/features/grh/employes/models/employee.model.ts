@@ -17,15 +17,6 @@ export interface Enfant {
   sexe: Sexe;
 }
 
-export interface Employee {
-  // …déjà existants…
-  salaireBase: number;
-  salaireBrut: number;
-  modePaiement: ModePaiement;
-  // 👉 nouveau champ
-  bonusAnnuel?: number;            // valeur optionnelle
-}
-
 export interface PersonneCharge {
   nom: string;
   prenom: string;
@@ -131,10 +122,7 @@ export interface Employee {
   // Salaire
   salaireBase: number;
   salaireBrut: number;
-  classe?: string;
-  categorie?: string;
-  echelle?: string;
-  echellon?: string;
+  modePaiement: ModePaiement;
   banque?: string;
   iban?: string;
 
@@ -148,10 +136,10 @@ export interface Employee {
 }
 
 export const STATUT_COLORS: Record<StatutEmploye, { background: string; color: string }> = {
-  'Actif': { background: '#e6f4ea', color: '#1e8e3e' },
-  'Inactif': { background: '#f1f3f4', color: '#5f6368' },
-  'Suspendu': { background: '#fce8e6', color: '#d93025' },
+  'Actif':          { background: '#e6f4ea', color: '#1e8e3e' },
+  'Inactif':        { background: '#f1f3f4', color: '#5f6368' },
+  'Suspendu':       { background: '#fce8e6', color: '#d93025' },
   "Période d'essai": { background: '#fff3e0', color: '#e65100' },
-  'Congé maladie': { background: '#e8f0fe', color: '#1a73e8' },
-  'Détaché': { background: '#f3e8fd', color: '#7b1fa2' }
+  'Congé maladie':  { background: '#e8f0fe', color: '#1a73e8' },
+  'Détaché':        { background: '#f3e8fd', color: '#7b1fa2' }
 };

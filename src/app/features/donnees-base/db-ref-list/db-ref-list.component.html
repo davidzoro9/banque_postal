@@ -73,26 +73,6 @@
             <th mat-header-cell *matHeaderCellDef>Description</th>
             <td mat-cell *matCellDef="let row" class="desc-cell">{{ row.description }}</td>
           </ng-container>
-          <ng-container matColumnDef="classe" *ngIf="type === 'grille-salariale'">
-            <th mat-header-cell *matHeaderCellDef>Classe</th>
-            <td mat-cell *matCellDef="let row">{{ row.classe || '' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="categorie" *ngIf="type === 'grille-salariale'">
-            <th mat-header-cell *matHeaderCellDef>Catégorie</th>
-            <td mat-cell *matCellDef="let row">{{ row.categorie || '' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="echelle" *ngIf="type === 'grille-salariale'">
-            <th mat-header-cell *matHeaderCellDef>Echelle</th>
-            <td mat-cell *matCellDef="let row">{{ row.echelle || '' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="echellon" *ngIf="type === 'grille-salariale'">
-            <th mat-header-cell *matHeaderCellDef>Échelon</th>
-            <td mat-cell *matCellDef="let row">{{ row.echellon || '' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="salaireBase" *ngIf="type === 'grille-salariale'">
-            <th mat-header-cell *matHeaderCellDef>Salaire Base</th>
-            <td mat-cell *matCellDef="let row">{{ row.salaireBase || '' }}</td>
-          </ng-container>
 
           <ng-container matColumnDef="actif">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
@@ -166,28 +146,8 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" style="width: 100%;">
-      <mat-label>Classe</mat-label>
-      <input matInput formControlName="classe" placeholder="Ex: A">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" style="width: 100%;">
-      <mat-label>Catégorie</mat-label>
-      <input matInput formControlName="categorie" placeholder="Ex: Cadre">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" style="width: 100%;">
-      <mat-label>Echelle</mat-label>
-      <input matInput formControlName="echelle" placeholder="Ex: I">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" style="width: 100%;">
-      <mat-label>Échelon</mat-label>
-      <input matInput formControlName="echellon" placeholder="Ex: 1">
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" style="width: 100%;">
-      <mat-label>Salaire Base</mat-label>
-      <input matInput formControlName="salaireBase" placeholder="Ex: 50000">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="3" placeholder="Description de l'élément..."></textarea>
     </mat-form-field>
   </mat-dialog-content>
 

@@ -25,7 +25,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   icon   = 'list';
   type   = '';
 
-  displayedColumns = ['code', 'libelle', 'description', 'classe', 'categorie', 'echelle', 'echellon', 'salaireBase', 'actif', 'actions'];
+  displayedColumns = ['code', 'libelle', 'description', 'actif', 'actions'];
   dataSource = new MatTableDataSource<RefItem>([]);
   searchQuery = '';
 
@@ -45,11 +45,6 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       code: ['', [Validators.required, Validators.maxLength(20)]],
       libelle: ['', [Validators.required, Validators.maxLength(150)]],
       description: [''],
-      classe: [''],
-      categorie: [''],
-      echelle: [''],
-      echellon: [''],
-      salaireBase: [''],
       actif: [true]
     });
   }
@@ -88,7 +83,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openAddDialog(): void {
     this.isEditing = false;
     this.editingItem = null;
-    this.formGroup.reset({ code: '', libelle: '', description: '', classe: '', categorie: '', echelle: '', echellon: '', salaireBase: '', actif: true });
+    this.formGroup.reset({ code: '', libelle: '', description: '', actif: true });
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
   }
@@ -96,17 +91,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openEditDialog(item: RefItem): void {
     this.isEditing = true;
     this.editingItem = item;
-      this.formGroup.reset({
-        code: item.code,
-        libelle: item.libelle,
-        description: item.description,
-        classe: item.classe || '',
-        categorie: item.categorie || '',
-        echelle: item.echelle || '',
-        echellon: item.echellon || '',
-        salaireBase: item.salaireBase || '',
-        actif: item.actif
-      });
+    this.formGroup.reset({
+      code: item.code,
+      libelle: item.libelle,
+      description: item.description,
+      actif: item.actif
+    });
     this.formGroup.get('code')?.disable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
   }
@@ -120,11 +110,6 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       code: rawValue.code,
       libelle: rawValue.libelle,
       description: rawValue.description || '',
-      classe: rawValue.classe,
-      categorie: rawValue.categorie,
-      echelle: rawValue.echelle,
-      echellon: rawValue.echellon,
-      salaireBase: rawValue.salaireBase,
       actif: rawValue.actif ?? true
     };
 

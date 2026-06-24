@@ -9,11 +9,6 @@ export interface RefItem {
   code: string;
   libelle: string;
   description: string;
-  classe?: string;
-  categorie?: string;
-  echelle?: string;
-  echellon?: string;
-  salaireBase?: string;
   actif: boolean;
 }
 
