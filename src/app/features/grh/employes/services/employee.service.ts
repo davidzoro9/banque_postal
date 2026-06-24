@@ -17,9 +17,20 @@ export class EmployeeService {
   }
 
   private toBackend(emp: Partial<Employee>): any {
+    // Start with a shallow copy of the provided partial employee
     const result: any = { ...emp };
-    
-    // Map JSON fields
+
+    // Ensure salary related fields are present with defaults
+    result.salaireBase = emp.salaireBase ?? 0;
+    result.salaireBrut = emp.salaireBrut ?? 0;
+    result.classe = emp.classe ?? '';
+    result.categorie = emp.categorie ?? '';
+    result.echelle = emp.echelle ?? '';
+    result.echellon = emp.echellon ?? '';
+    result.banque = emp.banque ?? '';
+    result.iban = emp.iban ?? '';
+
+    // Map complex objects to JSON strings for backend payload
     if (emp.contactsUrgence) result.contactsUrgenceJson = JSON.stringify(emp.contactsUrgence);
     if (emp.conjoint) result.conjointJson = JSON.stringify(emp.conjoint);
     if (emp.enfants) result.enfantsJson = JSON.stringify(emp.enfants);
@@ -31,8 +42,8 @@ export class EmployeeService {
     if (emp.documents) result.documentsJson = JSON.stringify(emp.documents);
     if (emp.evaluations) result.evaluationsJson = JSON.stringify(emp.evaluations);
     if (emp.historiqueActions) result.historiqueActionsJson = JSON.stringify(emp.historiqueActions);
-    
-    // Delete original array/object fields to prevent payload structure mismatch
+
+    // Remove original object fields to match backend expectations
     delete result.contactsUrgence;
     delete result.conjoint;
     delete result.enfants;
@@ -44,7 +55,7 @@ export class EmployeeService {
     delete result.documents;
     delete result.evaluations;
     delete result.historiqueActions;
-    
+
     return result;
   }
 
@@ -63,6 +74,16 @@ export class EmployeeService {
     result.documents = db.documentsJson ? JSON.parse(db.documentsJson) : [];
     result.evaluations = db.evaluationsJson ? JSON.parse(db.evaluationsJson) : [];
     result.historiqueActions = db.historiqueActionsJson ? JSON.parse(db.historiqueActionsJson) : [];
+
+    // Map salary fields
+    result.salaireBase = db.salaireBase ?? 0;
+    result.salaireBrut = db.salaireBrut ?? 0;
+    result.classe = db.classe ?? '';
+    result.categorie = db.categorie ?? '';
+    result.echelle = db.echelle ?? '';
+    result.echellon = db.echellon ?? '';
+    result.banque = db.banque ?? '';
+    result.iban = db.iban ?? '';
     
     return result;
   }

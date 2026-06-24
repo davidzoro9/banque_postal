@@ -3,21 +3,21 @@
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
     <span class="sep">›</span>
-    @if (employee) {
+    <ng-container *ngIf="employee">
       <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
       <span class="sep">›</span>
-    }
+    </ng-container>
     <span class="current">Informations sur le salaire</span>
   </div>
 
   @if (employee) {
-    <div class="emp-ctx">
-      <div class="emp-ctx-avatar">{{ initials }}</div>
-      <div>
-        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
-        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
-      </div>
+  <div class="emp-ctx">
+    <div class="emp-ctx-avatar">{{ initials }}</div>
+    <div>
+      <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+      <div class="emp-ctx-sub">{{ employee.matricule }}</div>
     </div>
+  </div>
   }
 
   <mat-card class="section-card">
@@ -29,70 +29,89 @@
 
     <mat-card-content>
       @if (!employee) {
-        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
       }
 
       @if (employee) {
-        <form [formGroup]="form">
+      <form [formGroup]="form">
 
-          <p class="form-section-label">Rémunération</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Salaire de base (FCFA) *</mat-label>
-              <input matInput formControlName="salaireBase" type="number" min="0">
-              @if (form.get('salaireBase')?.hasError('min') && form.get('salaireBase')?.touched) {
-                <mat-error>Doit être supérieur à 0</mat-error>
+        <p class="form-section-label">Rémunération</p>
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Salaire de base (FCFA) *</mat-label>
+            <input matInput formControlName="salaireBase" type="number" min="0">
+            @if (form.get('salaireBase')?.hasError('min') && form.get('salaireBase')?.touched) {
+            <mat-error>Doit être supérieur à 0</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Salaire brut (FCFA) *</mat-label>
+            <input matInput formControlName="salaireBrut" type="number" min="0">
+            @if (form.get('salaireBrut')?.hasError('min') && form.get('salaireBrut')?.touched) {
+            <mat-error>Doit être supérieur à 0</mat-error>
+            }
+          </mat-form-field>
+
+
+          <mat-form-field appearance="outline">
+            <mat-label>Classe</mat-label>
+            <input matInput formControlName="classe" type="text" placeholder="Ex: A">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Categorie</mat-label>
+            <input matInput formControlName="categorie" type="text" placeholder="Ex: Senior">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Echelle</mat-label>
+            <input matInput formControlName="echelle" type="text" placeholder="Ex: 1">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Echellon</mat-label>
+            <input matInput formControlName="echellon" type="text" placeholder="Ex: 2">
+          </mat-form-field>
+
+        </div>
+
+        <p class="form-section-label">Mode de paiement</p>
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Mode de paiement *</mat-label>
+            <mat-select formControlName="modePaiement">
+              @for (m of modesPaiement; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
               }
-            </mat-form-field>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Salaire brut (FCFA) *</mat-label>
-              <input matInput formControlName="salaireBrut" type="number" min="0">
-              @if (form.get('salaireBrut')?.hasError('min') && form.get('salaireBrut')?.touched) {
-                <mat-error>Doit être supérieur à 0</mat-error>
-              }
-            </mat-form-field>
+        @if (showBancaire) {
+        <p class="form-section-label">Coordonnées bancaires</p>
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Banque</mat-label>
+            <input matInput formControlName="banque" placeholder="Ex: BICIAB, BOA, BIB…">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>IBAN / Numéro de compte</mat-label>
+            <input matInput formControlName="iban" placeholder="BF…">
+          </mat-form-field>
+        </div>
+        }
+
+        <div class="salary-summary">
+          <div class="sal-item">
+            <span class="sal-lbl">Salaire de base</span>
+            <span class="sal-val">{{ form.get('salaireBase')?.value | number:'1.0-0' }} FCFA</span>
           </div>
-
-          <p class="form-section-label">Mode de paiement</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Mode de paiement *</mat-label>
-              <mat-select formControlName="modePaiement">
-                @for (m of modesPaiement; track m) {
-                  <mat-option [value]="m">{{ m }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <div class="sal-item">
+            <span class="sal-lbl">Salaire brut</span>
+            <span class="sal-val highlight">{{ form.get('salaireBrut')?.value | number:'1.0-0' }} FCFA</span>
           </div>
+        </div>
 
-          @if (showBancaire) {
-            <p class="form-section-label">Coordonnées bancaires</p>
-            <div class="form-grid-2">
-              <mat-form-field appearance="outline">
-                <mat-label>Banque</mat-label>
-                <input matInput formControlName="banque" placeholder="Ex: BICIAB, BOA, BIB…">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>IBAN / Numéro de compte</mat-label>
-                <input matInput formControlName="iban" placeholder="BF…">
-              </mat-form-field>
-            </div>
-          }
-
-          <div class="salary-summary">
-            <div class="sal-item">
-              <span class="sal-lbl">Salaire de base</span>
-              <span class="sal-val">{{ form.get('salaireBase')?.value | number:'1.0-0' }} FCFA</span>
-            </div>
-            <div class="sal-item">
-              <span class="sal-lbl">Salaire brut</span>
-              <span class="sal-val highlight">{{ form.get('salaireBrut')?.value | number:'1.0-0' }} FCFA</span>
-            </div>
-          </div>
-
-        </form>
+      </form>
       }
     </mat-card-content>
 
@@ -103,7 +122,8 @@
           <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
             Enregistrer
           </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('dossier')" [disabled]="saving || form.invalid">
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('dossier')"
+            [disabled]="saving || form.invalid">
             @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
             Enregistrer et continuer
             <mat-icon>arrow_forward</mat-icon>
