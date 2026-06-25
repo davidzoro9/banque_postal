@@ -5,25 +5,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
-
-interface Contrat {
-  id: string;
-  employe: string;
-  type: string;
-  dateDebut: string;
-  dateFin: string;
-  service: string;
-  statut: 'Actif' | 'Expiré' | 'À renouveler';
-}
-
-const MOCK_CONTRATS: Contrat[] = [
-  { id: '1', employe: 'Sophie Martin',   type: 'CDI', dateDebut: '2023-01-15', dateFin: '-',          service: 'Finance',  statut: 'Actif' },
-  { id: '2', employe: 'Thomas Bernard',  type: 'CDI', dateDebut: '2022-06-01', dateFin: '-',          service: 'IT',       statut: 'Actif' },
-  { id: '3', employe: 'Claire Dubois',   type: 'CDD', dateDebut: '2025-03-01', dateFin: '2026-06-30', service: 'RH',       statut: 'À renouveler' },
-  { id: '4', employe: 'Marc Leroy',      type: 'CDI', dateDebut: '2021-09-01', dateFin: '-',          service: 'Ventes',   statut: 'Actif' },
-  { id: '5', employe: 'Alice Traoré',    type: 'CDD', dateDebut: '2025-01-01', dateFin: '2026-07-15', service: 'Comptab.', statut: 'À renouveler' },
-  { id: '6', employe: 'Didier Ouédraogo',type: 'CDD', dateDebut: '2024-01-01', dateFin: '2025-12-31', service: 'Logist.',  statut: 'Expiré' },
-];
+import { ContratService, Contrat } from '../services/contrat.service';
 
 @Component({
   selector: 'app-contrats-list',
@@ -37,23 +19,45 @@ export class ContratsListComponent implements OnInit {
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
   displayedColumns = ['employe', 'type', 'service', 'dateDebut', 'dateFin', 'statut', 'actions'];
-  dataSource = new MatTableDataSource<Contrat>(MOCK_CONTRATS);
+  dataSource = new MatTableDataSource<Contrat>([]);
   searchQuery = '';
+  contrats: Contrat[] = [];
 
-  constructor(private router: Router, private moduleNav: ModuleNavService) {}
+  constructor(
+    private router: Router, 
+    private moduleNav: ModuleNavService,
+    private contratService: ContratService
+  ) {}
 
-  ngOnInit(): void { this.moduleNav.selectModule(this.module); }
+  ngOnInit(): void {
+    this.moduleNav.selectModule(this.module);
+    this.loadContrats();
+  }
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
   }
 
-  applyFilter(): void { this.dataSource.filter = this.searchQuery.trim().toLowerCase(); }
+  loadContrats(): void {
+    this.contratService.getAll().subscribe({
+      next: (list) => {
+        this.contrats = list;
+        this.dataSource.data = list;
+      },
+      error: (err) => {
+        console.error('Error loading contrats:', err);
+      }
+    });
+  }
 
-  get totalActifs(): number       { return MOCK_CONTRATS.filter(c => c.statut === 'Actif').length; }
-  get totalARenouveler(): number  { return MOCK_CONTRATS.filter(c => c.statut === 'À renouveler').length; }
-  get totalExpires(): number      { return MOCK_CONTRATS.filter(c => c.statut === 'Expiré').length; }
+  applyFilter(): void {
+    this.dataSource.filter = this.searchQuery.trim().toLowerCase();
+  }
+
+  get totalActifs(): number       { return this.contrats.filter(c => c.statut === 'Actif').length; }
+  get totalARenouveler(): number  { return this.contrats.filter(c => c.statut === 'À renouveler').length; }
+  get totalExpires(): number      { return this.contrats.filter(c => c.statut === 'Expiré').length; }
 
   statutStyle(statut: string): { background: string; color: string } {
     const map: Record<string, { background: string; color: string }> = {

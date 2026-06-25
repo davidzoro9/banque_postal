@@ -5,24 +5,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
-
-interface Conge {
-  id: string;
-  employe: string;
-  type: string;
-  dateDebut: string;
-  dateFin: string;
-  nbJours: number;
-  statut: 'En attente' | 'Approuvé' | 'Refusé';
-}
-
-const MOCK_CONGES: Conge[] = [
-  { id: '1', employe: 'Sophie Martin',   type: 'Congé annuel',   dateDebut: '2026-06-15', dateFin: '2026-06-28', nbJours: 14, statut: 'En attente' },
-  { id: '2', employe: 'Thomas Bernard',  type: 'Congé maladie',  dateDebut: '2026-06-10', dateFin: '2026-06-12', nbJours: 3,  statut: 'Approuvé' },
-  { id: '3', employe: 'Claire Dubois',   type: 'Congé annuel',   dateDebut: '2026-07-01', dateFin: '2026-07-20', nbJours: 20, statut: 'En attente' },
-  { id: '4', employe: 'Marc Leroy',      type: 'Congé paternité',dateDebut: '2026-06-20', dateFin: '2026-06-30', nbJours: 11, statut: 'Approuvé' },
-  { id: '5', employe: 'Alice Traoré',    type: 'Congé sans solde',dateDebut: '2026-08-01', dateFin: '2026-08-15', nbJours: 15, statut: 'Refusé' },
-];
+import { CongeService, Conge } from '../services/conge.service';
 
 @Component({
   selector: 'app-conges-list',
@@ -36,13 +19,19 @@ export class CongesListComponent implements OnInit {
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
   displayedColumns = ['employe', 'type', 'dateDebut', 'dateFin', 'nbJours', 'statut', 'actions'];
-  dataSource = new MatTableDataSource<Conge>(MOCK_CONGES);
+  dataSource = new MatTableDataSource<Conge>([]);
   searchQuery = '';
+  conges: Conge[] = [];
 
-  constructor(private router: Router, private moduleNav: ModuleNavService) {}
+  constructor(
+    private router: Router, 
+    private moduleNav: ModuleNavService,
+    private congeService: CongeService
+  ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
+    this.loadConges();
   }
 
   ngAfterViewInit(): void {
@@ -50,15 +39,29 @@ export class CongesListComponent implements OnInit {
     this.dataSource.sort = this.sort;
   }
 
+  loadConges(): void {
+    this.congeService.getAll().subscribe({
+      next: (list) => {
+        this.conges = list;
+        this.dataSource.data = list;
+      },
+      error: (err) => {
+        console.error('Error loading conges:', err);
+      }
+    });
+  }
+
   applyFilter(): void {
     this.dataSource.filter = this.searchQuery.trim().toLowerCase();
   }
 
-  nouveauConge(): void { this.router.navigate(['/grh/conges/nouveau']); }
+  nouveauConge(): void {
+    this.router.navigate(['/grh/conges/nouveau']);
+  }
 
-  get totalEnAttente(): number { return MOCK_CONGES.filter(c => c.statut === 'En attente').length; }
-  get totalApprouves(): number { return MOCK_CONGES.filter(c => c.statut === 'Approuvé').length; }
-  get totalRefuses(): number   { return MOCK_CONGES.filter(c => c.statut === 'Refusé').length; }
+  get totalEnAttente(): number { return this.conges.filter(c => c.statut === 'En attente').length; }
+  get totalApprouves(): number { return this.conges.filter(c => c.statut === 'Approuvé').length; }
+  get totalRefuses(): number   { return this.conges.filter(c => c.statut === 'Refusé').length; }
 
   statutStyle(statut: string): { background: string; color: string } {
     const map: Record<string, { background: string; color: string }> = {

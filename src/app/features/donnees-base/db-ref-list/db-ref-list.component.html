@@ -10,7 +10,7 @@
         <p>{{ dataSource.data.length }} entrée(s) enregistrée(s)</p>
       </div>
     </div>
-    <button mat-raised-button class="btn-new">
+    <button mat-raised-button class="btn-new" (click)="openAddDialog()">
       <mat-icon>add</mat-icon> Nouveau
     </button>
   </div>
@@ -87,11 +87,14 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              <button mat-icon-button color="primary" matTooltip="Modifier">
+              <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(row)">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}">
+              <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}" (click)="toggleStatus(row, $event)">
                 <mat-icon>{{ row.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="deleteItem(row, $event)">
+                <mat-icon>delete</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -112,3 +115,44 @@
   </mat-card>
 
 </div>
+
+<!-- Template de la boîte de dialogue d'ajout/modification -->
+<ng-template #dialogTpl>
+  <h2 mat-dialog-title style="margin: 0; padding-bottom: 12px; font-weight: 600; color: #163059;">
+    {{ isEditing ? 'Modifier ' + title : 'Nouveau ' + title }}
+  </h2>
+  
+  <mat-dialog-content [formGroup]="formGroup" class="dialog-content" style="display: flex; flex-direction: column; gap: 16px; padding-top: 8px; min-width: 380px;">
+    <mat-form-field appearance="outline" style="width: 100%;">
+      <mat-label>Code</mat-label>
+      <input matInput formControlName="code" placeholder="Ex: EMP-001">
+      @if (formGroup.get('code')?.hasError('required')) {
+        <mat-error>Le code est obligatoire</mat-error>
+      }
+      @if (formGroup.get('code')?.hasError('maxlength')) {
+        <mat-error>Le code ne doit pas dépasser 20 caractères</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" style="width: 100%;">
+      <mat-label>Libellé</mat-label>
+      <input matInput formControlName="libelle" placeholder="Ex: Directeur Général">
+      @if (formGroup.get('libelle')?.hasError('required')) {
+        <mat-error>Le libellé est obligatoire</mat-error>
+      }
+      @if (formGroup.get('libelle')?.hasError('maxlength')) {
+        <mat-error>Le libellé ne doit pas dépasser 150 caractères</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" style="width: 100%;">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="3" placeholder="Description de l'élément..."></textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" style="padding-top: 12px; margin-bottom: 0;">
+    <button mat-button mat-dialog-close>Annuler</button>
+    <button mat-raised-button color="primary" [disabled]="formGroup.invalid" (click)="onSubmit()">Enregistrer</button>
+  </mat-dialog-actions>
+</ng-template>
