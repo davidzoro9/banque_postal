@@ -19,6 +19,7 @@ import { CongesListComponent } from './conges/conges-list/conges-list.component'
 import { AbsencesFormComponent } from './absences/absences-form/absences-form.component';
 import { AbsencesListComponent } from './absences/absences-list/absences-list.component';
 import { ContratsListComponent } from './contrats/contrats-list/contrats-list.component';
+import { ContratsForm } from './contrats/contrats-form/contrats-form';
 
 const routes: Routes = [
   { path: '', component: GrhOverviewComponent },
@@ -40,6 +41,7 @@ const routes: Routes = [
   { path: 'absences',         component: AbsencesListComponent },
   { path: 'absences/nouveau', component: AbsencesFormComponent },
   { path: 'contrats',         component: ContratsListComponent },
+  { path: 'contrats/nouveau', component: ContratsForm },
   { path: 'contrats/renouvellements', component: ContratsListComponent },
   { path: 'parametres-rh', component: ParametresRhComponent },
   { path: '**', redirectTo: '' }

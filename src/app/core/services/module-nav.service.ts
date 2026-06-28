@@ -10,9 +10,10 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Employés',
       icon: 'badge',
       children: [
-        { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '/grh/employes'           },
-        { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
+        { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
         { id: 'fiche-infos-pro',    label: 'Info. professionnelles',  icon: 'work',                   route: '__emp__/infos-pro'       },
+        { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
+        { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
         { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
         { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                   route: '__emp__/indemnites'      },
         { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',           route: '__emp__/exonerations'    },
@@ -39,6 +40,12 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'renouvellements', label: 'Renouvellements', icon: 'autorenew', route: '/grh/contrats/renouvellements', badge: 3 }
       ]
     },
+    {
+      id: 'parametres-rh',
+      label: 'Paramètres RH',
+      icon: 'manage_accounts',
+      route: '/grh/parametres-rh'
+    }
   ],
   carrieres: [
     {

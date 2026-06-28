@@ -38,15 +38,12 @@
           <p class="form-section-label">État civil</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
-              <mat-label>Nom *</mat-label>
+              <mat-label>Nom</mat-label>
               <input matInput formControlName="nom">
-              @if (form.get('nom')?.invalid && form.get('nom')?.touched) {
-                <mat-error>Requis</mat-error>
-              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Prénom *</mat-label>
+              <mat-label>Prénom</mat-label>
               <input matInput formControlName="prenom">
             </mat-form-field>
 
@@ -56,7 +53,7 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Sexe *</mat-label>
+              <mat-label>Sexe</mat-label>
               <mat-select formControlName="sexe">
                 @for (s of sexes; track s.value) {
                   <mat-option [value]="s.value">{{ s.label }}</mat-option>
@@ -65,22 +62,22 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Date de naissance *</mat-label>
+              <mat-label>Date de naissance</mat-label>
               <input matInput formControlName="dateNaissance" type="date">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Lieu de naissance *</mat-label>
+              <mat-label>Lieu de naissance</mat-label>
               <input matInput formControlName="lieuNaissance">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Nationalité *</mat-label>
+              <mat-label>Nationalité</mat-label>
               <input matInput formControlName="nationalite">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>N° CNI / Pièce d'identité *</mat-label>
+              <mat-label>N° CNI / Pièce d'identité</mat-label>
               <input matInput formControlName="numeroCNI">
             </mat-form-field>
           </div>
@@ -88,12 +85,12 @@
           <p class="form-section-label">Coordonnées</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Adresse *</mat-label>
+              <mat-label>Adresse</mat-label>
               <input matInput formControlName="adresse">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Ville *</mat-label>
+              <mat-label>Ville</mat-label>
               <input matInput formControlName="ville">
             </mat-form-field>
 
@@ -103,21 +100,18 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Pays *</mat-label>
+              <mat-label>Pays</mat-label>
               <input matInput formControlName="pays">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Téléphone *</mat-label>
+              <mat-label>Téléphone</mat-label>
               <input matInput formControlName="telephone" placeholder="+226 70 00 00 00">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Email professionnel *</mat-label>
+              <mat-label>Email professionnel</mat-label>
               <input matInput formControlName="email" type="email">
-              @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
-                <mat-error>Email invalide</mat-error>
-              }
             </mat-form-field>
           </div>
 
@@ -136,19 +130,19 @@
                 }
                 <div [formGroupName]="$index" class="arr-row">
                   <mat-form-field appearance="outline">
-                    <mat-label>Nom *</mat-label>
+                    <mat-label>Nom</mat-label>
                     <input matInput formControlName="nom">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Prénom *</mat-label>
+                    <mat-label>Prénom</mat-label>
                     <input matInput formControlName="prenom">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Lien *</mat-label>
+                    <mat-label>Lien</mat-label>
                     <input matInput formControlName="lien" placeholder="Père, Épouse…">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Téléphone *</mat-label>
+                    <mat-label>Téléphone</mat-label>
                     <input matInput formControlName="telephone">
                   </mat-form-field>
                   <button mat-icon-button color="warn" type="button" (click)="removeContact($index)"

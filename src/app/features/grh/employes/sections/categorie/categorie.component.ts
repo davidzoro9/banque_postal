@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
+import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 import { Employee } from '../../models/employee.model';
 
 @Component({
@@ -15,20 +17,28 @@ export class CategorieComponent implements OnInit {
   form!: FormGroup;
   saving = false;
   empId = '';
+  
+  categories$!: Observable<RefItem[]>;
+  echelons$!: Observable<RefItem[]>;
+  grades$!: Observable<RefItem[]>;
 
-  readonly categories = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2', 'Cadre supérieur', 'Cadre dirigeant'];
-  readonly echelons  = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-  readonly niveaux   = ['Niveau 1', 'Niveau 2', 'Niveau 3', 'Niveau 4', 'Niveau 5'];
+  readonly niveaux = ['Niveau 1', 'Niveau 2', 'Niveau 3', 'Niveau 4', 'Niveau 5'];
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
+    
+    this.categories$ = this.dbRefService.getItems('categorie');
+    this.echelons$ = this.dbRefService.getItems('echelon');
+    this.grades$ = this.dbRefService.getItems('grade');
+
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -39,9 +49,9 @@ export class CategorieComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      categoriePro: ['', Validators.required],
-      echelon:      ['', Validators.required],
-      grade:        ['', Validators.required],
+      categoriePro: [''],
+      echelon:      [''],
+      grade:        [''],
       niveau:       ['']
     });
   }

@@ -68,11 +68,15 @@
               @for (item of autres.controls; track $index) {
                 <div [formGroupName]="$index" class="arr-row">
                   <mat-form-field appearance="outline" style="flex:2">
-                    <mat-label>Libellé *</mat-label>
-                    <input matInput formControlName="libelle" placeholder="Ex: Prime de risque">
+                    <mat-label>Libellé</mat-label>
+                    <mat-select formControlName="libelle">
+                      @for (ind of indemnites$ | async; track ind.code) {
+                        <mat-option [value]="ind.libelle">{{ ind.libelle }}</mat-option>
+                      }
+                    </mat-select>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Montant (FCFA) *</mat-label>
+                    <mat-label>Montant (FCFA)</mat-label>
                     <input matInput formControlName="montant" type="number" min="0">
                   </mat-form-field>
                   <button mat-icon-button color="warn" type="button" (click)="removeAutre($index)">

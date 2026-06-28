@@ -20,36 +20,45 @@
         <div class="form-grid-2">
 
           <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Type d'absence *</mat-label>
-            <mat-select formControlName="typeAbsence">
-              @for (t of typesAbsence; track t.value) {
-                <mat-option [value]="t.value">{{ t.label }}</mat-option>
+            <mat-label>Employé concerné</mat-label>
+            <mat-select formControlName="employe">
+              <mat-option value="">— Moi-même (ou aucun) —</mat-option>
+              <div style="padding: 6px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; background: #fafafa;">
+                <mat-icon style="color: #888; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+                <input matInput placeholder="Rechercher un employé..." 
+                       formControlName="employeSearch" 
+                       (keydown)="$event.stopPropagation()"
+                       style="width: 100%; border: none; outline: none; font-size: 14px; background: transparent;">
+              </div>
+              @for (emp of filteredEmployees$ | async; track emp.id) {
+                <mat-option [value]="emp.prenom + ' ' + emp.nom">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
               }
             </mat-select>
-            @if (form.get('typeAbsence')?.invalid && form.get('typeAbsence')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Type d'absence</mat-label>
+            <mat-select formControlName="typeAbsence">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (t of typesAbsence$ | async; track t.code) {
+                <mat-option [value]="t.libelle">{{ t.libelle }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Date de l'absence *</mat-label>
+            <mat-label>Date de l'absence</mat-label>
             <input matInput formControlName="dateAbsence" type="date">
-            @if (form.get('dateAbsence')?.invalid && form.get('dateAbsence')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
           </mat-form-field>
 
           <div class="duree-row">
             <mat-form-field appearance="outline" class="duree-field">
-              <mat-label>Durée *</mat-label>
+              <mat-label>Durée</mat-label>
               <input matInput formControlName="duree" type="number" min="1">
-              @if (form.get('duree')?.invalid && form.get('duree')?.touched) {
-                <mat-error>Valeur invalide</mat-error>
-              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="unite-field">
-              <mat-label>Unité *</mat-label>
+              <mat-label>Unité</mat-label>
               <mat-select formControlName="unite">
                 @for (u of unitesDuree; track u.value) {
                   <mat-option [value]="u.value">{{ u.label }}</mat-option>
@@ -64,12 +73,9 @@
         <div class="form-grid-1">
 
           <mat-form-field appearance="outline">
-            <mat-label>Motif *</mat-label>
+            <mat-label>Motif</mat-label>
             <textarea matInput formControlName="motif" rows="3"
                       placeholder="Décrivez le motif de l'absence…"></textarea>
-            @if (form.get('motif')?.invalid && form.get('motif')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">

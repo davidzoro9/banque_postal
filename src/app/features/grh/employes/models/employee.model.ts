@@ -98,6 +98,7 @@ export interface Employee {
   poste: string;
   service: string;
   direction: string;
+  departement?: string;
   dateEmbauche: string;
   statut: StatutEmploye;
   typeContrat: TypeContrat;

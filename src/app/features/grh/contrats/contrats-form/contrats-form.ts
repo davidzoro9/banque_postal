@@ -3,56 +3,53 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
-import { AbsenceService } from '../services/absence.service';
-import { AuthService } from '../../../../core/services/auth.service';
-
-import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
-import { Observable, combineLatest, startWith, map } from 'rxjs';
+import { ContratService, Contrat } from '../services/contrat.service';
 import { EmployeeService } from '../../employes/services/employee.service';
 import { Employee } from '../../employes/models/employee.model';
+import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
+import { Observable, combineLatest } from 'rxjs';
+import { startWith, map } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-absences-form',
-  templateUrl: './absences-form.component.html',
-  styleUrls: ['./absences-form.component.scss'],
+  selector: 'app-contrats-form',
+  templateUrl: './contrats-form.html',
+  styleUrls: ['./contrats-form.scss'],
   standalone: false
 })
-export class AbsencesFormComponent implements OnInit {
+export class ContratsForm implements OnInit {
   module = APP_MODULES.find(m => m.id === 'grh')!;
   form!: FormGroup;
   saving = false;
-  typesAbsence$!: Observable<RefItem[]>;
+
   employees$!: Observable<Employee[]>;
   filteredEmployees$!: Observable<Employee[]>;
-
-  readonly unitesDuree = [
-    { value: 'heures', label: 'Heure(s)' },
-    { value: 'jours',  label: 'Jour(s)' }
-  ];
+  contrats$!: Observable<RefItem[]>;
+  services$!: Observable<RefItem[]>;
+  readonly statuts = ['Actif', 'À renouveler', 'Expiré'];
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private moduleNav: ModuleNavService,
-    private absenceService: AbsenceService,
-    private authService: AuthService,
+    private contratService: ContratService,
     private dbRefService: DbRefService,
     private employeeService: EmployeeService
   ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
-    this.typesAbsence$ = this.dbRefService.getItems('type-conge');
     this.employees$ = this.employeeService.getAll();
+    this.contrats$ = this.dbRefService.getItems('type-contrat');
+    this.services$ = this.dbRefService.getItems('service');
+
     this.form = this.fb.group({
       employeSearch: [''],
-      employe:       [''],
-      typeAbsence:   [''],
-      dateAbsence:   [''],
-      duree:         [1],
-      unite:         ['jours'],
-      motif:         [''],
-      justificatif:  ['']
+      employe:   [''],
+      type:      ['CDI'],
+      dateDebut: [''],
+      dateFin:   [''],
+      service:   [''],
+      statut:    ['Actif']
     });
 
     this.filteredEmployees$ = combineLatest([
@@ -76,24 +73,19 @@ export class AbsencesFormComponent implements OnInit {
     this.saving = true;
 
     const val = this.form.value;
-    const user = this.authService.currentUser;
-    const empName = val.employe || (user ? `${user.prenom} ${user.nom}` : 'Collaborateur');
-
-    const dureeStr = `${val.duree || 0} ${val.unite === 'jours' ? 'jour(s)' : 'heure(s)'}`;
-
-    const absenceData = {
-      employe: empName,
-      type: val.typeAbsence || '',
-      date: val.dateAbsence || '',
-      duree: dureeStr,
-      motif: val.motif || '',
-      statut: ((val.typeAbsence || '').toLowerCase().includes('injustif') ? 'Injustifiée' : 'En attente') as 'Justifiée' | 'Injustifiée' | 'En attente'
+    const contratData: Omit<Contrat, 'id'> = {
+      employe: val.employe || '',
+      type: val.type || '',
+      dateDebut: val.dateDebut || '',
+      dateFin: val.dateFin || '',
+      service: val.service || '',
+      statut: val.statut || 'Actif'
     };
 
-    this.absenceService.create(absenceData).subscribe({
+    this.contratService.create(contratData).subscribe({
       next: () => {
         this.saving = false;
-        this.router.navigate(['/grh/absences']);
+        this.router.navigate(['/grh/contrats']);
       },
       error: (err) => {
         this.saving = false;
@@ -102,5 +94,5 @@ export class AbsencesFormComponent implements OnInit {
     });
   }
 
-  cancel(): void { this.router.navigate(['/grh/absences']); }
+  cancel(): void { this.router.navigate(['/grh/contrats']); }
 }

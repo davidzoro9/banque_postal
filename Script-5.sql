@@ -250,6 +250,7 @@ CREATE TABLE telia.grilles_salariale (
     echelle        character varying(10)  NOT NULL,
     echelon        character varying(10)  NOT NULL,
     categorie      character varying(100) NOT NULL,
+    montant        numeric NOT NULL DEFAULT 0,
     utilisateur_id uuid,
     CONSTRAINT grilles_salariale_pkey PRIMARY KEY (id)
 );
@@ -283,6 +284,38 @@ CREATE TABLE telia.employe (
     grade_code             character varying(20),
     echelon_code           character varying(20),
     
+    -- Nouveaux champs pour Employé
+    nom_jeune_fille        character varying(100),
+    sexe                   character varying(10),
+    date_naissance         character varying(50),
+    lieu_naissance         character varying(100),
+    nationalite            character varying(100),
+    numero_cni             character varying(50),
+    adresse                text,
+    ville                  character varying(100),
+    code_postal            character varying(20),
+    pays                   character varying(100),
+    poste                  character varying(100),
+    niveau                 character varying(50),
+    prime_logement         numeric,
+    prime_transport        numeric,
+    prime_responsabilite   numeric,
+    salaire_base           numeric,
+    salaire_brut           numeric,
+    mode_paiement          character varying(50),
+    observations           text,
+    contacts_urgence_json  text,
+    conjoint_json          text,
+    enfants_json           text,
+    personnes_charge_json  text,
+    autres_indemnites_json text,
+    exonerations_fiscales_json text,
+    exonerations_sociales_json text,
+    avantages_particuliers_json text,
+    documents_json         text,
+    evaluations_json       text,
+    historique_actions_json text,
+    
     cree_le                timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     modifie_le             timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT employe_pkey PRIMARY KEY (id)
@@ -315,6 +348,10 @@ CREATE TABLE telia.absence (
     employe_id        uuid NOT NULL,
     periode           character varying(100) NOT NULL,
     type_absence_code character varying(20) NOT NULL,
+    date_absence      character varying(50),
+    duree             character varying(50),
+    motif             text,
+    statut            character varying(50),
     utilisateur_id    uuid, -- Traçabilité
     CONSTRAINT absence_pkey PRIMARY KEY (id)
 );
@@ -325,7 +362,11 @@ CREATE TABLE telia.contrat (
     name            character varying(150) NOT NULL,
     employe_id      uuid NOT NULL,
     type_contrat_id uuid,
-    utilisateur_id  uuid, -- Traçabilité
+    date_debut        character varying(50),
+    date_fin          character varying(50),
+    statut            character varying(50),
+    service           character varying(100),
+    utilisateur_id    uuid, -- Traçabilité
     CONSTRAINT contrat_pkey PRIMARY KEY (id)
 );
 

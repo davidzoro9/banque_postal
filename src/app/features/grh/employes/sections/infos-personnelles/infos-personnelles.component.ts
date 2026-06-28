@@ -37,20 +37,20 @@ export class InfosPersonnellesComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      nom:           ['', Validators.required],
-      prenom:        ['', Validators.required],
+      nom:           [''],
+      prenom:        [''],
       nomJeuneFille: [''],
-      sexe:          ['M', Validators.required],
-      dateNaissance: ['', Validators.required],
-      lieuNaissance: ['', Validators.required],
-      nationalite:   ['', Validators.required],
-      numeroCNI:     ['', Validators.required],
-      adresse:       ['', Validators.required],
-      ville:         ['', Validators.required],
+      sexe:          ['M'],
+      dateNaissance: [''],
+      lieuNaissance: [''],
+      nationalite:   [''],
+      numeroCNI:     [''],
+      adresse:       [''],
+      ville:         [''],
       codePostal:    [''],
-      pays:          ['', Validators.required],
-      telephone:     ['', Validators.required],
-      email:         ['', [Validators.required, Validators.email]],
+      pays:          [''],
+      telephone:     [''],
+      email:         ['', [Validators.email]],
       contactsUrgence: this.fb.array([])
     });
   }
@@ -64,8 +64,8 @@ export class InfosPersonnellesComponent implements OnInit {
       pays: e.pays, telephone: e.telephone, email: e.email
     });
     e.contactsUrgence.forEach(c => this.contacts.push(this.fb.group({
-      nom: [c.nom, Validators.required], prenom: [c.prenom, Validators.required],
-      lien: [c.lien, Validators.required], telephone: [c.telephone, Validators.required]
+      nom: [c.nom], prenom: [c.prenom],
+      lien: [c.lien], telephone: [c.telephone]
     })));
     if (this.contacts.length === 0) this.addContact();
   }
@@ -73,8 +73,8 @@ export class InfosPersonnellesComponent implements OnInit {
   get contacts(): FormArray { return this.form.get('contactsUrgence') as FormArray; }
   addContact(): void {
     this.contacts.push(this.fb.group({
-      nom: ['', Validators.required], prenom: ['', Validators.required],
-      lien: ['', Validators.required], telephone: ['', Validators.required]
+      nom: [''], prenom: [''],
+      lien: [''], telephone: ['']
     }));
   }
   removeContact(i: number): void { if (this.contacts.length > 1) this.contacts.removeAt(i); }

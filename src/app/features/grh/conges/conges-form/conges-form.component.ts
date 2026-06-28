@@ -6,6 +6,11 @@ import { APP_MODULES } from '../../../../core/models/app-module.model';
 import { CongeService } from '../services/conge.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
+import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
+import { Observable, combineLatest, startWith, map } from 'rxjs';
+import { EmployeeService } from '../../employes/services/employee.service';
+import { Employee } from '../../employes/models/employee.model';
+
 @Component({
   selector: 'app-conges-form',
   templateUrl: './conges-form.component.html',
@@ -16,16 +21,9 @@ export class CongesFormComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'grh')!;
   form!: FormGroup;
   saving = false;
-
-  readonly typesConge = [
-    { value: 'Congé annuel',      label: 'Congé annuel' },
-    { value: 'Congé maladie',     label: 'Congé maladie' },
-    { value: 'Congé maternité',   label: 'Congé maternité' },
-    { value: 'Congé paternité',   label: 'Congé paternité' },
-    { value: 'Congé sans solde',  label: 'Congé sans solde' },
-    { value: 'Congé exceptionnel',label: 'Congé exceptionnel' },
-    { value: 'Autre',             label: 'Autre' }
-  ];
+  typesConge$!: Observable<RefItem[]>;
+  employees$!: Observable<Employee[]>;
+  filteredEmployees$!: Observable<Employee[]>;
 
   get nbJours(): number {
     const debut = this.form?.get('dateDebut')?.value;
@@ -42,18 +40,40 @@ export class CongesFormComponent implements OnInit {
     private router: Router,
     private moduleNav: ModuleNavService,
     private congeService: CongeService,
-    private authService: AuthService
+    private authService: AuthService,
+    private dbRefService: DbRefService,
+    private employeeService: EmployeeService
   ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
+    this.typesConge$ = this.dbRefService.getItems('type-conge');
+    this.employees$ = this.employeeService.getAll();
+
     this.form = this.fb.group({
-      typeConge:  ['Congé annuel', Validators.required],
-      dateDebut:  ['', Validators.required],
-      dateFin:    ['', Validators.required],
+      employeSearch: [''],
+      employe:    [''],
+      typeConge:  [''],
+      dateDebut:  [''],
+      dateFin:    [''],
       motif:      [''],
       justificatif: ['']
     });
+
+    this.filteredEmployees$ = combineLatest([
+      this.employees$,
+      this.form.get('employeSearch')!.valueChanges.pipe(startWith(''))
+    ]).pipe(
+      map(([emps, term]) => {
+        const t = (term || '').toLowerCase().trim();
+        if (!t) return emps;
+        return emps.filter(e =>
+          (e.prenom || '').toLowerCase().includes(t) ||
+          (e.nom || '').toLowerCase().includes(t) ||
+          (e.matricule || '').toLowerCase().includes(t)
+        );
+      })
+    );
   }
 
   save(): void {
@@ -62,13 +82,13 @@ export class CongesFormComponent implements OnInit {
     
     const val = this.form.value;
     const user = this.authService.currentUser;
-    const empName = user ? `${user.prenom} ${user.nom}` : 'Collaborateur';
+    const empName = val.employe || (user ? `${user.prenom} ${user.nom}` : 'Collaborateur');
 
     const congeData = {
       employe: empName,
-      type: val.typeConge,
-      dateDebut: val.dateDebut,
-      dateFin: val.dateFin,
+      type: val.typeConge || '',
+      dateDebut: val.dateDebut || '',
+      dateFin: val.dateFin || '',
       nbJours: this.nbJours,
       statut: 'En attente' as const
     };

@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { EmployeeService } from '../services/employee.service';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
+import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
 import { Employee } from '../models/employee.model';
 
@@ -17,48 +19,43 @@ export class EmployeeFormComponent implements OnInit {
   form!: FormGroup;
   saving = false;
 
-  readonly sexes = [{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }];
+  readonly statuts = ['Actif', 'En congé', 'Suspendu', 'Retraité'];
+  
+  services$!: Observable<RefItem[]>;
+  directions$!: Observable<RefItem[]>;
+  contrats$!: Observable<RefItem[]>;
+  departements$!: Observable<RefItem[]>;
+  fonctions$!: Observable<RefItem[]>;
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private employeeService: EmployeeService,
-    private moduleNav: ModuleNavService
+    private moduleNav: ModuleNavService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
+    
+    this.services$ = this.dbRefService.getItems('service');
+    this.directions$ = this.dbRefService.getItems('direction');
+    this.contrats$ = this.dbRefService.getItems('type-contrat');
+    this.departements$ = this.dbRefService.getItems('departement');
+    this.fonctions$ = this.dbRefService.getItems('fonction');
+
     this.form = this.fb.group({
-      nom:           ['', Validators.required],
-      prenom:        ['', Validators.required],
-      nomJeuneFille: [''],
-      sexe:          ['M', Validators.required],
-      dateNaissance: ['', Validators.required],
-      lieuNaissance: ['', Validators.required],
-      nationalite:   ['Burkinabè', Validators.required],
-      numeroCNI:     ['', Validators.required],
-      adresse:       ['', Validators.required],
-      ville:         ['', Validators.required],
-      codePostal:    [''],
-      pays:          ['Burkina Faso', Validators.required],
-      telephone:     ['', Validators.required],
-      email:         ['', [Validators.required, Validators.email]],
-      contactsUrgence: this.fb.array([this.newContact()])
+      nom:           [''],
+      prenom:        [''],
+      statut:        ['Actif'],
+      poste:         [''],
+      service:       [''],
+      direction:     [''],
+      departement:   [''],
+      typeContrat:   ['CDI'],
+      dateEmbauche:  ['']
     });
   }
-
-  newContact(): FormGroup {
-    return this.fb.group({
-      nom:       ['', Validators.required],
-      prenom:    ['', Validators.required],
-      lien:      ['', Validators.required],
-      telephone: ['', Validators.required]
-    });
-  }
-
-  get contacts(): FormArray { return this.form.get('contactsUrgence') as FormArray; }
-  addContact(): void { this.contacts.push(this.newContact()); }
-  removeContact(i: number): void { if (this.contacts.length > 1) this.contacts.removeAt(i); }
 
   save(): void {
     if (this.form.invalid) return;
@@ -67,27 +64,32 @@ export class EmployeeFormComponent implements OnInit {
 
     const data: Omit<Employee, 'id'> = {
       matricule:      this.employeeService.generateMatricule(),
-      nom:            v.nom,
-      prenom:         v.prenom,
-      nomJeuneFille:  v.nomJeuneFille || undefined,
-      sexe:           v.sexe,
-      dateNaissance:  v.dateNaissance,
-      lieuNaissance:  v.lieuNaissance,
-      nationalite:    v.nationalite,
-      numeroCNI:      v.numeroCNI,
-      adresse:        v.adresse,
-      ville:          v.ville,
-      codePostal:     v.codePostal,
-      pays:           v.pays,
-      telephone:      v.telephone,
-      email:          v.email,
-      contactsUrgence: v.contactsUrgence,
+      nom:            v.nom || '',
+      prenom:         v.prenom || '',
+      nomJeuneFille:  undefined,
+      sexe:           'M',
+      dateNaissance:  '',
+      lieuNaissance:  '',
+      nationalite:    '',
+      numeroCNI:      '',
+      adresse:        '',
+      ville:          '',
+      codePostal:     '',
+      pays:           '',
+      telephone:      '',
+      email:          '',
+      contactsUrgence: [],
       photo: undefined,
       conjoint: undefined,
       enfants: [],
       personnesCharge: [],
-      poste: '', service: '', direction: '', dateEmbauche: '',
-      statut: 'Actif', typeContrat: 'CDI',
+      poste:          v.poste || '',
+      service:        v.service || '',
+      direction:      v.direction || '',
+      departement:    v.departement || '',
+      dateEmbauche:   v.dateEmbauche || '',
+      statut:         v.statut || 'Actif',
+      typeContrat:    v.typeContrat || 'CDI',
       categoriePro: '', echelon: '', grade: '', niveau: '',
       primeLogement: 0, primeTransport: 0, primeResponsabilite: 0,
       autresIndemnites: [], exonerationsFiscales: [], exonerationsSociales: [], avantagesParticuliers: [],
@@ -95,9 +97,15 @@ export class EmployeeFormComponent implements OnInit {
       documents: [], observations: '', evaluations: [], historiqueActions: []
     };
 
-    this.employeeService.create(data).subscribe(emp => {
-      this.saving = false;
-      this.router.navigate(['/grh/employes', emp.id]);
+    this.employeeService.create(data).subscribe({
+      next: (emp) => {
+        this.saving = false;
+        // On redirige vers infos-personnelles (l'étape suivante logicielle)
+        this.router.navigate(['/grh/employes', emp.id, 'infos-personnelles']);
+      },
+      error: () => {
+        this.saving = false;
+      }
     });
   }
 

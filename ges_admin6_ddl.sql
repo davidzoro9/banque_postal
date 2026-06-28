@@ -250,6 +250,7 @@ CREATE TABLE telia.grilles_salariale (
     echelle        character varying(10)  NOT NULL,
     echelon        character varying(10)  NOT NULL,
     categorie      character varying(100) NOT NULL,
+    montant        numeric NOT NULL DEFAULT 0,
     utilisateur_id uuid,
     CONSTRAINT grilles_salariale_pkey PRIMARY KEY (id)
 );

@@ -44,12 +44,12 @@ export class ExonerationsComponent implements OnInit {
 
   private patch(e: Employee): void {
     e.exonerationsFiscales.forEach(x => this.fiscales.push(this.fb.group({
-      libelle: [x.libelle, Validators.required], montant: [x.montant, [Validators.required, Validators.min(0)]]
+      libelle: [x.libelle], montant: [x.montant]
     })));
     e.exonerationsSociales.forEach(x => this.sociales.push(this.fb.group({
-      libelle: [x.libelle, Validators.required], montant: [x.montant, [Validators.required, Validators.min(0)]]
+      libelle: [x.libelle], montant: [x.montant]
     })));
-    e.avantagesParticuliers.forEach(av => this.avantages.push(this.fb.control(av, Validators.required)));
+    e.avantagesParticuliers.forEach(av => this.avantages.push(this.fb.control(av)));
   }
 
   get fiscales(): FormArray  { return this.form.get('exonerationsFiscales') as FormArray; }
@@ -57,19 +57,19 @@ export class ExonerationsComponent implements OnInit {
   get avantages(): FormArray { return this.form.get('avantagesParticuliers') as FormArray; }
 
   addFiscale(): void {
-    this.fiscales.push(this.fb.group({ libelle: ['', Validators.required], montant: [0, [Validators.required, Validators.min(0)]] }));
+    this.fiscales.push(this.fb.group({ libelle: [''], montant: [0] }));
   }
   removeFiscale(i: number): void { this.fiscales.removeAt(i); }
 
   addSociale(): void {
-    this.sociales.push(this.fb.group({ libelle: ['', Validators.required], montant: [0, [Validators.required, Validators.min(0)]] }));
+    this.sociales.push(this.fb.group({ libelle: [''], montant: [0] }));
   }
   removeSociale(i: number): void { this.sociales.removeAt(i); }
 
   addAvantage(): void {
     const v = this.newAvantage.trim();
     if (!v) return;
-    this.avantages.push(this.fb.control(v, Validators.required));
+    this.avantages.push(this.fb.control(v));
     this.newAvantage = '';
   }
   removeAvantage(i: number): void { this.avantages.removeAt(i); }

@@ -58,15 +58,15 @@ export class FamilleComponent implements OnInit {
       });
     }
     e.enfants.forEach(enf => this.enfants.push(this.fb.group({
-      nom:           [enf.nom, Validators.required],
-      prenom:        [enf.prenom, Validators.required],
-      dateNaissance: [enf.dateNaissance, Validators.required],
-      sexe:          [enf.sexe, Validators.required]
+      nom:           [enf.nom],
+      prenom:        [enf.prenom],
+      dateNaissance: [enf.dateNaissance],
+      sexe:          [enf.sexe || 'M']
     })));
     e.personnesCharge.forEach(p => this.personnesCharge.push(this.fb.group({
-      nom:    [p.nom, Validators.required],
-      prenom: [p.prenom, Validators.required],
-      lien:   [p.lien, Validators.required]
+      nom:    [p.nom],
+      prenom: [p.prenom],
+      lien:   [p.lien]
     })));
   }
 
@@ -75,15 +75,15 @@ export class FamilleComponent implements OnInit {
 
   addEnfant(): void {
     this.enfants.push(this.fb.group({
-      nom: ['', Validators.required], prenom: ['', Validators.required],
-      dateNaissance: ['', Validators.required], sexe: ['M', Validators.required]
+      nom: [''], prenom: [''],
+      dateNaissance: [''], sexe: ['M']
     }));
   }
   removeEnfant(i: number): void { this.enfants.removeAt(i); }
 
   addPersonne(): void {
     this.personnesCharge.push(this.fb.group({
-      nom: ['', Validators.required], prenom: ['', Validators.required], lien: ['', Validators.required]
+      nom: [''], prenom: [''], lien: ['']
     }));
   }
   removePersonne(i: number): void { this.personnesCharge.removeAt(i); }

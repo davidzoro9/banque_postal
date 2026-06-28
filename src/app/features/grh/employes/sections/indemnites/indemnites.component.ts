@@ -4,6 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
 
+import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
+import { Observable } from 'rxjs';
+
 @Component({
   selector: 'app-indemnites',
   templateUrl: './indemnites.component.html',
@@ -15,16 +18,19 @@ export class IndemnitesComponent implements OnInit {
   form!: FormGroup;
   saving = false;
   empId = '';
+  indemnites$!: Observable<RefItem[]>;
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
+    this.indemnites$ = this.dbRefService.getItems('type-indemnite');
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -35,9 +41,9 @@ export class IndemnitesComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      primeLogement:      [0, [Validators.required, Validators.min(0)]],
-      primeTransport:     [0, [Validators.required, Validators.min(0)]],
-      primeResponsabilite:[0, [Validators.required, Validators.min(0)]],
+      primeLogement:      [0],
+      primeTransport:     [0],
+      primeResponsabilite:[0],
       autresIndemnites:   this.fb.array([])
     });
   }
@@ -49,16 +55,16 @@ export class IndemnitesComponent implements OnInit {
       primeResponsabilite: e.primeResponsabilite
     });
     e.autresIndemnites.forEach(item => this.autres.push(this.fb.group({
-      libelle: [item.libelle, Validators.required],
-      montant: [item.montant, [Validators.required, Validators.min(0)]]
+      libelle: [item.libelle],
+      montant: [item.montant]
     })));
   }
 
   get autres(): FormArray { return this.form.get('autresIndemnites') as FormArray; }
   addAutre(): void {
     this.autres.push(this.fb.group({
-      libelle: ['', Validators.required],
-      montant: [0, [Validators.required, Validators.min(0)]]
+      libelle: [''],
+      montant: [0]
     }));
   }
   removeAutre(i: number): void { this.autres.removeAt(i); }

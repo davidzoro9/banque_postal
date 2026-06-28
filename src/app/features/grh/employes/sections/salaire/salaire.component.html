@@ -38,29 +38,24 @@
           <p class="form-section-label">Rémunération</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
-              <mat-label>Salaire de base (FCFA) *</mat-label>
+              <mat-label>Salaire de base (FCFA)</mat-label>
               <input matInput formControlName="salaireBase" type="number" min="0">
-              @if (form.get('salaireBase')?.hasError('min') && form.get('salaireBase')?.touched) {
-                <mat-error>Doit être supérieur à 0</mat-error>
-              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Salaire brut (FCFA) *</mat-label>
+              <mat-label>Salaire brut (FCFA)</mat-label>
               <input matInput formControlName="salaireBrut" type="number" min="0">
-              @if (form.get('salaireBrut')?.hasError('min') && form.get('salaireBrut')?.touched) {
-                <mat-error>Doit être supérieur à 0</mat-error>
-              }
             </mat-form-field>
           </div>
 
           <p class="form-section-label">Mode de paiement</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
-              <mat-label>Mode de paiement *</mat-label>
+              <mat-label>Mode de paiement</mat-label>
               <mat-select formControlName="modePaiement">
-                @for (m of modesPaiement; track m) {
-                  <mat-option [value]="m">{{ m }}</mat-option>
+                <mat-option value="">— Aucun —</mat-option>
+                @for (m of modesPaiement$ | async; track m.code) {
+                  <mat-option [value]="m.libelle">{{ m.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>

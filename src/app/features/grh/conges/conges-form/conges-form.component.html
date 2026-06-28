@@ -20,31 +20,40 @@
         <div class="form-grid-2">
 
           <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Type de congé *</mat-label>
-            <mat-select formControlName="typeConge">
-              @for (t of typesConge; track t.value) {
-                <mat-option [value]="t.value">{{ t.label }}</mat-option>
+            <mat-label>Employé concerné</mat-label>
+            <mat-select formControlName="employe">
+              <mat-option value="">— Moi-même (ou aucun) —</mat-option>
+              <div style="padding: 6px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; background: #fafafa;">
+                <mat-icon style="color: #888; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+                <input matInput placeholder="Rechercher un employé..." 
+                       formControlName="employeSearch" 
+                       (keydown)="$event.stopPropagation()"
+                       style="width: 100%; border: none; outline: none; font-size: 14px; background: transparent;">
+              </div>
+              @for (emp of filteredEmployees$ | async; track emp.id) {
+                <mat-option [value]="emp.prenom + ' ' + emp.nom">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
               }
             </mat-select>
-            @if (form.get('typeConge')?.invalid && form.get('typeConge')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Type de congé</mat-label>
+            <mat-select formControlName="typeConge">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (t of typesConge$ | async; track t.code) {
+                <mat-option [value]="t.libelle">{{ t.libelle }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Date de début *</mat-label>
+            <mat-label>Date de début</mat-label>
             <input matInput formControlName="dateDebut" type="date">
-            @if (form.get('dateDebut')?.invalid && form.get('dateDebut')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Date de fin *</mat-label>
+            <mat-label>Date de fin</mat-label>
             <input matInput formControlName="dateFin" type="date">
-            @if (form.get('dateFin')?.invalid && form.get('dateFin')?.touched) {
-              <mat-error>Requis</mat-error>
-            }
           </mat-form-field>
 
         </div>

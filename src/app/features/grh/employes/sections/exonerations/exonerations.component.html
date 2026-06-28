@@ -50,11 +50,11 @@
               @for (item of fiscales.controls; track $index) {
                 <div [formGroupName]="$index" class="arr-row">
                   <mat-form-field appearance="outline" style="flex:2">
-                    <mat-label>Libellé *</mat-label>
+                    <mat-label>Libellé</mat-label>
                     <input matInput formControlName="libelle" placeholder="Ex: Exonération IRVM">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Montant (FCFA) *</mat-label>
+                    <mat-label>Montant (FCFA)</mat-label>
                     <input matInput formControlName="montant" type="number" min="0">
                   </mat-form-field>
                   <button mat-icon-button color="warn" type="button" (click)="removeFiscale($index)">
@@ -80,11 +80,11 @@
               @for (item of sociales.controls; track $index) {
                 <div [formGroupName]="$index" class="arr-row">
                   <mat-form-field appearance="outline" style="flex:2">
-                    <mat-label>Libellé *</mat-label>
+                    <mat-label>Libellé</mat-label>
                     <input matInput formControlName="libelle" placeholder="Ex: Exonération CNSS">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Montant (FCFA) *</mat-label>
+                    <mat-label>Montant (FCFA)</mat-label>
                     <input matInput formControlName="montant" type="number" min="0">
                   </mat-form-field>
                   <button mat-icon-button color="warn" type="button" (click)="removeSociale($index)">

@@ -4,6 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee, ModePaiement } from '../../models/employee.model';
 
+import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
+import { Observable } from 'rxjs';
+
 @Component({
   selector: 'app-salaire',
   templateUrl: './salaire.component.html',
@@ -15,18 +18,19 @@ export class SalaireComponent implements OnInit {
   form!: FormGroup;
   saving = false;
   empId = '';
-
-  readonly modesPaiement: ModePaiement[] = ['Virement bancaire', 'Espèces', 'Chèque'];
+  modesPaiement$!: Observable<RefItem[]>;
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
+    this.modesPaiement$ = this.dbRefService.getItems('mode-paiement');
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -37,9 +41,9 @@ export class SalaireComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      salaireBase:   [0, [Validators.required, Validators.min(1)]],
-      salaireBrut:   [0, [Validators.required, Validators.min(1)]],
-      modePaiement:  ['Virement bancaire', Validators.required],
+      salaireBase:   [0],
+      salaireBrut:   [0],
+      modePaiement:  ['Virement bancaire'],
       banque:        [''],
       iban:          ['']
     });

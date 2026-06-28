@@ -23,6 +23,8 @@ import { MatListModule } from '@angular/material/list';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 
 // Routing
 import { GrhRoutingModule } from './grh-routing.module';
@@ -49,6 +51,7 @@ import { CongesListComponent } from './conges/conges-list/conges-list.component'
 import { AbsencesFormComponent } from './absences/absences-form/absences-form.component';
 import { AbsencesListComponent } from './absences/absences-list/absences-list.component';
 import { ContratsListComponent } from './contrats/contrats-list/contrats-list.component';
+import { ContratsForm } from './contrats/contrats-form/contrats-form';
 
 @NgModule({
   declarations: [
@@ -70,7 +73,8 @@ import { ContratsListComponent } from './contrats/contrats-list/contrats-list.co
     CongesListComponent,
     AbsencesFormComponent,
     AbsencesListComponent,
-    ContratsListComponent
+    ContratsListComponent,
+    ContratsForm
   ],
   imports: [
     CommonModule,
@@ -96,7 +100,9 @@ import { ContratsListComponent } from './contrats/contrats-list/contrats-list.co
     MatListModule,
     MatCheckboxModule,
     MatProgressBarModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatProgressSpinnerModule,
+    MatAutocompleteModule
   ]
 })
 export class GrhModule {}

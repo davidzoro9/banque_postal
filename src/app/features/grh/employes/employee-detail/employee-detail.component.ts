@@ -15,9 +15,9 @@ export interface SectionDef {
 }
 
 export const EMPLOYEE_SECTIONS: SectionDef[] = [
+  { id: 'infos-pro', title: 'Informations professionnelles', subtitle: 'Poste, service, contrat, statut', icon: 'work', route: 'infos-pro', isComplete: e => !!(e.poste && e.service && e.dateEmbauche) },
   { id: 'infos-personnelles', title: 'Informations personnelles', subtitle: 'État civil, coordonnées, contacts urgence', icon: 'person', route: 'infos-personnelles', isComplete: e => !!(e.nom && e.adresse && e.telephone) },
   { id: 'famille', title: 'Famille', subtitle: 'Conjoint, enfants, personnes à charge', icon: 'family_restroom', route: 'famille', isComplete: _ => true },
-  { id: 'infos-pro', title: 'Informations professionnelles', subtitle: 'Poste, service, contrat, statut', icon: 'work', route: 'infos-pro', isComplete: e => !!(e.poste && e.service && e.dateEmbauche) },
   { id: 'categorie', title: 'Catégorie', subtitle: 'Catégorie professionnelle, grade, échelon', icon: 'military_tech', route: 'categorie', isComplete: e => !!(e.categoriePro) },
   { id: 'indemnites', title: 'Indemnités', subtitle: 'Primes de logement, transport, responsabilité', icon: 'paid', route: 'indemnites', isComplete: e => e.primeLogement > 0 || e.primeTransport > 0 || e.autresIndemnites.length > 0 },
   { id: 'exonerations', title: 'Exonérations', subtitle: 'Exonérations fiscales, sociales, avantages', icon: 'receipt_long', route: 'exonerations', isComplete: e => e.exonerationsFiscales.length > 0 || e.exonerationsSociales.length > 0 || e.avantagesParticuliers.length > 0 },

@@ -42,10 +42,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder
   ) {
     this.formGroup = this.fb.group({
-      code: ['', [Validators.required, Validators.maxLength(20)]],
-      libelle: ['', [Validators.required, Validators.maxLength(150)]],
+      code:        ['', [Validators.required, Validators.maxLength(20)]],
+      libelle:     ['', [Validators.required, Validators.maxLength(150)]],
       description: [''],
-      actif: [true]
+      actif:       [true],
+      montant:     [0, [Validators.min(0)]]  // champ pour grille salariale
     });
   }
 
@@ -55,6 +56,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.title  = data['title']  ?? '';
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
+      // Afficher la colonne Montant uniquement pour la grille salariale
+      if (this.type === 'grille-salariale') {
+        this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'montant', 'actions'];
+      } else {
+        this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'actions'];
+      }
       this.searchQuery = '';
       this.loadData();
     });
@@ -83,7 +90,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openAddDialog(): void {
     this.isEditing = false;
     this.editingItem = null;
-    this.formGroup.reset({ code: '', libelle: '', description: '', actif: true });
+    this.formGroup.reset({ code: '', libelle: '', description: '', actif: true, montant: 0 });
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
   }
@@ -92,10 +99,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.isEditing = true;
     this.editingItem = item;
     this.formGroup.reset({
-      code: item.code,
-      libelle: item.libelle,
+      code:        item.code,
+      libelle:     item.libelle,
       description: item.description,
-      actif: item.actif
+      actif:       item.actif,
+      montant:     item.montant ?? 0
     });
     this.formGroup.get('code')?.disable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
@@ -106,11 +114,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
     const rawValue = this.formGroup.getRawValue();
     const item: RefItem = {
-      id: this.editingItem?.id,
-      code: rawValue.code,
-      libelle: rawValue.libelle,
+      id:          this.editingItem?.id,
+      code:        rawValue.code,
+      libelle:     rawValue.libelle,
       description: rawValue.description || '',
-      actif: rawValue.actif ?? true
+      actif:       rawValue.actif ?? true,
+      montant:     rawValue.montant ?? 0
     };
 
     if (this.isEditing && this.editingItem) {

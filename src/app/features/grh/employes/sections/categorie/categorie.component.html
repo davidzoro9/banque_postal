@@ -38,26 +38,33 @@
           <p class="form-section-label">Classification</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
-              <mat-label>Catégorie professionnelle *</mat-label>
+              <mat-label>Catégorie professionnelle</mat-label>
               <mat-select formControlName="categoriePro">
-                @for (cat of categories; track cat) {
-                  <mat-option [value]="cat">{{ cat }}</mat-option>
+                <mat-option value="">— Aucune —</mat-option>
+                @for (c of categories$ | async; track c.code) {
+                  <mat-option [value]="c.libelle">{{ c.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Échelon *</mat-label>
+              <mat-label>Échelon</mat-label>
               <mat-select formControlName="echelon">
-                @for (e of echelons; track e) {
-                  <mat-option [value]="e">Échelon {{ e }}</mat-option>
+                <mat-option value="">— Aucun —</mat-option>
+                @for (e of echelons$ | async; track e.code) {
+                  <mat-option [value]="e.libelle">{{ e.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Grade *</mat-label>
-              <input matInput formControlName="grade" placeholder="Ex: Ingénieur principal">
+              <mat-label>Grade</mat-label>
+              <mat-select formControlName="grade">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (g of grades$ | async; track g.code) {
+                  <mat-option [value]="g.libelle">{{ g.libelle }}</mat-option>
+                }
+              </mat-select>
             </mat-form-field>
 
             <mat-form-field appearance="outline">

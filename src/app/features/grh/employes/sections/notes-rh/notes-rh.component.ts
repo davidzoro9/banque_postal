@@ -43,22 +43,22 @@ export class NotesRhComponent implements OnInit {
   private patch(e: Employee): void {
     this.form.patchValue({ observations: e.observations });
     e.evaluations.forEach(ev => this.evaluations.push(this.fb.group({
-      date:        [ev.date, Validators.required],
-      periode:     [ev.periode, Validators.required],
-      note:        [ev.note, [Validators.required, Validators.min(0), Validators.max(20)]],
+      date:        [ev.date],
+      periode:     [ev.periode],
+      note:        [ev.note, [Validators.min(0), Validators.max(20)]],
       commentaire: [ev.commentaire],
-      evaluateur:  [ev.evaluateur, Validators.required]
+      evaluateur:  [ev.evaluateur]
     })));
   }
 
   get evaluations(): FormArray { return this.form.get('evaluations') as FormArray; }
   addEvaluation(): void {
     this.evaluations.push(this.fb.group({
-      date:        [new Date().toISOString().slice(0, 10), Validators.required],
-      periode:     ['', Validators.required],
-      note:        [0, [Validators.required, Validators.min(0), Validators.max(20)]],
+      date:        [new Date().toISOString().slice(0, 10)],
+      periode:     [''],
+      note:        [0, [Validators.min(0), Validators.max(20)]],
       commentaire: [''],
-      evaluateur:  ['', Validators.required]
+      evaluateur:  ['']
     }));
   }
   removeEvaluation(i: number): void { this.evaluations.removeAt(i); }
