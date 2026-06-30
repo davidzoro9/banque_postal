@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
@@ -50,8 +50,7 @@ export class InfosPersonnellesComponent implements OnInit {
       codePostal:    [''],
       pays:          [''],
       telephone:     [''],
-      email:         ['', [Validators.email]],
-      contactsUrgence: this.fb.array([])
+      email:         ['', [Validators.email]]
     });
   }
 
@@ -63,21 +62,7 @@ export class InfosPersonnellesComponent implements OnInit {
       adresse: e.adresse, ville: e.ville, codePostal: e.codePostal,
       pays: e.pays, telephone: e.telephone, email: e.email
     });
-    e.contactsUrgence.forEach(c => this.contacts.push(this.fb.group({
-      nom: [c.nom], prenom: [c.prenom],
-      lien: [c.lien], telephone: [c.telephone]
-    })));
-    if (this.contacts.length === 0) this.addContact();
   }
-
-  get contacts(): FormArray { return this.form.get('contactsUrgence') as FormArray; }
-  addContact(): void {
-    this.contacts.push(this.fb.group({
-      nom: [''], prenom: [''],
-      lien: [''], telephone: ['']
-    }));
-  }
-  removeContact(i: number): void { if (this.contacts.length > 1) this.contacts.removeAt(i); }
 
   get initials(): string {
     if (!this.employee) return '';
@@ -93,14 +78,15 @@ export class InfosPersonnellesComponent implements OnInit {
       sexe: v.sexe, dateNaissance: v.dateNaissance, lieuNaissance: v.lieuNaissance,
       nationalite: v.nationalite, numeroCNI: v.numeroCNI,
       adresse: v.adresse, ville: v.ville, codePostal: v.codePostal,
-      pays: v.pays, telephone: v.telephone, email: v.email,
-      contactsUrgence: v.contactsUrgence
+      pays: v.pays, telephone: v.telephone, email: v.email
     }).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);
       else this.router.navigate(['/grh/employes', this.empId]);
     });
   }
+
+  goToFamille(): void { this.router.navigate(['/grh/employes', this.empId, 'famille']); }
 
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }

@@ -24,7 +24,7 @@
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#163059">person</mat-icon>
       <mat-card-title>Informations personnelles</mat-card-title>
-      <mat-card-subtitle>État civil, coordonnées et contacts d'urgence</mat-card-subtitle>
+      <mat-card-subtitle>État civil et coordonnées</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -115,43 +115,22 @@
             </mat-form-field>
           </div>
 
-          <p class="form-section-label">Contacts d'urgence</p>
-          <div class="array-block">
-            <div class="array-block-header">
-              <span>{{ contacts.length }} contact(s)</span>
-              <button mat-stroked-button type="button" (click)="addContact()">
-                <mat-icon>add</mat-icon> Ajouter
-              </button>
+          <!-- Bloc info : contacts d'urgence gérés dans le menu Famille -->
+          <div class="contact-info-banner">
+            <mat-icon class="banner-icon">info_outline</mat-icon>
+            <div class="banner-content">
+              <span class="banner-title">Contacts d'urgence</span>
+              <span class="banner-desc">
+                Les contacts d'urgence de cet employé sont gérés depuis le menu
+                <strong>Famille</strong>. Retrouvez-y les membres de la famille
+                et les personnes à contacter en cas d'urgence.
+              </span>
             </div>
-            <div formArrayName="contactsUrgence">
-              @for (c of contacts.controls; track $index) {
-                @if (contacts.length === 0) {
-                  <p class="arr-empty">Aucun contact d'urgence</p>
-                }
-                <div [formGroupName]="$index" class="arr-row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Nom</mat-label>
-                    <input matInput formControlName="nom">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Prénom</mat-label>
-                    <input matInput formControlName="prenom">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Lien</mat-label>
-                    <input matInput formControlName="lien" placeholder="Père, Épouse…">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Téléphone</mat-label>
-                    <input matInput formControlName="telephone">
-                  </mat-form-field>
-                  <button mat-icon-button color="warn" type="button" (click)="removeContact($index)"
-                          [disabled]="contacts.length === 1">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </div>
-              }
-            </div>
+            <button mat-stroked-button color="primary" class="banner-btn"
+                    (click)="goToFamille()">
+              <mat-icon>open_in_new</mat-icon>
+              Voir la famille
+            </button>
           </div>
 
         </form>
