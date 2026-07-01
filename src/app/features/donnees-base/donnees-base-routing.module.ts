@@ -17,6 +17,8 @@ const routes: Routes = [
   { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: 'Type indemnité',      icon: 'paid',               type: 'type-indemnite'  } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
+  { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenue (par employé)', icon: 'money_off', type: 'type-retenue-employe' } },
+  { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Types de retenue (par emploi)',  icon: 'money_off', type: 'type-retenue-emploi' } },
 
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },

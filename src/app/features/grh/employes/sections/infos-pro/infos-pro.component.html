@@ -4,114 +4,113 @@
     <span class="link" (click)="goBack()">Employés</span>
     <span class="sep">›</span>
     @if (employee) {
-      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
-      <span class="sep">›</span>
+    <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+    <span class="sep">›</span>
     }
     <span class="current">Informations professionnelles</span>
   </div>
 
   @if (employee) {
-    <div class="emp-ctx">
-      <div class="emp-ctx-avatar">{{ initials }}</div>
-      <div>
-        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
-        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
-      </div>
+  <div class="emp-ctx">
+    <div class="emp-ctx-avatar">{{ initials }}</div>
+    <div>
+      <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+      <div class="emp-ctx-sub">{{ employee.matricule }}</div>
     </div>
+  </div>
   }
 
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#163059">work</mat-icon>
       <mat-card-title>Informations professionnelles</mat-card-title>
-      <mat-card-subtitle>Poste, service, contrat et statut</mat-card-subtitle>
+      <mat-card-subtitle>Poste, service, département et statut</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
       @if (!employee) {
-        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
       }
 
       @if (employee) {
-        <form [formGroup]="form">
+      <form [formGroup]="form">
 
-          <p class="form-section-label">Identité professionnelle</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Matricule</mat-label>
-              <input matInput [value]="employee.matricule" readonly>
-              <mat-hint>Généré automatiquement</mat-hint>
-            </mat-form-field>
+        <p class="form-section-label">Identité professionnelle</p>
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Matricule</mat-label>
+            <input matInput [value]="employee.matricule" readonly>
+            <mat-hint>Généré automatiquement</mat-hint>
+          </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Statut</mat-label>
-              <mat-select formControlName="statut">
-                @for (s of statuts; track s) {
-                  <mat-option [value]="s">{{ s }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="statut">
+              @for (s of statuts; track s) {
+              <mat-option [value]="s">{{ s }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Poste occupé</mat-label>
-              <mat-select formControlName="poste">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (f of fonctions$ | async; track f.code) {
-                  <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Poste occupé</mat-label>
+            <mat-select formControlName="poste">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (f of fonctions$ | async; track f.code) {
+              <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Service</mat-label>
-              <mat-select formControlName="service">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (srv of services$ | async; track srv.code) {
-                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Service</mat-label>
+            <mat-select formControlName="service">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (srv of services$ | async; track srv.code) {
+              <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Direction</mat-label>
-              <mat-select formControlName="direction">
-                <mat-option value="">— Aucune —</mat-option>
-                @for (dir of directions$ | async; track dir.code) {
-                  <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Direction</mat-label>
+            <mat-select formControlName="direction">
+              <mat-option value="">— Aucune —</mat-option>
+              @for (dir of directions$ | async; track dir.code) {
+              <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Département</mat-label>
-              <mat-select formControlName="departement">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (dep of departements$ | async; track dep.code) {
-                  <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Département</mat-label>
+            <mat-select formControlName="departement">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (dep of departements$ | async; track dep.code) {
+              <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Bloc info : contrat géré dans le menu Contrats -->
+        <div class="contrat-info-banner">
+          <mat-icon class="banner-icon">info_outline</mat-icon>
+          <div class="banner-content">
+            <span class="banner-title">Gestion des contrats</span>
+            <span class="banner-desc">
+              Le contrat de cet employé est géré depuis le menu
+              <strong>Contrats</strong>. Retrouvez-y l'historique,
+              la création et la modification des contrats.
+            </span>
           </div>
+          <button mat-stroked-button color="primary" class="banner-btn" (click)="goToContrats()">
+            <mat-icon>open_in_new</mat-icon>
+            Voir les contrats
+          </button>
+        </div>
 
-          <p class="form-section-label">Contrat</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Type de contrat</mat-label>
-              <mat-select formControlName="typeContrat">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (c of contrats$ | async; track c.code) {
-                  <mat-option [value]="c.libelle">{{ c.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Date d'embauche</mat-label>
-              <input matInput formControlName="dateEmbauche" type="date">
-            </mat-form-field>
-          </div>
-
-        </form>
+      </form>
       }
     </mat-card-content>
 
@@ -122,7 +121,8 @@
           <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
             Enregistrer
           </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('infos-personnelles')" [disabled]="saving || form.invalid">
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('infos-personnelles')"
+            [disabled]="saving || form.invalid">
             @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
             Enregistrer et continuer
             <mat-icon>arrow_forward</mat-icon>

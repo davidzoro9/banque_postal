@@ -58,23 +58,13 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Grade</mat-label>
-              <mat-select formControlName="grade">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (g of grades$ | async; track g.code) {
-                  <mat-option [value]="g.libelle">{{ g.libelle }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Échelle</mat-label>
+              <input matInput formControlName="echelle" placeholder="Ex: A, B, C...">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Niveau</mat-label>
-              <mat-select formControlName="niveau">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (n of niveaux; track n) {
-                  <mat-option [value]="n">{{ n }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Salaire de base / Taux (FCFA)</mat-label>
+              <input matInput formControlName="salaireBase" type="number" min="0">
             </mat-form-field>
           </div>
 

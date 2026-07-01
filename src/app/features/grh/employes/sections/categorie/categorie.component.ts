@@ -51,8 +51,8 @@ export class CategorieComponent implements OnInit {
     this.form = this.fb.group({
       categoriePro: [''],
       echelon:      [''],
-      grade:        [''],
-      niveau:       ['']
+      echelle:      [''],
+      salaireBase:  [0]
     });
   }
 
@@ -60,8 +60,8 @@ export class CategorieComponent implements OnInit {
     this.form.patchValue({
       categoriePro: e.categoriePro,
       echelon:      e.echelon,
-      grade:        e.grade,
-      niveau:       e.niveau
+      echelle:      (e as any).echelle || '',
+      salaireBase:  e.salaireBase
     });
   }
 
@@ -77,9 +77,9 @@ export class CategorieComponent implements OnInit {
     this.employeeService.update(this.empId, {
       categoriePro: v.categoriePro,
       echelon:      v.echelon,
-      grade:        v.grade,
-      niveau:       v.niveau
-    }).subscribe(() => {
+      echelle:      v.echelle,
+      salaireBase:  +v.salaireBase
+    } as any).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);
       else this.router.navigate(['/grh/employes', this.empId]);

@@ -20,7 +20,6 @@ export class InfosProComponent implements OnInit {
   
   services$!: Observable<RefItem[]>;
   directions$!: Observable<RefItem[]>;
-  contrats$!: Observable<RefItem[]>;
   departements$!: Observable<RefItem[]>;
   fonctions$!: Observable<RefItem[]>;
 
@@ -38,7 +37,6 @@ export class InfosProComponent implements OnInit {
     this.empId = this.route.snapshot.paramMap.get('id')!;
     this.services$ = this.dbRefService.getItems('service');
     this.directions$ = this.dbRefService.getItems('direction');
-    this.contrats$ = this.dbRefService.getItems('type-contrat');
     this.departements$ = this.dbRefService.getItems('departement');
     this.fonctions$ = this.dbRefService.getItems('fonction');
 
@@ -56,8 +54,6 @@ export class InfosProComponent implements OnInit {
       service:      [''],
       direction:    [''],
       departement:  [''],
-      typeContrat:  ['CDI'],
-      dateEmbauche: [''],
       statut:       ['Actif']
     });
   }
@@ -65,7 +61,7 @@ export class InfosProComponent implements OnInit {
   private patch(e: Employee): void {
     this.form.patchValue({
       poste: e.poste, service: e.service, direction: e.direction, departement: e.departement,
-      typeContrat: e.typeContrat, dateEmbauche: e.dateEmbauche, statut: e.statut
+      statut: e.statut
     });
   }
 
@@ -80,13 +76,15 @@ export class InfosProComponent implements OnInit {
     const v = this.form.value;
     this.employeeService.update(this.empId, {
       poste: v.poste, service: v.service, direction: v.direction, departement: v.departement,
-      typeContrat: v.typeContrat, dateEmbauche: v.dateEmbauche, statut: v.statut
+      statut: v.statut
     }).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);
       else this.router.navigate(['/grh/employes', this.empId]);
     });
   }
+
+  goToContrats(): void { this.router.navigate(['/grh/contrats']); }
 
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }

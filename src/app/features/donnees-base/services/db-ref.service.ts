@@ -16,70 +16,80 @@ export interface RefItem {
 // ─── Mapping frontend type → backend segment ───────────────────────────────
 const BACKEND_MAP: Record<string, {
   segment: string;
+  getAllPath: string;
   toFront: (dto: any) => RefItem;
   toBack: (item: RefItem) => any;
   toBackUpdate: (item: RefItem) => any;
 }> = {
   'emploi': {
     segment: 'emplois',
+    getAllPath: '/all',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
   'fonction': {
     segment: 'fonctions',
+    getAllPath: '/all',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
   'type-contrat': {
     segment: 'typecontrat',
+    getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
   'type-indemnite': {
     segment: 'typeindemnite',
+    getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
   'type-conge': {
     segment: 'typeabsenceconge',
+    getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
   'grille-salariale': {
     segment: 'grillesalariale',
+    getAllPath: '',
     toFront: dto => ({
       id: String(dto.id),
       code: dto.classe || dto.code || '',
       libelle: dto.category || dto.libelle || '',
       description: `${dto.echelle || ''} - ${dto.echellon || ''}`.trim(),
       actif: true,
-      montant: dto.salaireBase || dto.montant || 0
+      montant: dto.basicSalary || dto.montant || 0
     }),
-    toBack:  item => ({ code: item.code, name: item.libelle, salaireBase: item.montant || 0 }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle, salaireBase: item.montant || 0 }),
-  },
-  'service': {
-    segment: 'services',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+    toBack:  item => ({ classe: item.code, category: item.libelle, basicSalary: item.montant || 0 }),
+    toBackUpdate: item => ({ id: item.id, classe: item.code, category: item.libelle, basicSalary: item.montant || 0 }),
   },
   'departement': {
     segment: 'departments',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+    getAllPath: '',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.directeur || '', actif: true }),
+    toBack:  item => ({ code: item.code, name: item.libelle, directeur: item.description }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle, directeur: item.description }),
   },
-  'direction': {
-    segment: 'directions',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+  'type-retenue-employe': {
+    segment: 'ref-data/retenue-employe',
+    getAllPath: '/all',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+  },
+  'type-retenue-emploi': {
+    segment: 'ref-data/retenue-emploi',
+    getAllPath: '/all',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
   },
 };
 
@@ -91,6 +101,20 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'AGN-003', libelle: 'Agence Sud',         description: 'Zone sud du pays',           actif: true  },
     { code: 'AGN-004', libelle: 'Agence Est',         description: 'Zone est du pays',           actif: true  },
     { code: 'AGN-005', libelle: 'Agence Ouest',       description: 'Zone ouest du pays',         actif: false },
+  ],
+  'direction': [
+    { code: 'DIR-001', libelle: 'Direction Générale',      description: 'Direction principale',             actif: true  },
+    { code: 'DIR-002', libelle: 'Direction Administrative', description: 'Administration et ressources',     actif: true  },
+    { code: 'DIR-003', libelle: 'Direction Financière',     description: 'Finances et comptabilité',         actif: true  },
+    { code: 'DIR-004', libelle: 'Direction Technique',      description: 'Services techniques',              actif: true  },
+    { code: 'DIR-005', libelle: 'Direction Commerciale',    description: 'Ventes et marketing',              actif: false },
+  ],
+  'service': [
+    { code: 'SRV-001', libelle: 'Service Informatique',     description: 'Systèmes d\'information',          actif: true  },
+    { code: 'SRV-002', libelle: 'Service RH',               description: 'Ressources humaines',              actif: true  },
+    { code: 'SRV-003', libelle: 'Service Comptabilité',     description: 'Comptabilité et finances',         actif: true  },
+    { code: 'SRV-004', libelle: 'Service Logistique',       description: 'Approvisionnement et logistique',  actif: true  },
+    { code: 'SRV-005', libelle: 'Service Juridique',        description: 'Affaires juridiques',              actif: false },
   ],
   'categorie': [
     { code: 'CAT-001', libelle: 'Cadre Supérieur',   description: 'Niveau hiérarchique supérieur', actif: true  },
@@ -202,7 +226,7 @@ export class DbRefService {
     const mapping = BACKEND_MAP[type];
 
     if (mapping) {
-      const url = `${environment.apiUrl}/${mapping.segment}/all`;
+      const url = `${environment.apiUrl}/${mapping.segment}${mapping.getAllPath}`;
       return this.http.get<any[]>(url).pipe(
         map(dtos => dtos.map(dto => mapping.toFront(dto))),
         tap(items => this.getSubject(type).next(items)),

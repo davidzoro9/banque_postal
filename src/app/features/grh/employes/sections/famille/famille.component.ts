@@ -38,55 +38,58 @@ export class FamilleComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      conjointNom:        [''],
-      conjointPrenom:     [''],
-      conjointDateNaiss:  [''],
-      conjointProfession: [''],
-      enfants:            this.fb.array([]),
-      personnesCharge:    this.fb.array([])
+      membresFamille: this.fb.array([])
     });
   }
 
   private patch(e: Employee): void {
-    if (e.conjoint) {
-      this.hasConjoint = true;
-      this.form.patchValue({
-        conjointNom:        e.conjoint.nom,
-        conjointPrenom:     e.conjoint.prenom,
-        conjointDateNaiss:  e.conjoint.dateNaissance || '',
-        conjointProfession: e.conjoint.profession || ''
+    // 1. Charge Conjoint
+    if (e.conjoint && (e.conjoint.nom || e.conjoint.prenom)) {
+      this.membresFamille.push(this.fb.group({
+        nom:    [e.conjoint.nom],
+        prenom: [e.conjoint.prenom],
+        lien:   ['Conjoint']
+      }));
+    }
+
+    // 2. Charge Enfants
+    if (e.enfants && e.enfants.length > 0) {
+      e.enfants.forEach(enf => {
+        this.membresFamille.push(this.fb.group({
+          nom:    [enf.nom],
+          prenom: [enf.prenom],
+          lien:   ['Enfant']
+        }));
       });
     }
-    e.enfants.forEach(enf => this.enfants.push(this.fb.group({
-      nom:           [enf.nom],
-      prenom:        [enf.prenom],
-      dateNaissance: [enf.dateNaissance],
-      sexe:          [enf.sexe || 'M']
-    })));
-    e.personnesCharge.forEach(p => this.personnesCharge.push(this.fb.group({
-      nom:    [p.nom],
-      prenom: [p.prenom],
-      lien:   [p.lien]
-    })));
+
+    // 3. Charge Personnes à charge
+    if (e.personnesCharge && e.personnesCharge.length > 0) {
+      e.personnesCharge.forEach(p => {
+        this.membresFamille.push(this.fb.group({
+          nom:    [p.nom],
+          prenom: [p.prenom],
+          lien:   [p.lien || 'Autre']
+        }));
+      });
+    }
   }
 
-  get enfants(): FormArray { return this.form.get('enfants') as FormArray; }
-  get personnesCharge(): FormArray { return this.form.get('personnesCharge') as FormArray; }
+  get membresFamille(): FormArray {
+    return this.form.get('membresFamille') as FormArray;
+  }
 
-  addEnfant(): void {
-    this.enfants.push(this.fb.group({
-      nom: [''], prenom: [''],
-      dateNaissance: [''], sexe: ['M']
+  addMembre(): void {
+    this.membresFamille.push(this.fb.group({
+      nom:    [''],
+      prenom: [''],
+      lien:   ['Enfant']
     }));
   }
-  removeEnfant(i: number): void { this.enfants.removeAt(i); }
 
-  addPersonne(): void {
-    this.personnesCharge.push(this.fb.group({
-      nom: [''], prenom: [''], lien: ['']
-    }));
+  removeMembre(i: number): void {
+    this.membresFamille.removeAt(i);
   }
-  removePersonne(i: number): void { this.personnesCharge.removeAt(i); }
 
   get initials(): string {
     if (!this.employee) return '';
@@ -96,16 +99,13 @@ export class FamilleComponent implements OnInit {
   save(next?: string): void {
     this.saving = true;
     const v = this.form.value;
+
     const payload: Partial<Employee> = {
-      enfants: v.enfants,
-      personnesCharge: v.personnesCharge,
-      conjoint: this.hasConjoint ? {
-        nom:           v.conjointNom,
-        prenom:        v.conjointPrenom,
-        dateNaissance: v.conjointDateNaiss,
-        profession:    v.conjointProfession
-      } : undefined
+      conjoint: undefined,
+      enfants: [],
+      personnesCharge: v.membresFamille
     };
+
     this.employeeService.update(this.empId, payload).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);

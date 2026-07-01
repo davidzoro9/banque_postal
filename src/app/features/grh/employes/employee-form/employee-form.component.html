@@ -3,7 +3,7 @@
   <div class="sec-breadcrumb">
     <span class="link" (click)="cancel()">Employés</span>
     <span class="sep">›</span>
-    <span class="current">Nouvel employé — Informations professionnelles</span>
+    <span class="current">{{ isEdit ? 'Modifier ' + form.get('prenom')?.value + ' ' + form.get('nom')?.value : 'Nouvel employé' }} — Informations professionnelles</span>
   </div>
 
   <mat-card class="section-card">
@@ -11,8 +11,7 @@
       <mat-icon mat-card-avatar style="color:#163059">person_add</mat-icon>
       <mat-card-title>Informations professionnelles</mat-card-title>
       <mat-card-subtitle>
-        Créez d'abord le dossier de l'employé avec son poste, service, contrat et identité.
-        Les autres sections (informations personnelles, catégorie…) seront complétées ensuite.
+        Renseignez les détails du poste, du service, du contrat et du contact de l'employé.
       </mat-card-subtitle>
     </mat-card-header>
 
@@ -24,11 +23,17 @@
           <mat-form-field appearance="outline">
             <mat-label>Nom</mat-label>
             <input matInput formControlName="nom">
+            @if (form.get('nom')?.hasError('required')) {
+              <mat-error>Le nom est obligatoire</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Prénom</mat-label>
             <input matInput formControlName="prenom">
+            @if (form.get('prenom')?.hasError('required')) {
+              <mat-error>Le prénom est obligatoire</mat-error>
+            }
           </mat-form-field>
         </div>
 
@@ -36,8 +41,10 @@
         <div class="form-grid-2">
           <mat-form-field appearance="outline">
             <mat-label>Matricule</mat-label>
-            <input matInput value="Généré automatiquement" readonly disabled>
-            <mat-hint>Le matricule sera généré lors de la création</mat-hint>
+            <input matInput formControlName="matricule" placeholder="Ex: EMP-001">
+            @if (form.get('matricule')?.hasError('required')) {
+              <mat-error>Le matricule est obligatoire</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -90,23 +97,25 @@
           </mat-form-field>
         </div>
 
-        <p class="form-section-label">Contrat</p>
+        <p class="form-section-label">Contact & Hiérarchie</p>
         <div class="form-grid-2">
           <mat-form-field appearance="outline">
-            <mat-label>Type de contrat</mat-label>
-            <mat-select formControlName="typeContrat">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (c of contrats$ | async; track c.code) {
-              <mat-option [value]="c.libelle">{{ c.libelle }}</mat-option>
-              }
-            </mat-select>
+            <mat-label>Mail professionnel</mat-label>
+            <input matInput formControlName="emailPro" type="email" placeholder="Ex: collaborateur@entreprise.com">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Date d'embauche</mat-label>
-            <input matInput formControlName="dateEmbauche" type="date">
+            <mat-label>Numéro de poste (Tél)</mat-label>
+            <input matInput formControlName="numeroPoste" placeholder="Ex: 104 ou +226 ...">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Directeur hiérarchique (Directeur du département)</mat-label>
+            <input matInput formControlName="directeurHierarchique" placeholder="Saisissez ou sélectionneur de département...">
+            <mat-hint>Ce champ se remplit automatiquement lors de la sélection du département</mat-hint>
           </mat-form-field>
         </div>
+
 
       </form>
     </mat-card-content>
@@ -117,7 +126,7 @@
         <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
           @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
           @else { <mat-icon>save</mat-icon> }
-          Créer le dossier et continuer
+          {{ isEdit ? 'Enregistrer les modifications' : 'Créer le dossier et continuer' }}
         </button>
       </div>
     </mat-card-actions>

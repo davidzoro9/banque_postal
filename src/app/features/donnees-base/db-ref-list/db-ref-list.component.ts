@@ -105,7 +105,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       actif:       item.actif,
       montant:     item.montant ?? 0
     });
-    this.formGroup.get('code')?.disable();
+    this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
   }
 

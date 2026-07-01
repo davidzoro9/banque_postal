@@ -11,12 +11,10 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       icon: 'badge',
       children: [
         { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
-        { id: 'fiche-infos-pro',    label: 'Info. professionnelles',  icon: 'work',                   route: '__emp__/infos-pro'       },
         { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
         { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
         { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
         { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                   route: '__emp__/indemnites'      },
-        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',           route: '__emp__/exonerations'    },
         { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
         { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
         { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },
@@ -133,7 +131,9 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'agence',           label: 'Agence',              icon: 'store',               route: '/donnees-base/admin/agence'           },
         { id: 'type-indemnite',   label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
         { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
-        { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       }
+        { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
+        { id: 'type-retenue-employe', label: 'Retenue (par employé)', icon: 'money_off',      route: '/donnees-base/admin/type-retenue-employe' },
+        { id: 'type-retenue-emploi',  label: 'Retenue (par emploi)',  icon: 'money_off',      route: '/donnees-base/admin/type-retenue-emploi' }
       ]
     },
     {
