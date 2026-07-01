@@ -35,28 +35,10 @@
       @if (employee) {
         <form [formGroup]="form">
 
-          <p class="form-section-label">Primes fixes</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Prime de logement (FCFA)</mat-label>
-              <input matInput formControlName="primeLogement" type="number" min="0">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Prime de transport (FCFA)</mat-label>
-              <input matInput formControlName="primeTransport" type="number" min="0">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Prime de responsabilité (FCFA)</mat-label>
-              <input matInput formControlName="primeResponsabilite" type="number" min="0">
-            </mat-form-field>
-          </div>
-
-          <p class="form-section-label">Autres indemnités</p>
+          <p class="form-section-label">Indemnités attribuées</p>
           <div class="array-block">
             <div class="array-block-header">
-              <span>{{ autres.length }} indemnité(s) additionnelle(s)</span>
+              <span>{{ autres.length }} indemnité(s)</span>
               <button mat-stroked-button type="button" (click)="addAutre()">
                 <mat-icon>add</mat-icon> Ajouter
               </button>
@@ -68,10 +50,10 @@
               @for (item of autres.controls; track $index) {
                 <div [formGroupName]="$index" class="arr-row">
                   <mat-form-field appearance="outline" style="flex:2">
-                    <mat-label>Libellé</mat-label>
-                    <mat-select formControlName="libelle">
+                    <mat-label>Type d'indemnité</mat-label>
+                    <mat-select formControlName="code" (selectionChange)="onTypeChange($index, $event.value)">
                       @for (ind of indemnites$ | async; track ind.code) {
-                        <mat-option [value]="ind.libelle">{{ ind.libelle }}</mat-option>
+                        <mat-option [value]="ind.code">{{ ind.libelle }}</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
@@ -103,7 +85,7 @@
           <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
             Enregistrer
           </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('exonerations')" [disabled]="saving || form.invalid">
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('salaire')" [disabled]="saving || form.invalid">
             @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
             Enregistrer et continuer
             <mat-icon>arrow_forward</mat-icon>

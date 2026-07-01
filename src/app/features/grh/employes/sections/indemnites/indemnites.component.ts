@@ -28,9 +28,16 @@ export class IndemnitesComponent implements OnInit {
     private dbRefService: DbRefService
   ) {}
 
+  typesList: RefItem[] = [];
+
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
     this.indemnites$ = this.dbRefService.getItems('type-indemnite');
+    
+    this.dbRefService.getItems('type-indemnite').subscribe(list => {
+      this.typesList = list;
+    });
+
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -41,38 +48,44 @@ export class IndemnitesComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      primeLogement:      [0],
-      primeTransport:     [0],
-      primeResponsabilite:[0],
       autresIndemnites:   this.fb.array([])
     });
   }
 
   private patch(e: Employee): void {
-    this.form.patchValue({
-      primeLogement:       e.primeLogement,
-      primeTransport:      e.primeTransport,
-      primeResponsabilite: e.primeResponsabilite
-    });
-    e.autresIndemnites.forEach(item => this.autres.push(this.fb.group({
-      libelle: [item.libelle],
-      montant: [item.montant]
-    })));
+    if (e.autresIndemnites && e.autresIndemnites.length > 0) {
+      e.autresIndemnites.forEach(item => this.autres.push(this.fb.group({
+        code:    [item.code || ''],
+        libelle: [item.libelle || ''],
+        montant: [item.montant || 0]
+      })));
+    }
   }
 
   get autres(): FormArray { return this.form.get('autresIndemnites') as FormArray; }
+  
   addAutre(): void {
     this.autres.push(this.fb.group({
+      code:    [''],
       libelle: [''],
       montant: [0]
     }));
   }
+
+  onTypeChange(index: number, code: string): void {
+    const matched = this.typesList.find(t => t.code === code);
+    if (matched) {
+      this.autres.at(index).patchValue({
+        libelle: matched.libelle
+      });
+    }
+  }
+
   removeAutre(i: number): void { this.autres.removeAt(i); }
 
   get totalIndemnites(): number {
     const v = this.form.value;
-    const autresTotal = (v.autresIndemnites as {montant: number}[]).reduce((s, i) => s + (+i.montant || 0), 0);
-    return (+v.primeLogement || 0) + (+v.primeTransport || 0) + (+v.primeResponsabilite || 0) + autresTotal;
+    return (v.autresIndemnites as {montant: number}[]).reduce((s, i) => s + (+i.montant || 0), 0);
   }
 
   get initials(): string {
@@ -85,9 +98,6 @@ export class IndemnitesComponent implements OnInit {
     this.saving = true;
     const v = this.form.value;
     this.employeeService.update(this.empId, {
-      primeLogement:       +v.primeLogement,
-      primeTransport:      +v.primeTransport,
-      primeResponsabilite: +v.primeResponsabilite,
       autresIndemnites:    v.autresIndemnites
     }).subscribe(() => {
       this.saving = false;

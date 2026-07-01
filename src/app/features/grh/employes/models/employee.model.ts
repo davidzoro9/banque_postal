@@ -24,6 +24,7 @@ export interface PersonneCharge {
 }
 
 export interface IndemniteItem {
+  code?: string;
   libelle: string;
   montant: number;
 }
@@ -102,12 +103,16 @@ export interface Employee {
   dateEmbauche: string;
   statut: StatutEmploye;
   typeContrat: TypeContrat;
+  emailPro?: string;
+  numeroPoste?: string;
+  directeurHierarchique?: string;
 
   // Catégorie
   categoriePro: string;
   echelon: string;
   grade: string;
   niveau: string;
+  echelle?: string;
 
   // Indemnités
   primeLogement: number;
