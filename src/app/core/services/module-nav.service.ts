@@ -15,6 +15,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
         { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
         { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                   route: '__emp__/indemnites'      },
+        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',           route: '__emp__/exonerations'    },
         { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
         { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
         { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },

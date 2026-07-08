@@ -54,9 +54,8 @@
               <mat-label>Mode de paiement</mat-label>
               <mat-select formControlName="modePaiement">
                 <mat-option value="">— Aucun —</mat-option>
-                @for (m of modesPaiement$ | async; track m.code) {
-                  <mat-option [value]="m.libelle">{{ m.libelle }}</mat-option>
-                }
+                <mat-option value="Chèque">Chèque</mat-option>
+                <mat-option value="Virement bancaire">Virement bancaire</mat-option>
               </mat-select>
             </mat-form-field>
           </div>

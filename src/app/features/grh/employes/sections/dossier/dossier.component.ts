@@ -19,6 +19,9 @@ export class DossierComponent implements OnInit {
   newDoc = { libelle: '', categorie: 'Contrat' as DocumentRH['categorie'] };
   readonly categories: DocumentRH['categorie'][] = ['Contrat', 'Diplôme', 'Pièce administrative', 'Document numérisé'];
 
+  selectedFileName = '';
+  selectedFileBase64 = '';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -36,7 +39,22 @@ export class DossierComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files?.[0];
+    if (file) {
+      this.selectedFileName = file.name;
+      if (!this.newDoc.libelle) {
+        this.newDoc.libelle = file.name.split('.').slice(0, -1).join('.');
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.selectedFileBase64 = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   addDoc(): void {
@@ -45,15 +63,31 @@ export class DossierComponent implements OnInit {
       id:        `doc-${Date.now()}`,
       libelle:   this.newDoc.libelle.trim(),
       categorie: this.newDoc.categorie,
-      dateAjout: new Date().toISOString().slice(0, 10)
+      dateAjout: new Date().toISOString().slice(0, 10),
+      url:       this.selectedFileBase64 || undefined
     };
     this.documents = [...this.documents, doc];
     this.newDoc = { libelle: '', categorie: 'Contrat' };
+    this.selectedFileName = '';
+    this.selectedFileBase64 = '';
     this.showAddForm = false;
   }
 
   removeDoc(id: string): void {
     this.documents = this.documents.filter(d => d.id !== id);
+  }
+
+  openFile(doc: DocumentRH): void {
+    if (!doc.url) return;
+    const win = window.open();
+    if (win) {
+      win.document.write(`<iframe src="${doc.url}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+    } else {
+      const a = document.createElement('a');
+      a.href = doc.url;
+      a.download = doc.libelle;
+      a.click();
+    }
   }
 
   getCatIcon(cat: DocumentRH['categorie']): string {

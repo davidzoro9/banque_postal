@@ -73,11 +73,28 @@ export class ContratsForm implements OnInit {
     this.saving = true;
 
     const val = this.form.value;
+
+    let start = val.dateDebut;
+    if (start instanceof Date) {
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, '0');
+      const day = String(start.getDate()).padStart(2, '0');
+      start = `${year}-${month}-${day}`;
+    }
+
+    let end = val.dateFin;
+    if (end instanceof Date) {
+      const year = end.getFullYear();
+      const month = String(end.getMonth() + 1).padStart(2, '0');
+      const day = String(end.getDate()).padStart(2, '0');
+      end = `${year}-${month}-${day}`;
+    }
+
     const contratData: Omit<Contrat, 'id'> = {
       employe: val.employe || '',
       type: val.type || '',
-      dateDebut: val.dateDebut || '',
-      dateFin: val.dateFin || '',
+      dateDebut: start || '',
+      dateFin: end || '',
       service: val.service || '',
       statut: val.statut || 'Actif'
     };

@@ -48,11 +48,31 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Grade</mat-label>
+              <mat-select formControlName="grade">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (g of grades$ | async; track g.code) {
+                  <mat-option [value]="g.libelle">{{ g.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Échelon</mat-label>
               <mat-select formControlName="echelon">
                 <mat-option value="">— Aucun —</mat-option>
                 @for (e of echelons$ | async; track e.code) {
                   <mat-option [value]="e.libelle">{{ e.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Niveau</mat-label>
+              <mat-select formControlName="niveau">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (n of niveaux; track n) {
+                  <mat-option [value]="n">{{ n }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>

@@ -35,7 +35,25 @@
       @if (employee) {
         <form [formGroup]="form">
 
-          <p class="form-section-label">Indemnités attribuées</p>
+          <p class="form-section-label">Primes standard</p>
+          <div class="form-grid-3">
+            <mat-form-field appearance="outline">
+              <mat-label>Indemnité de logement (FCFA)</mat-label>
+              <input matInput formControlName="primeLogement" type="number" min="0">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Indemnité de transport (FCFA)</mat-label>
+              <input matInput formControlName="primeTransport" type="number" min="0">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Prime de responsabilité (FCFA)</mat-label>
+              <input matInput formControlName="primeResponsabilite" type="number" min="0">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Autres indemnités attribuées</p>
           <div class="array-block">
             <div class="array-block-header">
               <span>{{ autres.length }} indemnité(s)</span>
@@ -85,7 +103,7 @@
           <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
             Enregistrer
           </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('salaire')" [disabled]="saving || form.invalid">
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('exonerations')" [disabled]="saving || form.invalid">
             @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
             Enregistrer et continuer
             <mat-icon>arrow_forward</mat-icon>

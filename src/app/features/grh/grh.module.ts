@@ -25,6 +25,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 // Routing
 import { GrhRoutingModule } from './grh-routing.module';
@@ -102,7 +104,9 @@ import { ContratsForm } from './contrats/contrats-form/contrats-form';
     MatProgressBarModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
+    MatDatepickerModule,
+    MatNativeDateModule
   ]
 })
 export class GrhModule {}

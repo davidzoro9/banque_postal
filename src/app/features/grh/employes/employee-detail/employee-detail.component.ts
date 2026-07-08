@@ -19,6 +19,7 @@ export const EMPLOYEE_SECTIONS: SectionDef[] = [
   { id: 'famille', title: 'Famille', subtitle: 'Conjoint, enfants, personnes à charge', icon: 'family_restroom', route: 'famille', isComplete: _ => true },
   { id: 'categorie', title: 'Catégorie', subtitle: 'Catégorie professionnelle, grade, échelon', icon: 'military_tech', route: 'categorie', isComplete: e => !!(e.categoriePro) },
   { id: 'indemnites', title: 'Indemnités', subtitle: 'Primes de logement, transport, responsabilité', icon: 'paid', route: 'indemnites', isComplete: e => e.primeLogement > 0 || e.primeTransport > 0 || e.autresIndemnites.length > 0 },
+  { id: 'exonerations', title: 'Exonérations', subtitle: 'Exonérations fiscales, sociales et avantages', icon: 'receipt_long', route: 'exonerations', isComplete: e => (e.exonerationsFiscales || []).length > 0 || (e.exonerationsSociales || []).length > 0 || (e.avantagesParticuliers || []).length > 0 },
   { id: 'salaire', title: 'Informations sur le salaire', subtitle: 'Salaire de base, brut, compte bancaire', icon: 'account_balance_wallet', route: 'salaire', isComplete: e => e.salaireBase > 0 },
   { id: 'dossier', title: 'Dossier individuel', subtitle: 'Contrats, diplômes, pièces administratives', icon: 'folder_open', route: 'dossier', isComplete: e => e.documents.length > 0 },
   { id: 'notes-rh', title: 'Notes RH', subtitle: 'Observations, évaluations, historique des actions', icon: 'note_alt', route: 'notes-rh', isComplete: e => !!(e.observations) || e.evaluations.length > 0 }
@@ -60,11 +61,13 @@ export class EmployeeDetailComponent implements OnInit {
 
   getInitials(): string {
     if (!this.employee) return '';
-    return `${this.employee.prenom[0]}${this.employee.nom[0]}`.toUpperCase();
+    const p = this.employee.prenom?.[0] || '';
+    const n = this.employee.nom?.[0] || '';
+    return `${p}${n}`.toUpperCase() || '??';
   }
 
   getAvatarColor(): string {
-    if (!this.employee) return '#163059';
+    if (!this.employee || !this.employee.nom || !this.employee.prenom) return '#163059';
     const c = ['#163059','#1B3A6B','#1565C0','#0D47A1','#1B4B9A','#FFB300','#091628','#CC8800'];
     return c[(this.employee.nom.charCodeAt(0) + this.employee.prenom.charCodeAt(0)) % c.length];
   }

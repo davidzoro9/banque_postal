@@ -66,16 +66,26 @@ export class InfosPersonnellesComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {
     if (this.form.invalid) return;
     this.saving = true;
     const v = this.form.value;
+    
+    let dob = v.dateNaissance;
+    if (dob instanceof Date) {
+      // Use local timezone formatting to avoid date shift
+      const year = dob.getFullYear();
+      const month = String(dob.getMonth() + 1).padStart(2, '0');
+      const day = String(dob.getDate()).padStart(2, '0');
+      dob = `${year}-${month}-${day}`;
+    }
+
     this.employeeService.update(this.empId, {
       nom: v.nom, prenom: v.prenom, nomJeuneFille: v.nomJeuneFille,
-      sexe: v.sexe, dateNaissance: v.dateNaissance, lieuNaissance: v.lieuNaissance,
+      sexe: v.sexe, dateNaissance: dob, lieuNaissance: v.lieuNaissance,
       nationalite: v.nationalite, numeroCNI: v.numeroCNI,
       adresse: v.adresse, ville: v.ville, codePostal: v.codePostal,
       pays: v.pays, telephone: v.telephone, email: v.email

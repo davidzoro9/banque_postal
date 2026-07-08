@@ -1,0 +1,221 @@
+<div class="section-page">
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Carrières & Compétences</span>
+    <span class="sep">›</span>
+    <span class="current">Plan de formation</span>
+  </div>
+
+  <div class="header-container">
+    <div class="header-info">
+      <div class="header-icon"><mat-icon>event_note</mat-icon></div>
+      <div>
+        <h1>Plan & Sessions de Formation</h1>
+        <p>Planification des formations et catalogue d'apprentissage des collaborateurs</p>
+      </div>
+    </div>
+    
+    <div class="header-actions">
+      @if (activeTab === 'plan') {
+        <button mat-raised-button color="primary" (click)="showScheduleForm = !showScheduleForm">
+          <mat-icon>{{ showScheduleForm ? 'close' : 'calendar_today' }}</mat-icon>
+          {{ showScheduleForm ? 'Fermer' : 'Planifier une session' }}
+        </button>
+      } @else {
+        <button mat-raised-button color="primary" (click)="showAddCourseForm = !showAddCourseForm">
+          <mat-icon>{{ showAddCourseForm ? 'close' : 'add' }}</mat-icon>
+          {{ showAddCourseForm ? 'Fermer' : 'Ajouter un cours' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Sélecteur d'onglets personnalisés -->
+  <div class="tabs-nav">
+    <button class="tab-nav-btn" [class.active]="activeTab === 'plan'" (click)="activeTab = 'plan'">
+      <mat-icon>calendar_month</mat-icon> Plan de formation
+    </button>
+    <button class="tab-nav-btn" [class.active]="activeTab === 'catalogue'" (click)="activeTab = 'catalogue'">
+      <mat-icon>menu_book</mat-icon> Catalogue des formations
+    </button>
+  </div>
+
+  <!-- ONGLET 1 : PLAN DE FORMATION -->
+  @if (activeTab === 'plan') {
+    <!-- Formulaire de planification -->
+    @if (showScheduleForm) {
+      @if (catalogue$ | async; as courses) {
+        <mat-card class="add-card animate-fade-in">
+          <mat-card-header>
+            <mat-card-title>Planifier une nouvelle session de formation</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (!courses || courses.length === 0) {
+              <p class="warning-text">Veuillez d'abord ajouter des thèmes dans le catalogue de formations.</p>
+            } @else {
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Sélectionner la formation *</mat-label>
+                  <mat-select [(ngModel)]="newSession.courseId">
+                    @for (c of courses; track c.id) {
+                      <mat-option [value]="c.id">{{ c.titre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Date de planification *</mat-label>
+                  <input matInput [matDatepicker]="sessPicker" [(ngModel)]="newSession.date">
+                  <mat-datepicker-toggle matIconSuffix [for]="sessPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #sessPicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre estimé de participants *</mat-label>
+                  <input matInput type="number" min="1" [(ngModel)]="newSession.participants">
+                </mat-form-field>
+              </div>
+
+              <div class="form-actions-row">
+                <button mat-button (click)="showScheduleForm = false">Annuler</button>
+                <button mat-flat-button color="primary" (click)="scheduleSession(courses)" [disabled]="!newSession.courseId || !newSession.date || saving">
+                  <mat-icon>check</mat-icon> Confirmer la planification
+                </button>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+    <!-- Liste des sessions planifiées -->
+    <mat-card class="table-card">
+      <mat-card-content>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Formation</th>
+                <th>Date programmée</th>
+                <th>Participants</th>
+                <th>Durée</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sess of sessions$ | async; track sess.id) {
+                <tr>
+                  <td>
+                    <div class="course-cell">
+                      <strong>{{ sess.titre }}</strong>
+                      <span class="course-desc-sub">{{ sess.description }}</span>
+                    </div>
+                  </td>
+                  <td>{{ sess.date | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <div class="participants-badge">
+                      <mat-icon>people</mat-icon>
+                      <strong>{{ sess.participants }}</strong>
+                    </div>
+                  </td>
+                  <td>{{ sess.duree || 0 }} h</td>
+                  <td>
+                    <span class="status-badge" [attr.data-status]="sess.statut">
+                      {{ sess.statut }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions-buttons">
+                      @if (sess.statut === 'Planifiée') {
+                        <button mat-stroked-button color="primary" size="small" (click)="changeStatus(sess.id, 'Confirmée')">
+                          Confirmer
+                        </button>
+                      }
+                      @if (sess.statut === 'Confirmée') {
+                        <button mat-stroked-button color="accent" size="small" (click)="changeStatus(sess.id, 'Terminée')">
+                          Terminer
+                        </button>
+                      }
+                      @if (sess.statut !== 'Terminée' && sess.statut !== 'Annulée') {
+                        <button mat-icon-button color="warn" (click)="changeStatus(sess.id, 'Annulée')" matTooltip="Annuler la session">
+                          <mat-icon>cancel</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="table-empty">
+                    <mat-icon>calendar_today</mat-icon>
+                    <p>Aucune session programmée</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- ONGLET 2 : CATALOGUE DES COURS -->
+  @if (activeTab === 'catalogue') {
+    <!-- Formulaire d'ajout au catalogue -->
+    @if (showAddCourseForm) {
+      <mat-card class="add-card animate-fade-in">
+        <mat-card-header>
+          <mat-card-title>Ajouter un thème de formation au catalogue</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="form-grid-course">
+            <mat-form-field appearance="outline">
+              <mat-label>Titre du cours *</mat-label>
+              <input matInput [(ngModel)]="newCourse.titre" placeholder="Ex: Maîtrise avancée de Docker">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Durée estimée (en heures) *</mat-label>
+              <input matInput type="number" min="1" [(ngModel)]="newCourse.duree">
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label>Description du cours *</mat-label>
+            <textarea matInput [(ngModel)]="newCourse.description" rows="3" placeholder="Objectifs de formation, public cible et programme synthétique..."></textarea>
+          </mat-form-field>
+
+          <div class="form-actions-row">
+            <button mat-button (click)="showAddCourseForm = false">Annuler</button>
+            <button mat-flat-button color="primary" (click)="addCourse()" [disabled]="!newCourse.titre.trim() || !newCourse.description.trim() || saving">
+              <mat-icon>check</mat-icon> Ajouter au catalogue
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Liste du catalogue -->
+    <div class="catalogue-grid">
+      @for (course of catalogue$ | async; track course.id) {
+        <mat-card class="course-card">
+          <mat-card-content>
+            <div class="course-card-header">
+              <div class="course-card-icon"><mat-icon>school</mat-icon></div>
+              <span class="course-duration">
+                <mat-icon>schedule</mat-icon> {{ course.duree }} h
+              </span>
+            </div>
+            <h3 class="course-title">{{ course.titre }}</h3>
+            <p class="course-desc">{{ course.description }}</p>
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <div class="empty-state">
+          <mat-icon>school</mat-icon>
+          <p>Le catalogue des formations est actuellement vide.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

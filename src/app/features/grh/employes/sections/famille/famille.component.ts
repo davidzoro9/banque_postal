@@ -93,17 +93,32 @@ export class FamilleComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {
     this.saving = true;
     const v = this.form.value;
 
+    const list: any[] = v.membresFamille || [];
+    let conjoint: any = null;
+    const enfants: any[] = [];
+    const personnesCharge: any[] = [];
+
+    list.forEach(m => {
+      if (m.lien === 'Conjoint') {
+        conjoint = { nom: m.nom, prenom: m.prenom };
+      } else if (m.lien === 'Enfant') {
+        enfants.push({ nom: m.nom, prenom: m.prenom, dateNaissance: '', sexe: 'M' });
+      } else {
+        personnesCharge.push({ nom: m.nom, prenom: m.prenom, lien: m.lien });
+      }
+    });
+
     const payload: Partial<Employee> = {
-      conjoint: undefined,
-      enfants: [],
-      personnesCharge: v.membresFamille
+      conjoint: conjoint || undefined,
+      enfants: enfants,
+      personnesCharge: personnesCharge
     };
 
     this.employeeService.update(this.empId, payload).subscribe(() => {

@@ -1,0 +1,135 @@
+<div class="section-page">
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Carrières & Compétences</span>
+    <span class="sep">›</span>
+    <span class="current">Entretiens annuels</span>
+  </div>
+
+  <div class="header-container">
+    <div class="header-info">
+      <div class="header-icon"><mat-icon>forum</mat-icon></div>
+      <div>
+        <h1>Entretiens annuels & Évaluations</h1>
+        <p>Suivi des bilans de performance, objectifs de carrière et appréciations</p>
+      </div>
+    </div>
+    
+    <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
+      <mat-icon>{{ showAddForm ? 'close' : 'rate_review' }}</mat-icon>
+      {{ showAddForm ? 'Fermer' : 'Nouvel entretien' }}
+    </button>
+  </div>
+
+  <!-- Formulaire d'entretien -->
+  @if (showAddForm) {
+    @if (employees$ | async; as employees) {
+      <mat-card class="add-card animate-fade-in">
+        <mat-card-header>
+          <mat-card-title>Enregistrer un compte-rendu d'évaluation</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (!employees || employees.length === 0) {
+            <p class="warning-text">Aucun employé disponible.</p>
+          } @else {
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Collaborateur évalué *</mat-label>
+                <mat-select [(ngModel)]="newEval.employeeId">
+                  @for (emp of employees; track emp.id) {
+                    <mat-option [value]="emp.id">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Date de l'entretien *</mat-label>
+                <input matInput [matDatepicker]="evalDatePicker" [(ngModel)]="newEval.date">
+                <mat-datepicker-toggle matIconSuffix [for]="evalDatePicker"></mat-datepicker-toggle>
+                <mat-datepicker #evalDatePicker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nom de l'évaluateur *</mat-label>
+                <input matInput [(ngModel)]="newEval.evaluateur" placeholder="Ex: Marie DUPONT">
+              </mat-form-field>
+            </div>
+
+            <div class="form-row-score">
+              <mat-form-field appearance="outline" style="width: 200px;">
+                <mat-label>Score global / Note *</mat-label>
+                <mat-select [(ngModel)]="newEval.note">
+                  <mat-option [value]="1">1 — Insuffisant</mat-option>
+                  <mat-option [value]="2">2 — À améliorer</mat-option>
+                  <mat-option [value]="3">3 — Conforme aux attentes</mat-option>
+                  <mat-option [value]="4">4 — Dépasse les attentes</mat-option>
+                  <mat-option [value]="5">5 — Excellent / Exceptionnel</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Objectifs fixés pour la période suivante *</mat-label>
+              <textarea matInput [(ngModel)]="newEval.objectifs" rows="3" placeholder="Lister les objectifs SMART mesurables..."></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Commentaires, points forts et axes de progrès *</mat-label>
+              <textarea matInput [(ngModel)]="newEval.commentaires" rows="3" placeholder="Appréciation globale du responsable..."></textarea>
+            </mat-form-field>
+
+            <div class="form-actions-row">
+              <button mat-button (click)="showAddForm = false">Annuler</button>
+              <button mat-flat-button color="primary" (click)="addEval(employees)" [disabled]="!newEval.employeeId || !newEval.date || !newEval.evaluateur.trim() || !newEval.objectifs.trim() || !newEval.commentaires.trim() || saving">
+                <mat-icon>check</mat-icon> Valider le bilan
+              </button>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Liste des comptes-rendus d'évaluation -->
+  <div class="evals-list">
+    @for (ev of evaluations$ | async; track ev.id) {
+      <mat-card class="eval-card">
+        <mat-card-content>
+          <div class="eval-card-header">
+            <div class="emp-profile">
+              <div class="emp-avatar">{{ getInitials(ev.employeeName) }}</div>
+              <div>
+                <h3 class="emp-name">{{ ev.employeeName }}</h3>
+                <span class="eval-meta">Entretien du {{ ev.date | date:'dd/MM/yyyy' }} par <strong>{{ ev.evaluateur }}</strong></span>
+              </div>
+            </div>
+
+            <div class="rating-stars" [matTooltip]="ev.note + ' / 5'">
+              @for (star of [1,2,3,4,5]; track star) {
+                <mat-icon [style.color]="star <= ev.note ? '#FFB300' : '#e0e0e0'">
+                  {{ star <= ev.note ? 'star' : 'star_border' }}
+                </mat-icon>
+              }
+            </div>
+          </div>
+
+          <div class="eval-body">
+            <div class="eval-section">
+              <span class="sec-lbl"><mat-icon>outlined_flag</mat-icon> Objectifs fixés :</span>
+              <p class="sec-val">{{ ev.objectifs }}</p>
+            </div>
+
+            <div class="eval-section">
+              <span class="sec-lbl"><mat-icon>chat_bubble_outline</mat-icon> Commentaires & Appréciation :</span>
+              <p class="sec-val">{{ ev.commentaires }}</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @empty {
+      <div class="empty-state">
+        <mat-icon>rate_review</mat-icon>
+        <p>Aucun compte-rendu d'entretien annuel enregistré.</p>
+      </div>
+    }
+  </div>
+</div>

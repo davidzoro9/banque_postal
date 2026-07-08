@@ -52,6 +52,8 @@ export class CategorieComponent implements OnInit {
       categoriePro: [''],
       echelon:      [''],
       echelle:      [''],
+      grade:        [''],
+      niveau:       [''],
       salaireBase:  [0]
     });
   }
@@ -61,13 +63,15 @@ export class CategorieComponent implements OnInit {
       categoriePro: e.categoriePro,
       echelon:      e.echelon,
       echelle:      (e as any).echelle || '',
+      grade:        e.grade || '',
+      niveau:       e.niveau || '',
       salaireBase:  e.salaireBase
     });
   }
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {
@@ -78,6 +82,8 @@ export class CategorieComponent implements OnInit {
       categoriePro: v.categoriePro,
       echelon:      v.echelon,
       echelle:      v.echelle,
+      grade:        v.grade,
+      niveau:       v.niveau,
       salaireBase:  +v.salaireBase
     } as any).subscribe(() => {
       this.saving = false;

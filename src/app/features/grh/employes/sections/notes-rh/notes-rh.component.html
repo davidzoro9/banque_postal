@@ -59,7 +59,9 @@
                   <div class="form-grid-2">
                     <mat-form-field appearance="outline">
                       <mat-label>Date</mat-label>
-                      <input matInput formControlName="date" type="date">
+                      <input matInput [matDatepicker]="evalPicker" formControlName="date">
+                      <mat-datepicker-toggle matIconSuffix [for]="evalPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #evalPicker></mat-datepicker>
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>Période</mat-label>

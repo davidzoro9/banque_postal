@@ -67,7 +67,7 @@ export class InfosProComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {

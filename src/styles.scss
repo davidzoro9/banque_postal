@@ -1,15 +1,26 @@
 @use '@angular/material' as mat;
 
+@include mat.core();
+
+$my-light-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  )
+));
+
+$my-dark-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  )
+));
+
 // ─── Thème clair (défaut) ─────────────────────────────────
 html {
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.all-component-themes($my-light-theme);
 
   // CSS custom properties – thème clair
   --app-bg:          #f0f2f5;
@@ -35,15 +46,7 @@ html {
 html.dark-theme {
   color-scheme: dark;
 
-  @include mat.theme((
-    color: (
-      theme-type: dark,
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.all-component-colors($my-dark-theme);
 
   // CSS custom properties – thème sombre
   --app-bg:          #060f1e;
@@ -144,6 +147,13 @@ h1, h2, h3, h4, h5, h6 {
   .span-2 { grid-column: 1 / -1; }
   @media (max-width: 600px) { grid-template-columns: 1fr; .span-2 { grid-column: 1; } }
 }
+
+.form-grid-3 {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 4px;
+  mat-form-field { width: 100%; }
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
 
 .form-grid-4 {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px;

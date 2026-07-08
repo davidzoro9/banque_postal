@@ -48,7 +48,9 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Date de l'absence</mat-label>
-            <input matInput formControlName="dateAbsence" type="date">
+            <input matInput [matDatepicker]="absPicker" formControlName="dateAbsence">
+            <mat-datepicker-toggle matIconSuffix [for]="absPicker"></mat-datepicker-toggle>
+            <mat-datepicker #absPicker></mat-datepicker>
           </mat-form-field>
 
           <div class="duree-row">

@@ -79,12 +79,20 @@ export class AbsencesFormComponent implements OnInit {
     const user = this.authService.currentUser;
     const empName = val.employe || (user ? `${user.prenom} ${user.nom}` : 'Collaborateur');
 
+    let dt = val.dateAbsence;
+    if (dt instanceof Date) {
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      dt = `${year}-${month}-${day}`;
+    }
+
     const dureeStr = `${val.duree || 0} ${val.unite === 'jours' ? 'jour(s)' : 'heure(s)'}`;
 
     const absenceData = {
       employe: empName,
       type: val.typeAbsence || '',
-      date: val.dateAbsence || '',
+      date: dt || '',
       duree: dureeStr,
       motif: val.motif || '',
       statut: ((val.typeAbsence || '').toLowerCase().includes('injustif') ? 'Injustifiée' : 'En attente') as 'Justifiée' | 'Injustifiée' | 'En attente'

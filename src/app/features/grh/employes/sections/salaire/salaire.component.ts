@@ -18,19 +18,16 @@ export class SalaireComponent implements OnInit {
   form!: FormGroup;
   saving = false;
   empId = '';
-  modesPaiement$!: Observable<RefItem[]>;
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService,
-    private dbRefService: DbRefService
+    private employeeService: EmployeeService
   ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.modesPaiement$ = this.dbRefService.getItems('mode-paiement');
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -65,7 +62,7 @@ export class SalaireComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {

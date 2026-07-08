@@ -93,7 +93,16 @@ export class EmployeeService {
 
   getById(id: string): Observable<Employee> {
     return this.http.get<any>(`${environment.apiUrl}/employes/${id}`).pipe(
-      map(item => this.toFrontend(item))
+      map(item => this.toFrontend(item)),
+      tap(emp => {
+        const exists = this.employees.some(e => String(e.id) === String(emp.id));
+        if (exists) {
+          this.employees = this.employees.map(e => String(e.id) === String(emp.id) ? emp : e);
+        } else {
+          this.employees = [...this.employees, emp];
+        }
+        this.employeesSubject.next(this.employees);
+      })
     );
   }
 
@@ -109,11 +118,13 @@ export class EmployeeService {
   }
 
   update(id: string, data: Partial<Employee>): Observable<Employee> {
-    const backendData = this.toBackend(data);
+    const existing = this.employees.find(e => String(e.id) === String(id));
+    const mergedData = existing ? { ...existing, ...data } : data;
+    const backendData = this.toBackend(mergedData);
     return this.http.put<any>(`${environment.apiUrl}/employes/${id}`, backendData).pipe(
       map(item => this.toFrontend(item)),
       tap(updatedEmp => {
-        this.employees = this.employees.map(e => e.id === id ? updatedEmp : e);
+        this.employees = this.employees.map(e => String(e.id) === String(id) ? updatedEmp : e);
         this.employeesSubject.next(this.employees);
       })
     );

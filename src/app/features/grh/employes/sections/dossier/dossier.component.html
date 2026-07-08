@@ -42,25 +42,46 @@
         </div>
 
         @if (showAddForm) {
-          <div class="add-doc-form">
-            <mat-form-field appearance="outline" style="flex:2">
-              <mat-label>Libellé du document *</mat-label>
-              <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023">
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Catégorie *</mat-label>
-              <mat-select [(ngModel)]="newDoc.categorie">
-                @for (cat of categories; track cat) {
-                  <mat-option [value]="cat">{{ cat }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <button mat-flat-button color="primary" (click)="addDoc()" [disabled]="!newDoc.libelle.trim()">
-              <mat-icon>check</mat-icon> Valider
-            </button>
-            <button mat-icon-button (click)="showAddForm = false">
-              <mat-icon>close</mat-icon>
-            </button>
+          <div class="add-doc-form" style="display: flex; flex-direction: column; gap: 12px; background: var(--surface-variant); padding: 16px; border-radius: 8px; margin-bottom: 16px; width: 100%;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; width: 100%;">
+              <mat-form-field appearance="outline" style="flex:2; min-width: 200px;">
+                <mat-label>Libellé du document *</mat-label>
+                <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023">
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" style="flex:1; min-width: 150px;">
+                <mat-label>Catégorie *</mat-label>
+                <mat-select [(ngModel)]="newDoc.categorie">
+                  @for (cat of categories; track cat) {
+                    <mat-option [value]="cat">{{ cat }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+              <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" accept="image/*,application/pdf">
+              
+              <button mat-stroked-button type="button" (click)="fileInput.click()" style="color: var(--active-color); border-color: var(--active-color);">
+                <mat-icon>upload_file</mat-icon> Choisir un fichier (PDF, Image...)
+              </button>
+
+              @if (selectedFileName) {
+                <span style="font-size: 13px; color: var(--on-surface-2); font-weight: 500; display: inline-flex; align-items: center;">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">attach_file</mat-icon>
+                  {{ selectedFileName }}
+                </span>
+              } @else {
+                <span style="font-size: 12px; color: var(--on-surface-3); font-style: italic;">Aucun fichier sélectionné</span>
+              }
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button mat-button (click)="showAddForm = false">Annuler</button>
+              <button mat-flat-button color="primary" (click)="addDoc()" [disabled]="!newDoc.libelle.trim()">
+                <mat-icon>check</mat-icon> Valider
+              </button>
+            </div>
           </div>
         }
 
@@ -72,22 +93,31 @@
           </div>
         }
 
-        <div class="doc-list">
+        <div class="doc-list" style="display: flex; flex-direction: column; gap: 10px;">
           @for (doc of documents; track doc.id) {
-            <div class="doc-item">
-              <div class="doc-icon">
-                <mat-icon>{{ getCatIcon(doc.categorie) }}</mat-icon>
-              </div>
-              <div class="doc-body">
-                <span class="doc-libelle">{{ doc.libelle }}</span>
-                <div class="doc-meta">
-                  <span class="doc-cat">{{ doc.categorie }}</span>
-                  <span class="doc-date">{{ doc.dateAjout }}</span>
+            <div class="doc-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0;" [style.cursor]="doc.url ? 'pointer' : 'default'" (click)="doc.url && openFile(doc)" [matTooltip]="doc.url ? 'Cliquez pour ouvrir/télécharger' : ''">
+                <div class="doc-icon" style="color: var(--active-color); display: flex; align-items: center; justify-content: center; background: rgba(22,48,89,0.06); width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;">
+                  <mat-icon>{{ getCatIcon(doc.categorie) }}</mat-icon>
+                </div>
+                <div class="doc-body" style="display: flex; flex-direction: column; min-width: 0;">
+                  <span class="doc-libelle" style="font-weight: 600; font-size: 13px;" [style.color]="doc.url ? 'var(--active-color)' : 'var(--on-surface)'" [style.text-decoration]="doc.url ? 'underline' : 'none'">{{ doc.libelle }}</span>
+                  <div class="doc-meta" style="display: flex; gap: 12px; font-size: 11px; margin-top: 4px; flex-wrap: wrap;">
+                    <span class="doc-cat" style="color: var(--active-color); font-weight: 600;">{{ doc.categorie }}</span>
+                    <span class="doc-date" style="color: var(--on-surface-3);">Ajouté le {{ doc.dateAjout }}</span>
+                  </div>
                 </div>
               </div>
-              <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
-                <mat-icon>delete_outline</mat-icon>
-              </button>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                @if (doc.url) {
+                  <button mat-icon-button color="primary" (click)="openFile(doc)" matTooltip="Ouvrir le fichier">
+                    <mat-icon>open_in_new</mat-icon>
+                  </button>
+                }
+                <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
             </div>
           }
         </div>

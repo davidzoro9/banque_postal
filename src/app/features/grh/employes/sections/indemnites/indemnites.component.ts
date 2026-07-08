@@ -48,11 +48,19 @@ export class IndemnitesComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
+      primeLogement:      [0, [Validators.min(0)]],
+      primeTransport:     [0, [Validators.min(0)]],
+      primeResponsabilite: [0, [Validators.min(0)]],
       autresIndemnites:   this.fb.array([])
     });
   }
 
   private patch(e: Employee): void {
+    this.form.patchValue({
+      primeLogement:      e.primeLogement || 0,
+      primeTransport:     e.primeTransport || 0,
+      primeResponsabilite: e.primeResponsabilite || 0
+    });
     if (e.autresIndemnites && e.autresIndemnites.length > 0) {
       e.autresIndemnites.forEach(item => this.autres.push(this.fb.group({
         code:    [item.code || ''],
@@ -85,12 +93,14 @@ export class IndemnitesComponent implements OnInit {
 
   get totalIndemnites(): number {
     const v = this.form.value;
-    return (v.autresIndemnites as {montant: number}[]).reduce((s, i) => s + (+i.montant || 0), 0);
+    const primes = (+v.primeLogement || 0) + (+v.primeTransport || 0) + (+v.primeResponsabilite || 0);
+    const autres = (v.autresIndemnites as {montant: number}[]).reduce((s, i) => s + (+i.montant || 0), 0);
+    return primes + autres;
   }
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(next?: string): void {
@@ -98,6 +108,9 @@ export class IndemnitesComponent implements OnInit {
     this.saving = true;
     const v = this.form.value;
     this.employeeService.update(this.empId, {
+      primeLogement:       +v.primeLogement,
+      primeTransport:      +v.primeTransport,
+      primeResponsabilite: +v.primeResponsabilite,
       autresIndemnites:    v.autresIndemnites
     }).subscribe(() => {
       this.saving = false;

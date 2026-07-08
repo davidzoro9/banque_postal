@@ -65,15 +65,27 @@ export class NotesRhComponent implements OnInit {
 
   get initials(): string {
     if (!this.employee) return '';
-    return `${(this.employee.prenom[0] || '')}${(this.employee.nom[0] || '')}`.toUpperCase();
+    return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
   save(navigateToHub = false): void {
     this.saving = true;
     const v = this.form.value;
+
+    const formattedEvaluations = (v.evaluations || []).map((ev: any) => {
+      let d = ev.date;
+      if (d instanceof Date) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        d = `${year}-${month}-${day}`;
+      }
+      return { ...ev, date: d };
+    });
+
     this.employeeService.update(this.empId, {
       observations: v.observations,
-      evaluations:  v.evaluations
+      evaluations:  formattedEvaluations
     }).subscribe(() => {
       this.saving = false;
       this.router.navigate(['/grh/employes', this.empId]);

@@ -1,0 +1,298 @@
+.section-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sec-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--on-surface-3);
+  margin-bottom: 24px;
+  
+  .link {
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.2s;
+    &:hover { color: var(--active-color); text-decoration: underline; }
+  }
+  .sep { color: var(--on-surface-4); }
+  .current { color: var(--on-surface); font-weight: 600; }
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  
+  .header-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(21, 101, 192, 0.08);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1565c0;
+    mat-icon { font-size: 24px; width: 24px; height: 24px; }
+  }
+  
+  h1 { font-size: 22px; font-weight: 700; color: var(--on-surface); margin: 0; }
+  p { font-size: 14px; color: var(--on-surface-2); margin: 4px 0 0 0; }
+}
+
+.tabs-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  padding-bottom: 8px;
+}
+
+.tab-nav-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surface-2);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  
+  mat-icon { font-size: 18px; width:18px; height:18px; }
+  
+  &:hover { background: rgba(22, 48, 89, 0.04); color: var(--active-color); }
+  &.active {
+    background: rgba(22, 48, 89, 0.08);
+    color: var(--active-color);
+  }
+}
+
+.add-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  
+  mat-card-header {
+    margin-bottom: 16px;
+    mat-card-title { font-size: 16px; font-weight: 700; color: #163059; }
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.form-grid-course {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 16px;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.w-100 { width: 100%; }
+
+.form-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.warning-text {
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 8px 0;
+}
+
+.table-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+  overflow: hidden;
+  margin-bottom: 24px;
+  
+  mat-card-content { padding: 0 !important; }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  th {
+    background: var(--surface-variant);
+    color: var(--on-surface-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--on-surface);
+    vertical-align: middle;
+  }
+  
+  tr:last-child td { border-bottom: none; }
+}
+
+.course-cell {
+  display: flex;
+  flex-direction: column;
+  strong { color: var(--on-surface); font-size: 13.5px; }
+  .course-desc-sub { font-size: 11px; color: var(--on-surface-3); margin-top: 3px; }
+}
+
+.participants-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--on-surface-2);
+  
+  mat-icon { font-size: 16px; width:16px; height:16px; color: var(--on-surface-3); }
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  
+  &[data-status="Planifiée"] { background: rgba(0,0,0,0.06); color: var(--on-surface-2); }
+  &[data-status="Confirmée"] { background: rgba(22, 48, 89, 0.1); color: #163059; }
+  &[data-status="Terminée"] { background: rgba(76, 175, 80, 0.1); color: #2e7d32; }
+  &[data-status="Annulée"] { background: rgba(244, 67, 54, 0.1); color: #c62828; }
+}
+
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-empty {
+  text-align: center;
+  padding: 48px 16px !important;
+  color: var(--on-surface-3);
+  
+  mat-icon { font-size: 36px; width: 36px; height: 36px; color: var(--on-surface-4); }
+  p { font-size: 13px; font-weight: 500; margin: 8px 0 0 0; }
+}
+
+.catalogue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.course-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    border-color: rgba(21, 101, 192, 0.2);
+  }
+}
+
+.course-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  
+  .course-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(21, 101, 192, 0.08);
+    color: #1565c0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  }
+}
+
+.course-duration {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  mat-icon { font-size: 13px; width:13px; height:13px; }
+}
+
+.course-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0 0 8px 0;
+}
+
+.course-desc {
+  font-size: 12px;
+  color: var(--on-surface-2);
+  line-height: 1.5;
+  margin: 0;
+  height: 54px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--on-surface-3);
+  text-align: center;
+  
+  mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
+  p { font-size: 14px; font-weight: 500; margin: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

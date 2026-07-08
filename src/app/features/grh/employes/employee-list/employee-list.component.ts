@@ -86,11 +86,14 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   }
 
   getInitials(emp: Employee): string {
-    return `${emp.prenom.charAt(0)}${emp.nom.charAt(0)}`.toUpperCase();
+    const p = emp.prenom?.charAt(0) || '';
+    const n = emp.nom?.charAt(0) || '';
+    return `${p}${n}`.toUpperCase() || '??';
   }
 
   getAvatarColor(emp: Employee): string {
     const colors = ['#163059', '#1565C0', '#1B3A6B', '#FFB300', '#0D47A1', '#091628', '#1B4B9A', '#CC8800'];
+    if (!emp.nom || !emp.prenom) return '#163059';
     const idx = (emp.nom.charCodeAt(0) + emp.prenom.charCodeAt(0)) % colors.length;
     return colors[idx];
   }
