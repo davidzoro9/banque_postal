@@ -5,6 +5,7 @@ import { takeUntil, filter } from 'rxjs/operators';
 import { ModuleNavService } from '../../core/services/module-nav.service';
 import { AppModule } from '../../core/models/app-module.model';
 import { MenuItem } from '../../core/models/menu-item.model';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-nav-drawer',
@@ -22,14 +23,22 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
 
   constructor(
     public moduleNav: ModuleNavService,
-    public router: Router
+    public router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.moduleNav.activeModule$.pipe(takeUntil(this.destroy$)).subscribe(mod => {
       const isSameModule = this.activeModule?.id === mod?.id;
       this.activeModule = mod;
-      this.menuItems = this.moduleNav.getMenuForActiveModule();
+      
+      const rawItems = this.moduleNav.getMenuForActiveModule();
+      this.menuItems = rawItems.filter(item => {
+        if (item.id === 'parametres-rh') {
+          return this.authService.currentUser?.role === 'ADMIN';
+        }
+        return true;
+      });
 
       if (!isSameModule) {
         // Changement de module : on repart de zéro

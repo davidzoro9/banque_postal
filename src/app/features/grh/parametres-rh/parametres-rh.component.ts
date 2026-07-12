@@ -7,6 +7,7 @@ import { APP_MODULES } from '../../../core/models/app-module.model';
 import { DbRefService, RefItem } from '../../donnees-base/services/db-ref.service';
 import { ParametresRhService, ParamItem } from '../services/parametres-rh.service';
 import { UtilisateurService, Utilisateur } from '../services/utilisateur.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-parametres-rh',
@@ -41,10 +42,15 @@ export class ParametresRhComponent implements OnInit {
     private router: Router,
     private dbRefService: DbRefService,
     private paramsService: ParametresRhService,
-    private utilisateurService: UtilisateurService
+    private utilisateurService: UtilisateurService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    if (this.authService.currentUser?.role !== 'ADMIN') {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
     this.moduleNav.selectModule(this.module);
     this.buildAddForm();
     this.buildUserForm();
