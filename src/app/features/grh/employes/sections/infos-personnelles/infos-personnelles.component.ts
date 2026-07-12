@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
+import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 
 @Component({
   selector: 'app-infos-personnelles',
@@ -15,6 +17,7 @@ export class InfosPersonnellesComponent implements OnInit {
   form!: FormGroup;
   saving = false;
   empId = '';
+  villes: RefItem[] = [];
 
   readonly sexes = [{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }];
 
@@ -22,7 +25,8 @@ export class InfosPersonnellesComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
@@ -33,6 +37,7 @@ export class InfosPersonnellesComponent implements OnInit {
       this.buildForm();
       this.patch(e);
     });
+    this.loadVilles();
   }
 
   private buildForm(): void {
@@ -93,6 +98,40 @@ export class InfosPersonnellesComponent implements OnInit {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);
       else this.router.navigate(['/grh/employes', this.empId]);
+    });
+  }
+
+  loadVilles(): void {
+    this.dbRefService.getItems('ville').subscribe({
+      next: (items) => {
+        this.villes = items;
+        if (items.length === 0) {
+          this.initDefaultVilles();
+        }
+      }
+    });
+  }
+
+  private initDefaultVilles(): void {
+    const defaults = [
+      { code: 'OUAGA', libelle: 'Ouagadougou', description: 'Capitale politique', actif: true },
+      { code: 'BOBO', libelle: 'Bobo-Dioulasso', description: 'Capitale économique', actif: true },
+      { code: 'KOUDOU', libelle: 'Koudougou', description: 'Région du Centre-Ouest', actif: true },
+      { code: 'OUAHI', libelle: 'Ouahigouya', description: 'Région du Nord', actif: true },
+      { code: 'BANF', libelle: 'Banfora', description: 'Région des Cascades', actif: true },
+      { code: 'KAYA', libelle: 'Kaya', description: 'Région du Centre-Nord', actif: true },
+      { code: 'TENKO', libelle: 'Tenkodogo', description: 'Région du Centre-Est', actif: true },
+      { code: 'FADA', libelle: 'Fada N\'gourma', description: 'Région de l\'Est', actif: true },
+      { code: 'DEDOU', libelle: 'Dédougou', description: 'Région de la Boucle du Mouhoun', actif: true },
+      { code: 'MANGA', libelle: 'Manga', description: 'Région du Centre-Sud', actif: true }
+    ];
+    const calls = defaults.map(d => this.dbRefService.addItem('ville', d));
+    forkJoin(calls).subscribe({
+      next: (res) => {
+        if (res && res.length > 0) {
+          this.villes = res[res.length - 1];
+        }
+      }
     });
   }
 

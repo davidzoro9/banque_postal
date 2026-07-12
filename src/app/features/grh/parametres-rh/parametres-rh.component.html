@@ -142,12 +142,11 @@
                   <input matInput formControlName="username">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
-                  <mat-label>Rôle *</mat-label>
+                  <mat-label>Rôle / Profil *</mat-label>
                   <mat-select formControlName="role">
-                    <mat-option value="ADMIN">Administrateur</mat-option>
-                    <mat-option value="RH">Responsable RH</mat-option>
-                    <mat-option value="MANAGER">Manager</mat-option>
-                    <mat-option value="EMPLOYE">Employé</mat-option>
+                    @for (p of profils; track p.id) {
+                      <mat-option [value]="p.code">{{ p.libelle }}</mat-option>
+                    }
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline">

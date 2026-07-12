@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../core/models/app-module.model';
-import { DbRefService } from '../../donnees-base/services/db-ref.service';
+import { DbRefService, RefItem } from '../../donnees-base/services/db-ref.service';
 import { ParametresRhService, ParamItem } from '../services/parametres-rh.service';
 import { UtilisateurService, Utilisateur } from '../services/utilisateur.service';
 
@@ -22,6 +22,7 @@ export class ParametresRhComponent implements OnInit {
   motifsSortie: ParamItem[] = [];
   paramsSpecifiques: ParamItem[] = [];
   utilisateurs: Utilisateur[] = [];
+  profils: RefItem[] = [];
 
   addForm!: FormGroup;
   userForm!: FormGroup;
@@ -49,6 +50,7 @@ export class ParametresRhComponent implements OnInit {
     this.buildUserForm();
     this.loadAllParams();
     this.loadUtilisateurs();
+    this.loadProfils();
   }
 
   private buildAddForm(): void {
@@ -278,6 +280,34 @@ export class ParametresRhComponent implements OnInit {
     this.utilisateurService.getAll().subscribe({
       next: (res) => this.utilisateurs = res,
       error: (err) => console.error('Failed to load users:', err)
+    });
+  }
+
+  loadProfils(): void {
+    this.dbRefService.getItems('profil').subscribe({
+      next: (items) => {
+        this.profils = items;
+        if (items.length === 0) {
+          this.initDefaultProfils();
+        }
+      }
+    });
+  }
+
+  private initDefaultProfils(): void {
+    const defaults = [
+      { code: 'ADMIN', libelle: 'Administrateur', description: 'Accès complet', actif: true },
+      { code: 'RH', libelle: 'Responsable RH', description: 'Gestion des ressources humaines', actif: true },
+      { code: 'MANAGER', libelle: 'Manager', description: 'Gestion d\'équipe', actif: true },
+      { code: 'EMPLOYE', libelle: 'Employé', description: 'Accès collaborateur', actif: true }
+    ];
+    const calls = defaults.map(d => this.dbRefService.addItem('profil', d));
+    forkJoin(calls).subscribe({
+      next: (res) => {
+        if (res && res.length > 0) {
+          this.profils = res[res.length - 1];
+        }
+      }
     });
   }
 

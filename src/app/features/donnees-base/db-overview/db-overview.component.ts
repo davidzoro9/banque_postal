@@ -20,10 +20,10 @@ export class DbOverviewComponent implements OnInit {
   ];
 
   quickActions = [
-    { label: 'Départements',      icon: 'domain',             route: '/donnees-base/structure/departements',  color: '#163059' },
-    { label: 'Types de contrats', icon: 'article',            route: '/donnees-base/parametres/contrats',     color: '#1565C0' },
-    { label: 'Jours fériés',      icon: 'celebration',        route: '/donnees-base/calendriers/feries',      color: '#1B3A6B' },
-    { label: 'Configuration',     icon: 'admin_panel_settings',route: '/donnees-base/configuration',          color: '#FFB300' }
+    { label: 'Départements',      icon: 'domain',             route: '/donnees-base/admin/departement',  color: '#163059' },
+    { label: 'Types de contrats', icon: 'article',            route: '/donnees-base/admin/type-contrat', color: '#1565C0' },
+    { label: 'Types de congés',   icon: 'beach_access',        route: '/donnees-base/admin/type-conge',   color: '#1B3A6B' },
+    { label: 'Grille salariale',  icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale', color: '#FFB300' }
   ];
 
   configuration = [

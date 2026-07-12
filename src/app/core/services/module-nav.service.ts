@@ -134,7 +134,9 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
         { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
         { id: 'type-retenue-employe', label: 'Retenue (par employé)', icon: 'money_off',      route: '/donnees-base/admin/type-retenue-employe' },
-        { id: 'type-retenue-emploi',  label: 'Retenue (par emploi)',  icon: 'money_off',      route: '/donnees-base/admin/type-retenue-emploi' }
+        { id: 'type-retenue-emploi',  label: 'Retenue (par emploi)',  icon: 'money_off',      route: '/donnees-base/admin/type-retenue-emploi' },
+        { id: 'profil',               label: 'Profil / Rôle',         icon: 'admin_panel_settings', route: '/donnees-base/admin/profil' },
+        { id: 'ville',                label: 'Villes',                icon: 'location_city',        route: '/donnees-base/admin/ville' }
       ]
     },
     {

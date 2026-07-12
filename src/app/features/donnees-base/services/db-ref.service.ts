@@ -28,6 +28,34 @@ const BACKEND_MAP: Record<string, {
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
+  'direction': {
+    segment: 'directions',
+    getAllPath: '',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
+    toBack:  item => ({ code: item.code, name: item.libelle, departmentId: null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, departmentId: null }),
+  },
+  'service': {
+    segment: 'services',
+    getAllPath: '',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
+    toBack:  item => ({ code: item.code, name: item.libelle, departmentId: null, directionId: null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, departmentId: null, directionId: null }),
+  },
+  'profil': {
+    segment: 'ref-data/profil',
+    getAllPath: '/all',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+  },
+  'ville': {
+    segment: 'ref-data/ville',
+    getAllPath: '/all',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+  },
   'fonction': {
     segment: 'fonctions',
     getAllPath: '/all',
@@ -312,7 +340,7 @@ export class DbRefService {
     const item = subject.value.find(i => i.code === code);
 
     if (mapping && item?.id) {
-      return this.http.delete<void>(`${environment.apiUrl}/${mapping.segment}/${item.id}`).pipe(
+      return this.http.delete(`${environment.apiUrl}/${mapping.segment}/${item.id}`, { responseType: 'text' }).pipe(
         map(() => {
           const newList = subject.value.filter(i => i.code !== code);
           subject.next(newList);

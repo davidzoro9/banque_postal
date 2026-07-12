@@ -1,24 +1,17 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { User } from '../models/user.model';
-
-const MOCK_USER: User = {
-  id: '1',
-  nom: 'Dupont',
-  prenom: 'Marie',
-  email: 'marie.dupont@entreprise.com',
-  role: 'ADMIN',
-  permissions: ['grh.view', 'carrieres.view', 'paie.view', 'donnees-base.view'],
-  avatar: '',
-  poste: 'Directrice RH',
-  department: 'Ressources Humaines'
-};
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private userSubject = new BehaviorSubject<User | null>(MOCK_USER);
+  private userSubject = new BehaviorSubject<User | null>(null);
 
   currentUser$: Observable<User | null> = this.userSubject.asObservable();
+
+  constructor(private http: HttpClient) {}
 
   get currentUser(): User | null {
     return this.userSubject.value;
@@ -29,8 +22,31 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<User> {
-    this.userSubject.next(MOCK_USER);
-    return of(MOCK_USER);
+    return this.http.post<any>(`${environment.apiUrl}/utilisateurs/login`, { email, password }).pipe(
+      map(res => {
+        let permissions: string[] = ['grh.view'];
+        if (res.role === 'ADMIN' || res.role === 'RH') {
+          permissions = ['grh.view', 'carrieres.view', 'paie.view', 'donnees-base.view'];
+        } else if (res.role === 'MANAGER') {
+          permissions = ['grh.view', 'carrieres.view'];
+        }
+        
+        const user: User = {
+          id: String(res.id),
+          nom: res.nom,
+          prenom: res.prenom,
+          email: res.email,
+          role: res.role,
+          permissions: permissions,
+          avatar: '',
+          poste: res.role === 'ADMIN' ? 'Administrateur' : res.role,
+          department: ''
+        };
+        
+        this.userSubject.next(user);
+        return user;
+      })
+    );
   }
 
   logout(): void {

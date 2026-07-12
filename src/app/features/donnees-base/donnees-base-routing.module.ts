@@ -19,6 +19,8 @@ const routes: Routes = [
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
   { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenue (par employé)', icon: 'money_off', type: 'type-retenue-employe' } },
   { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Types de retenue (par emploi)',  icon: 'money_off', type: 'type-retenue-emploi' } },
+  { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
+  { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes (Burkina Faso)', icon: 'location_city', type: 'ville' } },
 
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },
