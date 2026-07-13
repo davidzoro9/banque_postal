@@ -11,6 +11,8 @@ export interface RefItem {
   description: string;
   actif: boolean;
   montant?: number;
+  departementId?: string;   // utilisé par Direction et Service
+  directionId?:   string;   // utilisé par Service
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -31,16 +33,25 @@ const BACKEND_MAP: Record<string, {
   'direction': {
     segment: 'directions',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle, departmentId: null }),
-    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, departmentId: null }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+                       departementId: dto.departmentId ? String(dto.departmentId) : undefined }),
+    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                        departmentId: item.departementId ? Number(item.departementId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                             departmentId: item.departementId ? Number(item.departementId) : null }),
   },
   'service': {
     segment: 'services',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle, departmentId: null, directionId: null }),
-    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, departmentId: null, directionId: null }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+                       directionId:   dto.directionId   ? String(dto.directionId)   : undefined,
+                       departementId: dto.departmentId  ? String(dto.departmentId)  : undefined }),
+    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                        directionId:  item.directionId   ? Number(item.directionId)   : null,
+                        departmentId: item.departementId ? Number(item.departementId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                             directionId:  item.directionId   ? Number(item.directionId)   : null,
+                             departmentId: item.departementId ? Number(item.departementId) : null }),
   },
   'profil': {
     segment: 'ref-data/profil',

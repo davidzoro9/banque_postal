@@ -167,6 +167,45 @@
       </mat-form-field>
     }
 
+    <!-- Select Département — pour Direction -->
+    @if (type === 'direction') {
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Département rattaché</mat-label>
+        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">account_tree</mat-icon>
+        <mat-select formControlName="departementId" placeholder="Sélectionner un département">
+          <mat-option [value]="null">— Aucun —</mat-option>
+          @for (dep of departements; track dep.id) {
+            <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
+    <!-- Selects Direction + Département — pour Service -->
+    @if (type === 'service') {
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Direction rattachée</mat-label>
+        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">account_tree</mat-icon>
+        <mat-select formControlName="directionId" placeholder="Sélectionner une direction">
+          <mat-option [value]="null">— Aucune —</mat-option>
+          @for (dir of directions; track dir.id) {
+            <mat-option [value]="dir.id">{{ dir.libelle }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Département rattaché</mat-label>
+        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">domain</mat-icon>
+        <mat-select formControlName="departementId" placeholder="Sélectionner un département">
+          <mat-option [value]="null">— Aucun —</mat-option>
+          @for (dep of departements; track dep.id) {
+            <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
     <!-- Champ Montant — uniquement pour la grille salariale -->
     @if (type === 'grille-salariale') {
       <mat-form-field appearance="outline" style="width: 100%;">

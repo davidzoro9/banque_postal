@@ -34,6 +34,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   isEditing = false;
   editingItem: RefItem | null = null;
 
+  // Listes pour les selects hiérarchiques
+  departements: RefItem[] = [];   // pour Direction et Service
+  directions:   RefItem[] = [];   // pour Service uniquement
+
   constructor(
     private route: ActivatedRoute,
     private moduleNav: ModuleNavService,
@@ -42,11 +46,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder
   ) {
     this.formGroup = this.fb.group({
-      code:        ['', [Validators.required, Validators.maxLength(20)]],
-      libelle:     ['', [Validators.required, Validators.maxLength(150)]],
-      description: [''],
-      actif:       [true],
-      montant:     [0, [Validators.min(0)]]  // champ pour grille salariale
+      code:          ['', [Validators.required, Validators.maxLength(20)]],
+      libelle:       ['', [Validators.required, Validators.maxLength(150)]],
+      description:   [''],
+      actif:         [true],
+      montant:       [0, [Validators.min(0)]],  // grille salariale
+      departementId: [null],                     // pour Direction et Service
+      directionId:   [null],                     // pour Service uniquement
     });
   }
 
@@ -56,13 +62,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.title  = data['title']  ?? '';
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
-      // Afficher la colonne Montant uniquement pour la grille salariale
       if (this.type === 'grille-salariale') {
         this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'montant', 'actions'];
       } else {
         this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'actions'];
       }
       this.searchQuery = '';
+      this.loadHierarchyData();
       this.loadData();
     });
   }
@@ -74,13 +80,24 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   loadData(): void {
     this.dbRefService.getItems(this.type).subscribe({
-      next: (items) => {
-        this.dataSource.data = items;
-      },
-      error: (err) => {
-        console.error('Error loading data for', this.type, err);
-      }
+      next: (items) => { this.dataSource.data = items; },
+      error: (err)  => { console.error('Erreur chargement', this.type, err); }
     });
+  }
+
+  loadHierarchyData(): void {
+    // Charger les départements pour Direction et Service
+    if (this.type === 'direction' || this.type === 'service') {
+      this.dbRefService.getItems('departement').subscribe(items => this.departements = items);
+    } else {
+      this.departements = [];
+    }
+    // Charger les directions pour Service uniquement
+    if (this.type === 'service') {
+      this.dbRefService.getItems('direction').subscribe(items => this.directions = items);
+    } else {
+      this.directions = [];
+    }
   }
 
   applyFilter(): void {
@@ -90,57 +107,54 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openAddDialog(): void {
     this.isEditing = false;
     this.editingItem = null;
-    this.formGroup.reset({ code: '', libelle: '', description: '', actif: true, montant: 0 });
+    this.formGroup.reset({
+      code: '', libelle: '', description: '', actif: true,
+      montant: 0, departementId: null, directionId: null
+    });
     this.formGroup.get('code')?.enable();
-    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
+    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
   }
 
   openEditDialog(item: RefItem): void {
     this.isEditing = true;
     this.editingItem = item;
     this.formGroup.reset({
-      code:        item.code,
-      libelle:     item.libelle,
-      description: item.description,
-      actif:       item.actif,
-      montant:     item.montant ?? 0
+      code:          item.code,
+      libelle:       item.libelle,
+      description:   item.description,
+      actif:         item.actif,
+      montant:       item.montant ?? 0,
+      departementId: item.departementId ?? null,
+      directionId:   item.directionId   ?? null,
     });
     this.formGroup.get('code')?.enable();
-    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '500px' });
+    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
   }
 
   onSubmit(): void {
     if (this.formGroup.invalid) return;
 
-    const rawValue = this.formGroup.getRawValue();
+    const v = this.formGroup.getRawValue();
     const item: RefItem = {
-      id:          this.editingItem?.id,
-      code:        rawValue.code,
-      libelle:     rawValue.libelle,
-      description: rawValue.description || '',
-      actif:       rawValue.actif ?? true,
-      montant:     rawValue.montant ?? 0
+      id:            this.editingItem?.id,
+      code:          v.code,
+      libelle:       v.libelle,
+      description:   v.description || '',
+      actif:         v.actif ?? true,
+      montant:       v.montant ?? 0,
+      departementId: v.departementId || undefined,
+      directionId:   v.directionId   || undefined,
     };
 
     if (this.isEditing && this.editingItem) {
       this.dbRefService.updateItem(this.type, this.editingItem.code, item).subscribe({
-        next: (items) => {
-          this.dataSource.data = items;
-          this.dialogRef.close();
-        },
-        error: (err) => {
-          alert(err.message || 'Une erreur est survenue lors de la modification.');
-        }
+        next: (items) => { this.dataSource.data = items; this.dialogRef.close(); },
+        error: (err)  => { alert(err.message || 'Erreur lors de la modification.'); }
       });
     } else {
       this.dbRefService.addItem(this.type, item).subscribe({
-        next: (items) => {
-          this.dataSource.data = items;
-          this.dialogRef.close();
-        },
-        error: (err) => {
-          alert(err.message || 'Une erreur est survenue lors de la création.');
-        }
+        next: (items) => { this.dataSource.data = items; this.dialogRef.close(); },
+        error: (err)  => { alert(err.message || 'Erreur lors de la création.'); }
       });
     }
   }
@@ -149,12 +163,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     event.stopPropagation();
     if (confirm(`Voulez-vous vraiment supprimer l'élément "${item.libelle}" ?`)) {
       this.dbRefService.deleteItem(this.type, item.code).subscribe({
-        next: (items) => {
-          this.dataSource.data = items;
-        },
-        error: (err) => {
-          alert(err.message || 'Une erreur est survenue lors de la suppression.');
-        }
+        next: (items) => { this.dataSource.data = items; },
+        error: (err)  => { alert(err.message || 'Erreur lors de la suppression.'); }
       });
     }
   }
@@ -162,9 +172,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   toggleStatus(item: RefItem, event: Event): void {
     event.stopPropagation();
     this.dbRefService.toggleItemStatus(this.type, item.code).subscribe({
-      next: (items) => {
-        this.dataSource.data = items;
-      }
+      next: (items) => { this.dataSource.data = items; }
     });
   }
 

@@ -12,6 +12,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatSelectModule } from '@angular/material/select';
 
 import { DonneesBaseRoutingModule } from './donnees-base-routing.module';
 import { DbOverviewComponent } from './db-overview/db-overview.component';
@@ -37,7 +38,8 @@ import { DbRefListComponent } from './db-ref-list/db-ref-list.component';
     MatFormFieldModule,
     MatInputModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSelectModule
   ]
 })
 export class DonneesBaseModule {}
