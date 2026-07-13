@@ -13,6 +13,8 @@ export interface RefItem {
   montant?: number;
   departementId?: string;   // utilisé par Direction et Service
   directionId?:   string;   // utilisé par Service
+  echelle?:       string;   // utilisé par Grille salariale
+  echellon?:      string;   // utilisé par Grille salariale
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -100,14 +102,29 @@ const BACKEND_MAP: Record<string, {
     getAllPath: '',
     toFront: dto => ({
       id: String(dto.id),
-      code: dto.classe || dto.code || '',
-      libelle: dto.category || dto.libelle || '',
+      code: dto.classe || '',
+      libelle: dto.category || '',
       description: `${dto.echelle || ''} - ${dto.echellon || ''}`.trim(),
       actif: true,
-      montant: dto.basicSalary || dto.montant || 0
+      montant: dto.basicSalary || 0,
+      echelle: dto.echelle || '',
+      echellon: dto.echellon || ''
     }),
-    toBack:  item => ({ classe: item.code, category: item.libelle, basicSalary: item.montant || 0 }),
-    toBackUpdate: item => ({ id: item.id, classe: item.code, category: item.libelle, basicSalary: item.montant || 0 }),
+    toBack:  item => ({
+      classe: item.code,
+      category: item.libelle,
+      basicSalary: item.montant || 0,
+      echelle: item.echelle || '',
+      echellon: item.echellon || ''
+    }),
+    toBackUpdate: item => ({
+      id: Number(item.id),
+      classe: item.code,
+      category: item.libelle,
+      basicSalary: item.montant || 0,
+      echelle: item.echelle || '',
+      echellon: item.echellon || ''
+    }),
   },
   'departement': {
     segment: 'departments',

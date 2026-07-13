@@ -38,6 +38,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   departements: RefItem[] = [];   // pour Direction et Service
   directions:   RefItem[] = [];   // pour Service uniquement
 
+  // --- Gestion spécifique de la grille salariale ---
+  activeTab = 'matrix'; // 'matrix' ou 'flat'
+  categories = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+  echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  
+  // Contient la correspondance [echelon][catégorie] -> RefItem
+  matrixData: Record<number, Record<string, RefItem>> = {};
+  horsCategorieList: RefItem[] = [];
+
   constructor(
     private route: ActivatedRoute,
     private moduleNav: ModuleNavService,
@@ -46,13 +55,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder
   ) {
     this.formGroup = this.fb.group({
-      code:          ['', [Validators.required, Validators.maxLength(20)]],
+      code:          ['', [Validators.required, Validators.maxLength(25)]],
       libelle:       ['', [Validators.required, Validators.maxLength(150)]],
       description:   [''],
       actif:         [true],
       montant:       [0, [Validators.min(0)]],  // grille salariale
       departementId: [null],                     // pour Direction et Service
       directionId:   [null],                     // pour Service uniquement
+      echelle:       [''],                       // pour Grille salariale
+      echellon:      ['']                        // pour Grille salariale
     });
   }
 
@@ -64,6 +75,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.type   = data['type']   ?? '';
       if (this.type === 'grille-salariale') {
         this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'montant', 'actions'];
+        this.activeTab = 'matrix';
       } else {
         this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'actions'];
       }
@@ -80,24 +92,97 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   loadData(): void {
     this.dbRefService.getItems(this.type).subscribe({
-      next: (items) => { this.dataSource.data = items; },
+      next: (items) => {
+        this.dataSource.data = items;
+        if (this.type === 'grille-salariale') {
+          this.updateMatrix();
+        }
+      },
       error: (err)  => { console.error('Erreur chargement', this.type, err); }
     });
   }
 
   loadHierarchyData(): void {
-    // Charger les départements pour Direction et Service
     if (this.type === 'direction' || this.type === 'service') {
       this.dbRefService.getItems('departement').subscribe(items => this.departements = items);
     } else {
       this.departements = [];
     }
-    // Charger les directions pour Service uniquement
     if (this.type === 'service') {
       this.dbRefService.getItems('direction').subscribe(items => this.directions = items);
     } else {
       this.directions = [];
     }
+  }
+
+  // Organise les données plates en une matrice à deux dimensions [Echelon][Catégorie]
+  updateMatrix(): void {
+    this.matrixData = {};
+    this.horsCategorieList = [];
+
+    this.echelons.forEach(ech => {
+      this.matrixData[ech] = {};
+    });
+
+    this.dataSource.data.forEach(item => {
+      const cat = (item.libelle || '').trim().toUpperCase();
+      const echNum = Number(item.echellon);
+
+      if (cat === 'HORS CATEGORIE' || cat === 'HORS CATÉGORIE' || cat === 'HORS CAT' || cat === 'HC') {
+        this.horsCategorieList.push(item);
+      } else if (!isNaN(echNum) && echNum >= 1 && echNum <= 16) {
+        // Associer à la colonne correspondante (I, II, etc.)
+        const matchingCat = this.categories.find(c => c === cat);
+        if (matchingCat) {
+          this.matrixData[echNum][matchingCat] = item;
+        } else {
+          // Fallback au cas où l'écriture varie (ex: "CAT I" au lieu de "I")
+          const cleanCat = cat.replace('CAT', '').trim();
+          const fallbackCat = this.categories.find(c => c === cleanCat);
+          if (fallbackCat) {
+            this.matrixData[echNum][fallbackCat] = item;
+          }
+        }
+      }
+    });
+
+    // Trier Hors Catégorie par échelon
+    this.horsCategorieList.sort((a, b) => Number(a.echellon) - Number(b.echellon));
+  }
+
+  getExperienceRange(echelon: number): string {
+    const ranges: Record<number, string> = {
+      1: '<= 4 ans',
+      2: '5-6 ans',
+      3: '7-8 ans',
+      4: '9-10 ans',
+      5: '11-12 ans',
+      6: '13-14 ans',
+      7: '15-16 ans',
+      8: '17-18 ans',
+      9: '19-20 ans',
+      10: '21-22 ans',
+      11: '23-24 ans',
+      12: '25-26 ans',
+      13: '27-28 ans',
+      14: '29-30 ans',
+      15: '31-32 ans',
+      16: '33-34 ans'
+    };
+    return ranges[echelon] || '';
+  }
+
+  getHorsCategorieExperienceRange(echelon: number | string | undefined): string {
+    if (echelon === undefined || echelon === null) return '';
+    const echNum = Number(echelon);
+    if (echNum === 5) return 'Inférieure ou égale à 10 ans';
+    if (echNum >= 6 && echNum <= 16) {
+      const min = 11 + (echNum - 6) * 2;
+      const max = min + 1;
+      return `${min}-${max} ans`;
+    }
+    if (echNum === 17) return 'Plus de 32 ans';
+    return '';
   }
 
   applyFilter(): void {
@@ -109,8 +194,61 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.editingItem = null;
     this.formGroup.reset({
       code: '', libelle: '', description: '', actif: true,
-      montant: 0, departementId: null, directionId: null
+      montant: 0, departementId: null, directionId: null, echelle: '', echellon: ''
     });
+    this.formGroup.get('code')?.enable();
+    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
+  }
+
+  // Ouvrir le dialogue prérempli pour une case spécifique de la grille
+  openAddCellDialog(echelon: number, category: string): void {
+    this.isEditing = false;
+    this.editingItem = null;
+    const expRange = this.getExperienceRange(echelon);
+    
+    // Code par défaut, ex: GS-CAT-I-ECH-1
+    const defaultCode = `GS-C${category}-E${echelon}`;
+
+    this.formGroup.reset({
+      code: defaultCode,
+      libelle: category,
+      description: expRange,
+      actif: true,
+      montant: 0,
+      departementId: null,
+      directionId: null,
+      echelle: expRange,
+      echellon: String(echelon)
+    });
+    
+    this.formGroup.get('code')?.enable();
+    this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
+  }
+
+  // Ouvrir le dialogue prérempli pour le Hors Catégorie
+  openAddHorsCatDialog(): void {
+    this.isEditing = false;
+    this.editingItem = null;
+    
+    // Proposer l'échelon suivant disponible pour Hors Catégorie
+    const maxEch = this.horsCategorieList.length > 0
+      ? Math.max(...this.horsCategorieList.map(h => Number(h.echellon) || 0))
+      : 4;
+    const nextEch = maxEch + 1 > 17 ? 17 : maxEch + 1;
+    const expRange = this.getHorsCategorieExperienceRange(nextEch);
+
+    this.formGroup.reset({
+      code: `GS-HC-E${nextEch}`,
+      libelle: 'Hors Catégorie',
+      description: expRange,
+      actif: true,
+      montant: 0,
+      departementId: null,
+      directionId: null,
+      echelle: expRange,
+      echellon: String(nextEch)
+    });
+
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
   }
@@ -126,6 +264,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       montant:       item.montant ?? 0,
       departementId: item.departementId ?? null,
       directionId:   item.directionId   ?? null,
+      echelle:       item.echelle || '',
+      echellon:      item.echellon || ''
     });
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '520px' });
@@ -144,16 +284,26 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       montant:       v.montant ?? 0,
       departementId: v.departementId || undefined,
       directionId:   v.directionId   || undefined,
+      echelle:       v.echelle || undefined,
+      echellon:      v.echellon || undefined
     };
 
     if (this.isEditing && this.editingItem) {
       this.dbRefService.updateItem(this.type, this.editingItem.code, item).subscribe({
-        next: (items) => { this.dataSource.data = items; this.dialogRef.close(); },
+        next: (items) => {
+          this.dataSource.data = items;
+          if (this.type === 'grille-salariale') this.updateMatrix();
+          this.dialogRef.close();
+        },
         error: (err)  => { alert(err.message || 'Erreur lors de la modification.'); }
       });
     } else {
       this.dbRefService.addItem(this.type, item).subscribe({
-        next: (items) => { this.dataSource.data = items; this.dialogRef.close(); },
+        next: (items) => {
+          this.dataSource.data = items;
+          if (this.type === 'grille-salariale') this.updateMatrix();
+          this.dialogRef.close();
+        },
         error: (err)  => { alert(err.message || 'Erreur lors de la création.'); }
       });
     }
@@ -163,7 +313,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     event.stopPropagation();
     if (confirm(`Voulez-vous vraiment supprimer l'élément "${item.libelle}" ?`)) {
       this.dbRefService.deleteItem(this.type, item.code).subscribe({
-        next: (items) => { this.dataSource.data = items; },
+        next: (items) => {
+          this.dataSource.data = items;
+          if (this.type === 'grille-salariale') this.updateMatrix();
+        },
         error: (err)  => { alert(err.message || 'Erreur lors de la suppression.'); }
       });
     }
@@ -172,7 +325,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   toggleStatus(item: RefItem, event: Event): void {
     event.stopPropagation();
     this.dbRefService.toggleItemStatus(this.type, item.code).subscribe({
-      next: (items) => { this.dataSource.data = items; }
+      next: (items) => {
+        this.dataSource.data = items;
+        if (this.type === 'grille-salariale') this.updateMatrix();
+      }
     });
   }
 
