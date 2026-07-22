@@ -28,8 +28,8 @@ export class LoginComponent {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      email: ['marie.dupont@entreprise.com', [Validators.required, Validators.email]],
-      password: ['password123', Validators.required]
+      email: ['davidzorom9@gmail.com', [Validators.required]],
+      password: ['5621', Validators.required]
     });
   }
 
@@ -40,9 +40,13 @@ export class LoginComponent {
 
     const { email, password } = this.loginForm.value;
     this.authService.login(email, password).subscribe({
-      next: () => {
+      next: (user) => {
         this.loading = false;
-        this.router.navigate(['/dashboard']);
+        if (user.role === 'EMPLOYE') {
+          this.router.navigate(['/mon-espace']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: () => {
         this.loading = false;

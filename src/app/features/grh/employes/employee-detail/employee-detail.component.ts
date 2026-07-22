@@ -16,6 +16,7 @@ export interface SectionDef {
 
 export const EMPLOYEE_SECTIONS: SectionDef[] = [
   { id: 'infos-personnelles', title: 'Informations personnelles', subtitle: 'État civil, coordonnées, contacts urgence', icon: 'person', route: 'infos-personnelles', isComplete: e => !!(e.nom && e.adresse && e.telephone) },
+  { id: 'infos-pro', title: 'Poste & Structure', subtitle: 'Fonction, service, direction, département, statut', icon: 'work', route: 'infos-pro', isComplete: e => !!(e.poste || e.service) },
   { id: 'famille', title: 'Famille', subtitle: 'Conjoint, enfants, personnes à charge', icon: 'family_restroom', route: 'famille', isComplete: _ => true },
   { id: 'categorie', title: 'Catégorie', subtitle: 'Catégorie professionnelle, grade, échelon', icon: 'military_tech', route: 'categorie', isComplete: e => !!(e.categoriePro) },
   { id: 'indemnites', title: 'Indemnités', subtitle: 'Primes de logement, transport, responsabilité', icon: 'paid', route: 'indemnites', isComplete: e => e.primeLogement > 0 || e.primeTransport > 0 || e.autresIndemnites.length > 0 },

@@ -15,258 +15,157 @@
     </button>
   </div>
 
-  <!-- Switcher d'onglets pour la grille salariale -->
-  @if (type === 'grille-salariale') {
-    <div class="tabs-header">
-      <button class="tab-btn" [class.active]="activeTab === 'matrix'" (click)="activeTab = 'matrix'">
-        <mat-icon>grid_on</mat-icon> Grille Matricielle (Tableau de Synthèse)
-      </button>
-      <button class="tab-btn" [class.active]="activeTab === 'flat'" (click)="activeTab = 'flat'">
-        <mat-icon>list</mat-icon> Liste brute des données
-      </button>
+  <!-- KPIs rapides (pour autres types) -->
+  @if (type !== 'grille-salariale') {
+    <div class="kpi-row">
+      <div class="kpi-chip">
+        <mat-icon style="color:#2e7d32">check_circle</mat-icon>
+        <span class="kpi-val">{{ totalActifs }}</span>
+        <span class="kpi-lbl">Actifs</span>
+      </div>
+      <div class="kpi-chip">
+        <mat-icon style="color:#9e9e9e">cancel</mat-icon>
+        <span class="kpi-val">{{ totalInactifs }}</span>
+        <span class="kpi-lbl">Inactifs</span>
+      </div>
+      <div class="kpi-chip">
+        <mat-icon style="color:#163059">list</mat-icon>
+        <span class="kpi-val">{{ dataSource.data.length }}</span>
+        <span class="kpi-lbl">Total</span>
+      </div>
     </div>
   }
 
-  <!-- VUE MATRICIELLE SPECIFIQUE -->
-  @if (type === 'grille-salariale' && activeTab === 'matrix') {
-    <div class="matrix-container">
-      
-      <!-- Présentation / Notice -->
-      <mat-card class="notice-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar style="color: #163059;">info</mat-icon>
-          <mat-card-title>Classification catégorielle & Salaires de base</mat-card-title>
-          <mat-card-subtitle>Grille Salariale de l'Agetib (Adoptée en CA)</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p>
-            Cette grille comprend <strong>9 catégories</strong> réparties sur <strong>16 échelons</strong> d'ancienneté.
-            Cliquez sur un montant pour le modifier, ou sur le bouton <strong>+</strong> pour ajouter un salaire de base manquant.
-          </p>
-        </mat-card-content>
-      </mat-card>
+  <!-- Filtre / Recherche -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher…</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
+               placeholder="Grade, catégorie, échelon, montant…">
+        @if (searchQuery) {
+          <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
 
-      <!-- Grille Principale (Cat I à IX, Ech 1 à 16) -->
-      <mat-card class="table-card">
-        <mat-card-content style="padding: 16px;">
-          <div class="table-wrapper">
-            <table class="matrix-table">
-              <thead>
-                <tr>
-                  <th rowspan="2" class="sticky-col first-col">Échelon</th>
-                  <th rowspan="2" class="sticky-col second-col">Ancienneté</th>
-                  <th colspan="9" style="text-align: center; border-bottom: 2px solid #163059;">Catégories</th>
-                </tr>
-                <tr>
-                  @for (cat of categories; track cat) {
-                    <th style="text-align: center;">Cat {{ cat }}</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (ech of echelons; track ech) {
-                  <tr>
-                    <td class="sticky-col first-col font-bold">{{ ech }}</td>
-                    <td class="sticky-col second-col text-grey text-small">{{ getExperienceRange(ech) }}</td>
-                    @for (cat of categories; track cat) {
-                      <td class="matrix-cell" style="text-align: center;">
-                        @if (matrixData[ech] && matrixData[ech][cat]) {
-                          <div class="cell-val-wrapper" (click)="openEditDialog(matrixData[ech][cat])" matTooltip="Modifier ce salaire">
-                            <span class="cell-amount">{{ matrixData[ech][cat].montant | number:'1.0-0' }}</span>
-                            <mat-icon class="cell-edit-icon">edit</mat-icon>
-                          </div>
-                        } @else {
-                          <button mat-icon-button class="cell-add-btn" (click)="openAddCellDialog(ech, cat)" matTooltip="Ajouter un salaire pour Cat {{cat}} / Éch {{ech}}">
-                            <mat-icon>add</mat-icon>
-                          </button>
-                        }
-                      </td>
-                    }
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </mat-card-content>
-      </mat-card>
+  <!-- Tableau principal des enregistrements (Comme Photo 1) -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" matSort>
 
-      <!-- Grille Hors Catégorie -->
-      <div style="display: flex; align-items: center; justify-content: space-between; margin: 24px 24px 12px;">
-        <h2 style="margin: 0; font-weight: 600; color: #163059; display: flex; align-items: center; gap: 8px;">
-          <mat-icon>star</mat-icon> Grille Hors Catégorie
-        </h2>
-        <button mat-raised-button color="primary" (click)="openAddHorsCatDialog()">
-          <mat-icon>add</mat-icon> Nouveau Hors Catégorie
-        </button>
+          <ng-container matColumnDef="code">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'grille-salariale' ? 'Grade' : 'Code' }}</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="code-chip">{{ row.code }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="libelle">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'grille-salariale' ? 'Catégorie' : 'Libellé' }}</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.libelle }}</strong></td>
+          </ng-container>
+
+          <!-- Colonnes spécifiques à Paramétrage Indemnité -->
+          <ng-container matColumnDef="typeIndemnite">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type d'indemnité</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.typeIndemnite || row.libelle }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="fonction">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fonction</th>
+            <td mat-cell *matCellDef="let row">{{ row.fonction || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="grade">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Grade</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="code-chip" style="background: #e8f5e9; color: #2e7d32;">{{ row.grade || '-' }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="categorie">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Catégorie</th>
+            <td mat-cell *matCellDef="let row">{{ row.categorie || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="taux">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Taux (FCFA)</th>
+            <td mat-cell *matCellDef="let row">
+              <span style="font-weight: 600; color: #2e7d32; font-size: 13px;">
+                {{ (row.taux ?? row.montant ?? 0) | number:'1.0-0' }} FCFA
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="echelle">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Échelle</th>
+            <td mat-cell *matCellDef="let row">{{ row.echelle || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="echellon">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Échelon</th>
+            <td mat-cell *matCellDef="let row">E{{ row.echellon || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>{{ type === 'departement' ? 'Directeur' : (type === 'grille-salariale' ? 'Grade suivant' : 'Description') }}</th>
+            <td mat-cell *matCellDef="let row" class="desc-cell">{{ row.description || '-' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actif">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="statut-badge" [class.actif]="row.actif" [class.inactif]="!row.actif">
+                <mat-icon>{{ row.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                {{ row.actif ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="montant">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'grille-salariale' ? 'Base mensuelle' : 'Montant' }}</th>
+            <td mat-cell *matCellDef="let row">
+              <span style="font-weight: 600; color: #163059;">
+                {{ (row.montant ?? 0) | number:'1.0-0' }} FCFA
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(row)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}" (click)="toggleStatus(row, $event)">
+                <mat-icon>{{ row.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="deleteItem(row, $event)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td [attr.colspan]="displayedColumns.length" class="no-data">
+              <mat-icon>search_off</mat-icon>
+              <span>Aucun enregistrement de grille salariale trouvé</span>
+            </td>
+          </tr>
+        </table>
       </div>
-
-      <mat-card class="table-card">
-        <mat-card-content>
-          <div class="table-wrapper">
-            <table class="hors-cat-table">
-              <thead>
-                <tr>
-                  <th>Échelon</th>
-                  <th>Ancienneté / Expérience</th>
-                  <th>Salaire de base</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (hc of horsCategorieList; track hc.id) {
-                  <tr>
-                    <td><strong>Éch {{ hc.echellon }}</strong></td>
-                    <td class="text-grey">{{ hc.echelle || getHorsCategorieExperienceRange(hc.echellon) }}</td>
-                    <td><strong style="color: #163059;">{{ hc.montant | number:'1.0-0' }} FCFA</strong></td>
-                    <td>
-                      <span class="statut-badge" [class.actif]="hc.actif" [class.inactif]="!hc.actif">
-                        <mat-icon>{{ hc.actif ? 'check_circle' : 'cancel' }}</mat-icon>
-                        {{ hc.actif ? 'Actif' : 'Inactif' }}
-                      </span>
-                    </td>
-                    <td>
-                      <button mat-icon-button color="primary" (click)="openEditDialog(hc)" matTooltip="Modifier">
-                        <mat-icon>edit</mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="toggleStatus(hc, $event)" matTooltip="{{ hc.actif ? 'Désactiver' : 'Activer' }}">
-                        <mat-icon>{{ hc.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                      </button>
-                      <button mat-icon-button color="warn" (click)="deleteItem(hc, $event)" matTooltip="Supprimer">
-                        <mat-icon>delete</mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                }
-                @if (horsCategorieList.length === 0) {
-                  <tr>
-                    <td colspan="5" class="no-data">
-                      <mat-icon>search_off</mat-icon>
-                      <span>Aucune donnée Hors Catégorie configurée</span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-    </div>
-  } @else {
-    
-    <!-- VUE CLASSIQUE / AUTRES DONNEES -->
-    <!-- KPIs rapides -->
-    @if (type !== 'grille-salariale') {
-      <div class="kpi-row">
-        <div class="kpi-chip">
-          <mat-icon style="color:#2e7d32">check_circle</mat-icon>
-          <span class="kpi-val">{{ totalActifs }}</span>
-          <span class="kpi-lbl">Actifs</span>
-        </div>
-        <div class="kpi-chip">
-          <mat-icon style="color:#9e9e9e">cancel</mat-icon>
-          <span class="kpi-val">{{ totalInactifs }}</span>
-          <span class="kpi-lbl">Inactifs</span>
-        </div>
-        <div class="kpi-chip">
-          <mat-icon style="color:#163059">list</mat-icon>
-          <span class="kpi-val">{{ dataSource.data.length }}</span>
-          <span class="kpi-lbl">Total</span>
-        </div>
-      </div>
-    }
-
-    <!-- Filtre -->
-    <mat-card class="filter-card">
-      <mat-card-content>
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Rechercher…</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
-                 placeholder="Code, libellé, description…">
-          @if (searchQuery) {
-            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Tableau classique -->
-    <mat-card class="table-card">
-      <mat-card-content>
-        <div class="table-wrapper">
-          <table mat-table [dataSource]="dataSource" matSort>
-
-            <ng-container matColumnDef="code">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Code</th>
-              <td mat-cell *matCellDef="let row">
-                <span class="code-chip">{{ row.code }}</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="libelle">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Libellé</th>
-              <td mat-cell *matCellDef="let row"><strong>{{ row.libelle }}</strong></td>
-            </ng-container>
-
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef>{{ type === 'departement' ? 'Directeur' : (type === 'grille-salariale' ? 'Expérience' : 'Description') }}</th>
-              <td mat-cell *matCellDef="let row" class="desc-cell">{{ row.description }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="actif">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
-              <td mat-cell *matCellDef="let row">
-                <span class="statut-badge" [class.actif]="row.actif" [class.inactif]="!row.actif">
-                  <mat-icon>{{ row.actif ? 'check_circle' : 'cancel' }}</mat-icon>
-                  {{ row.actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
-            </ng-container>
-
-            <!-- Colonne Montant — visible uniquement pour la grille salariale -->
-            <ng-container matColumnDef="montant">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Montant (FCFA)</th>
-              <td mat-cell *matCellDef="let row">
-                <span style="font-weight: 600; color: #163059;">
-                  {{ (row.montant ?? 0) | number:'1.0-0' }} FCFA
-                </span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let row">
-                <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(row)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}" (click)="toggleStatus(row, $event)">
-                  <mat-icon>{{ row.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="deleteItem(row, $event)">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
-
-            <tr class="mat-row" *matNoDataRow>
-              <td [attr.colspan]="displayedColumns.length" class="no-data">
-                <mat-icon>search_off</mat-icon>
-                <span>Aucune entrée trouvée</span>
-              </td>
-            </tr>
-          </table>
-        </div>
-        <mat-paginator [pageSizeOptions]="[10, 25, 50]" pageSize="10" showFirstLastButtons></mat-paginator>
-      </mat-card-content>
-    </mat-card>
-  }
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" pageSize="10" showFirstLastButtons></mat-paginator>
+    </mat-card-content>
+  </mat-card>
 
 </div>
 
@@ -278,8 +177,71 @@
   
   <mat-dialog-content [formGroup]="formGroup" class="dialog-content" style="display: flex; flex-direction: column; gap: 16px; padding-top: 8px; min-width: 420px;">
     
-    <!-- Si ce n'est pas la grille salariale, on affiche les champs par défaut -->
-    @if (type !== 'grille-salariale') {
+    <!-- CHAMPS DÉDIÉS POUR LE PARAMÉTRAGE D'INDEMNITÉ -->
+    @if (type === 'param-indemnite') {
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Code (Référence)</mat-label>
+        <input matInput formControlName="code" placeholder="Ex: PI-001">
+        @if (formGroup.get('code')?.hasError('required')) {
+          <mat-error>Le code est obligatoire</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Type d'indemnité</mat-label>
+        <mat-select formControlName="typeIndemnite" placeholder="Sélectionner un type d'indemnité">
+          @for (ti of typesIndemnite; track ti.id) {
+            <mat-option [value]="ti.libelle">{{ ti.libelle }} ({{ ti.code }})</mat-option>
+          }
+          @if (typesIndemnite.length === 0) {
+            <mat-option value="Indemnité de Logement">Indemnité de Logement</mat-option>
+            <mat-option value="Indemnité de Transport">Indemnité de Transport</mat-option>
+            <mat-option value="Indemnité de Fonction">Indemnité de Fonction</mat-option>
+            <mat-option value="Indemnité de Responsabilité">Indemnité de Responsabilité</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Fonction de l'employé</mat-label>
+          <mat-select formControlName="fonction" placeholder="Sélectionner une fonction">
+            <mat-option value="">— Toutes les fonctions —</mat-option>
+            @for (f of fonctions; track f.id) {
+              <mat-option [value]="f.libelle">{{ f.libelle }} ({{ f.code }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Grade</mat-label>
+          <mat-select formControlName="grade" placeholder="Sélectionner un grade">
+            <mat-option value="">— Tous les grades —</mat-option>
+            @for (g of grades; track g.id) {
+              <mat-option [value]="g.libelle">{{ g.libelle }} ({{ g.code }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Catégorie professionnelle</mat-label>
+          <mat-select formControlName="categorie" placeholder="Sélectionner une catégorie">
+            <mat-option value="">— Toutes les catégories —</mat-option>
+            @for (c of categoriesList; track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Taux / Montant (FCFA)</mat-label>
+          <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
+          <input matInput type="number" formControlName="taux" placeholder="Ex: 50000" min="0">
+        </mat-form-field>
+      </div>
+    } @else if (type !== 'grille-salariale') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Code</mat-label>
         <input matInput formControlName="code" placeholder="Ex: EMP-001">
@@ -318,8 +280,7 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Catégorie</mat-label>
-          <mat-select formControlName="libelle" placeholder="Ex: I, II, HC...">
-            <mat-option [value]="'Hors Catégorie'">Hors Catégorie (HC)</mat-option>
+          <mat-select formControlName="libelle" placeholder="Ex: I, II, III...">
             @for (cat of categories; track cat) {
               <mat-option [value]="cat">Catégorie {{ cat }}</mat-option>
             }
@@ -329,22 +290,33 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Échelon</mat-label>
           <mat-select formControlName="echellon" placeholder="Ex: 1, 2...">
-            @for (ech of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]; track ech) {
+            @for (ech of echelons; track ech) {
               <mat-option [value]="'' + ech">Échelon {{ ech }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Expérience / Ancienneté</mat-label>
-        <input matInput formControlName="echelle" placeholder="Ex: 5-6 ans">
-      </mat-form-field>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Grade (Référentiel)</mat-label>
+          <mat-select formControlName="code" placeholder="Sélectionner un grade enregistré">
+            @for (g of grades; track g.code) {
+              <mat-option [value]="g.libelle">{{ g.libelle }} ({{ g.code }})</mat-option>
+            }
+            @if (grades.length === 0) {
+              <mat-option value="Grade I">Grade I</mat-option>
+              <mat-option value="Grade II">Grade II</mat-option>
+              <mat-option value="Hors Classe">Hors Classe</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Code Interne</mat-label>
-        <input matInput formControlName="code" placeholder="Ex: GS-CI-E1">
-      </mat-form-field>
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Ancienneté (Échelle)</mat-label>
+          <input matInput formControlName="echelle" placeholder="Ex: 5-6 ans">
+        </mat-form-field>
+      </div>
     }
 
     <!-- Select Département — pour Direction -->

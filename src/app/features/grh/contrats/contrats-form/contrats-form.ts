@@ -39,8 +39,8 @@ export class ContratsForm implements OnInit {
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
     this.employees$ = this.employeeService.getAll();
-    this.contrats$ = this.dbRefService.getItems('type-contrat');
-    this.services$ = this.dbRefService.getItems('service');
+    this.contrats$ = this.dbRefService.getItems('type-contrat').pipe(map(list => list.filter(i => i.actif !== false)));
+    this.services$ = this.dbRefService.getItems('service').pipe(map(list => list.filter(i => i.actif !== false)));
 
     this.form = this.fb.group({
       employeSearch: [''],

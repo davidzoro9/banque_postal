@@ -43,6 +43,26 @@ export class IndemnitesComponent implements OnInit {
       this.employee = e;
       this.buildForm();
       this.patch(e);
+
+      // Auto-injection à partir du Paramétrage d'Indemnité
+      this.dbRefService.getItems('param-indemnite').subscribe(paramList => {
+        if (paramList && paramList.length > 0) {
+          paramList.forEach(p => {
+            if (p.actif ?? true) {
+              const m = p.taux || p.montant || 0;
+              const lib = (p.typeIndemnite || p.libelle || '').toLowerCase();
+
+              if (lib.includes('logement') && !this.form.value.primeLogement) {
+                this.form.patchValue({ primeLogement: m });
+              } else if (lib.includes('transport') && !this.form.value.primeTransport) {
+                this.form.patchValue({ primeTransport: m });
+              } else if (lib.includes('responsabilit') && !this.form.value.primeResponsabilite) {
+                this.form.patchValue({ primeResponsabilite: m });
+              }
+            }
+          });
+        }
+      });
     });
   }
 

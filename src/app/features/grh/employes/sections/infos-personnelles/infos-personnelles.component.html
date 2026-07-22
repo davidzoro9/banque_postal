@@ -127,6 +127,49 @@
             </mat-form-field>
           </div>
 
+          <p class="form-section-label">Affectation Professionnelle (Fonction & Structure)</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Fonction / Poste occupé</mat-label>
+              <mat-select formControlName="poste">
+                <mat-option value="">— Sélectionner une fonction —</mat-option>
+                @for (f of fonctions$ | async; track f.id || f.code) {
+                  <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Service</mat-label>
+              <mat-select formControlName="service">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (srv of services$ | async; track srv.id || srv.code) {
+                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Direction</mat-label>
+              <mat-select formControlName="direction">
+                <mat-option value="">— Aucune —</mat-option>
+                @for (dir of directions$ | async; track dir.id || dir.code) {
+                  <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Département</mat-label>
+              <mat-select formControlName="departement">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (dep of departements$ | async; track dep.id || dep.code) {
+                  <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
           <!-- Bloc info : contacts d'urgence gérés dans le menu Famille -->
           <div class="contact-info-banner">
             <mat-icon class="banner-icon">info_outline</mat-icon>

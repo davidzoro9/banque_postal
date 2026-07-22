@@ -214,11 +214,14 @@ export class ParametresRhComponent implements OnInit {
 
   deleteItem(tab: string, id?: string): void {
     if (!id) return;
-    if (confirm('Voulez-vous vraiment supprimer cet élément ?')) {
+    const item = this.getItems(tab).find(i => i.id === id);
+    const label = item ? item.libelle : 'cet élément';
+    const msg = `⚠️ Attention - Conflit potentiel :\n\nL'élément "${label}" risque d'être déjà lié à des dossiers existants.\n\nIl est recommandé de le DÉSACTIVER au lieu de le supprimer pour éviter toute anomalie.\n\nVoulez-vous quand même le supprimer ?`;
+    if (confirm(msg)) {
       if (tab === 'typesContrats') {
-        const item = this.typesContrats.find(i => i.id === id);
-        if (item) {
-          this.dbRefService.deleteItem('type-contrat', item.code).subscribe({
+        const tItem = this.typesContrats.find(i => i.id === id);
+        if (tItem) {
+          this.dbRefService.deleteItem('type-contrat', tItem.code).subscribe({
             next: (items) => {
               this.typesContrats = items.map(i => ({
                 id: i.id || '',
@@ -244,6 +247,10 @@ export class ParametresRhComponent implements OnInit {
   }
 
   toggleActif(item: ParamItem): void {
+    if (item.actif) {
+      const msg = `⚠️ Notification de conflit :\n\nL'élément "${item.libelle}" (${item.code}) va être désactivé.\n\nUne fois désactivé, il n'apparaîtra plus dans les sélecteurs pour les nouvelles saisies, mais restera conservé sur les dossiers enregistrés.\n\nConfirmez-vous la désactivation ?`;
+      if (!confirm(msg)) return;
+    }
     const tab = this.tabs[this.activeTab];
     if (tab === 'typesContrats') {
       this.dbRefService.toggleItemStatus('type-contrat', item.code).subscribe({

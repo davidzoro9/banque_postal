@@ -102,10 +102,17 @@ export class DossierComponent implements OnInit {
 
   save(next?: string): void {
     this.saving = true;
-    this.employeeService.update(this.empId, { documents: this.documents }).subscribe(() => {
-      this.saving = false;
-      if (next) this.router.navigate(['/grh/employes', this.empId, next]);
-      else this.router.navigate(['/grh/employes', this.empId]);
+    this.employeeService.update(this.empId, { documents: this.documents }).subscribe({
+      next: () => {
+        this.saving = false;
+        if (next) this.router.navigate(['/grh/employes', this.empId, next]);
+        else this.router.navigate(['/grh/employes', this.empId]);
+      },
+      error: (err) => {
+        this.saving = false;
+        console.error('Erreur lors de l\'enregistrement du dossier:', err);
+        alert('Erreur lors de l\'enregistrement du dossier : ' + (err.error?.message || err.message || 'Fichier trop lourd ou erreur réseau.'));
+      }
     });
   }
 

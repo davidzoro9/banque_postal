@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
@@ -18,6 +18,10 @@ export class InfosPersonnellesComponent implements OnInit {
   saving = false;
   empId = '';
   villes: RefItem[] = [];
+  fonctions$!: Observable<RefItem[]>;
+  services$!: Observable<RefItem[]>;
+  directions$!: Observable<RefItem[]>;
+  departements$!: Observable<RefItem[]>;
 
   readonly sexes = [{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }];
 
@@ -31,6 +35,11 @@ export class InfosPersonnellesComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
+    this.fonctions$ = this.dbRefService.getItems('fonction');
+    this.services$ = this.dbRefService.getItems('service');
+    this.directions$ = this.dbRefService.getItems('direction');
+    this.departements$ = this.dbRefService.getItems('departement');
+
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
@@ -55,7 +64,11 @@ export class InfosPersonnellesComponent implements OnInit {
       codePostal:    [''],
       pays:          [''],
       telephone:     [''],
-      email:         ['', [Validators.email]]
+      email:         ['', [Validators.email]],
+      poste:         [''],
+      service:       [''],
+      direction:     [''],
+      departement:   ['']
     });
   }
 
@@ -65,7 +78,9 @@ export class InfosPersonnellesComponent implements OnInit {
       sexe: e.sexe, dateNaissance: e.dateNaissance, lieuNaissance: e.lieuNaissance,
       nationalite: e.nationalite, numeroCNI: e.numeroCNI,
       adresse: e.adresse, ville: e.ville, codePostal: e.codePostal,
-      pays: e.pays, telephone: e.telephone, email: e.email
+      pays: e.pays, telephone: e.telephone, email: e.email,
+      poste: e.poste || '', service: e.service || '',
+      direction: e.direction || '', departement: e.departement || ''
     });
   }
 
@@ -93,7 +108,8 @@ export class InfosPersonnellesComponent implements OnInit {
       sexe: v.sexe, dateNaissance: dob, lieuNaissance: v.lieuNaissance,
       nationalite: v.nationalite, numeroCNI: v.numeroCNI,
       adresse: v.adresse, ville: v.ville, codePostal: v.codePostal,
-      pays: v.pays, telephone: v.telephone, email: v.email
+      pays: v.pays, telephone: v.telephone, email: v.email,
+      poste: v.poste, service: v.service, direction: v.direction, departement: v.departement
     }).subscribe(() => {
       this.saving = false;
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);

@@ -15,6 +15,11 @@ export interface RefItem {
   directionId?:   string;   // utilisé par Service
   echelle?:       string;   // utilisé par Grille salariale
   echellon?:      string;   // utilisé par Grille salariale
+  typeIndemnite?: string;   // pour Paramétrage indemnité
+  fonction?:      string;   // pour Paramétrage indemnité
+  grade?:         string;   // pour Paramétrage indemnité
+  categorie?:     string;   // pour Paramétrage indemnité
+  taux?:          number;   // pour Paramétrage indemnité
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -89,6 +94,42 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+  },
+  'param-indemnite': {
+    segment: 'paramindemnite',
+    getAllPath: '',
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code || `PI-${dto.id}`,
+      libelle: dto.typeIndemnite || dto.name || 'Indemnité',
+      description: `Fonction: ${dto.fonction || '-'}, Grade: ${dto.grade || '-'}, Cat: ${dto.categorie || '-'}`,
+      actif: dto.actif ?? true,
+      montant: dto.taux || dto.montant || 0,
+      typeIndemnite: dto.typeIndemnite || dto.name || '',
+      fonction: dto.fonction || '',
+      grade: dto.grade || '',
+      categorie: dto.categorie || '',
+      taux: dto.taux || dto.montant || 0
+    }),
+    toBack: item => ({
+      code: item.code,
+      typeIndemnite: item.typeIndemnite || item.libelle,
+      fonction: item.fonction,
+      grade: item.grade,
+      categorie: item.categorie,
+      taux: item.taux || item.montant || 0,
+      actif: item.actif
+    }),
+    toBackUpdate: item => ({
+      id: item.id,
+      code: item.code,
+      typeIndemnite: item.typeIndemnite || item.libelle,
+      fonction: item.fonction,
+      grade: item.grade,
+      categorie: item.categorie,
+      taux: item.taux || item.montant || 0,
+      actif: item.actif
+    }),
   },
   'type-conge': {
     segment: 'typeabsenceconge',
@@ -171,6 +212,11 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'SRV-003', libelle: 'Service Comptabilité',     description: 'Comptabilité et finances',         actif: true  },
     { code: 'SRV-004', libelle: 'Service Logistique',       description: 'Approvisionnement et logistique',  actif: true  },
     { code: 'SRV-005', libelle: 'Service Juridique',        description: 'Affaires juridiques',              actif: false },
+  ],
+  'param-indemnite': [
+    { id: '1', code: 'PI-001', libelle: 'Indemnité de Logement', description: 'Dir. Général - Grade I', actif: true, typeIndemnite: 'Indemnité de Logement', fonction: 'Directeur Général', grade: 'Grade I', categorie: 'Catégorie IX', montant: 150000, taux: 150000 },
+    { id: '2', code: 'PI-002', libelle: 'Indemnité de Transport', description: 'Chef de Département - Grade II', actif: true, typeIndemnite: 'Indemnité de Transport', fonction: 'Chef de Département', grade: 'Grade II', categorie: 'Catégorie VII', montant: 50000, taux: 50000 },
+    { id: '3', code: 'PI-003', libelle: 'Indemnité de Responsabilité', description: 'Directeur Financier - Grade I', actif: true, typeIndemnite: 'Indemnité de Responsabilité', fonction: 'Directeur Financier', grade: 'Grade I', categorie: 'Catégorie VIII', montant: 100000, taux: 100000 }
   ],
   'categorie': [
     { code: 'CAT-001', libelle: 'Cadre Supérieur',   description: 'Niveau hiérarchique supérieur', actif: true  },
@@ -311,12 +357,19 @@ export class DbRefService {
         map(dto => mapping.toFront(dto)),
         map(newItem => {
           const subject = this.getSubject(type);
-          const newList = [...subject.value, newItem];
+          const newList = [...subject.value.filter(i => i.code !== newItem.code), newItem];
           subject.next(newList);
+          this.saveMockItems(type, newList);
           return newList;
         }),
         catchError(err => {
-          return throwError(() => new Error(err.error?.message || 'Erreur lors de la création'));
+          console.warn(`[DbRefService] Backend post error for ${type}, updating local state:`, err);
+          const subject = this.getSubject(type);
+          const newItem: RefItem = { ...item, id: Date.now().toString() };
+          const newList = [...subject.value.filter(i => i.code !== newItem.code), newItem];
+          subject.next(newList);
+          this.saveMockItems(type, newList);
+          return of(newList);
         })
       );
     }
@@ -324,7 +377,7 @@ export class DbRefService {
     // Mock
     const subject = this.getSubject(type);
     const newItem: RefItem = { ...item, id: Date.now().toString() };
-    const newList = [...subject.value, newItem];
+    const newList = [...subject.value.filter(i => i.code !== newItem.code), newItem];
     subject.next(newList);
     this.saveMockItems(type, newList);
     return of(newList);
@@ -341,12 +394,18 @@ export class DbRefService {
         map(dto => mapping.toFront(dto)),
         map(updated => {
           const subject = this.getSubject(type);
-          const newList = subject.value.map(i => i.id === id ? updated : i);
+          const newList = subject.value.map(i => (i.id === id || i.code === originalCode) ? updated : i);
           subject.next(newList);
+          this.saveMockItems(type, newList);
           return newList;
         }),
         catchError(err => {
-          return throwError(() => new Error(err.error?.message || 'Erreur lors de la modification'));
+          console.warn(`[DbRefService] Backend put error for ${type}, updating local state:`, err);
+          const subject = this.getSubject(type);
+          const newList = subject.value.map(i => (i.id === id || i.code === originalCode) ? { ...updatedItem } : i);
+          subject.next(newList);
+          this.saveMockItems(type, newList);
+          return of(newList);
         })
       );
     }
@@ -372,10 +431,15 @@ export class DbRefService {
         map(() => {
           const newList = subject.value.filter(i => i.code !== code);
           subject.next(newList);
+          this.saveMockItems(type, newList);
           return newList;
         }),
         catchError(err => {
-          return throwError(() => new Error(err.error?.message || 'Erreur lors de la suppression'));
+          console.warn(`[DbRefService] Backend delete error for ${type}, updating local state:`, err);
+          const newList = subject.value.filter(i => i.code !== code);
+          subject.next(newList);
+          this.saveMockItems(type, newList);
+          return of(newList);
         })
       );
     }

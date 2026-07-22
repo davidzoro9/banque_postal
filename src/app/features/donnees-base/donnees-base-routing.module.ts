@@ -15,6 +15,7 @@ const routes: Routes = [
   { path: 'admin/grille-salariale',component: DbRefListComponent, data: { title: 'Grille salariale',    icon: 'table_chart',        type: 'grille-salariale'} },
   { path: 'admin/agence',          component: DbRefListComponent, data: { title: 'Agence',              icon: 'store',              type: 'agence'          } },
   { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: 'Type indemnité',      icon: 'paid',               type: 'type-indemnite'  } },
+  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: "Paramétrage d'indemnité", icon: 'settings_suggest',   type: 'param-indemnite' } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
   { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenue (par employé)', icon: 'money_off', type: 'type-retenue-employe' } },

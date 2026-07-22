@@ -56,6 +56,7 @@ export class CategorieComponent implements OnInit {
 
       // Écouter les changements pour calculer le salaire automatiquement
       this.form.get('categoriePro')?.valueChanges.subscribe(() => this.autoUpdateSalary());
+      this.form.get('grade')?.valueChanges.subscribe(() => this.autoUpdateSalary());
       this.form.get('echelon')?.valueChanges.subscribe(() => this.autoUpdateSalary());
     });
   }
@@ -73,59 +74,91 @@ export class CategorieComponent implements OnInit {
 
   private patch(e: Employee): void {
     this.form.patchValue({
-      categoriePro: e.categoriePro,
-      echelon:      e.echelon,
+      categoriePro: e.categoriePro || '',
+      echelon:      e.echelon || '',
       echelle:      (e as any).echelle || '',
       grade:        e.grade || '',
       niveau:       e.niveau || '',
-      salaireBase:  e.salaireBase
+      salaireBase:  e.salaireBase || 0
     });
+
+    // Seulement si le salaire n'est pas encore renseigné (> 0), on applique le calcul auto
+    if (!e.salaireBase || e.salaireBase === 0) {
+      this.autoUpdateSalary(false);
+    }
   }
 
-  // Effectue la recherche automatique du salaire de base et de l'échelle
-  private autoUpdateSalary(): void {
+  selectedGrilleId: any = null;
+
+  // Effectue la recherche automatique du salaire de base et de l'échelle à partir de la grille salariale
+  private autoUpdateSalary(force = false): void {
     if (this.grilleSalariale.length === 0 || !this.form) return;
 
-    const catVal = this.form.get('categoriePro')?.value;
-    const echVal = this.form.get('echelon')?.value;
+    const currentSal = this.form.get('salaireBase')?.value;
+    if (currentSal > 0 && !force) return;
 
-    if (!catVal || !echVal) return;
+    const catVal = (this.form.get('categoriePro')?.value || '').trim().toLowerCase();
+    const gradeVal = (this.form.get('grade')?.value || '').trim().toLowerCase();
+    const echVal = (this.form.get('echelon')?.value || '').trim().toLowerCase();
 
-    // Normalisation de la catégorie (ex: "Catégorie I" ou "I" -> "I", "Hors Catégorie" -> "HORS CATEGORIE")
-    let cleanCat = String(catVal).trim().toUpperCase();
-    if (cleanCat.startsWith('CATÉGORIE')) {
-      cleanCat = cleanCat.replace('CATÉGORIE', '').trim();
-    } else if (cleanCat.startsWith('CAT')) {
-      cleanCat = cleanCat.replace('CAT', '').trim();
-    } else if (cleanCat === 'HORS CATÉGORIE' || cleanCat === 'HORS CATEGORIE' || cleanCat === 'HC') {
-      cleanCat = 'HORS CATÉGORIE';
-    }
-
-    // Normalisation de l'échelon (ex: "Échelon 1" ou "1" -> "1")
-    let cleanEch = String(echVal).trim().toUpperCase();
-    if (cleanEch.startsWith('ÉCHELON')) {
-      cleanEch = cleanEch.replace('ÉCHELON', '').trim();
-    } else if (cleanEch.startsWith('ÉCH')) {
-      cleanEch = cleanEch.replace('ÉCH', '').trim();
-    }
-
-    // Recherche de correspondance dans la grille salariale
     const match = this.grilleSalariale.find(item => {
-      let itemCat = (item.libelle || '').trim().toUpperCase();
-      if (itemCat === 'HORS CATEGORIE' || itemCat === 'HORS CATÉGORIE' || itemCat === 'HC') {
-        itemCat = 'HORS CATÉGORIE';
-      }
-      
-      const itemEch = (item.echellon || '').trim().toUpperCase();
-      return itemCat === cleanCat && itemEch === cleanEch;
-    });
+      const gCode = (item.code || '').trim().toLowerCase();
+      const gLib = (item.libelle || (item as any).category || '').trim().toLowerCase();
+      const gEch = (item.echellon || '').trim().toLowerCase();
+
+      const matchGrade = !gradeVal || gCode === gradeVal || gCode.includes(gradeVal) || gradeVal.includes(gCode);
+      const matchCat = !catVal || gLib === catVal || gLib.includes(catVal) || catVal.includes(gLib);
+      const cleanEch = echVal.replace('échelon', '').replace('echelon', '').trim();
+      const matchEch = !echVal || gEch === echVal || gEch === cleanEch || gEch.includes(cleanEch);
+
+      return (matchGrade || matchCat) && matchEch;
+    }) || this.grilleSalariale[0];
 
     if (match) {
-      this.form.patchValue({
-        salaireBase: match.montant,
-        echelle: match.echelle || ''
-      }, { emitEvent: false }); // Empêcher les boucles d'événements
+      this.onSelectGrille(match);
     }
+  }
+
+  // Restaure la valeur initiale de l'employé
+  annuler(): void {
+    if (this.employee) {
+      this.patch(this.employee);
+    } else {
+      this.goBack();
+    }
+  }
+
+  // Sélection directe depuis le menu Grille Salariale
+  onSelectGrille(g: any): void {
+    if (!g || !this.form) return;
+    this.selectedGrilleId = g;
+
+    const catTarget = (g.libelle || g.category || '').trim();
+    const gradeTarget = (g.code || g.grade || '').trim();
+
+    let echTarget = (g.echellon || g.echelon || '').trim();
+    if (echTarget && !echTarget.toLowerCase().startsWith('échelon') && !echTarget.toLowerCase().startsWith('echelon')) {
+      echTarget = 'Échelon ' + echTarget;
+    }
+
+    const sal = g.montant || g.salaireBase || 250000;
+    const ech = g.echelle || 'Échelle A';
+
+    this.form.patchValue({
+      categoriePro: catTarget,
+      grade:        gradeTarget,
+      echelon:      echTarget,
+      echelle:      ech,
+      salaireBase:  sal
+    });
+
+    this.form.markAsDirty();
+    this.form.updateValueAndValidity();
+  }
+
+  // Force la réapplication des tarifs de la grille salariale
+  reinitialiserSelonGrille(): void {
+    this.autoUpdateSalary(true);
   }
 
   get initials(): string {

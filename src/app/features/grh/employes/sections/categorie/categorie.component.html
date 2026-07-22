@@ -37,6 +37,18 @@
 
           <p class="form-section-label">Classification</p>
           <div class="form-grid-2">
+            <mat-form-field appearance="outline" style="grid-column: 1 / -1; background: #f8fafc; border-radius: 8px;">
+              <mat-label style="font-weight: 700; color: #163059;">⚡ Choisir directement une Grille Salariale de référence</mat-label>
+              <mat-select [value]="selectedGrilleId" (selectionChange)="onSelectGrille($event.value)">
+                <mat-option [value]="null">— Sélectionner dans la grille prédéfinie —</mat-option>
+                @for (g of grilleSalariale; track g.id || g.code) {
+                  <mat-option [value]="g">
+                    <strong>{{ g.libelle }}</strong> — {{ g.code }} — Échelon {{ g.echellon }} ({{ g.montant || 0 | number:'1.0-0' }} FCFA)
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
             <mat-form-field appearance="outline">
               <mat-label>Catégorie professionnelle</mat-label>
               <mat-select formControlName="categoriePro">
@@ -99,7 +111,10 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-button (click)="annuler()" title="Annuler les modifications et restaurer la fiche">Annuler</button>
+        <button mat-stroked-button color="accent" (click)="reinitialiserSelonGrille()" title="Réappliquer le montant standard de la grille salariale">
+          <mat-icon style="margin-right: 4px;">refresh</mat-icon> Réappliquer la grille
+        </button>
         <div class="sec-right">
           <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
             Enregistrer

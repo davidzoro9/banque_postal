@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { EmployeeService } from '../services/employee.service';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
@@ -42,11 +43,11 @@ export class EmployeeFormComponent implements OnInit {
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
     
-    this.services$ = this.dbRefService.getItems('service');
-    this.directions$ = this.dbRefService.getItems('direction');
-    this.contrats$ = this.dbRefService.getItems('type-contrat');
-    this.departements$ = this.dbRefService.getItems('departement');
-    this.fonctions$ = this.dbRefService.getItems('fonction');
+    this.services$ = this.dbRefService.getItems('service').pipe(map(list => list.filter(i => i.actif !== false)));
+    this.directions$ = this.dbRefService.getItems('direction').pipe(map(list => list.filter(i => i.actif !== false)));
+    this.contrats$ = this.dbRefService.getItems('type-contrat').pipe(map(list => list.filter(i => i.actif !== false)));
+    this.departements$ = this.dbRefService.getItems('departement').pipe(map(list => list.filter(i => i.actif !== false)));
+    this.fonctions$ = this.dbRefService.getItems('fonction').pipe(map(list => list.filter(i => i.actif !== false)));
     this.employees$ = this.employeeService.getAll();
 
     this.empId = this.route.snapshot.paramMap.get('id') || undefined;
