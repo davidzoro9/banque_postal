@@ -143,6 +143,14 @@ html.dark-theme {
   }
 }
 
+.data-row {
+  background-color: var(--surface);
+  color: var(--on-surface);
+  &:hover {
+    background-color: var(--surface-hover) !important;
+  }
+}
+
 // ─── Reset & base ─────────────────────────────────────────
 *, *::before, *::after { box-sizing: border-box; }
 

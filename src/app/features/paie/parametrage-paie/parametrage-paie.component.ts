@@ -57,7 +57,7 @@ export interface ParametragePaieRule {
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+              <tr *ngFor="let item of rules" class="data-row" style="border-bottom: 1px solid var(--border); font-size: 14px; transition: background 0.2s;">
                 <td style="padding: 14px 18px;">
                   <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 13px; display: inline-block; white-space: nowrap;">
                     {{ item.code }}
