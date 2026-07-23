@@ -478,7 +478,22 @@ export class DbRefService {
       }
     }
     const stored = localStorage.getItem(`ref_${type}`);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (type !== 'grille-salariale' && type !== 'param-indemnite') {
+          if (Array.isArray(parsed) && parsed.some((x: any) => x.libelle === 'GRADE I' || x.libelle === 'GRADE II' || x.libelle === 'GRADE III')) {
+            localStorage.removeItem(`ref_${type}`);
+            const initial = MOCK_DATA[type] ?? [];
+            localStorage.setItem(`ref_${type}`, JSON.stringify(initial));
+            return initial;
+          }
+        }
+        return parsed;
+      } catch (e) {
+        localStorage.removeItem(`ref_${type}`);
+      }
+    }
     const initial = MOCK_DATA[type] ?? [];
     localStorage.setItem(`ref_${type}`, JSON.stringify(initial));
     return initial;
