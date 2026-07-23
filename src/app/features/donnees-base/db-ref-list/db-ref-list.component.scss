@@ -64,30 +64,31 @@ table           { width: 100%; border-collapse: collapse; }
 .text-grey { color: #757575; }
 .text-small { font-size: 11px; }
 
-/* ─── SCSS STYLE MATRICE 2D BPBF (Conforme au document officiel) ────────── */
+/* ─── SCSS STYLE MATRICE 2D BPBF (Conforme au document officiel - Thème Épuré Minimaliste) ────────── */
 .matrix-card {
   margin: 0 24px 24px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border) !important;
 }
 
 .matrix-wrapper {
   overflow-x: auto;
   max-width: 100%;
-  border: 2px solid #333333;
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
 .bpbf-matrix-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
-  background-color: #ffffff;
-  color: #000000;
+  background-color: var(--surface);
+  color: var(--on-surface);
 
   th, td {
-    border: 1px solid #444444;
+    border: 1px solid var(--border);
     padding: 6px 8px;
     text-align: center;
     white-space: nowrap;
@@ -95,78 +96,68 @@ table           { width: 100%; border-collapse: collapse; }
 
   thead {
     tr.header-main-title {
-      background-color: #d9d9d9;
+      background-color: var(--surface-variant);
       th {
         font-weight: 700;
         font-size: 12px;
-        color: #000;
+        color: var(--on-surface);
         text-transform: uppercase;
-        border-bottom: 2px solid #333;
+        border-bottom: 2px solid var(--border);
       }
       .main-title {
         text-align: left;
         padding-left: 12px;
-        background-color: #bfbfbf;
+        background-color: var(--surface-variant);
       }
       .base-col-header {
-        background-color: #90caf9 !important;
-        color: #000000;
-        font-weight: 800;
+        background-color: var(--surface-variant) !important;
+        color: var(--on-surface);
+        font-weight: 700;
       }
     }
 
     tr.header-sub-title {
-      background-color: #e6e6e6;
+      background-color: var(--surface-variant);
       th {
         font-weight: 700;
         font-size: 11px;
         text-transform: uppercase;
+        color: var(--on-surface-2);
       }
       .classification-hdr { text-align: center; }
-      .echelons-hdr { text-align: center; font-weight: 800; letter-spacing: 2px; }
+      .echelons-hdr { text-align: center; font-weight: 700; letter-spacing: 1px; }
     }
   }
 
   tbody {
-    tr:hover {
-      background-color: #f5f8ff;
-    }
-
-    .group-cell {
-      font-weight: 800;
-      font-size: 12px;
-      vertical-align: middle;
-      background-color: #f2f2f2;
-      width: 70px;
-      text-align: center;
-
-      span {
-        font-weight: 800;
-        color: #000;
+    tr {
+      background-color: var(--surface);
+      color: var(--on-surface);
+      &:hover {
+        background-color: var(--surface-hover);
       }
     }
 
-    .class-name-cell {
-      font-weight: 700;
-      text-align: left;
-      padding-left: 10px;
-      background-color: #fafafa;
-      min-width: 140px;
-    }
-
-    .amount-cell {
-      font-weight: 700;
-      font-family: 'Consolas', 'Courier New', monospace;
-      cursor: default;
-      transition: background-color 0.15s ease;
+    td {
       position: relative;
-      padding: 0 !important;
+      font-size: 11px;
+      color: var(--on-surface-2);
 
-      .cell-amount {
-        display: block;
-        padding: 6px 4px;
-        text-align: right;
-        min-height: 28px;
+      &.cat-label {
+        font-weight: 600;
+        text-align: left;
+        padding-left: 10px;
+        background-color: var(--surface-variant);
+        color: var(--on-surface);
+      }
+
+      .cell-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        position: relative;
+        min-height: 20px;
       }
 
       .cell-actions {
@@ -176,54 +167,55 @@ table           { width: 100%; border-collapse: collapse; }
         right: 2px;
         gap: 0;
         align-items: center;
-        background: rgba(255,255,255,0.95);
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-card);
         z-index: 10;
 
         .cell-btn {
-          width: 26px !important;
-          height: 26px !important;
-          line-height: 26px !important;
+          width: 24px !important;
+          height: 24px !important;
+          line-height: 24px !important;
           padding: 0 !important;
-          min-width: 26px !important;
+          min-width: 24px !important;
         }
 
-        .edit-btn { color: #0060B3; }
-        .del-btn  { color: #c62828; }
+        .edit-btn { color: var(--on-surface); }
+        .del-btn  { color: var(--on-surface-3); }
       }
 
       &:hover {
-        background-color: #fff9c4 !important;
-        color: #000;
-        outline: 2px solid #0060B3;
+        background-color: var(--surface-hover) !important;
+        color: var(--on-surface);
+        outline: 1px solid var(--border);
         .cell-actions { display: flex; }
       }
 
       &.base-cell {
-        background-color: #bbdefb;
-        font-weight: 800;
-        color: #000000;
+        background-color: var(--surface-variant);
+        font-weight: 700;
+        color: var(--on-surface);
       }
 
       &.has-value .cell-amount {
-        color: #1b5e20;
+        color: var(--on-surface);
+        font-weight: 600;
       }
     }
 
     .section-divider {
-      background-color: #e0e0e0;
+      background-color: var(--surface-variant);
       td {
-        font-weight: 800;
+        font-weight: 700;
         font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        padding: 5px;
+        letter-spacing: 1.5px;
+        padding: 6px;
         text-align: center;
-        background-color: #d9d9d9;
-        color: #000;
+        background-color: var(--surface-variant);
+        color: var(--on-surface);
       }
     }
   }
 }
-

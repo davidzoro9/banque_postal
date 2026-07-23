@@ -1,4 +1,4 @@
-﻿export interface AppModule {
+export interface AppModule {
   id: string;
   name: string;
   shortName: string;
@@ -17,9 +17,9 @@ export const APP_MODULES: AppModule[] = [
     name: 'Gestion Administrative',
     shortName: 'GA',
     icon: 'people',
-    color: '#0060B3',
-    gradientFrom: '#1B3A6B',
-    gradientTo: '#004080',
+    color: '#475569',
+    gradientFrom: '#334155',
+    gradientTo: '#1e293b',
     route: '/grh',
     description: 'Gestion des collaborateurs, présences et recrutement',
     permissions: ['grh.view']
@@ -29,9 +29,9 @@ export const APP_MODULES: AppModule[] = [
     name: 'Gestion de la Paie',
     shortName: 'PAIE',
     icon: 'payments',
-    color: '#0060B3',
-    gradientFrom: '#1B4B9A',
-    gradientTo: '#0A2744',
+    color: '#475569',
+    gradientFrom: '#334155',
+    gradientTo: '#1e293b',
     route: '/paie',
     description: 'Bulletins de paie, déclarations et cotisations',
     permissions: ['paie.view']
@@ -41,9 +41,9 @@ export const APP_MODULES: AppModule[] = [
     name: 'Données de Base',
     shortName: 'DB',
     icon: 'storage',
-    color: '#CC8800',
-    gradientFrom: '#FFC700',
-    gradientTo: '#CC8800',
+    color: '#475569',
+    gradientFrom: '#334155',
+    gradientTo: '#1e293b',
     route: '/donnees-base',
     description: 'Structure organisationnelle et référentiels de base',
     permissions: ['donnees-base.view']
