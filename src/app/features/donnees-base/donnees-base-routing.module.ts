@@ -36,7 +36,6 @@ const routes: Routes = [
   { path: 'paie/cotisation',       component: DbRefListComponent, data: { title: 'Type de cotisation',  icon: 'percent',            type: 'cotisation'      } },
   { path: 'paie/bareme',           component: DbRefListComponent, data: { title: 'Barème fiscal',       icon: 'calculate',          type: 'bareme'          } },
   { path: 'paie/mode-paiement',    component: DbRefListComponent, data: { title: 'Mode de paiement',    icon: 'payments',           type: 'mode-paiement'   } },
-  { path: 'paie/calendrier',       component: DbRefListComponent, data: { title: 'Calendrier de paie',  icon: 'calendar_month',     type: 'calendrier-paie' } },
 
   // ─── Alias direct (sans préfixe admin/) ────────────────────────────────────
   { path: 'grille-salariale',      redirectTo: 'admin/grille-salariale', pathMatch: 'full' },

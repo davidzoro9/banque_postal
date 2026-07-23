@@ -40,8 +40,7 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
       { id: 'rubrique',         label: 'Rubrique de paie',    icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
       { id: 'cotisation',       label: 'Type de cotisation',  icon: 'percent',             route: '/donnees-base/paie/cotisation'        },
       { id: 'bareme',           label: 'Barème fiscal',       icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
-      { id: 'mode-paiement',    label: 'Mode de paiement',    icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     },
-      { id: 'calendrier-paie',  label: 'Calendrier de paie',  icon: 'calendar_month',      route: '/donnees-base/paie/calendrier'        }
+      { id: 'mode-paiement',    label: 'Mode de paiement',    icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     }
     ]
   }
 ];

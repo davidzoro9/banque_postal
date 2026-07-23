@@ -395,11 +395,7 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'MPY-002', libelle: 'Mobile Money',      description: 'Paiement par mobile money',     actif: true  },
     { code: 'MPY-003', libelle: 'Espèces',           description: 'Paiement en espèces',           actif: false },
     { code: 'MPY-004', libelle: 'Chèque',            description: 'Paiement par chèque',           actif: false },
-  ],
-  'calendrier-paie': [
-    { code: 'CAL-001', libelle: 'Calendrier mensuel',   description: 'Paie le 25 de chaque mois', actif: true  },
-    { code: 'CAL-002', libelle: 'Calendrier bimensuel', description: 'Paie le 15 et le 30',        actif: false },
-  ],
+  ]
 };
 
 @Injectable({
