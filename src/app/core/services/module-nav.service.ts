@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AppModule, APP_MODULES } from '../models/app-module.model';
 import { MenuItem } from '../models/menu-item.model';
@@ -131,8 +131,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       ]
     }
   ],
-  'donnees-base': FULL_REF_AND_PARAM_MENUS,
-  parametrage: FULL_REF_AND_PARAM_MENUS
+  'donnees-base': FULL_REF_AND_PARAM_MENUS
 };
 
 export interface QuickLink {
@@ -158,11 +157,10 @@ export class ModuleNavService {
   }
 
   readonly quickLinks: QuickLink[] = [
-    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',             color: '#163059' },
+    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',             color: '#0060B3' },
     { label: 'Données Base',icon: 'storage',       route: '/donnees-base',             color: '#CC8800' },
     { label: 'Bulletins',   icon: 'receipt_long',  route: '/paie/bulletins/historique', color: '#1B3A6B' },
-    { label: 'Paramétrage', icon: 'settings',      route: '/parametrage',              color: '#0060B3' },
-    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',         color: '#091628' }
+    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',         color: '#004080' }
   ];
 
   constructor() {
@@ -202,3 +200,4 @@ export class ModuleNavService {
     this.sidebarOpenSubject.next(open);
   }
 }
+

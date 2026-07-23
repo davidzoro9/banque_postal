@@ -1,4 +1,4 @@
-.spin-icon { animation: spin 1s linear infinite; }
+﻿.spin-icon { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .total-box {
@@ -7,4 +7,5 @@
   padding: 14px 18px; margin-top: 16px;
 }
 .total-lbl { font-size: 14px; font-weight: 600; color: var(--on-surface-2); }
-.total-val { font-size: 18px; font-weight: 800; color: #163059; }
+.total-val { font-size: 18px; font-weight: 800; color: #004080; }
+

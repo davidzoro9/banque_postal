@@ -1,4 +1,4 @@
-<div class="ref-page">
+﻿<div class="ref-page">
 
   <!-- En-tête -->
   <div class="page-header"
@@ -29,7 +29,7 @@
         <span class="kpi-lbl">Inactifs</span>
       </div>
       <div class="kpi-chip">
-        <mat-icon style="color:#163059">list</mat-icon>
+        <mat-icon style="color:#0060B3">list</mat-icon>
         <span class="kpi-val">{{ dataSource.data.length }}</span>
         <span class="kpi-lbl">Total</span>
       </div>
@@ -83,11 +83,24 @@
                   }
                   <td class="class-name-cell">{{ c }}</td>
                   @for (ech of echelonsList; track ech) {
-                    <td class="amount-cell" 
-                        [class.base-cell]="ech === 1" 
-                        (click)="openCellEdit(c, ech)" 
-                        [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech">
-                      {{ getSalaryFormatted(c, ech) }}
+                    <td class="amount-cell"
+                        [class.base-cell]="ech === 1"
+                        [class.has-value]="getSalary(c, ech) !== null">
+                      <span class="cell-amount">{{ getSalaryFormatted(c, ech) }}</span>
+                      <span class="cell-actions">
+                        <button mat-icon-button class="cell-btn edit-btn"
+                                [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech"
+                                (click)="openCellEdit(c, ech); $event.stopPropagation()">
+                          <mat-icon style="font-size:14px;width:14px;height:14px">edit</mat-icon>
+                        </button>
+                        @if (getSalary(c, ech) !== null) {
+                          <button mat-icon-button class="cell-btn del-btn"
+                                  [matTooltip]="'Supprimer'"
+                                  (click)="deleteCellEntry(c, ech); $event.stopPropagation()">
+                            <mat-icon style="font-size:14px;width:14px;height:14px">delete</mat-icon>
+                          </button>
+                        }
+                      </span>
                     </td>
                   }
                 </tr>
@@ -106,11 +119,24 @@
                   }
                   <td class="class-name-cell">{{ c }}</td>
                   @for (ech of echelonsList; track ech) {
-                    <td class="amount-cell" 
-                        [class.base-cell]="ech === 1" 
-                        (click)="openCellEdit(c, ech)" 
-                        [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech">
-                      {{ getSalaryFormatted(c, ech) }}
+                    <td class="amount-cell"
+                        [class.base-cell]="ech === 1"
+                        [class.has-value]="getSalary(c, ech) !== null">
+                      <span class="cell-amount">{{ getSalaryFormatted(c, ech) }}</span>
+                      <span class="cell-actions">
+                        <button mat-icon-button class="cell-btn edit-btn"
+                                [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech"
+                                (click)="openCellEdit(c, ech); $event.stopPropagation()">
+                          <mat-icon style="font-size:14px;width:14px;height:14px">edit</mat-icon>
+                        </button>
+                        @if (getSalary(c, ech) !== null) {
+                          <button mat-icon-button class="cell-btn del-btn"
+                                  [matTooltip]="'Supprimer'"
+                                  (click)="deleteCellEntry(c, ech); $event.stopPropagation()">
+                            <mat-icon style="font-size:14px;width:14px;height:14px">delete</mat-icon>
+                          </button>
+                        }
+                      </span>
                     </td>
                   }
                 </tr>
@@ -126,11 +152,24 @@
                   }
                   <td class="class-name-cell">{{ c }}</td>
                   @for (ech of echelonsList; track ech) {
-                    <td class="amount-cell" 
-                        [class.base-cell]="ech === 1" 
-                        (click)="openCellEdit(c, ech)" 
-                        [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech">
-                      {{ getSalaryFormatted(c, ech) }}
+                    <td class="amount-cell"
+                        [class.base-cell]="ech === 1"
+                        [class.has-value]="getSalary(c, ech) !== null">
+                      <span class="cell-amount">{{ getSalaryFormatted(c, ech) }}</span>
+                      <span class="cell-actions">
+                        <button mat-icon-button class="cell-btn edit-btn"
+                                [matTooltip]="'Modifier ' + c + ' - Échelon ' + ech"
+                                (click)="openCellEdit(c, ech); $event.stopPropagation()">
+                          <mat-icon style="font-size:14px;width:14px;height:14px">edit</mat-icon>
+                        </button>
+                        @if (getSalary(c, ech) !== null) {
+                          <button mat-icon-button class="cell-btn del-btn"
+                                  [matTooltip]="'Supprimer'"
+                                  (click)="deleteCellEntry(c, ech); $event.stopPropagation()">
+                            <mat-icon style="font-size:14px;width:14px;height:14px">delete</mat-icon>
+                          </button>
+                        }
+                      </span>
                     </td>
                   }
                 </tr>
@@ -241,7 +280,7 @@
 
 <!-- Template de la boîte de dialogue d'ajout/modification -->
 <ng-template #dialogTpl>
-  <h2 mat-dialog-title style="margin: 0; padding-bottom: 12px; font-weight: 600; color: #163059;">
+  <h2 mat-dialog-title style="margin: 0; padding-bottom: 12px; font-weight: 600; color: #0060B3;">
     {{ isEditing ? 'Modifier ' + title : 'Nouveau ' + title }}
   </h2>
   
@@ -383,7 +422,7 @@
     @if (type === 'direction') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Département rattaché</mat-label>
-        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">account_tree</mat-icon>
+        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
         <mat-select formControlName="departementId" placeholder="Sélectionner un département">
           <mat-option [value]="null">— Aucun —</mat-option>
           @for (dep of departements; track dep.id) {
@@ -397,7 +436,7 @@
     @if (type === 'service') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Direction rattachée</mat-label>
-        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">account_tree</mat-icon>
+        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
         <mat-select formControlName="directionId" placeholder="Sélectionner une direction">
           <mat-option [value]="null">— Aucune —</mat-option>
           @for (dir of directions; track dir.id) {
@@ -408,7 +447,7 @@
 
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Département rattaché</mat-label>
-        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">domain</mat-icon>
+        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">domain</mat-icon>
         <mat-select formControlName="departementId" placeholder="Sélectionner un département">
           <mat-option [value]="null">— Aucun —</mat-option>
           @for (dep of departements; track dep.id) {
@@ -422,7 +461,7 @@
     @if (type === 'grille-salariale') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Salaire de base (FCFA)</mat-label>
-        <mat-icon matPrefix style="color: #163059; margin-right: 4px;">payments</mat-icon>
+        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">payments</mat-icon>
         <input matInput type="number" formControlName="montant"
                placeholder="ex. 406395" min="0">
         @if (formGroup.get('montant')?.hasError('min')) {
@@ -437,3 +476,4 @@
     <button mat-raised-button color="primary" [disabled]="formGroup.invalid" (click)="onSubmit()">Enregistrer</button>
   </mat-dialog-actions>
 </ng-template>
+

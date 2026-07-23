@@ -1,4 +1,4 @@
-.emp-list-page { max-width: 1300px; margin: 0 auto; }
+﻿.emp-list-page { max-width: 1300px; margin: 0 auto; }
 
 .page-header {
   border-radius: 16px;
@@ -22,7 +22,7 @@ h1 { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
 p { font-size: 12px; color: rgba(255,255,255,0.8); margin: 0; }
 .ph-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-new {
-  background: #fff !important; color: #1976D2 !important;
+  background: #fff !important; color: #0060B3 !important;
   border-radius: 10px !important; font-weight: 600 !important;
   display: flex; align-items: center; gap: 6px;
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -110,3 +110,4 @@ p { font-size: 12px; color: rgba(255,255,255,0.8); margin: 0; }
   mat-icon { font-size: 48px; width: 48px; height: 48px; color: var(--on-surface-3); display: block; margin: 0 auto 8px; }
   span { display: block; color: var(--on-surface-3); font-size: 14px; }
 }
+

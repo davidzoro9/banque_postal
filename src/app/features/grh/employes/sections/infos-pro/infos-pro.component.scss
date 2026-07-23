@@ -1,4 +1,4 @@
-.spin-icon { animation: spin 1s linear infinite; }
+﻿.spin-icon { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .contrat-info-banner {
@@ -7,13 +7,13 @@
   gap: 16px;
   background: #eef4fb;
   border: 1px solid #b3cce8;
-  border-left: 4px solid #163059;
+  border-left: 4px solid #004080;
   border-radius: 8px;
   padding: 16px 20px;
   margin: 8px 0 16px 0;
 
   .banner-icon {
-    color: #163059;
+    color: #004080;
     font-size: 28px;
     flex-shrink: 0;
   }
@@ -27,7 +27,7 @@
     .banner-title {
       font-weight: 600;
       font-size: 0.95rem;
-      color: #163059;
+      color: #004080;
     }
 
     .banner-desc {
@@ -45,3 +45,4 @@
     mat-icon { font-size: 18px; }
   }
 }
+

@@ -1,10 +1,10 @@
-<!-- Portail Employé - Mon Espace Paie BPBF -->
+﻿<!-- Portail Employé - Mon Espace Paie BPBF -->
 <div style="min-height: 100vh; background: linear-gradient(135deg, #0A2744 0%, #1B4B9A 100%); padding: 0;">
 
   <!-- Barre de navigation employé -->
   <nav style="background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1);">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 36px; height: 36px; background: #FFB300; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 36px; height: 36px; background: #FFC700; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
         <mat-icon style="color: #0A2744; font-size: 20px; width: 20px; height: 20px;">account_balance</mat-icon>
       </div>
       <span style="color: white; font-weight: 800; font-size: 16px;">BPBF — Mon Espace Paie</span>
@@ -15,7 +15,7 @@
         <div style="font-weight: 700;">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
         <div style="font-size: 11px; opacity: 0.7;">{{ currentUser?.email }}</div>
       </div>
-      <div style="width: 38px; height: 38px; border-radius: 50%; background: #FFB300; display: flex; align-items: center; justify-content: center; color: #0A2744; font-weight: 800; font-size: 14px;">
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: #FFC700; display: flex; align-items: center; justify-content: center; color: #0A2744; font-weight: 800; font-size: 14px;">
         {{ (currentUser?.prenom?.charAt(0) || '') + (currentUser?.nom?.charAt(0) || '') }}
       </div>
       <button mat-icon-button style="color: white;" title="Se déconnecter" (click)="logout()">
@@ -182,3 +182,4 @@
     }
   </div>
 </div>
+

@@ -1,4 +1,4 @@
-<div class="section-page">
+﻿<div class="section-page">
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Carrières & Compétences</span>
     <span class="sep">›</span>
@@ -105,7 +105,7 @@
 
             <div class="rating-stars" [matTooltip]="ev.note + ' / 5'">
               @for (star of [1,2,3,4,5]; track star) {
-                <mat-icon [style.color]="star <= ev.note ? '#FFB300' : '#e0e0e0'">
+                <mat-icon [style.color]="star <= ev.note ? '#FFC700' : '#e0e0e0'">
                   {{ star <= ev.note ? 'star' : 'star_border' }}
                 </mat-icon>
               }
@@ -133,3 +133,4 @@
     }
   </div>
 </div>
+

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
@@ -92,8 +92,8 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   }
 
   getAvatarColor(emp: Employee): string {
-    const colors = ['#163059', '#1565C0', '#1B3A6B', '#FFB300', '#0D47A1', '#091628', '#1B4B9A', '#CC8800'];
-    if (!emp.nom || !emp.prenom) return '#163059';
+    const colors = ['#0060B3', '#0060B3', '#1B3A6B', '#FFC700', '#004080', '#004080', '#1B4B9A', '#CC8800'];
+    if (!emp.nom || !emp.prenom) return '#0060B3';
     const idx = (emp.nom.charCodeAt(0) + emp.prenom.charCodeAt(0)) % colors.length;
     return colors[idx];
   }
@@ -111,3 +111,4 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 }
+

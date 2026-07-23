@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
@@ -16,16 +16,16 @@ export class PaieOverviewComponent implements OnInit {
 
   kpis = [
     { label: 'Bulletins générés', value: '4',         icon: 'receipt_long', color: '#1B3A6B', sub: 'Juillet 2026' },
-    { label: 'Masse salariale',   value: '2,600,000 FCFA',  icon: 'payments',    color: '#163059', sub: 'Brut mensuel' },
+    { label: 'Masse salariale',   value: '2,600,000 FCFA',  icon: 'payments',    color: '#0060B3', sub: 'Brut mensuel' },
     { label: 'Indemnités versées', value: '1,200,000 FCFA', icon: 'paid', color: '#2E7D32', sub: 'Paramétrage actif' },
     { label: 'Anomalies paie',    value: '0',       icon: 'check_circle',color: '#2E7D32', sub: 'Conforme' }
   ];
 
   quickActions = [
     { label: 'Générer bulletins', icon: 'add_circle_outline', route: '/paie/bulletins/generer',    color: '#1B3A6B' },
-    { label: 'Historique',        icon: 'history',             route: '/paie/bulletins/historique', color: '#163059' },
+    { label: 'Historique',        icon: 'history',             route: '/paie/bulletins/historique', color: '#0060B3' },
     { label: 'Paramétrage indemnité', icon: 'settings_suggest', route: '/donnees-base/admin/param-indemnite', color: '#2E7D32' },
-    { label: 'Paramétrage',       icon: 'tune',                route: '/paie/parametrage',          color: '#FFB300' }
+    { label: 'Paramétrage',       icon: 'tune',                route: '/paie/parametrage',          color: '#FFC700' }
   ];
 
   recentBulletins: any[] = [];
@@ -75,3 +75,4 @@ export class PaieOverviewComponent implements OnInit {
     this.router.navigate([route]);
   }
 }
+

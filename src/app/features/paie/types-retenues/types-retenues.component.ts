@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 
 export interface TypeRetenue {
   id?: number;
@@ -18,7 +18,7 @@ export interface TypeRetenue {
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div>
-          <h2 style="color: #163059; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+          <h2 style="color: #0060B3; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
             <mat-icon style="color: #0060B3;">money_off</mat-icon>
             Types de Retenues sur Salaire
           </h2>
@@ -35,13 +35,13 @@ export interface TypeRetenue {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Retenues</div>
-          <div style="font-size: 26px; font-weight: 700; color: #163059; margin-top: 4px;">{{ typesRetenues.length }}</div>
+          <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ typesRetenues.length }}</div>
           <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Référentiel configuré</div>
         </mat-card>
 
-        <mat-card style="border-radius: 12px; border-left: 5px solid #1976D2; padding: 16px; background: #fff;">
+        <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Sociales & Fiscales</div>
-          <div style="font-size: 26px; font-weight: 700; color: #1976D2; margin-top: 4px;">{{ getCountCategorie('Sociale') + getCountCategorie('Fiscale') }}</div>
+          <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ getCountCategorie('Sociale') + getCountCategorie('Fiscale') }}</div>
           <div style="font-size: 12px; color: #64748b; margin-top: 2px;">CNSS, IUTS & Cotisations</div>
         </mat-card>
 
@@ -102,7 +102,7 @@ export interface TypeRetenue {
           <tbody>
             <tr *ngFor="let item of getFilteredTypes()" style="border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
               <td style="padding: 14px 18px;">
-                <span style="font-weight: 700; color: #163059; background: #e2e8f0; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 13px;">
+                <span style="font-weight: 700; color: #0060B3; background: #e2e8f0; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 13px;">
                   {{ item.code }}
                 </span>
               </td>
@@ -151,7 +151,7 @@ export interface TypeRetenue {
       <div *ngIf="afficherFormulaire" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
         <div style="background: #fff; width: 100%; max-width: 540px; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
-            <h3 style="margin: 0; color: #163059; font-size: 18px; font-weight: 700;">
+            <h3 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 700;">
               {{ modeEdition ? 'Modifier le Type de Retenue' : 'Nouveau Type de Retenue' }}
             </h3>
             <button mat-icon-button (click)="fermerFormulaire()">
@@ -366,3 +366,4 @@ export class TypesRetenuesComponent implements OnInit {
     };
   }
 }
+

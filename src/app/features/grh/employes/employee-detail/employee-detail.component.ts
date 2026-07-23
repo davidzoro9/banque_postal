@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Employee, STATUT_COLORS, StatutEmploye } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -68,8 +68,8 @@ export class EmployeeDetailComponent implements OnInit {
   }
 
   getAvatarColor(): string {
-    if (!this.employee || !this.employee.nom || !this.employee.prenom) return '#163059';
-    const c = ['#163059','#1B3A6B','#1565C0','#0D47A1','#1B4B9A','#FFB300','#091628','#CC8800'];
+    if (!this.employee || !this.employee.nom || !this.employee.prenom) return '#0060B3';
+    const c = ['#0060B3','#1B3A6B','#0060B3','#004080','#1B4B9A','#FFC700','#004080','#CC8800'];
     return c[(this.employee.nom.charCodeAt(0) + this.employee.prenom.charCodeAt(0)) % c.length];
   }
 
@@ -86,3 +86,4 @@ export class EmployeeDetailComponent implements OnInit {
     return Math.round((this.completedCount / this.sections.length) * 100);
   }
 }
+

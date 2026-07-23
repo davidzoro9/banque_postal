@@ -1,4 +1,4 @@
-.section-page {
+﻿.section-page {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
@@ -44,7 +44,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #163059;
+    color: #004080;
     mat-icon { font-size: 24px; width: 24px; height: 24px; }
   }
   
@@ -60,7 +60,7 @@
   
   mat-card-header {
     margin-bottom: 16px;
-    mat-card-title { font-size: 16px; font-weight: 700; color: #163059; }
+    mat-card-title { font-size: 16px; font-weight: 700; color: #004080; }
   }
 }
 
@@ -124,8 +124,8 @@
   border-radius: 20px;
   text-transform: uppercase;
   
-  &[data-cat="Technique"] { background: rgba(22, 48, 89, 0.1); color: #163059; }
-  &[data-cat="Soft Skills"] { background: rgba(21, 101, 192, 0.1); color: #1565c0; }
+  &[data-cat="Technique"] { background: rgba(22, 48, 89, 0.1); color: #004080; }
+  &[data-cat="Soft Skills"] { background: rgba(21, 101, 192, 0.1); color: #0060B3; }
   &[data-cat="Management"] { background: rgba(255, 179, 0, 0.1); color: #b78103; }
   &[data-cat="Organisationnelle"] { background: rgba(0, 150, 136, 0.1); color: #00796b; }
 }
@@ -209,3 +209,4 @@
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+

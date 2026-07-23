@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../core/models/app-module.model';
@@ -13,17 +13,17 @@ export class CarrieresOverviewComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'carrieres')!;
 
   kpis = [
-    { label: 'Compétences référencées', value: '186', icon: 'psychology',              color: '#163059', sub: 'Référentiel actif' },
-    { label: 'Formations planifiées',   value: '14',  icon: 'school',                  color: '#1565C0', sub: 'Ce semestre' },
+    { label: 'Compétences référencées', value: '186', icon: 'psychology',              color: '#0060B3', sub: 'Référentiel actif' },
+    { label: 'Formations planifiées',   value: '14',  icon: 'school',                  color: '#0060B3', sub: 'Ce semestre' },
     { label: 'Entretiens annuels',      value: '67%', icon: 'star_rate',               color: '#1B3A6B', sub: 'Complétés' },
-    { label: 'Mobilités internes',      value: '5',   icon: 'transfer_within_a_station', color: '#FFB300', sub: 'En cours' }
+    { label: 'Mobilités internes',      value: '5',   icon: 'transfer_within_a_station', color: '#FFC700', sub: 'En cours' }
   ];
 
   quickActions = [
-    { label: 'Référentiel',      icon: 'menu_book',                route: '/carrieres/competences/referentiel',   color: '#163059' },
-    { label: 'Plan de formation',icon: 'event_note',               route: '/carrieres/formations/plan',           color: '#1565C0' },
+    { label: 'Référentiel',      icon: 'menu_book',                route: '/carrieres/competences/referentiel',   color: '#0060B3' },
+    { label: 'Plan de formation',icon: 'event_note',               route: '/carrieres/formations/plan',           color: '#0060B3' },
     { label: 'Entretiens annuels',icon: 'forum',                   route: '/carrieres/evaluations/entretiens',    color: '#1B3A6B' },
-    { label: 'Mobilité',         icon: 'transfer_within_a_station',route: '/carrieres/mobilite',                  color: '#FFB300' }
+    { label: 'Mobilité',         icon: 'transfer_within_a_station',route: '/carrieres/mobilite',                  color: '#FFC700' }
   ];
 
   upcomingFormations = [
@@ -43,3 +43,4 @@ export class CarrieresOverviewComponent implements OnInit {
     this.router.navigate([route]);
   }
 }
+

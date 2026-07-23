@@ -1,4 +1,4 @@
-<div style="padding: 24px; max-width: 1400px; margin: 0 auto;">
+﻿<div style="padding: 24px; max-width: 1400px; margin: 0 auto;">
   <!-- En-tête principal & Navigation de Période -->
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: linear-gradient(135deg, #1B4B9A, #0A2744); padding: 20px 24px; border-radius: 12px; color: white;">
     <div>
@@ -71,12 +71,12 @@
   @if (isCalculating) {
     <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
       <mat-spinner diameter="40" style="margin: 0 auto 16px;"></mat-spinner>
-      <p style="font-size: 15px; color: #163059; font-weight: 600;">Extraction et calcul des bulletins de paie ({{ sessionType }}) pour {{ periode }}...</p>
+      <p style="font-size: 15px; color: #0060B3; font-weight: 600;">Extraction et calcul des bulletins de paie ({{ sessionType }}) pour {{ periode }}...</p>
     </div>
   } @else {
     <mat-card style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
       <div style="padding: 16px 24px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 700; color: #163059; font-size: 15px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-weight: 700; color: #0060B3; font-size: 15px; display: flex; align-items: center; gap: 8px;">
           <mat-icon style="color: #2e7d32;">verified</mat-icon>
           Bulletins Générés pour {{ periode }} ({{ bulletins.length }} employés)
           @if (sessionType !== 'ORDINAIRE') {
@@ -218,9 +218,9 @@
 @if (selectedBulletin) {
   <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
     <div style="background: white; border-radius: 12px; max-width: 650px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #163059; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">
         <div>
-          <h2 style="margin: 0; color: #163059; font-size: 18px; font-weight: 800;">
+          <h2 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 800;">
             BULLETIN DE SALAIRE - {{ selectedBulletin.mois || periode }}
           </h2>
           <span style="font-size: 12px; color: #64748b;">Matricule: {{ selectedBulletin.matricule }} | Session: {{ selectedBulletin.sessionType }}</span>
@@ -235,7 +235,7 @@
         <div><strong>Période & Session:</strong> {{ selectedBulletin.mois || periode }}</div>
       </div>
 
-      <h3 style="font-size: 14px; font-weight: 700; color: #163059; margin-bottom: 8px;">Détails de la Rémunération :</h3>
+      <h3 style="font-size: 14px; font-weight: 700; color: #0060B3; margin-bottom: 8px;">Détails de la Rémunération :</h3>
       <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px;">
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 8px 0;"><strong>Salaire de base (Grille Salariale)</strong></td>
@@ -250,8 +250,8 @@
           }
         }
         <tr style="border-top: 2px solid #cbd5e1; font-weight: 700; background: #f8fafc;">
-          <td style="padding: 8px 0; color: #163059;">TOTAL SALAIRE BRUT (Auto = Base + Indemnités)</td>
-          <td style="text-align: right; padding: 8px 0; color: #163059;">{{ selectedBulletin.salaireBrut | number:'1.0-0' }} FCFA</td>
+          <td style="padding: 8px 0; color: #0060B3;">TOTAL SALAIRE BRUT (Auto = Base + Indemnités)</td>
+          <td style="text-align: right; padding: 8px 0; color: #0060B3;">{{ selectedBulletin.salaireBrut | number:'1.0-0' }} FCFA</td>
         </tr>
         <tr style="color: #c62828;">
           <td style="padding: 6px 0; padding-left: 12px;">- Cotisation Sociale (CNSS 5.5%)</td>
@@ -261,7 +261,7 @@
           <td style="padding: 6px 0; padding-left: 12px;">- Retenue Impôt (IUTS)</td>
           <td style="text-align: right; padding: 6px 0;">-{{ selectedBulletin.impotIUTS | number:'1.0-0' }} FCFA</td>
         </tr>
-        <tr style="border-top: 2px solid #163059; background: #e8f5e9; font-size: 15px; font-weight: 800; color: #2e7d32;">
+        <tr style="border-top: 2px solid #0060B3; background: #e8f5e9; font-size: 15px; font-weight: 800; color: #2e7d32;">
           <td style="padding: 10px 8px;">NET À PAYER</td>
           <td style="text-align: right; padding: 10px 8px;">{{ selectedBulletin.salaireNet | number:'1.0-0' }} FCFA</td>
         </tr>
@@ -276,3 +276,4 @@
     </div>
   </div>
 }
+

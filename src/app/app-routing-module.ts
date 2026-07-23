@@ -39,10 +39,6 @@ const routes: Routes = [
         path: 'donnees-base',
         loadChildren: () => import('./features/donnees-base/donnees-base.module').then(m => m.DonneesBaseModule)
       },
-      {
-        path: 'parametrage',
-        loadChildren: () => import('./features/donnees-base/donnees-base.module').then(m => m.DonneesBaseModule)
-      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

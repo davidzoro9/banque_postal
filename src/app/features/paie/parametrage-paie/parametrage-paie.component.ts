@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 
 export interface ParametragePaieRule {
   id?: number;
@@ -20,7 +20,7 @@ export interface ParametragePaieRule {
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div>
-          <h2 style="color: #163059; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+          <h2 style="color: #0060B3; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
             <mat-icon style="color: #0060B3;">tune</mat-icon>
             Paramétrage des Taux & Cotisations de Paie
           </h2>
@@ -37,7 +37,7 @@ export interface ParametragePaieRule {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Règles Configurées</div>
-          <div style="font-size: 26px; font-weight: 700; color: #163059; margin-top: 4px;">{{ rules.length }}</div>
+          <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ rules.length }}</div>
           <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Cotisations & Prélèvements actifs</div>
         </mat-card>
 
@@ -63,7 +63,7 @@ export interface ParametragePaieRule {
       <!-- Main Rules Table -->
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px;">
         <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #163059;">
+          <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0060B3;">
             Tableau des Paramétrages de Cotisations et Retenues (% Part Employeur / % Part Agent)
           </h3>
           <span style="font-size: 12px; color: #64748b;">
@@ -115,7 +115,7 @@ export interface ParametragePaieRule {
               </td>
 
               <td style="padding: 14px 18px; color: #334155; font-size: 13px;">
-                <span *ngIf="item.plafondMensuel && item.plafondMensuel > 0" style="font-weight: 600; color: #163059;">
+                <span *ngIf="item.plafondMensuel && item.plafondMensuel > 0" style="font-weight: 600; color: #0060B3;">
                   {{ item.plafondMensuel | number:'1.0-0' }} FCFA
                 </span>
                 <span *ngIf="!item.plafondMensuel || item.plafondMensuel === 0" style="color: #94a3b8; font-style: italic;">
@@ -151,7 +151,7 @@ export interface ParametragePaieRule {
 
       <!-- Live Simulator Component Card -->
       <mat-card style="border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1px solid #cbd5e1;">
-        <h3 style="margin: 0 0 12px 0; color: #163059; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <h3 style="margin: 0 0 12px 0; color: #0060B3; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
           <mat-icon style="color: #0060B3;">calculate</mat-icon>
           Simulateur de Déduction en Direct
         </h3>
@@ -162,7 +162,7 @@ export interface ParametragePaieRule {
             type="number"
             [(ngModel)]="salaireSimul"
             step="10000"
-            style="padding: 8px 14px; border: 1px solid #0060B3; border-radius: 8px; font-weight: 700; font-size: 15px; color: #163059; width: 180px;"
+            style="padding: 8px 14px; border: 1px solid #0060B3; border-radius: 8px; font-weight: 700; font-size: 15px; color: #0060B3; width: 180px;"
           >
           <span style="font-size: 13px; color: #64748b;">(Modifiez le salaire pour tester le calcul automatique des cotisations)</span>
         </div>
@@ -197,7 +197,7 @@ export interface ParametragePaieRule {
       <div *ngIf="afficherFormulaire" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
         <div style="background: #fff; width: 100%; max-width: 580px; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
-            <h3 style="margin: 0; color: #163059; font-size: 18px; font-weight: 700;">
+            <h3 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 700;">
               {{ modeEdition ? 'Modifier le Paramétrage de Retenue' : 'Nouveau Paramétrage de Retenue' }}
             </h3>
             <button mat-icon-button (click)="fermerFormulaire()">
@@ -212,7 +212,7 @@ export interface ParametragePaieRule {
               <select
                 [(ngModel)]="formRule.typeRetenueCode"
                 (change)="onTypeRetenueChange()"
-                style="width: 100%; padding: 10px; border: 1px solid #0060B3; border-radius: 8px; font-size: 14px; background: #f0f9ff; font-weight: 600; color: #163059;"
+                style="width: 100%; padding: 10px; border: 1px solid #0060B3; border-radius: 8px; font-size: 14px; background: #f0f9ff; font-weight: 600; color: #0060B3;"
               >
                 <option value="" disabled>-- Choisir un type de retenue enregistré --</option>
                 <option *ngFor="let t of availableTypes" [value]="t.code">
@@ -540,3 +540,4 @@ export class ParametragePaieComponent implements OnInit {
     };
   }
 }
+

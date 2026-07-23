@@ -1,4 +1,4 @@
-@use '@angular/material' as mat;
+﻿@use '@angular/material' as mat;
 
 @include mat.core();
 
@@ -26,19 +26,20 @@ html {
   --app-bg:          #f0f2f5;
   --surface:         #ffffff;
   --surface-variant: #f4f6f9;
-  --surface-hover:   #eef1f6;
+  --surface-hover:   #e8f0fb;
   --border:          #dde2ed;
-  --on-surface:      #091628;
+  --on-surface:      #004080;
   --on-surface-2:    #3a4660;
   --on-surface-3:    #7a8699;
-  --active-bg:       rgba(22, 48, 89, 0.08);
-  --active-color:    #163059;
-  --brand-gold:      #FFB300;
-  --toolbar-bg:      linear-gradient(135deg, #091628 0%, #163059 100%);
-  --shadow-nav:      0 1px 4px rgba(9, 22, 40, 0.08);
-  --shadow-card:     0 2px 8px rgba(9, 22, 40, 0.08);
-  --shadow-sidenav:  2px 0 8px rgba(9, 22, 40, 0.08);
-  --badge-bg:        #FFB300;
+  --active-bg:       rgba(0, 96, 179, 0.08);
+  --active-color:    #0060B3;
+  --brand-blue:      #0060B3;
+  --brand-gold:      #FFC700;
+  --toolbar-bg:      linear-gradient(135deg, #004080 0%, #0060B3 100%);
+  --shadow-nav:      0 1px 4px rgba(0, 64, 128, 0.12);
+  --shadow-card:     0 2px 8px rgba(0, 64, 128, 0.08);
+  --shadow-sidenav:  2px 0 8px rgba(0, 64, 128, 0.08);
+  --badge-bg:        #FFC700;
   --nav-bg:          #ffffff;
 }
 
@@ -57,14 +58,15 @@ html.dark-theme {
   --on-surface:      #e8eef8;
   --on-surface-2:    #8ea4c0;
   --on-surface-3:    #4e6a8a;
-  --active-bg:       rgba(212, 160, 23, 0.15);
-  --active-color:    #FFB300;
-  --brand-gold:      #FFB300;
-  --toolbar-bg:      linear-gradient(135deg, #040c18 0%, #091628 100%);
+  --active-bg:       rgba(0, 96, 179, 0.18);
+  --active-color:    #FFC700;
+  --brand-blue:      #0060B3;
+  --brand-gold:      #FFC700;
+  --toolbar-bg:      linear-gradient(135deg, #002040 0%, #004080 100%);
   --shadow-nav:      0 1px 4px rgba(0, 0, 0, 0.5);
   --shadow-card:     0 2px 8px rgba(0, 0, 0, 0.5);
   --shadow-sidenav:  2px 0 12px rgba(0, 0, 0, 0.5);
-  --badge-bg:        #FFB300;
+  --badge-bg:        #FFC700;
   --nav-bg:          #0e1e35;
 }
 
@@ -196,3 +198,5 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 .drawer-container, .sidebar-container {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
+
+

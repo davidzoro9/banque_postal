@@ -1,4 +1,4 @@
-export interface AppModule {
+﻿export interface AppModule {
   id: string;
   name: string;
   shortName: string;
@@ -17,9 +17,9 @@ export const APP_MODULES: AppModule[] = [
     name: 'Gestion Administrative',
     shortName: 'GA',
     icon: 'people',
-    color: '#163059',
+    color: '#0060B3',
     gradientFrom: '#1B3A6B',
-    gradientTo: '#091628',
+    gradientTo: '#004080',
     route: '/grh',
     description: 'Gestion des collaborateurs, présences et recrutement',
     permissions: ['grh.view']
@@ -29,7 +29,7 @@ export const APP_MODULES: AppModule[] = [
     name: 'Gestion de la Paie',
     shortName: 'PAIE',
     icon: 'payments',
-    color: '#163059',
+    color: '#0060B3',
     gradientFrom: '#1B4B9A',
     gradientTo: '#0A2744',
     route: '/paie',
@@ -42,22 +42,11 @@ export const APP_MODULES: AppModule[] = [
     shortName: 'DB',
     icon: 'storage',
     color: '#CC8800',
-    gradientFrom: '#FFB300',
+    gradientFrom: '#FFC700',
     gradientTo: '#CC8800',
     route: '/donnees-base',
     description: 'Structure organisationnelle et référentiels de base',
     permissions: ['donnees-base.view']
   },
-  {
-    id: 'parametrage',
-    name: 'Paramétrage',
-    shortName: 'PARAM',
-    icon: 'settings',
-    color: '#0060B3',
-    gradientFrom: '#0B62AC',
-    gradientTo: '#1B4B9A',
-    route: '/parametrage',
-    description: 'Configuration des taux, grilles, indemnités et retenues',
-    permissions: ['donnees-base.view']
-  }
 ];
+

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 
 export interface CotisationItem {
   id: number;
@@ -49,7 +49,7 @@ export interface TrancheIuts {
         <!-- 1. Tableau des Cotisations Sociales & Patronales -->
         <mat-card class="config-card">
           <div class="card-title">
-            <mat-icon style="color: #1e3a8a;">account_balance</mat-icon>
+            <mat-icon style="color: #004080;">account_balance</mat-icon>
             <h3>Taux des Organismes de Cotisation & Retraite (CNSS & CRRAE-UMOA)</h3>
           </div>
           
@@ -226,7 +226,7 @@ export interface TrancheIuts {
     }
     .page-header h2 {
       margin: 0;
-      color: #1e3a8a;
+      color: #004080;
       font-size: 20px;
       font-weight: 700;
     }
@@ -529,3 +529,4 @@ export class CotisationsPaieComponent implements OnInit {
     setTimeout(() => this.showSuccess = false, 4000);
   }
 }
+

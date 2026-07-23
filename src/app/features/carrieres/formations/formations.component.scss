@@ -1,4 +1,4 @@
-.section-page {
+﻿.section-page {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
@@ -44,7 +44,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #1565c0;
+    color: #0060B3;
     mat-icon { font-size: 24px; width: 24px; height: 24px; }
   }
   
@@ -91,7 +91,7 @@
   
   mat-card-header {
     margin-bottom: 16px;
-    mat-card-title { font-size: 16px; font-weight: 700; color: #163059; }
+    mat-card-title { font-size: 16px; font-weight: 700; color: #004080; }
   }
 }
 
@@ -187,7 +187,7 @@
   text-transform: uppercase;
   
   &[data-status="Planifiée"] { background: rgba(0,0,0,0.06); color: var(--on-surface-2); }
-  &[data-status="Confirmée"] { background: rgba(22, 48, 89, 0.1); color: #163059; }
+  &[data-status="Confirmée"] { background: rgba(22, 48, 89, 0.1); color: #004080; }
   &[data-status="Terminée"] { background: rgba(76, 175, 80, 0.1); color: #2e7d32; }
   &[data-status="Annulée"] { background: rgba(244, 67, 54, 0.1); color: #c62828; }
 }
@@ -237,7 +237,7 @@
     height: 32px;
     border-radius: 8px;
     background: rgba(21, 101, 192, 0.08);
-    color: #1565c0;
+    color: #0060B3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -296,3 +296,4 @@
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+

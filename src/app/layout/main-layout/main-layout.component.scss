@@ -1,4 +1,4 @@
-:host {
+﻿:host {
   display: block;
   height: 100vh;
   overflow: hidden;
@@ -58,8 +58,8 @@
   }
 
   &.active {
-    border-bottom-color: var(--tab-color, #1976D2);
-    background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, var(--tab-color, #1976D2) 8%, transparent));
+    border-bottom-color: var(--tab-color, #0060B3);
+    background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, var(--tab-color, #0060B3) 8%, transparent));
   }
 }
 
@@ -101,7 +101,7 @@
 }
 
 .module-tab.active .tab-label {
-  color: var(--tab-color, #1976D2);
+  color: var(--tab-color, #0060B3);
 }
 
 .navbar-right {
@@ -176,3 +176,4 @@
 @media (max-width: 600px) {
   .page-wrapper { padding: 16px; }
 }
+

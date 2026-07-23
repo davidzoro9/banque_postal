@@ -46,12 +46,62 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   categories = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
-  // Matrice 2D pour Grille Salariale (conformité document BPBF)
-  allClassifications = [
-    '1ÈRE CATEGORIE', '2ÈME CATEGORIE', '3ÈME CATEGORIE', '4ÈME CATEGORIE', '5ÈME CATEGORIE', '6ÈME CATEGORIE', '7ÈME CATEGORIE',
-    'CLASSE I', 'CLASSE II', 'CLASSE III', 'CLASSE IV',
+  // Grille salariale - listes par grade
+  groupe1Classifications = [
+    '1ÈRE CATEGORIE', '2ÈME CATEGORIE', '3ÈME CATEGORIE', '4ÈME CATEGORIE',
+    '5ÈME CATEGORIE', '6ÈME CATEGORIE', '7ÈME CATEGORIE'
+  ];
+  groupe2Classifications = [
+    'CLASSE I', 'CLASSE II', 'CLASSE III', 'CLASSE IV'
+  ];
+  groupe3Classifications = [
     'CLASSE V', 'CLASSE VI', 'CLASSE VII', 'CLASSE VIII'
   ];
+  echelonsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+  get allClassifications(): string[] {
+    return [...this.groupe1Classifications, ...this.groupe2Classifications, ...this.groupe3Classifications];
+  }
+
+  getSalaryItem(classification: string, echelon: number): RefItem | undefined {
+    return this.dataSource.data.find(
+      item => (item.categorie === classification || item.code === classification)
+           && (item.echellon === String(echelon))
+    );
+  }
+
+  getSalary(classification: string, echelon: number): number | null {
+    const item = this.getSalaryItem(classification, echelon);
+    return item ? (item.montant ?? null) : null;
+  }
+
+  getSalaryFormatted(classification: string, echelon: number): string {
+    const val = this.getSalary(classification, echelon);
+    return val !== null ? this.formatMontant(val) : '-';
+  }
+
+  formatMontant(value: number): string {
+    if (!value && value !== 0) return '-';
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value).replace(/\s/g, ' ');
+  }
+
+  deleteCellEntry(classification: string, echelon: number): void {
+    const item = this.getSalaryItem(classification, echelon);
+    if (!item) return;
+    const msg = `Supprimer le salaire de ${classification} - Échelon ${echelon} ?\n\nCette action est irréversible.`;
+    if (confirm(msg)) {
+      this.dbRefService.deleteItem(this.type, item.code + '_' + echelon).subscribe({
+        next: (items) => { this.dataSource.data = items; },
+        error: () => {
+          // Si l'API échoue, on supprime localement
+          this.dataSource.data = this.dataSource.data.filter(
+            i => !((i.categorie === classification || i.code === classification)
+                && i.echellon === String(echelon))
+          );
+        }
+      });
+    }
+  }
 
   openCellEdit(classification: string, echelon: number): void {
     let item = this.getSalaryItem(classification, echelon);

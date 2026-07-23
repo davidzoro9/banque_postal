@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-rubriques-paie',
   template: `
     <div style="padding: 24px; max-width: 1200px; margin: 0 auto;">
-      <h2 style="color: #163059; margin-bottom: 16px;">Rubriques de Paie</h2>
+      <h2 style="color: #0060B3; margin-bottom: 16px;">Rubriques de Paie</h2>
       <mat-card style="border-radius: 12px; padding: 20px;">
         <p style="color: #64748b; font-size: 14px;">Gestion des éléments de salaire (Gains, Primes, Indemnités, Retenues).</p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;">
@@ -59,3 +59,4 @@ import { Component, OnInit } from '@angular/core';
 export class RubriquesPaieComponent implements OnInit {
   ngOnInit(): void {}
 }
+

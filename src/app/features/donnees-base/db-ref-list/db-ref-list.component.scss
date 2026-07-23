@@ -1,4 +1,4 @@
-.ref-page { padding: 0; }
+﻿.ref-page { padding: 0; }
 
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -21,7 +21,7 @@
     border-radius: 10px; padding: 10px 18px;
     box-shadow: 0 1px 4px rgba(0,0,0,.08); flex: 1;
   }
-  .kpi-val { font-size: 20px; font-weight: 700; color: #1a237e; }
+  .kpi-val { font-size: 20px; font-weight: 700; color: #0060B3; }
   .kpi-lbl { font-size: 12px; color: #757575; }
 }
 
@@ -33,7 +33,7 @@
 table           { width: 100%; border-collapse: collapse; }
 
 .code-chip {
-  background: #e8eaf6; color: #1a237e;
+  background: #e8eaf6; color: #0060B3;
   padding: 2px 8px; border-radius: 6px;
   font-size: 12px; font-weight: 600; font-family: monospace;
 }
@@ -153,19 +153,57 @@ table           { width: 100%; border-collapse: collapse; }
     .amount-cell {
       font-weight: 700;
       font-family: 'Consolas', 'Courier New', monospace;
-      cursor: pointer;
-      transition: background-color 0.15s ease, transform 0.1s ease;
+      cursor: default;
+      transition: background-color 0.15s ease;
+      position: relative;
+      padding: 0 !important;
+
+      .cell-amount {
+        display: block;
+        padding: 6px 4px;
+        text-align: right;
+        min-height: 28px;
+      }
+
+      .cell-actions {
+        display: none;
+        position: absolute;
+        top: 1px;
+        right: 2px;
+        gap: 0;
+        align-items: center;
+        background: rgba(255,255,255,0.95);
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        z-index: 10;
+
+        .cell-btn {
+          width: 26px !important;
+          height: 26px !important;
+          line-height: 26px !important;
+          padding: 0 !important;
+          min-width: 26px !important;
+        }
+
+        .edit-btn { color: #0060B3; }
+        .del-btn  { color: #c62828; }
+      }
 
       &:hover {
         background-color: #fff9c4 !important;
         color: #000;
-        outline: 2px solid #1976d2;
+        outline: 2px solid #0060B3;
+        .cell-actions { display: flex; }
       }
 
       &.base-cell {
         background-color: #bbdefb;
         font-weight: 800;
         color: #000000;
+      }
+
+      &.has-value .cell-amount {
+        color: #1b5e20;
       }
     }
 
@@ -184,3 +222,4 @@ table           { width: 100%; border-collapse: collapse; }
     }
   }
 }
+

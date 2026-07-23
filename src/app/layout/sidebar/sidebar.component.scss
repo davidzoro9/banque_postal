@@ -1,4 +1,4 @@
-:host {
+﻿:host {
   display: block;
   height: 100%;
 }
@@ -103,7 +103,7 @@
   text-align: left;
   &:hover {
     background: var(--surface-hover);
-    border-color: var(--mod-color, #1976D2);
+    border-color: var(--mod-color, #0060B3);
   }
 }
 
@@ -163,3 +163,4 @@
 .sidebar-container::-webkit-scrollbar { width: 4px; }
 .sidebar-container::-webkit-scrollbar-track { background: transparent; }
 .sidebar-container::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+
