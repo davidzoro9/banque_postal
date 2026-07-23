@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../core/models/app-module.model';
@@ -13,17 +13,17 @@ export class DbOverviewComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'donnees-base')!;
 
   kpis = [
-    { label: 'Entités & Structure',     value: '18', icon: 'domain',            color: '#CC8800', sub: 'Services & Agences' },
-    { label: 'Grilles & Indemnités',   value: '14', icon: 'table_chart',        color: '#0060B3', sub: 'Grilles salariales' },
-    { label: 'Types de Retenues',       value: '7',  icon: 'money_off',          color: '#0288D1', sub: 'Cotisations & Impôts' },
-    { label: 'Règles de Paie',          value: '4',  icon: 'tune',               color: '#0060B3', sub: '% Employeur & % Agent' }
+    { label: 'Entités & Structure',     value: '18', icon: 'domain',            color: '#CC8800', sub: 'Services & Agences BPBF' },
+    { label: 'Grilles & Indemnités',   value: '14', icon: 'table_chart',        color: '#0060B3', sub: 'Grille salariale BPBF' },
+    { label: 'Type de retenue',         value: '6',  icon: 'money_off',          color: '#0288D1', sub: 'Référentiel des types' },
+    { label: 'Paramétrage retenue',     value: '5',  icon: 'tune',               color: '#0060B3', sub: 'Taux % Employeur & % Agent' }
   ];
 
   quickActions = [
     { label: 'Départements',        icon: 'domain',        route: '/donnees-base/admin/departement',      color: '#CC8800' },
     { label: 'Grille Salariale',    icon: 'table_chart',   route: '/donnees-base/admin/grille-salariale', color: '#0060B3' },
-    { label: 'Types de Retenues',   icon: 'money_off',     route: '/paie/types-retenues',                 color: '#0288D1' },
-    { label: 'Taux & Cotisations',  icon: 'tune',          route: '/paie/parametrage',                    color: '#0060B3' }
+    { label: 'Type de retenue',     icon: 'money_off',     route: '/paie/types-retenues',                 color: '#0288D1' },
+    { label: 'Paramétrage retenue', icon: 'tune',          route: '/paie/parametrage',                    color: '#0060B3' }
   ];
 
   configuration = [

@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
@@ -22,10 +22,10 @@ export class PaieOverviewComponent implements OnInit {
   ];
 
   quickActions = [
-    { label: 'Générer bulletins', icon: 'add_circle_outline', route: '/paie/bulletins/generer',    color: '#1B3A6B' },
-    { label: 'Historique',        icon: 'history',             route: '/paie/bulletins/historique', color: '#0060B3' },
-    { label: 'Paramétrage indemnité', icon: 'settings_suggest', route: '/donnees-base/admin/param-indemnite', color: '#2E7D32' },
-    { label: 'Paramétrage',       icon: 'tune',                route: '/paie/parametrage',          color: '#FFC700' }
+    { label: 'Générer bulletins',     icon: 'add_circle_outline', route: '/paie/bulletins/generer',          color: '#004080' },
+    { label: 'Type de retenue',       icon: 'money_off',           route: '/paie/types-retenues',             color: '#0060B3' },
+    { label: 'Paramétrage retenue',   icon: 'tune',                route: '/paie/parametrage',                color: '#FFC700' },
+    { label: 'Paramétrage indemnité', icon: 'settings_suggest',    route: '/donnees-base/admin/param-indemnite', color: '#2E7D32' }
   ];
 
   recentBulletins: any[] = [];

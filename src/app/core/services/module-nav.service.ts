@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AppModule, APP_MODULES } from '../models/app-module.model';
 import { MenuItem } from '../models/menu-item.model';
@@ -35,8 +35,8 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
     label: 'Paramétrage Paie & Retenues',
     icon: 'tune',
     children: [
-      { id: 'types-retenues',   label: 'Types de retenues',   icon: 'money_off',           route: '/paie/types-retenues'                 },
-      { id: 'param-paie-taux',  label: 'Taux & Cotisations (% Employeur/Agent)', icon: 'tune', route: '/paie/parametrage'             },
+      { id: 'types-retenues',   label: 'Type de retenue',     icon: 'money_off',           route: '/paie/types-retenues'                 },
+      { id: 'param-paie-taux',  label: 'Paramétrage retenue', icon: 'tune',                route: '/paie/parametrage'                    },
       { id: 'rubrique',         label: 'Rubrique de paie',    icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
       { id: 'cotisation',       label: 'Type de cotisation',  icon: 'percent',             route: '/donnees-base/paie/cotisation'        },
       { id: 'bareme',           label: 'Barème fiscal',       icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
@@ -110,16 +110,13 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       ]
     },
     {
-      id: 'types-retenues',
-      label: 'Types de retenues',
+      id: 'retenues-group',
+      label: 'Retenues sur Salaire',
       icon: 'money_off',
-      route: '/paie/types-retenues'
-    },
-    {
-      id: 'parametrage-paie',
-      label: 'Paramétrage paie (Taux %)',
-      icon: 'tune',
-      route: '/paie/parametrage'
+      children: [
+        { id: 'types-retenues',   label: 'Type de retenue',      icon: 'money_off', route: '/paie/types-retenues' },
+        { id: 'parametrage-paie', label: 'Paramétrage retenue',   icon: 'tune',      route: '/paie/parametrage' }
+      ]
     },
     {
       id: 'declarations',
