@@ -1,16 +1,15 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 export interface ParametragePaieRule {
   id?: number;
-  typeRetenueCode: string;
-  typeRetenueLibelle: string;
-  categorie: string;
-  partEmployeurPct: number;  // % Part Employeur (Patronale)
-  partAgentPct: number;      // % Part Agent / Employé (Salariale)
+  code: string;
+  libelle: string;
+  partEmployeurPct: number;  // Taux Part Employeur (Patronale %)
+  partAgentPct: number;      // Taux Part Agent / Salariale (%)
   assietteCalcul: 'SALAIRE_BASE' | 'SALAIRE_BRUT' | 'BRUT_IMPOSABLE' | 'MONTANT_FIXE';
   plafondMensuel?: number;   // Plafond mensuel en FCFA (0 si non plafonné)
   actif: boolean;
-  notes?: string;
+  description?: string;
 }
 
 @Component({
@@ -22,64 +21,63 @@ export interface ParametragePaieRule {
         <div>
           <h2 style="color: #0060B3; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
             <mat-icon style="color: #0060B3;">tune</mat-icon>
-            Paramétrage des Taux & Cotisations de Paie
+            Paramétrage des Retenues sur Salaire
           </h2>
           <p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">
-            Configuration des taux de cotisations et retenues (% Part Employeur & % Part Agent / Employé)
+            Définition des retenues applicables avec le taux de chaque type (Part Employeur et Part Agent)
           </p>
         </div>
         <button mat-raised-button color="primary" (click)="ouvrirFormulaire()" style="background: #0060B3; border-radius: 8px; font-weight: 600; padding: 0 20px;">
-          <mat-icon style="margin-right: 6px;">add_circle</mat-icon> Configurer un Taux de Retenue
+          <mat-icon style="margin-right: 6px;">add_circle</mat-icon> Nouvelle Retenue
         </button>
       </div>
 
       <!-- Summary KPI Cards -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Règles Configurées</div>
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Retenues Configurées</div>
           <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ rules.length }}</div>
-          <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Cotisations & Prélèvements actifs</div>
+          <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Retenues actives dans le système</div>
         </mat-card>
 
         <mat-card style="border-radius: 12px; border-left: 5px solid #0288D1; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Taux Patronal</div>
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Cumul Taux Part Employeur</div>
           <div style="font-size: 26px; font-weight: 700; color: #0288D1; margin-top: 4px;">{{ getTotalPartEmployeur() | number:'1.1-2' }} %</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Charge globale entreprise</div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Taux global pris en charge employeur</div>
         </mat-card>
 
         <mat-card style="border-radius: 12px; border-left: 5px solid #7B1FA2; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Taux Salarial</div>
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Cumul Taux Part Agent</div>
           <div style="font-size: 26px; font-weight: 700; color: #7B1FA2; margin-top: 4px;">{{ getTotalPartAgent() | number:'1.1-2' }} %</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Retenues directes agent</div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Taux global prélevé sur l'agent</div>
         </mat-card>
 
         <mat-card style="border-radius: 12px; border-left: 5px solid #2E7D32; padding: 16px; background: #fff;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Simulation Rapide</div>
           <div style="font-size: 18px; font-weight: 700; color: #2E7D32; margin-top: 4px;">{{ simulerChargeEmployeur(500000) | number:'1.0-0' }} FCFA</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Charges patronales pour 500k Brut</div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Part employeur pour 500 000 FCFA Brut</div>
         </mat-card>
       </div>
 
-      <!-- Main Rules Table -->
+      <!-- Main Retenues Table -->
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px;">
         <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0060B3;">
-            Tableau des Paramétrages de Cotisations et Retenues (% Part Employeur / % Part Agent)
+            Liste des Retenues (Code, Libellé, Taux Part Employeur, Taux Part Agent, Description)
           </h3>
           <span style="font-size: 12px; color: #64748b;">
-            Appel direct des types de retenues enregistrés
+            Déduction automatique selon les taux configurés
           </span>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
           <thead>
             <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #334155; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-              <th style="padding: 14px 18px;">Type de Retenue</th>
-              <th style="padding: 14px 18px;">Catégorie</th>
-              <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1;">% Part Employeur</th>
-              <th style="padding: 14px 18px; text-align: center; background: #f3e8ff; color: #6b21a8;">% Part Agent / Employé</th>
-              <th style="padding: 14px 18px;">Assiette de Calcul</th>
-              <th style="padding: 14px 18px;">Plafond Mensuel</th>
+              <th style="padding: 14px 18px;">Code</th>
+              <th style="padding: 14px 18px;">Libellé de la Retenue</th>
+              <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1;">Taux Part Employeur (%)</th>
+              <th style="padding: 14px 18px; text-align: center; background: #f3e8ff; color: #6b21a8;">Taux Part Agent (%)</th>
+              <th style="padding: 14px 18px;">Description</th>
               <th style="padding: 14px 18px; text-align: center;">Statut</th>
               <th style="padding: 14px 18px; text-align: right;">Actions</th>
             </tr>
@@ -87,40 +85,30 @@ export interface ParametragePaieRule {
           <tbody>
             <tr *ngFor="let item of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
               <td style="padding: 14px 18px;">
-                <div style="font-weight: 700; color: #0f172a;">{{ item.typeRetenueLibelle }}</div>
-                <div style="font-size: 12px; color: #64748b; font-family: monospace;">{{ item.typeRetenueCode }}</div>
-              </td>
-              <td style="padding: 14px 18px;">
-                <span [ngStyle]="getCategorieBadgeStyle(item.categorie)">
-                  {{ item.categorie }}
+                <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 13px;">
+                  {{ item.code }}
                 </span>
               </td>
+              <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">
+                {{ item.libelle }}
+              </td>
 
-              <!-- % Part Employeur -->
+              <!-- Taux Part Employeur (%) -->
               <td style="padding: 14px 18px; text-align: center; background: #f0f9ff;">
                 <span style="background: #0288D1; color: #fff; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px;">
                   {{ item.partEmployeurPct | number:'1.1-2' }} %
                 </span>
               </td>
 
-              <!-- % Part Agent / Employé -->
+              <!-- Taux Part Agent (%) -->
               <td style="padding: 14px 18px; text-align: center; background: #faf5ff;">
                 <span style="background: #7B1FA2; color: #fff; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px;">
                   {{ item.partAgentPct | number:'1.1-2' }} %
                 </span>
               </td>
 
-              <td style="padding: 14px 18px; color: #334155; font-size: 13px;">
-                <span style="font-weight: 600; color: #475569;">{{ getLibelleAssiette(item.assietteCalcul) }}</span>
-              </td>
-
-              <td style="padding: 14px 18px; color: #334155; font-size: 13px;">
-                <span *ngIf="item.plafondMensuel && item.plafondMensuel > 0" style="font-weight: 600; color: #0060B3;">
-                  {{ item.plafondMensuel | number:'1.0-0' }} FCFA
-                </span>
-                <span *ngIf="!item.plafondMensuel || item.plafondMensuel === 0" style="color: #94a3b8; font-style: italic;">
-                  Non plafonné
-                </span>
+              <td style="padding: 14px 18px; color: #64748b; font-size: 13px;">
+                {{ item.description || '—' }}
               </td>
 
               <td style="padding: 14px 18px; text-align: center;">
@@ -141,8 +129,8 @@ export interface ParametragePaieRule {
             </tr>
 
             <tr *ngIf="rules.length === 0">
-              <td colspan="8" style="padding: 32px; text-align: center; color: #94a3b8;">
-                Aucun paramétrage de retenue configuré. Cliquer sur "Configurer un Taux de Retenue".
+              <td colspan="7" style="padding: 32px; text-align: center; color: #94a3b8;">
+                Aucune retenue configurée. Cliquer sur "Nouvelle Retenue".
               </td>
             </tr>
           </tbody>
@@ -153,7 +141,7 @@ export interface ParametragePaieRule {
       <mat-card style="border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1px solid #cbd5e1;">
         <h3 style="margin: 0 0 12px 0; color: #0060B3; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
           <mat-icon style="color: #0060B3;">calculate</mat-icon>
-          Simulateur de Déduction en Direct
+          Simulateur de Retenues en Direct
         </h3>
 
         <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
@@ -164,22 +152,22 @@ export interface ParametragePaieRule {
             step="10000"
             style="padding: 8px 14px; border: 1px solid #0060B3; border-radius: 8px; font-weight: 700; font-size: 15px; color: #0060B3; width: 180px;"
           >
-          <span style="font-size: 13px; color: #64748b;">(Modifiez le salaire pour tester le calcul automatique des cotisations)</span>
+          <span style="font-size: 13px; color: #64748b;">(Test direct du calcul des retenues)</span>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <thead>
             <tr style="background: #e2e8f0; color: #334155; font-size: 12px; text-transform: uppercase;">
               <th style="padding: 10px 14px;">Retenue</th>
-              <th style="padding: 10px 14px; text-align: center;">% Part Employeur</th>
+              <th style="padding: 10px 14px; text-align: center;">Taux Part Employeur (%)</th>
               <th style="padding: 10px 14px; text-align: right; color: #0288D1;">Montant Employeur (FCFA)</th>
-              <th style="padding: 10px 14px; text-align: center;">% Part Agent</th>
+              <th style="padding: 10px 14px; text-align: center;">Taux Part Agent (%)</th>
               <th style="padding: 10px 14px; text-align: right; color: #7B1FA2;">Montant Agent (FCFA)</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let r of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
-              <td style="padding: 10px 14px; font-weight: 600; color: #1e293b;">{{ r.typeRetenueLibelle }}</td>
+              <td style="padding: 10px 14px; font-weight: 600; color: #1e293b;">{{ r.libelle }}</td>
               <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #0288D1;">{{ r.partEmployeurPct }} %</td>
               <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0288D1;">
                 {{ calculMontantPartEmployeur(r, salaireSimul) | number:'1.0-0' }} FCFA
@@ -195,10 +183,10 @@ export interface ParametragePaieRule {
 
       <!-- Modal Form Overlay -->
       <div *ngIf="afficherFormulaire" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-        <div style="background: #fff; width: 100%; max-width: 580px; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+        <div style="background: #fff; width: 100%; max-width: 540px; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
             <h3 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 700;">
-              {{ modeEdition ? 'Modifier le Paramétrage de Retenue' : 'Nouveau Paramétrage de Retenue' }}
+              {{ modeEdition ? 'Modifier la Retenue' : 'Nouvelle Retenue' }}
             </h3>
             <button mat-icon-button (click)="fermerFormulaire()">
               <mat-icon>close</mat-icon>
@@ -206,25 +194,32 @@ export interface ParametragePaieRule {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Selection / Call of Type de Retenue -->
+            <!-- Code -->
             <div>
-              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Sélectionner le Type de Retenue *</label>
-              <select
-                [(ngModel)]="formRule.typeRetenueCode"
-                (change)="onTypeRetenueChange()"
-                style="width: 100%; padding: 10px; border: 1px solid #0060B3; border-radius: 8px; font-size: 14px; background: #f0f9ff; font-weight: 600; color: #0060B3;"
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Code de la retenue *</label>
+              <input
+                type="text"
+                [(ngModel)]="formRule.code"
+                placeholder="Ex: RET-CNSS, RET-CRRAE, RET-IUTS..."
+                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; text-transform: uppercase;"
               >
-                <option value="" disabled>-- Choisir un type de retenue enregistré --</option>
-                <option *ngFor="let t of availableTypes" [value]="t.code">
-                  {{ t.code }} - {{ t.libelle }} ({{ t.categorie }})
-                </option>
-              </select>
             </div>
 
-            <!-- Taux Inputs: Part Employeur (%) & Part Agent (%) -->
+            <!-- Libellé -->
+            <div>
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Libellé de la retenue *</label>
+              <input
+                type="text"
+                [(ngModel)]="formRule.libelle"
+                placeholder="Ex: Cotisation Sociale CNSS"
+                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;"
+              >
+            </div>
+
+            <!-- Taux Inputs: Taux Part Employeur (%) & Taux Part Agent (%) -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
               <div>
-                <label style="display: block; font-size: 13px; font-weight: 700; color: #0288D1; margin-bottom: 4px;">% Part Employeur (Patronale) *</label>
+                <label style="display: block; font-size: 13px; font-weight: 700; color: #0288D1; margin-bottom: 4px;">Taux Part Employeur (%) *</label>
                 <div style="display: flex; align-items: center; gap: 6px;">
                   <input
                     type="number"
@@ -240,7 +235,7 @@ export interface ParametragePaieRule {
               </div>
 
               <div>
-                <label style="display: block; font-size: 13px; font-weight: 700; color: #7B1FA2; margin-bottom: 4px;">% Part Agent / Employé (Salariale) *</label>
+                <label style="display: block; font-size: 13px; font-weight: 700; color: #7B1FA2; margin-bottom: 4px;">Taux Part Agent (%) *</label>
                 <div style="display: flex; align-items: center; gap: 6px;">
                   <input
                     type="number"
@@ -256,53 +251,27 @@ export interface ParametragePaieRule {
               </div>
             </div>
 
-            <!-- Assiette de calcul & Plafond -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-              <div>
-                <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Assiette de calcul *</label>
-                <select
-                  [(ngModel)]="formRule.assietteCalcul"
-                  style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff;"
-                >
-                  <option value="SALAIRE_BASE">Salaire de Base</option>
-                  <option value="SALAIRE_BRUT">Salaire Brut Total</option>
-                  <option value="BRUT_IMPOSABLE">Salaire Brut Imposable</option>
-                  <option value="MONTANT_FIXE">Montant Fixe Forfaitaire</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Plafond mensuel (FCFA)</label>
-                <input
-                  type="number"
-                  step="10000"
-                  [(ngModel)]="formRule.plafondMensuel"
-                  placeholder="0 pour illimité"
-                  style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;"
-                >
-              </div>
-            </div>
-
+            <!-- Description -->
             <div>
-              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Notes / Justificatif légal</label>
-              <input
-                type="text"
-                [(ngModel)]="formRule.notes"
-                placeholder="Ex: Taux réglementaire CNSS Burkina Faso Code du Travail"
-                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;"
-              >
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Description</label>
+              <textarea
+                [(ngModel)]="formRule.description"
+                rows="3"
+                placeholder="Description détaillée de la retenue..."
+                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit;"
+              ></textarea>
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px;">
               <input type="checkbox" id="chkRuleActif" [(ngModel)]="formRule.actif" style="width: 18px; height: 18px; cursor: pointer;">
-              <label for="chkRuleActif" style="font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer;">Actif (Appliqué lors du calcul des bulletins de paie)</label>
+              <label for="chkRuleActif" style="font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer;">Actif (Appliqué lors du calcul de la paie)</label>
             </div>
           </div>
 
           <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
             <button mat-button (click)="fermerFormulaire()">Annuler</button>
             <button mat-raised-button color="primary" (click)="sauvegarderRule()" style="background: #0060B3; font-weight: 600;">
-              <mat-icon style="margin-right: 6px;">save</mat-icon> Enregistrer le Paramétrage
+              <mat-icon style="margin-right: 6px;">save</mat-icon> Enregistrer la Retenue
             </button>
           </div>
         </div>
@@ -313,7 +282,6 @@ export interface ParametragePaieRule {
 })
 export class ParametragePaieComponent implements OnInit {
   rules: ParametragePaieRule[] = [];
-  availableTypes: any[] = [];
   salaireSimul: number = 500000;
 
   afficherFormulaire: boolean = false;
@@ -322,33 +290,11 @@ export class ParametragePaieComponent implements OnInit {
   formRule: ParametragePaieRule = this.getEmptyRule();
 
   ngOnInit(): void {
-    this.chargerAvailableTypes();
     this.chargerRules();
   }
 
-  chargerAvailableTypes(): void {
-    const saved = localStorage.getItem('sigrh_types_retenues');
-    if (saved) {
-      try {
-        this.availableTypes = JSON.parse(saved);
-        return;
-      } catch (e) {}
-    }
-
-    // Default registered types
-    this.availableTypes = [
-      { code: 'RET-CNSS',      libelle: 'Cotisation Sociale CNSS',          categorie: 'Sociale' },
-      { code: 'RET-IUTS',      libelle: 'Impôt Unique sur Traitements (IUTS)', categorie: 'Fiscale' },
-      { code: 'RET-ASSUR',     libelle: 'Assurance Maladie Groupe',         categorie: 'Assurance' },
-      { code: 'RET-MUTUELLE',  libelle: 'Mutuelle de Santé Interne',        categorie: 'Assurance' },
-      { code: 'RET-PRET',      libelle: 'Remboursement Prêt Équipement/Auto',categorie: 'Remboursement' },
-      { code: 'RET-AVANCE',    libelle: 'Avance sur Salaire / Acompte',     categorie: 'Remboursement' },
-      { code: 'RET-CR',        libelle: 'Cotisation Retraite Complémentaire',categorie: 'Sociale' }
-    ];
-  }
-
   chargerRules(): void {
-    const saved = localStorage.getItem('sigrh_parametrage_paie_rules');
+    const saved = localStorage.getItem('sigrh_retenues_v3');
     if (saved) {
       try {
         this.rules = JSON.parse(saved);
@@ -356,55 +302,62 @@ export class ParametragePaieComponent implements OnInit {
       } catch (e) {}
     }
 
-    // Initial default rules with Part Employeur (%) and Part Agent (%)
+    // Default rules with Code, Libellé, Taux Part Employeur, Taux Part Agent, Description
     this.rules = [
       {
         id: 1,
-        typeRetenueCode: 'RET-CNSS',
-        typeRetenueLibelle: 'Cotisation Sociale CNSS',
-        categorie: 'Sociale',
+        code: 'RET-CNSS',
+        libelle: 'Cotisation Sociale CNSS',
         partEmployeurPct: 16.0,
         partAgentPct: 5.5,
         assietteCalcul: 'SALAIRE_BRUT',
         plafondMensuel: 600000,
         actif: true,
-        notes: 'Plafond mensuel 600 000 FCFA selon code CNSS Burkina'
+        description: 'Sécurité sociale obligatoire (Part patronale 16%, Part salariale 5.5%, Plafond 600 000 FCFA)'
       },
       {
         id: 2,
-        typeRetenueCode: 'RET-IUTS',
-        typeRetenueLibelle: 'Impôt Unique sur Traitements (IUTS)',
-        categorie: 'Fiscale',
+        code: 'RET-CRRAE',
+        libelle: 'Retraite Complémentaire CRRAE-UMOA',
+        partEmployeurPct: 10.0,
+        partAgentPct: 6.0,
+        assietteCalcul: 'SALAIRE_BRUT',
+        plafondMensuel: 0,
+        actif: true,
+        description: 'Régime de retraite complémentaire bancaire UMOA (Part patronale 10%, Part agent 6%)'
+      },
+      {
+        id: 3,
+        code: 'RET-IUTS',
+        libelle: 'Impôt Unique sur Traitements (IUTS)',
         partEmployeurPct: 0.0,
         partAgentPct: 10.0,
         assietteCalcul: 'BRUT_IMPOSABLE',
         plafondMensuel: 0,
         actif: true,
-        notes: 'Barème progressif fiscal'
+        description: 'Impôt direct retenu à la source selon le barème progressif fiscal'
       },
       {
-        id: 3,
-        typeRetenueCode: 'RET-ASSUR',
-        typeRetenueLibelle: 'Assurance Maladie Groupe',
-        categorie: 'Assurance',
+        id: 4,
+        code: 'RET-ASSUR',
+        libelle: 'Assurance Maladie Groupe',
         partEmployeurPct: 50.0,
         partAgentPct: 50.0,
         assietteCalcul: 'MONTANT_FIXE',
         plafondMensuel: 0,
         actif: true,
-        notes: 'Partage 50/50 entre employeur et agent'
+        description: 'Couverture santé groupe entreprise (Prise en charge 50% employeur, 50% agent)'
       },
       {
-        id: 4,
-        typeRetenueCode: 'RET-MUTUELLE',
-        typeRetenueLibelle: 'Mutuelle de Santé Interne',
-        categorie: 'Assurance',
+        id: 5,
+        code: 'RET-MUTUELLE',
+        libelle: 'Mutuelle de Santé Interne',
         partEmployeurPct: 0.0,
         partAgentPct: 2.0,
         assietteCalcul: 'SALAIRE_BASE',
         plafondMensuel: 0,
         actif: true,
-        notes: 'Cotisation mutuelle agent 2%'
+        description: 'Cotisation mutuelle du personnel (2% du salaire de base prélevé sur l\'agent)'
       }
     ];
 
@@ -412,7 +365,7 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   sauvegarderLocal(): void {
-    localStorage.setItem('sigrh_parametrage_paie_rules', JSON.stringify(this.rules));
+    localStorage.setItem('sigrh_retenues_v3', JSON.stringify(this.rules));
   }
 
   getTotalPartEmployeur(): number {
@@ -443,48 +396,13 @@ export class ParametragePaieComponent implements OnInit {
     return (assiette * (rule.partAgentPct || 0)) / 100;
   }
 
-  getLibelleAssiette(code: string): string {
-    switch (code) {
-      case 'SALAIRE_BASE': return 'Salaire de Base';
-      case 'SALAIRE_BRUT': return 'Salaire Brut Total';
-      case 'BRUT_IMPOSABLE': return 'Brut Imposable';
-      case 'MONTANT_FIXE': return 'Montant Fixe';
-      default: return code;
-    }
-  }
-
-  getCategorieBadgeStyle(cat: string) {
-    switch (cat) {
-      case 'Sociale':
-        return { background: '#e0f2fe', color: '#0369a1', padding: '4px 10px', 'border-radius': '12px', 'font-size': '12px', 'font-weight': '700' };
-      case 'Fiscale':
-        return { background: '#ffe4e6', color: '#be123c', padding: '4px 10px', 'border-radius': '12px', 'font-size': '12px', 'font-weight': '700' };
-      case 'Assurance':
-        return { background: '#dcfce7', color: '#15803d', padding: '4px 10px', 'border-radius': '12px', 'font-size': '12px', 'font-weight': '700' };
-      case 'Remboursement':
-        return { background: '#ffedd5', color: '#c2410c', padding: '4px 10px', 'border-radius': '12px', 'font-size': '12px', 'font-weight': '700' };
-      default:
-        return { background: '#f1f5f9', color: '#475569', padding: '4px 10px', 'border-radius': '12px', 'font-size': '12px', 'font-weight': '700' };
-    }
-  }
-
-  onTypeRetenueChange(): void {
-    const found = this.availableTypes.find(t => t.code === this.formRule.typeRetenueCode);
-    if (found) {
-      this.formRule.typeRetenueLibelle = found.libelle;
-      this.formRule.categorie = found.categorie || 'Sociale';
-    }
-  }
-
   ouvrirFormulaire(): void {
-    this.chargerAvailableTypes();
     this.modeEdition = false;
     this.formRule = this.getEmptyRule();
     this.afficherFormulaire = true;
   }
 
   editerRule(item: ParametragePaieRule): void {
-    this.chargerAvailableTypes();
     this.modeEdition = true;
     this.formRule = { ...item };
     this.afficherFormulaire = true;
@@ -495,8 +413,8 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   sauvegarderRule(): void {
-    if (!this.formRule.typeRetenueCode) {
-      alert('Veuillez sélectionner un type de retenue.');
+    if (!this.formRule.code || !this.formRule.libelle) {
+      alert('Veuillez renseigner le code et le libellé de la retenue.');
       return;
     }
 
@@ -515,7 +433,7 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   supprimerRule(item: ParametragePaieRule): void {
-    if (confirm(`Voulez-vous vraiment supprimer le paramétrage pour "${item.typeRetenueLibelle}" ?`)) {
+    if (confirm(`Voulez-vous vraiment supprimer la retenue "${item.libelle}" ?`)) {
       this.rules = this.rules.filter(r => r.id !== item.id);
       this.sauvegarderLocal();
     }
@@ -528,16 +446,14 @@ export class ParametragePaieComponent implements OnInit {
 
   private getEmptyRule(): ParametragePaieRule {
     return {
-      typeRetenueCode: '',
-      typeRetenueLibelle: '',
-      categorie: 'Sociale',
+      code: '',
+      libelle: '',
       partEmployeurPct: 0,
       partAgentPct: 0,
       assietteCalcul: 'SALAIRE_BRUT',
       plafondMensuel: 0,
       actif: true,
-      notes: ''
+      description: ''
     };
   }
 }
-
