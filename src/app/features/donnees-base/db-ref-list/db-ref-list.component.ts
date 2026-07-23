@@ -259,58 +259,125 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openEditDialog(item: RefItem): void {
     this.isEditing = true;
     this.editingItem = item;
-    const catVal = item.categorie || item.code || '';
-    const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GRADE I' : (this.groupe2Classifications.includes(catVal) ? 'GRADE II' : 'GRADE III'));
 
-    this.formGroup.reset({
-      code:          catVal,
-      libelle:       gradeVal,
-      description:   item.description,
-      actif:         item.actif,
-      montant:       item.montant ?? 0,
-      departementId: item.departementId ?? null,
-      directionId:   item.directionId   ?? null,
-      echelle:       gradeVal,
-      echellon:      item.echellon || '',
-      typeIndemnite: item.typeIndemnite || item.libelle || '',
-      fonction:      item.fonction || '',
-      grade:         gradeVal,
-      categorie:     catVal,
-      taux:          item.taux ?? item.montant ?? 0
-    });
+    if (this.type === 'grille-salariale') {
+      const catVal = item.categorie || item.code || '';
+      const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GRADE I' : (this.groupe2Classifications.includes(catVal) ? 'GRADE II' : 'GRADE III'));
+
+      this.formGroup.reset({
+        code:          catVal,
+        libelle:       gradeVal,
+        description:   item.description,
+        actif:         item.actif,
+        montant:       item.montant ?? 0,
+        departementId: item.departementId ?? null,
+        directionId:   item.directionId   ?? null,
+        echelle:       gradeVal,
+        echellon:      item.echellon || '',
+        typeIndemnite: '',
+        fonction:      '',
+        grade:         gradeVal,
+        categorie:     catVal,
+        taux:          0
+      });
+    } else if (this.type === 'param-indemnite') {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.typeIndemnite || item.libelle || '',
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       item.montant ?? 0,
+        departementId: null,
+        directionId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: item.typeIndemnite || item.libelle || '',
+        fonction:      item.fonction || '',
+        grade:         item.grade || '',
+        categorie:     item.categorie || '',
+        taux:          item.taux ?? item.montant ?? 0
+      });
+    } else {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.libelle || '',
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       item.montant ?? 0,
+        departementId: item.departementId ?? null,
+        directionId:   item.directionId   ?? null,
+        echelle:       item.echelle || '',
+        echellon:      item.echellon || '',
+        typeIndemnite: '',
+        fonction:      '',
+        grade:         '',
+        categorie:     '',
+        taux:          0
+      });
+    }
+
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '560px' });
   }
 
   onSubmit(): void {
-    if (this.formGroup.invalid) return;
-
     const v = this.formGroup.getRawValue();
-    const catCode = v.categorie || v.code || this.editingItem?.code || '';
-    const gradeVal = v.grade || v.libelle || 'GRADE I';
 
-    const item: RefItem = {
-      id:            this.editingItem?.id,
-      code:          catCode,
-      libelle:       gradeVal,
-      description:   `${gradeVal} (${catCode}) - Échelon ${v.echellon || 1}`,
-      actif:         v.actif ?? true,
-      montant:       Number(v.montant ?? v.taux ?? 0),
-      departementId: v.departementId || undefined,
-      directionId:   v.directionId   || undefined,
-      echelle:       gradeVal,
-      echellon:      v.echellon ? String(v.echellon) : (this.editingItem?.echellon ? String(this.editingItem.echellon) : undefined),
-      typeIndemnite: v.typeIndemnite || undefined,
-      fonction:      v.fonction || undefined,
-      grade:         gradeVal,
-      categorie:     catCode,
-      taux:          v.taux !== undefined ? Number(v.taux) : undefined
-    };
+    let item: RefItem;
+
+    if (this.type === 'grille-salariale') {
+      const catCode = v.categorie || v.code || this.editingItem?.code || '';
+      const gradeVal = v.grade || v.libelle || 'GRADE I';
+      item = {
+        id:            this.editingItem?.id,
+        code:          catCode,
+        libelle:       gradeVal,
+        description:   `${gradeVal} (${catCode}) - Échelon ${v.echellon || 1}`,
+        actif:         v.actif ?? true,
+        montant:       Number(v.montant ?? v.taux ?? 0),
+        echelle:       gradeVal,
+        echellon:      v.echellon ? String(v.echellon) : (this.editingItem?.echellon ? String(this.editingItem.echellon) : '1'),
+        grade:         gradeVal,
+        categorie:     catCode
+      };
+    } else if (this.type === 'param-indemnite') {
+      item = {
+        id:            this.editingItem?.id,
+        code:          v.code || this.editingItem?.code || `PI-${Date.now()}`,
+        libelle:       v.typeIndemnite || v.libelle || 'Indemnité',
+        description:   `Fonction: ${v.fonction || '-'}, Grade: ${v.grade || '-'}, Cat: ${v.categorie || '-'}`,
+        actif:         v.actif ?? true,
+        montant:       Number(v.taux ?? v.montant ?? 0),
+        typeIndemnite: v.typeIndemnite || v.libelle || '',
+        fonction:      v.fonction || '',
+        grade:         v.grade || '',
+        categorie:     v.categorie || '',
+        taux:          Number(v.taux ?? v.montant ?? 0)
+      };
+    } else {
+      if (!v.code || !v.libelle) {
+        alert('Le code et le libellé sont obligatoires.');
+        return;
+      }
+      item = {
+        id:            this.editingItem?.id,
+        code:          v.code,
+        libelle:       v.libelle,
+        description:   v.description || '',
+        actif:         v.actif ?? true,
+        montant:       v.montant ? Number(v.montant) : undefined,
+        departementId: v.departementId || undefined,
+        directionId:   v.directionId   || undefined
+      };
+    }
 
     if (this.isEditing && this.editingItem) {
       this.dbRefService.updateItem(this.type, this.editingItem.code, item).subscribe({
         next: (items) => {
           this.dataSource.data = items;
+          if (this.type === 'grille-salariale' && this.paginator) {
+            this.paginator.pageSize = 250;
+          }
           this.dialogRef.close();
         },
         error: (err)  => { alert(err.message || 'Erreur lors de la modification.'); }
@@ -319,6 +386,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.dbRefService.addItem(this.type, item).subscribe({
         next: (items) => {
           this.dataSource.data = items;
+          if (this.type === 'grille-salariale' && this.paginator) {
+            this.paginator.pageSize = 250;
+          }
           this.dialogRef.close();
         },
         error: (err)  => { alert(err.message || 'Erreur lors de la création.'); }
