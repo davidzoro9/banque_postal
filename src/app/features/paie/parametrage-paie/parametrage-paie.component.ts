@@ -52,13 +52,6 @@ export interface ParametragePaieRule {
           <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Taux global prélevé sur l'agent</div>
         </mat-card>
 
-        <mat-card style="border-radius: 12px; border-left: 5px solid #2E7D32; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Simulation Rapide</div>
-          <div style="font-size: 18px; font-weight: 700; color: #2E7D32; margin-top: 4px;">{{ simulerChargeEmployeur(500000) | number:'1.0-0' }} FCFA</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Part employeur pour 500 000 FCFA Brut</div>
-        </mat-card>
-      </div>
-
       <!-- Main Retenues Table -->
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px;">
         <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
@@ -131,50 +124,6 @@ export interface ParametragePaieRule {
             <tr *ngIf="rules.length === 0">
               <td colspan="7" style="padding: 32px; text-align: center; color: #94a3b8;">
                 Aucune retenue configurée. Cliquer sur "Nouvelle Retenue".
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </mat-card>
-
-      <!-- Live Simulator Component Card -->
-      <mat-card style="border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1px solid #cbd5e1;">
-        <h3 style="margin: 0 0 12px 0; color: #0060B3; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-          <mat-icon style="color: #0060B3;">calculate</mat-icon>
-          Simulateur de Retenues en Direct
-        </h3>
-
-        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
-          <label style="font-weight: 600; color: #334155; font-size: 14px;">Salaire Brut de Test (FCFA) :</label>
-          <input
-            type="number"
-            [(ngModel)]="salaireSimul"
-            step="10000"
-            style="padding: 8px 14px; border: 1px solid #0060B3; border-radius: 8px; font-weight: 700; font-size: 15px; color: #0060B3; width: 180px;"
-          >
-          <span style="font-size: 13px; color: #64748b;">(Test direct du calcul des retenues)</span>
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <thead>
-            <tr style="background: #e2e8f0; color: #334155; font-size: 12px; text-transform: uppercase;">
-              <th style="padding: 10px 14px;">Retenue</th>
-              <th style="padding: 10px 14px; text-align: center;">Taux Part Employeur (%)</th>
-              <th style="padding: 10px 14px; text-align: right; color: #0288D1;">Montant Employeur (FCFA)</th>
-              <th style="padding: 10px 14px; text-align: center;">Taux Part Agent (%)</th>
-              <th style="padding: 10px 14px; text-align: right; color: #7B1FA2;">Montant Agent (FCFA)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let r of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
-              <td style="padding: 10px 14px; font-weight: 600; color: #1e293b;">{{ r.libelle }}</td>
-              <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #0288D1;">{{ r.partEmployeurPct }} %</td>
-              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0288D1;">
-                {{ calculMontantPartEmployeur(r, salaireSimul) | number:'1.0-0' }} FCFA
-              </td>
-              <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #7B1FA2;">{{ r.partAgentPct }} %</td>
-              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #7B1FA2;">
-                {{ calculMontantPartAgent(r, salaireSimul) | number:'1.0-0' }} FCFA
               </td>
             </tr>
           </tbody>
