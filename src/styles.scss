@@ -1,4 +1,4 @@
-﻿@use '@angular/material' as mat;
+@use '@angular/material' as mat;
 
 @include mat.core();
 
@@ -43,31 +43,104 @@ html {
   --nav-bg:          #ffffff;
 }
 
-// ─── Thème sombre ─────────────────────────────────────────
+// ─── Thème sombre Ultra-Profond (OLED Deep Dark) ───────────
 html.dark-theme {
   color-scheme: dark;
 
   @include mat.all-component-colors($my-dark-theme);
 
-  // CSS custom properties – thème sombre
-  --app-bg:          #060f1e;
-  --surface:         #0e1e35;
-  --surface-variant: #0a1728;
-  --surface-hover:   #152540;
-  --border:          #1e3152;
-  --on-surface:      #e8eef8;
-  --on-surface-2:    #8ea4c0;
-  --on-surface-3:    #4e6a8a;
-  --active-bg:       rgba(0, 96, 179, 0.18);
+  // CSS custom properties – thème sombre ultra-profond
+  --app-bg:          #040914;
+  --surface:         #091322;
+  --surface-variant: #060e1a;
+  --surface-hover:   #0f1f36;
+  --border:          #162842;
+  --on-surface:      #f1f5f9;
+  --on-surface-2:    #94a3b8;
+  --on-surface-3:    #64748b;
+  --active-bg:       rgba(255, 199, 0, 0.15);
   --active-color:    #FFC700;
-  --brand-blue:      #0060B3;
+  --brand-blue:      #3b82f6;
   --brand-gold:      #FFC700;
-  --toolbar-bg:      linear-gradient(135deg, #002040 0%, #004080 100%);
-  --shadow-nav:      0 1px 4px rgba(0, 0, 0, 0.5);
-  --shadow-card:     0 2px 8px rgba(0, 0, 0, 0.5);
-  --shadow-sidenav:  2px 0 12px rgba(0, 0, 0, 0.5);
+  --toolbar-bg:      linear-gradient(135deg, #020712 0%, #002855 100%);
+  --shadow-nav:      0 1px 8px rgba(0, 0, 0, 0.8);
+  --shadow-card:     0 4px 12px rgba(0, 0, 0, 0.8);
+  --shadow-sidenav:  2px 0 16px rgba(0, 0, 0, 0.8);
   --badge-bg:        #FFC700;
-  --nav-bg:          #0e1e35;
+  --nav-bg:          #091322;
+
+  // Overrides globaux pour cartes et conteneurs
+  mat-card, 
+  .mat-mdc-card,
+  .mat-card,
+  .matrix-card,
+  .filter-card,
+  .table-card {
+    background-color: var(--surface) !important;
+    color: var(--on-surface) !important;
+    border-color: var(--border) !important;
+  }
+
+  // Adaptation automatique des éléments avec fond blanc ou clair inline
+  div[style*="background: #fff"],
+  div[style*="background:#fff"],
+  div[style*="background: white"],
+  div[style*="background: #f8fafc"],
+  div[style*="background:#f8fafc"],
+  mat-card[style*="background: #fff"],
+  mat-card[style*="background:#fff"] {
+    background-color: var(--surface) !important;
+    color: var(--on-surface) !important;
+    border-color: var(--border) !important;
+  }
+
+  // En-têtes et barres d'outils internes
+  div[style*="background: #f8fafc"],
+  div[style*="background: #f1f5f9"],
+  tr[style*="background: #f8fafc"],
+  tr[style*="background: #f1f5f9"],
+  tr[style*="background: #e2e8f0"] {
+    background-color: var(--surface-variant) !important;
+    color: var(--on-surface) !important;
+    border-color: var(--border) !important;
+  }
+
+  // Adaptations des colonnes et cellules de tableaux
+  td, th {
+    border-color: var(--border) !important;
+  }
+
+  td[style*="background: #f0f9ff"],
+  td[style*="background: #faf5ff"],
+  th[style*="background: #e0f2fe"],
+  th[style*="background: #f3e8ff"] {
+    background-color: #0b182c !important;
+    color: #e2e8f0 !important;
+  }
+
+  // Harmonisation des textes sombres statiques
+  h1, h2, h3, h4, h5, h6,
+  p, label, span, td, th, strong {
+    &[style*="color: #0f172a"],
+    &[style*="color: #1e293b"],
+    &[style*="color: #334155"],
+    &[style*="color: #475569"],
+    &[style*="color: #64748b"] {
+      color: #cbd5e1 !important;
+    }
+  }
+
+  // Champs de saisie, formulaires, modales
+  input, textarea, select, .mat-mdc-input-element {
+    background-color: #060e1a !important;
+    color: #f1f5f9 !important;
+    border-color: #162842 !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    background-color: #091322 !important;
+    color: #f1f5f9 !important;
+  }
 }
 
 // ─── Reset & base ─────────────────────────────────────────
@@ -156,7 +229,6 @@ h1, h2, h3, h4, h5, h6 {
   @media (max-width: 768px) { grid-template-columns: 1fr; }
 }
 
-
 .form-grid-4 {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px;
   mat-form-field { width: 100%; }
@@ -198,5 +270,3 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 .drawer-container, .sidebar-container {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
-
-
