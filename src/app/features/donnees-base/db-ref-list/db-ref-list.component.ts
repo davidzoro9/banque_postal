@@ -131,6 +131,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.openEditDialog(item);
   }
 
+  viewMode: 'list' | 'matrix' = 'list';
+
   constructor(
     private route: ActivatedRoute,
     private moduleNav: ModuleNavService,
@@ -163,7 +165,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
       if (this.type === 'grille-salariale') {
-        this.displayedColumns = ['code', 'libelle', 'echelle', 'echellon', 'montant', 'actif', 'actions'];
+        this.displayedColumns = ['grade', 'categorie', 'echellon', 'montant', 'actif', 'actions'];
       } else if (this.type === 'param-indemnite') {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else {
