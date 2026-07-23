@@ -503,7 +503,13 @@ export class DbRefService {
     if (mapping) {
       const url = `${environment.apiUrl}/${mapping.segment}${mapping.getAllPath}`;
       return this.http.get<any[]>(url).pipe(
-        map(dtos => dtos.map(dto => mapping.toFront(dto))),
+        map(dtos => (Array.isArray(dtos) && dtos.length > 0) ? dtos.map(dto => mapping.toFront(dto)) : []),
+        map(items => {
+          if (!items || items.length === 0) {
+            return this.getMockItems(type);
+          }
+          return items;
+        }),
         tap(items => {
           this.getSubject(type).next(items);
           this.saveMockItems(type, items);
