@@ -219,25 +219,25 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'TI-NOM',  libelle: 'Indemnité de nomination',      description: 'Indemnité globale pour une nomination à un poste de responsabilité', actif: true }
   ],
   'agence': [
-    { code: 'AGN-001', libelle: 'Agence Centrale',   description: 'Siège social — Ouagadougou', actif: true  },
-    { code: 'AGN-002', libelle: 'Agence Nord',        description: 'Zone nord du pays',          actif: true  },
-    { code: 'AGN-003', libelle: 'Agence Sud',         description: 'Zone sud du pays',           actif: true  },
-    { code: 'AGN-004', libelle: 'Agence Est',         description: 'Zone est du pays',           actif: true  },
-    { code: 'AGN-005', libelle: 'Agence Ouest',       description: 'Zone ouest du pays',         actif: false },
+    { code: 'AGN-001', libelle: 'Agence Centrale',          description: 'Siège social BPBF — Ouagadougou', actif: true  },
+    { code: 'AGN-002', libelle: 'Agence Bobo-Dioulasso',     description: 'Agence Principale Zone Ouest',   actif: true  },
+    { code: 'AGN-003', libelle: 'Agence Koudougou',          description: 'Agence Zone Centre-Ouest',       actif: true  },
+    { code: 'AGN-004', libelle: 'Agence Ouahigouya',         description: 'Agence Zone Nord',               actif: true  },
+    { code: 'AGN-005', libelle: "Agence Fada N'Gourma",      description: 'Agence Zone Est',                actif: true  },
   ],
   'direction': [
-    { code: 'DIR-001', libelle: 'Direction Générale',      description: 'Direction principale',             actif: true  },
-    { code: 'DIR-002', libelle: 'Direction Administrative', description: 'Administration et ressources',     actif: true  },
-    { code: 'DIR-003', libelle: 'Direction Financière',     description: 'Finances et comptabilité',         actif: true  },
-    { code: 'DIR-004', libelle: 'Direction Technique',      description: 'Services techniques',              actif: true  },
-    { code: 'DIR-005', libelle: 'Direction Commerciale',    description: 'Ventes et marketing',              actif: false },
+    { code: 'DIR-001', libelle: 'Direction Générale (DG)',                            description: 'Pilotage stratégique et gouvernance BPBF',                   actif: true  },
+    { code: 'DIR-002', libelle: 'Direction des Opérations Bancaires (DOB)',            description: 'Exploitation bancaire et gestion du réseau d\'agences',       actif: true  },
+    { code: 'DIR-003', libelle: 'Direction Monétique & SI (DMSI)',                    description: 'Systèmes d\'information, réseaux bancaires & Cash Point',   actif: true  },
+    { code: 'DIR-004', libelle: 'Direction des Ressources Humaines (DRH)',             description: 'Gestion du personnel, paie et développement des compétences', actif: true  },
+    { code: 'DIR-005', libelle: 'Direction Financière & Trésorerie (DFT)',             description: 'Gestion financière, comptabilité et trésorerie bancaire',    actif: true  },
   ],
   'service': [
-    { code: 'SRV-001', libelle: 'Service Informatique',     description: 'Systèmes d\'information',          actif: true  },
-    { code: 'SRV-002', libelle: 'Service RH',               description: 'Ressources humaines',              actif: true  },
-    { code: 'SRV-003', libelle: 'Service Comptabilité',     description: 'Comptabilité et finances',         actif: true  },
-    { code: 'SRV-004', libelle: 'Service Logistique',       description: 'Approvisionnement et logistique',  actif: true  },
-    { code: 'SRV-005', libelle: 'Service Juridique',        description: 'Affaires juridiques',              actif: false }
+    { code: 'SRV-001', libelle: 'Service Monétique & Cash Point',     description: 'Gestion des cartes, GAB, TPE et services Cash Point', actif: true  },
+    { code: 'SRV-002', libelle: 'Service Gestion du Personnel & Paie', description: 'Administration du personnel et calcul de la paie',      actif: true  },
+    { code: 'SRV-003', libelle: 'Service Comptabilité & Trésorerie',  description: 'Comptabilité générale bancaire et gestion de la caisse', actif: true },
+    { code: 'SRV-004', libelle: 'Service Opérations de Guichet',       description: 'Gestion des opérations de caisse et transferts',          actif: true  },
+    { code: 'SRV-005', libelle: 'Service Crédit & Engagements',        description: 'Analyse et octroi des prêts aux particuliers et pro',     actif: true  }
   ],
   'param-indemnite': [
     // ─── GRADE I : AGENTS, EMPLOYES & TECHNICIENS OPERATIONNELS ───────────────
