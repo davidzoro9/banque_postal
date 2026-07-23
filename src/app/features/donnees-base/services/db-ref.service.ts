@@ -378,12 +378,6 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'RUB-004', libelle: 'Retenue CNSS',           description: 'Cotisation sociale employé',   actif: true },
     { code: 'RUB-005', libelle: 'IUTS',                   description: 'Impôt unique traitements',     actif: true },
   ],
-  'cotisation': [
-    { code: 'COT-001', libelle: 'CNSS Employé',  description: 'Part salariale CNSS',    actif: true },
-    { code: 'COT-002', libelle: 'CNSS Patronal', description: 'Part patronale CNSS',    actif: true },
-    { code: 'COT-003', libelle: 'CARFO',         description: 'Caisse autonome retraite',actif: true },
-    { code: 'COT-004', libelle: 'AT/MP',         description: 'Accident travail/Maladie',actif: true },
-  ],
   'bareme': [
     { code: 'BAR-001', libelle: 'Tranche 1 — 0 %',  description: '0 à 30 000 FCFA',       actif: true },
     { code: 'BAR-002', libelle: 'Tranche 2 — 12 %', description: '30 001 à 60 000 FCFA',  actif: true },

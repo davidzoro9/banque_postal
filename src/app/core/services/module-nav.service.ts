@@ -40,7 +40,6 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
       { id: 'type-indemnite-p', label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
       { id: 'param-indemnite-p',label: 'Paramétrage indemnité',icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'rubrique',         label: 'Rubrique de paie',    icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
-      { id: 'cotisation',       label: 'Type de cotisation',  icon: 'percent',             route: '/donnees-base/paie/cotisation'        },
       { id: 'bareme',           label: 'Barème fiscal',       icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
       { id: 'mode-paiement',    label: 'Mode de paiement',    icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     }
     ]
