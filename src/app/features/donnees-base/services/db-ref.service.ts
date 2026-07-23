@@ -432,16 +432,29 @@ export class DbRefService {
 
   // ─── Charge depuis mock localStorage ──────────────────────────────────────
   private getMockItems(type: string): RefItem[] {
-    if (type === 'grille-salariale' || type === 'param-indemnite') {
-      const stored = localStorage.getItem(`ref_${type}`);
+    if (type === 'grille-salariale') {
+      const stored = localStorage.getItem('ref_grille-salariale');
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (parsed.length !== 225 || (type === 'grille-salariale' && (parsed[0]?.code?.includes('Grade') || parsed[0]?.code?.includes('GS-')))) {
-            localStorage.removeItem(`ref_${type}`);
+          if (!Array.isArray(parsed) || parsed.length !== 225 || parsed[0]?.code?.includes('Grade')) {
+            localStorage.removeItem('ref_grille-salariale');
           }
         } catch (e) {
-          localStorage.removeItem(`ref_${type}`);
+          localStorage.removeItem('ref_grille-salariale');
+        }
+      }
+    }
+    if (type === 'param-indemnite') {
+      const stored = localStorage.getItem('ref_param-indemnite');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!Array.isArray(parsed) || parsed.length < 35) {
+            localStorage.removeItem('ref_param-indemnite');
+          }
+        } catch (e) {
+          localStorage.removeItem('ref_param-indemnite');
         }
       }
     }
