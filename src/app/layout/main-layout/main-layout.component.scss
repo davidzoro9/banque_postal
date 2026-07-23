@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   height: 100vh;
   overflow: hidden;
@@ -40,38 +40,36 @@
   flex-direction: column;
   justify-content: center;
   gap: 3px;
-  padding: 0 16px;
+  padding: 0 18px;
   height: 100%;
   background: none;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
   border-radius: 0;
   transition: all 0.2s;
   position: relative;
   white-space: nowrap;
-  min-width: 72px;
 
   &:hover:not(.active) {
     background: var(--surface-hover);
-    border-bottom-color: var(--border);
   }
 
   &.active {
-    border-bottom-color: var(--tab-color, #0060B3);
-    background: linear-gradient(to bottom, transparent 60%, color-mix(in srgb, var(--tab-color, #0060B3) 8%, transparent));
+    border-bottom-color: var(--on-surface);
+    background: var(--active-bg);
   }
 }
 
 .tab-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  background: var(--surface-hover);
+  background: transparent;
 
   mat-icon {
     font-size: 18px;
@@ -83,25 +81,25 @@
 }
 
 .module-tab.active .tab-icon mat-icon {
-  color: #fff;
+  color: var(--on-surface);
 }
 
 .module-tab:hover:not(.active) .tab-icon {
-  background: var(--border);
+  background: var(--surface-hover);
 }
 
 .tab-label {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--on-surface-3);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
   transition: color 0.2s;
   line-height: 1;
 }
 
 .module-tab.active .tab-label {
-  color: var(--tab-color, #0060B3);
+  color: var(--on-surface);
+  font-weight: 700;
 }
 
 .navbar-right {

@@ -18,56 +18,56 @@ $my-dark-theme: mat.define-theme((
   )
 ));
 
-// ─── Thème clair (défaut) ─────────────────────────────────
+// ─── Thème clair épuré (Minimaliste Corporate) ─────────────────
 html {
   @include mat.all-component-themes($my-light-theme);
 
-  // CSS custom properties – thème clair
-  --app-bg:          #f0f2f5;
+  // CSS custom properties – thème clair épuré
+  --app-bg:          #f8fafc;
   --surface:         #ffffff;
-  --surface-variant: #f4f6f9;
-  --surface-hover:   #e8f0fb;
-  --border:          #dde2ed;
-  --on-surface:      #004080;
-  --on-surface-2:    #3a4660;
-  --on-surface-3:    #7a8699;
-  --active-bg:       rgba(0, 96, 179, 0.08);
-  --active-color:    #0060B3;
-  --brand-blue:      #0060B3;
-  --brand-gold:      #FFC700;
-  --toolbar-bg:      linear-gradient(135deg, #004080 0%, #0060B3 100%);
-  --shadow-nav:      0 1px 4px rgba(0, 64, 128, 0.12);
-  --shadow-card:     0 2px 8px rgba(0, 64, 128, 0.08);
-  --shadow-sidenav:  2px 0 8px rgba(0, 64, 128, 0.08);
-  --badge-bg:        #FFC700;
+  --surface-variant: #f1f5f9;
+  --surface-hover:   #f8fafc;
+  --border:          #e2e8f0;
+  --on-surface:      #0f172a;
+  --on-surface-2:    #475569;
+  --on-surface-3:    #64748b;
+  --active-bg:       rgba(15, 23, 42, 0.05);
+  --active-color:    #0f172a;
+  --brand-blue:      #1e293b;
+  --brand-gold:      #d97706;
+  --toolbar-bg:      #ffffff;
+  --shadow-nav:      0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-card:     0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-sidenav:  1px 0 4px rgba(0, 0, 0, 0.05);
+  --badge-bg:        #f1f5f9;
   --nav-bg:          #ffffff;
 }
 
-// ─── Thème sombre Ultra-Profond (OLED Deep Dark) ───────────
+// ─── Thème sombre épuré (Minimaliste Deep Slate) ───────────
 html.dark-theme {
   color-scheme: dark;
 
   @include mat.all-component-colors($my-dark-theme);
 
-  // CSS custom properties – thème sombre ultra-profond
-  --app-bg:          #040914;
-  --surface:         #091322;
-  --surface-variant: #060e1a;
-  --surface-hover:   #0f1f36;
-  --border:          #162842;
-  --on-surface:      #f1f5f9;
+  // CSS custom properties – thème sombre épuré
+  --app-bg:          #090d16;
+  --surface:         #0f172a;
+  --surface-variant: #1e293b;
+  --surface-hover:   #1e293b;
+  --border:          #1e293b;
+  --on-surface:      #f8fafc;
   --on-surface-2:    #94a3b8;
   --on-surface-3:    #64748b;
-  --active-bg:       rgba(255, 199, 0, 0.15);
-  --active-color:    #FFC700;
-  --brand-blue:      #3b82f6;
-  --brand-gold:      #FFC700;
-  --toolbar-bg:      linear-gradient(135deg, #020712 0%, #002855 100%);
-  --shadow-nav:      0 1px 8px rgba(0, 0, 0, 0.8);
-  --shadow-card:     0 4px 12px rgba(0, 0, 0, 0.8);
-  --shadow-sidenav:  2px 0 16px rgba(0, 0, 0, 0.8);
-  --badge-bg:        #FFC700;
-  --nav-bg:          #091322;
+  --active-bg:       rgba(248, 250, 252, 0.07);
+  --active-color:    #38bdf8;
+  --brand-blue:      #38bdf8;
+  --brand-gold:      #f59e0b;
+  --toolbar-bg:      #090d16;
+  --shadow-nav:      0 1px 4px rgba(0, 0, 0, 0.5);
+  --shadow-card:     0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-sidenav:  1px 0 8px rgba(0, 0, 0, 0.5);
+  --badge-bg:        #1e293b;
+  --nav-bg:          #0f172a;
 
   // Overrides globaux pour cartes et conteneurs
   mat-card, 
