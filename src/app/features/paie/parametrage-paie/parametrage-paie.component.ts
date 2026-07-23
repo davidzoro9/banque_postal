@@ -15,9 +15,9 @@ export interface ParametragePaieRule {
 @Component({
   selector: 'app-parametrage-paie',
   template: `
-    <div style="padding: 24px; max-width: 1200px; margin: 0 auto; font-family: 'Segoe UI', sans-serif;">
+    <div style="padding: 24px; width: 100%; box-sizing: border-box; font-family: 'Segoe UI', sans-serif;">
       <!-- Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
         <div>
           <h2 style="color: #0060B3; margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
             <mat-icon style="color: #0060B3;">tune</mat-icon>
@@ -27,14 +27,14 @@ export interface ParametragePaieRule {
             Définition des retenues applicables avec le taux de chaque type (Part Employeur et Part Agent)
           </p>
         </div>
-        <button mat-raised-button color="primary" (click)="ouvrirFormulaire()" style="background: #0060B3; border-radius: 8px; font-weight: 600; padding: 0 20px;">
-          <mat-icon style="margin-right: 6px;">add_circle</mat-icon> Nouvelle Retenue
+        <button mat-raised-button (click)="ouvrirFormulaire()" style="background: #0060B3; color: #ffffff; border-radius: 8px; font-weight: 600; padding: 0 22px; height: 42px;">
+          <mat-icon style="margin-right: 6px; color: #ffffff;">add_circle</mat-icon> Nouvelle Retenue
         </button>
       </div>
 
       <!-- Main Retenues Table -->
-      <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px;">
-        <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px; width: 100%;">
+        <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0060B3;">
             Liste des Retenues (Code, Libellé, Taux Part Employeur, Taux Part Agent, Description)
           </h3>
@@ -43,71 +43,73 @@ export interface ParametragePaieRule {
           </span>
         </div>
 
-        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-          <thead>
-            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #334155; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-              <th style="padding: 14px 18px;">Code</th>
-              <th style="padding: 14px 18px;">Libellé de la Retenue</th>
-              <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1;">Taux Part Employeur (%)</th>
-              <th style="padding: 14px 18px; text-align: center; background: #f3e8ff; color: #6b21a8;">Taux Part Agent (%)</th>
-              <th style="padding: 14px 18px;">Description</th>
-              <th style="padding: 14px 18px; text-align: center;">Statut</th>
-              <th style="padding: 14px 18px; text-align: right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
-              <td style="padding: 14px 18px;">
-                <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 13px;">
-                  {{ item.code }}
-                </span>
-              </td>
-              <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">
-                {{ item.libelle }}
-              </td>
+        <div style="overflow-x: auto; width: 100%;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 800px;">
+            <thead>
+              <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #334155; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 14px 18px; width: 120px;">Code</th>
+                <th style="padding: 14px 18px; min-width: 200px;">Libellé de la Retenue</th>
+                <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1; width: 180px;">Taux Part Employeur (%)</th>
+                <th style="padding: 14px 18px; text-align: center; background: #f3e8ff; color: #6b21a8; width: 180px;">Taux Part Agent (%)</th>
+                <th style="padding: 14px 18px;">Description</th>
+                <th style="padding: 14px 18px; text-align: center; width: 100px;">Statut</th>
+                <th style="padding: 14px 18px; text-align: right; width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of rules" style="border-bottom: 1px solid #f1f5f9; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+                <td style="padding: 14px 18px;">
+                  <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 13px; display: inline-block; white-space: nowrap;">
+                    {{ item.code }}
+                  </span>
+                </td>
+                <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">
+                  {{ item.libelle }}
+                </td>
 
-              <!-- Taux Part Employeur (%) -->
-              <td style="padding: 14px 18px; text-align: center; background: #f0f9ff;">
-                <span style="background: #0288D1; color: #fff; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px;">
-                  {{ item.partEmployeurPct | number:'1.1-2' }} %
-                </span>
-              </td>
+                <!-- Taux Part Employeur (%) -->
+                <td style="padding: 14px 18px; text-align: center; background: #f0f9ff;">
+                  <span style="background: #0288D1; color: #ffffff; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; display: inline-block; white-space: nowrap;">
+                    {{ item.partEmployeurPct | number:'1.1-2' }} %
+                  </span>
+                </td>
 
-              <!-- Taux Part Agent (%) -->
-              <td style="padding: 14px 18px; text-align: center; background: #faf5ff;">
-                <span style="background: #7B1FA2; color: #fff; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 13px;">
-                  {{ item.partAgentPct | number:'1.1-2' }} %
-                </span>
-              </td>
+                <!-- Taux Part Agent (%) -->
+                <td style="padding: 14px 18px; text-align: center; background: #faf5ff;">
+                  <span style="background: #7B1FA2; color: #ffffff; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; display: inline-block; white-space: nowrap;">
+                    {{ item.partAgentPct | number:'1.1-2' }} %
+                  </span>
+                </td>
 
-              <td style="padding: 14px 18px; color: #64748b; font-size: 13px;">
-                {{ item.description || '—' }}
-              </td>
+                <td style="padding: 14px 18px; color: #64748b; font-size: 13px;">
+                  {{ item.description || '—' }}
+                </td>
 
-              <td style="padding: 14px 18px; text-align: center;">
-                <span (click)="toggleStatut(item)" style="cursor: pointer;" [title]="item.actif ? 'Cliquer pour désactiver' : 'Cliquer pour activer'">
-                  <span *ngIf="item.actif" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">Actif</span>
-                  <span *ngIf="!item.actif" style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">Inactif</span>
-                </span>
-              </td>
+                <td style="padding: 14px 18px; text-align: center;">
+                  <span (click)="toggleStatut(item)" style="cursor: pointer; display: inline-block; white-space: nowrap;" [title]="item.actif ? 'Cliquer pour désactiver' : 'Cliquer pour activer'">
+                    <span *ngIf="item.actif" style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;">Actif</span>
+                    <span *ngIf="!item.actif" style="background: #f3f4f6; color: #6b7280; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">Inactif</span>
+                  </span>
+                </td>
 
-              <td style="padding: 14px 18px; text-align: right;">
-                <button mat-icon-button color="primary" (click)="editerRule(item)" title="Modifier">
-                  <mat-icon style="font-size: 20px;">edit</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" (click)="supprimerRule(item)" title="Supprimer">
-                  <mat-icon style="font-size: 20px;">delete</mat-icon>
-                </button>
-              </td>
-            </tr>
+                <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
+                  <button mat-icon-button color="primary" (click)="editerRule(item)" title="Modifier">
+                    <mat-icon style="font-size: 20px;">edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="supprimerRule(item)" title="Supprimer">
+                    <mat-icon style="font-size: 20px;">delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
 
-            <tr *ngIf="rules.length === 0">
-              <td colspan="7" style="padding: 32px; text-align: center; color: #94a3b8;">
-                Aucune retenue configurée. Cliquer sur "Nouvelle Retenue".
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <tr *ngIf="rules.length === 0">
+                <td colspan="7" style="padding: 32px; text-align: center; color: #94a3b8;">
+                  Aucune retenue configurée. Cliquer sur "Nouvelle Retenue".
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </mat-card>
 
       <!-- Modal Form Overlay -->
