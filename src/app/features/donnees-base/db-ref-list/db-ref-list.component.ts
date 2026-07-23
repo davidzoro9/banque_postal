@@ -182,6 +182,14 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.dataSource.sort = this.sort;
   }
 
+  getGradeName(row: RefItem): string {
+    const cat = row.categorie || row.code || '';
+    if (this.groupe1Classifications.includes(cat)) return 'GRADE I';
+    if (this.groupe2Classifications.includes(cat)) return 'GRADE II';
+    if (this.groupe3Classifications.includes(cat)) return 'GRADE III';
+    return row.grade || row.libelle || row.echelle || 'GRADE I';
+  }
+
   loadData(): void {
     if (this.type === 'grille-salariale') {
       const stored = localStorage.getItem('ref_grille-salariale');
@@ -199,6 +207,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.dbRefService.getItems(this.type).subscribe({
       next: (items) => {
         this.dataSource.data = items;
+        if (this.type === 'grille-salariale' && this.paginator) {
+          this.paginator.pageSize = 250;
+        }
       },
       error: (err)  => { console.error('Erreur chargement', this.type, err); }
     });
