@@ -13,30 +13,34 @@ export class DbOverviewComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'donnees-base')!;
 
   kpis = [
-    { label: 'Entités juridiques',      value: '3',  icon: 'business',          color: '#FFB300', sub: 'Actives' },
-    { label: 'Départements',            value: '12', icon: 'domain',            color: '#163059', sub: 'Configurés' },
-    { label: 'Types de contrats',       value: '8',  icon: 'article',           color: '#1565C0', sub: 'Référencés' },
-    { label: 'Calendriers de travail',  value: '4',  icon: 'date_range',        color: '#1B3A6B', sub: 'Actifs' }
+    { label: 'Entités & Structure',     value: '18', icon: 'domain',            color: '#CC8800', sub: 'Services & Agences' },
+    { label: 'Grilles & Indemnités',   value: '14', icon: 'table_chart',        color: '#0060B3', sub: 'Grilles salariales' },
+    { label: 'Types de Retenues',       value: '7',  icon: 'money_off',          color: '#0288D1', sub: 'Cotisations & Impôts' },
+    { label: 'Règles de Paie',          value: '4',  icon: 'tune',               color: '#163059', sub: '% Employeur & % Agent' }
   ];
 
   quickActions = [
-    { label: 'Départements',      icon: 'domain',             route: '/donnees-base/admin/departement',  color: '#163059' },
-    { label: 'Types de contrats', icon: 'article',            route: '/donnees-base/admin/type-contrat', color: '#1565C0' },
-    { label: 'Types de congés',   icon: 'beach_access',        route: '/donnees-base/admin/type-conge',   color: '#1B3A6B' },
-    { label: 'Grille salariale',  icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale', color: '#FFB300' }
+    { label: 'Départements',        icon: 'domain',        route: '/donnees-base/admin/departement',      color: '#CC8800' },
+    { label: 'Grille Salariale',    icon: 'table_chart',   route: '/donnees-base/admin/grille-salariale', color: '#0060B3' },
+    { label: 'Types de Retenues',   icon: 'money_off',     route: '/paie/types-retenues',                 color: '#0288D1' },
+    { label: 'Taux & Cotisations',  icon: 'tune',          route: '/paie/parametrage',                    color: '#163059' }
   ];
 
   configuration = [
-    { section: 'Structure organisationnelle', items: 3,  icon: 'corporate_fare',     color: '#FFB300', desc: 'Entités, départements, services' },
-    { section: 'Paramètres RH',               items: 8,  icon: 'manage_accounts',    color: '#1565C0', desc: 'Contrats, catégories, grades' },
-    { section: 'Calendriers',                 items: 4,  icon: 'calendar_month',     color: '#1B3A6B', desc: 'Calendriers de travail, jours fériés' },
-    { section: 'Configuration système',       items: 12, icon: 'admin_panel_settings',color: '#163059', desc: 'Paramètres globaux de l\'application' }
+    { section: 'Gestion Administrative',   items: '19 tables',icon: 'corporate_fare',        color: '#CC8800', desc: 'Emplois, fonctions, départements, agences, catégories, grades, échelons, compétences', route: '/donnees-base/admin/departement' },
+    { section: 'Salaires & Indemnités',    items: '5 grilles',icon: 'table_chart',          color: '#0060B3', desc: 'Grilles salariales, indemnités, types de contrats', route: '/donnees-base/admin/grille-salariale' },
+    { section: 'Paramétrage Paie & Retenues',items: '7 règles', icon: 'tune',               color: '#163059', desc: 'Taux % Part Employeur, Part Agent, barèmes et retenues', route: '/paie/parametrage' }
   ];
 
   constructor(public moduleNav: ModuleNavService, private router: Router) {}
 
   ngOnInit(): void {
-    this.moduleNav.selectModule(this.module);
+    const isParam = this.router.url.includes('/parametrage');
+    const targetModule = APP_MODULES.find(m => m.id === (isParam ? 'parametrage' : 'donnees-base'));
+    if (targetModule) {
+      this.module = targetModule;
+      this.moduleNav.selectModule(this.module);
+    }
   }
 
   navigate(route: string): void {

@@ -27,7 +27,7 @@
     }
   </div>
 
-  <div class="section-title">Actions rapides</div>
+  <div class="section-title">Actions rapides de paramétrage</div>
   <div class="quick-actions-row">
     @for (qa of quickActions; track qa.route) {
       <button mat-raised-button class="qa-pill"
@@ -38,10 +38,10 @@
     }
   </div>
 
-  <div class="section-title">Espaces de configuration</div>
+  <div class="section-title">Espaces de paramétrage général</div>
   <div class="config-grid">
     @for (c of configuration; track c.section) {
-      <mat-card class="config-card" (click)="navigate('/donnees-base')" matRipple>
+      <mat-card class="config-card" (click)="navigate(c.route)" matRipple style="cursor: pointer;">
         <mat-card-content>
           <div class="cfg-icon" [style.background-color]="c.color + '1A'" [style.color]="c.color">
             <mat-icon>{{ c.icon }}</mat-icon>

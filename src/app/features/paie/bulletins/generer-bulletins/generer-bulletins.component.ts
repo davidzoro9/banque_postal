@@ -62,6 +62,7 @@ export class GenererBulletinsComponent implements OnInit {
       next: (data) => {
         let baseList = data || [];
         this.bulletins = this.adapterBulletinsSelonSession(baseList);
+        this.restaurerSessionState();
         this.isCalculating = false;
       },
       error: (err) => {
@@ -94,10 +95,51 @@ export class GenererBulletinsComponent implements OnInit {
           }
         ];
         this.bulletins = this.adapterBulletinsSelonSession(fallback);
-        this.etatSession = 'OUVERTE'; // reset session state on recalc
+        this.restaurerSessionState();
         this.isCalculating = false;
       }
     });
+  }
+
+  private getKey(): string {
+    return `paie_session_${this.periode}_${this.sessionType}`;
+  }
+
+  private sauvegarderSessionState(): void {
+    try {
+      const state = {
+        etatSession: this.etatSession,
+        bulletins: this.bulletins.map(b => ({
+          employeeId: b.employeeId,
+          etat: b.etat,
+          dateValidation: b.dateValidation
+        }))
+      };
+      localStorage.setItem(this.getKey(), JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  private restaurerSessionState(): void {
+    try {
+      const saved = localStorage.getItem(this.getKey());
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.etatSession = parsed.etatSession || 'OUVERTE';
+        if (parsed.bulletins && Array.isArray(parsed.bulletins)) {
+          parsed.bulletins.forEach((s: any) => {
+            const match = this.bulletins.find(b => String(b.employeeId) === String(s.employeeId));
+            if (match) {
+              match.etat = s.etat;
+              match.dateValidation = s.dateValidation;
+            }
+          });
+        }
+      } else {
+        this.etatSession = 'OUVERTE';
+      }
+    } catch (e) {
+      this.etatSession = 'OUVERTE';
+    }
   }
 
   private adapterBulletinsSelonSession(list: any[]): any[] {
@@ -143,12 +185,14 @@ export class GenererBulletinsComponent implements OnInit {
     if (this.sessionCloturee) return;
     b.etat = 'VALIDE';
     b.dateValidation = new Date().toLocaleString('fr-FR');
+    this.sauvegarderSessionState();
   }
 
   refuserBulletin(b: any): void {
     if (this.sessionCloturee) return;
     b.etat = 'GENERE'; // Remet en attente pour correction
     b.dateValidation = null;
+    this.sauvegarderSessionState();
   }
 
   cloturerSession(): void {
@@ -159,6 +203,7 @@ export class GenererBulletinsComponent implements OnInit {
     if (confirm(`Confirmer la clôture définitive de la session de paie ${this.periode} ?\n\nAttention : Cette action est irréversible.`)) {
       this.bulletins.forEach(b => b.etat = 'CLOTURE');
       this.etatSession = 'CLOTUREE';
+      this.sauvegarderSessionState();
     }
   }
 

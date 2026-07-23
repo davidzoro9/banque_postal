@@ -14,8 +14,8 @@ export interface AppModule {
 export const APP_MODULES: AppModule[] = [
   {
     id: 'grh',
-    name: 'Ressources Humaines',
-    shortName: 'RH',
+    name: 'Gestion Administrative',
+    shortName: 'GA',
     icon: 'people',
     color: '#163059',
     gradientFrom: '#1B3A6B',
@@ -23,18 +23,6 @@ export const APP_MODULES: AppModule[] = [
     route: '/grh',
     description: 'Gestion des collaborateurs, présences et recrutement',
     permissions: ['grh.view']
-  },
-  {
-    id: 'carrieres',
-    name: 'Carrières & Compétences',
-    shortName: 'CC',
-    icon: 'trending_up',
-    color: '#1565C0',
-    gradientFrom: '#1976D2',
-    gradientTo: '#0D47A1',
-    route: '/carrieres',
-    description: 'Compétences, formations et évaluations',
-    permissions: ['carrieres.view']
   },
   {
     id: 'paie',
@@ -45,7 +33,7 @@ export const APP_MODULES: AppModule[] = [
     gradientFrom: '#1B4B9A',
     gradientTo: '#0A2744',
     route: '/paie',
-    description: 'Bulletins de paie et déclarations sociales',
+    description: 'Bulletins de paie, déclarations et cotisations',
     permissions: ['paie.view']
   },
   {
@@ -57,7 +45,19 @@ export const APP_MODULES: AppModule[] = [
     gradientFrom: '#FFB300',
     gradientTo: '#CC8800',
     route: '/donnees-base',
-    description: 'Structure organisationnelle et paramètres',
+    description: 'Structure organisationnelle et référentiels de base',
+    permissions: ['donnees-base.view']
+  },
+  {
+    id: 'parametrage',
+    name: 'Paramétrage',
+    shortName: 'PARAM',
+    icon: 'settings',
+    color: '#0060B3',
+    gradientFrom: '#0B62AC',
+    gradientTo: '#1B4B9A',
+    route: '/parametrage',
+    description: 'Configuration des taux, grilles, indemnités et retenues',
     permissions: ['donnees-base.view']
   }
 ];

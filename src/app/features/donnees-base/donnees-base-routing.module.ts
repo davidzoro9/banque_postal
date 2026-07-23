@@ -38,6 +38,10 @@ const routes: Routes = [
   { path: 'paie/mode-paiement',    component: DbRefListComponent, data: { title: 'Mode de paiement',    icon: 'payments',           type: 'mode-paiement'   } },
   { path: 'paie/calendrier',       component: DbRefListComponent, data: { title: 'Calendrier de paie',  icon: 'calendar_month',     type: 'calendrier-paie' } },
 
+  // ─── Alias direct (sans préfixe admin/) ────────────────────────────────────
+  { path: 'grille-salariale',      redirectTo: 'admin/grille-salariale', pathMatch: 'full' },
+  { path: 'param-indemnite',       redirectTo: 'admin/param-indemnite',  pathMatch: 'full' },
+
   { path: '**', redirectTo: '' }
 ];
 

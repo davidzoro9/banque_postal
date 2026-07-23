@@ -6,11 +6,12 @@
 }
 
 .app-toolbar {
-  background: linear-gradient(135deg, #091628 0%, #163059 100%);
-  color: #fff;
-  height: 64px;
-  padding: 0 8px 0 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  color: #1e293b;
+  height: 70px;
+  padding: 0 12px 0 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid #e2e8f0;
   gap: 0;
 }
 
@@ -22,8 +23,8 @@
 }
 
 .menu-btn {
-  color: rgba(255, 255, 255, 0.8);
-  &:hover { color: #fff; }
+  color: #334155;
+  &:hover { color: #0060B3; background: rgba(0, 96, 179, 0.08); }
 }
 
 .brand {
@@ -31,27 +32,29 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 8px;
   transition: background 0.2s;
-  &:hover { background: rgba(255,255,255,0.08); }
+  &:hover { background: #f1f5f9; }
 }
 
 .brand-logo {
-  height: 40px;
+  height: 52px;
+  max-height: 54px;
   width: auto;
   display: block;
+  object-fit: contain;
 }
 
 .module-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #f1f5f9;
   border-radius: 20px;
   padding: 4px 12px 4px 4px;
   margin-left: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid #cbd5e1;
 }
 
 .mod-icon {
@@ -66,8 +69,8 @@
 
 .mod-name {
   font-size: 13px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .flex-spacer { flex: 1; }
@@ -79,26 +82,25 @@
 }
 
 .action-btn {
-  color: rgba(255, 255, 255, 0.75);
-  &:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  color: #475569;
+  &:hover { color: #0060B3; background: #f1f5f9; }
 }
 
 .user-btn {
-  color: #fff !important;
+  color: #1e293b !important;
   padding: 4px 10px 4px 4px !important;
   border-radius: 10px !important;
   height: 48px !important;
   margin-left: 4px;
   min-width: unset !important;
 
-  // Force le label interne de mat-button à afficher en flex
   ::ng-deep .mdc-button__label {
     display: flex;
     align-items: center;
     gap: 10px;
   }
 
-  &:hover { background: rgba(255,255,255,0.1) !important; }
+  &:hover { background: #f1f5f9 !important; }
 }
 
 .avatar {
@@ -131,13 +133,14 @@
 
 .user-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #0f172a;
   line-height: 1.2;
 }
 
 .user-role {
   font-size: 11px;
-  color: rgba(255,255,255,0.6);
+  color: #64748b;
   line-height: 1.2;
 }
 
@@ -145,7 +148,7 @@
   font-size: 18px;
   width: 18px;
   height: 18px;
-  color: rgba(255,255,255,0.6);
+  color: #64748b;
 }
 
 // Menu overlay styles

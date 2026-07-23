@@ -3,6 +3,49 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { AppModule, APP_MODULES } from '../models/app-module.model';
 import { MenuItem } from '../models/menu-item.model';
 
+const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
+  {
+    id: 'gestion-admin',
+    label: 'Gestion administrative',
+    icon: 'admin_panel_settings',
+    children: [
+      { id: 'emploi',           label: 'Emploi',              icon: 'work',                route: '/donnees-base/admin/emploi'           },
+      { id: 'fonction',         label: 'Fonction',            icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+      { id: 'departement',      label: 'Département',         icon: 'domain',              route: '/donnees-base/admin/departement'      },
+      { id: 'direction',        label: 'Direction',           icon: 'business',            route: '/donnees-base/admin/direction'        },
+      { id: 'service',          label: 'Service',             icon: 'group_work',          route: '/donnees-base/admin/service'          },
+      { id: 'grille-salariale', label: 'Grille salariale',    icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
+      { id: 'agence',           label: 'Agence',              icon: 'store',               route: '/donnees-base/admin/agence'           },
+      { id: 'type-indemnite',   label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
+      { id: 'param-indemnite',  label: 'Paramétrage indemnité',icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
+      { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
+      { id: 'profil',           label: 'Profil / Rôle',       icon: 'admin_panel_settings', route: '/donnees-base/admin/profil'           },
+      { id: 'ville',            label: 'Villes',              icon: 'location_city',        route: '/donnees-base/admin/ville'            },
+      { id: 'categorie',        label: 'Catégorie professionnelle', icon: 'category',          route: '/donnees-base/carriere/categorie'     },
+      { id: 'grade',            label: 'Grade',                    icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+      { id: 'echelon',          label: 'Échelon / Niveau',         icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
+      { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
+      { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
+      { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',          route: '/donnees-base/carriere/type-evaluation'}
+    ]
+  },
+  {
+    id: 'param-paie',
+    label: 'Paramétrage Paie & Retenues',
+    icon: 'tune',
+    children: [
+      { id: 'types-retenues',   label: 'Types de retenues',   icon: 'money_off',           route: '/paie/types-retenues'                 },
+      { id: 'param-paie-taux',  label: 'Taux & Cotisations (% Employeur/Agent)', icon: 'tune', route: '/paie/parametrage'             },
+      { id: 'rubrique',         label: 'Rubrique de paie',    icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
+      { id: 'cotisation',       label: 'Type de cotisation',  icon: 'percent',             route: '/donnees-base/paie/cotisation'        },
+      { id: 'bareme',           label: 'Barème fiscal',       icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
+      { id: 'mode-paiement',    label: 'Mode de paiement',    icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     },
+      { id: 'calendrier-paie',  label: 'Calendrier de paie',  icon: 'calendar_month',      route: '/donnees-base/paie/calendrier'        }
+    ]
+  }
+];
+
 export const MODULE_MENUS: Record<string, MenuItem[]> = {
   grh: [
     {
@@ -47,42 +90,6 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       route: '/grh/parametres-rh'
     }
   ],
-  carrieres: [
-    {
-      id: 'competences',
-      label: 'Compétences',
-      icon: 'psychology',
-      children: [
-        { id: 'referentiel', label: 'Référentiel', icon: 'menu_book', route: '/carrieres/competences/referentiel' },
-        { id: 'evaluation-comp', label: 'Évaluations', icon: 'assessment', route: '/carrieres/competences/evaluation' }
-      ]
-    },
-    {
-      id: 'formations',
-      label: 'Formations',
-      icon: 'school',
-      children: [
-        { id: 'catalogue', label: 'Catalogue', icon: 'library_books', route: '/carrieres/formations/catalogue' },
-        { id: 'plan', label: 'Plan de formation', icon: 'event_note', route: '/carrieres/formations/plan' },
-        { id: 'suivi', label: 'Suivi des formations', icon: 'track_changes', route: '/carrieres/formations/suivi' }
-      ]
-    },
-    {
-      id: 'evaluations',
-      label: 'Évaluations',
-      icon: 'star_rate',
-      children: [
-        { id: 'entretiens-annuels', label: 'Entretiens annuels', icon: 'forum', route: '/carrieres/evaluations/entretiens' },
-        { id: 'objectifs', label: 'Objectifs', icon: 'flag', route: '/carrieres/evaluations/objectifs' }
-      ]
-    },
-    {
-      id: 'mobilite',
-      label: 'Mobilité interne',
-      icon: 'transfer_within_a_station',
-      route: '/carrieres/mobilite'
-    }
-  ],
   paie: [
     {
       id: 'bulletins',
@@ -103,6 +110,18 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       ]
     },
     {
+      id: 'types-retenues',
+      label: 'Types de retenues',
+      icon: 'money_off',
+      route: '/paie/types-retenues'
+    },
+    {
+      id: 'parametrage-paie',
+      label: 'Paramétrage paie (Taux %)',
+      icon: 'tune',
+      route: '/paie/parametrage'
+    },
+    {
       id: 'declarations',
       label: 'Déclarations sociales',
       icon: 'send',
@@ -110,70 +129,10 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'dsn', label: 'DSN', icon: 'description', route: '/paie/declarations/dsn' },
         { id: 'urssaf', label: 'URSSAF', icon: 'account_balance', route: '/paie/declarations/urssaf' }
       ]
-    },
-    {
-      id: 'parametrage-paie',
-      label: 'Paramétrage paie',
-      icon: 'tune',
-      route: '/paie/parametrage'
     }
   ],
-  'donnees-base': [
-    {
-      id: 'gestion-admin',
-      label: 'Gestion administrative',
-      icon: 'admin_panel_settings',
-      children: [
-        { id: 'emploi',           label: 'Emploi',              icon: 'work',                route: '/donnees-base/admin/emploi'           },
-        { id: 'fonction',         label: 'Fonction',            icon: 'badge',               route: '/donnees-base/admin/fonction'         },
-        { id: 'departement',      label: 'Département',         icon: 'domain',              route: '/donnees-base/admin/departement'      },
-        { id: 'direction',        label: 'Direction',           icon: 'business',            route: '/donnees-base/admin/direction'        },
-        { id: 'service',          label: 'Service',             icon: 'group_work',          route: '/donnees-base/admin/service'          },
-        { id: 'grille-salariale', label: 'Grille salariale',    icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
-        { id: 'agence',           label: 'Agence',              icon: 'store',               route: '/donnees-base/admin/agence'           },
-        { id: 'type-indemnite',   label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-        { id: 'param-indemnite',  label: 'Paramétrage indemnité',icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-        { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
-        { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
-        { id: 'profil',               label: 'Profil / Rôle',         icon: 'admin_panel_settings', route: '/donnees-base/admin/profil' },
-        { id: 'ville',                label: 'Villes',                icon: 'location_city',        route: '/donnees-base/admin/ville' }
-      ]
-    },
-    {
-      id: 'type-retenue',
-      label: 'Type de retenue',
-      icon: 'money_off',
-      children: [
-        { id: 'type-retenue-employe', label: 'Retenue (par employé)', icon: 'money_off',      route: '/donnees-base/admin/type-retenue-employe' },
-        { id: 'type-retenue-emploi',  label: 'Retenue (par emploi)',  icon: 'money_off',      route: '/donnees-base/admin/type-retenue-emploi' }
-      ]
-    },
-    {
-      id: 'gestion-carriere',
-      label: 'Gestion de carrière et compétence',
-      icon: 'trending_up',
-      children: [
-        { id: 'categorie',        label: 'Catégorie professionnelle', icon: 'category',          route: '/donnees-base/carriere/categorie'     },
-        { id: 'grade',            label: 'Grade',                    icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
-        { id: 'echelon',          label: 'Échelon / Niveau',         icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
-        { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
-        { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
-        { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',          route: '/donnees-base/carriere/type-evaluation'}
-      ]
-    },
-    {
-      id: 'gestion-paie',
-      label: 'Gestion paie',
-      icon: 'payments',
-      children: [
-        { id: 'rubrique',         label: 'Rubrique de paie',     icon: 'receipt_long',  route: '/donnees-base/paie/rubrique'       },
-        { id: 'cotisation',       label: 'Type de cotisation',   icon: 'percent',       route: '/donnees-base/paie/cotisation'    },
-        { id: 'bareme',           label: 'Barème fiscal',        icon: 'calculate',     route: '/donnees-base/paie/bareme'        },
-        { id: 'mode-paiement',    label: 'Mode de paiement',     icon: 'payments',      route: '/donnees-base/paie/mode-paiement' },
-        { id: 'calendrier-paie',  label: 'Calendrier de paie',   icon: 'calendar_month',route: '/donnees-base/paie/calendrier'    }
-      ]
-    }
-  ]
+  'donnees-base': FULL_REF_AND_PARAM_MENUS,
+  parametrage: FULL_REF_AND_PARAM_MENUS
 };
 
 export interface QuickLink {
@@ -185,6 +144,7 @@ export interface QuickLink {
 
 @Injectable({ providedIn: 'root' })
 export class ModuleNavService {
+  readonly modules: AppModule[] = APP_MODULES;
   private activeModuleSubject = new BehaviorSubject<AppModule | null>(null);
   private drawerOpenSubject = new BehaviorSubject<boolean>(true);
   private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
@@ -193,59 +153,52 @@ export class ModuleNavService {
   drawerOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
   sidebarOpen$: Observable<boolean> = this.sidebarOpenSubject.asObservable();
 
-  readonly quickLinks: QuickLink[] = [
-    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',                        color: '#163059' },
-    { label: 'Congés',      icon: 'beach_access',  route: '/grh/conges',                          color: '#1565C0' },
-    { label: 'Bulletins',   icon: 'receipt_long',  route: '/paie/bulletins/historique',            color: '#1B3A6B' },
-    { label: 'Formations',  icon: 'school',        route: '/carrieres/formations/catalogue',       color: '#FFB300' },
-    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',                    color: '#091628' }
-  ];
-
-  get modules(): AppModule[] {
-    return APP_MODULES;
-  }
-
   get activeModule(): AppModule | null {
     return this.activeModuleSubject.value;
   }
 
-  get drawerOpen(): boolean {
-    return this.drawerOpenSubject.value;
-  }
+  readonly quickLinks: QuickLink[] = [
+    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',             color: '#163059' },
+    { label: 'Données Base',icon: 'storage',       route: '/donnees-base',             color: '#CC8800' },
+    { label: 'Bulletins',   icon: 'receipt_long',  route: '/paie/bulletins/historique', color: '#1B3A6B' },
+    { label: 'Paramétrage', icon: 'settings',      route: '/parametrage',              color: '#0060B3' },
+    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',         color: '#091628' }
+  ];
 
-  get sidebarOpen(): boolean {
-    return this.sidebarOpenSubject.value;
+  constructor() {
+    this.selectModule(APP_MODULES[0]);
   }
 
   selectModule(module: AppModule): void {
     this.activeModuleSubject.next(module);
-    if (!this.drawerOpenSubject.value) {
-      this.drawerOpenSubject.next(true);
-    }
+  }
+
+  clearModule(): void {
+    this.activeModuleSubject.next(null);
+  }
+
+  getMenuItemsForModule(moduleId: string): MenuItem[] {
+    return MODULE_MENUS[moduleId] || [];
   }
 
   getMenuForActiveModule(): MenuItem[] {
-    const id = this.activeModuleSubject.value?.id;
-    return id ? (MODULE_MENUS[id] ?? []) : [];
+    const active = this.activeModule;
+    return active ? this.getMenuItemsForModule(active.id) : [];
   }
 
   toggleDrawer(): void {
     this.drawerOpenSubject.next(!this.drawerOpenSubject.value);
   }
 
-  openDrawer(): void {
-    this.drawerOpenSubject.next(true);
-  }
-
-  closeDrawer(): void {
-    this.drawerOpenSubject.next(false);
+  setDrawerOpen(open: boolean): void {
+    this.drawerOpenSubject.next(open);
   }
 
   toggleSidebar(): void {
     this.sidebarOpenSubject.next(!this.sidebarOpenSubject.value);
   }
 
-  clearModule(): void {
-    this.activeModuleSubject.next(null);
+  setSidebarOpen(open: boolean): void {
+    this.sidebarOpenSubject.next(open);
   }
 }

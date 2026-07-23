@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48">
-  <text x="0" y="31" font-family="'Arial Black', Arial, sans-serif"
-        font-size="31" font-weight="900" fill="#ffffff" letter-spacing="1">BPBF</text>
-  <path d="M122,3 L143,24 L122,45"
-        fill="none" stroke="#FFB300" stroke-width="10"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 50">
+  <text x="0" y="32" font-family="'Arial Black', Arial, sans-serif"
+        font-size="32" font-weight="900" font-style="italic" fill="#38BDF8" letter-spacing="0.5">BPBF</text>
+  <path d="M125,4 L146,25 L125,46"
+        fill="none" stroke="#FFC700" stroke-width="9"
         stroke-linejoin="miter" stroke-linecap="butt"/>
-  <path d="M137,3 L158,24 L137,45"
-        fill="none" stroke="#FFB300" stroke-width="10"
+  <path d="M140,4 L161,25 L140,46"
+        fill="none" stroke="#FFC700" stroke-width="9"
         stroke-linejoin="miter" stroke-linecap="butt"/>
-  <text x="0" y="46" font-family="Arial, sans-serif" font-size="8.2"
-        fill="rgba(255,255,255,0.68)" letter-spacing="0.2">Banque Postale du Burkina Faso</text>
+  <text x="0" y="47" font-family="Arial, sans-serif" font-size="8.5" font-weight="600"
+        fill="#FFFFFF" letter-spacing="0.1">Banque Postale du Burkina Faso</text>
 </svg>

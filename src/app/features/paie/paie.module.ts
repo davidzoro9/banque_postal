@@ -13,6 +13,7 @@ import { CotisationsPaieComponent } from './elements/cotisations-paie/cotisation
 import { DsnComponent } from './declarations/dsn/dsn.component';
 import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
+import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -28,7 +29,8 @@ import { MatSelectModule } from '@angular/material/select';
     CotisationsPaieComponent,
     DsnComponent,
     UrssafComponent,
-    ParametragePaieComponent
+    ParametragePaieComponent,
+    TypesRetenuesComponent
   ],
   imports: [
     CommonModule,

@@ -46,6 +46,41 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   categories = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
+  // Matrice 2D pour Grille Salariale (conformité document BPBF)
+  allClassifications = [
+    '1ÈRE CATEGORIE', '2ÈME CATEGORIE', '3ÈME CATEGORIE', '4ÈME CATEGORIE', '5ÈME CATEGORIE', '6ÈME CATEGORIE', '7ÈME CATEGORIE',
+    'CLASSE I', 'CLASSE II', 'CLASSE III', 'CLASSE IV',
+    'CLASSE V', 'CLASSE VI', 'CLASSE VII', 'CLASSE VIII'
+  ];
+
+  openCellEdit(classification: string, echelon: number): void {
+    let item = this.getSalaryItem(classification, echelon);
+    const groupe = this.groupe1Classifications.includes(classification) ? 'GRADE I' :
+                   (this.groupe2Classifications.includes(classification) ? 'GRADE II' : 'GRADE III');
+    if (!item) {
+      item = {
+        code: classification,
+        libelle: groupe,
+        grade: groupe,
+        categorie: classification,
+        echelle: groupe,
+        echellon: String(echelon),
+        description: `${groupe} (${classification}) - Échelon ${echelon}`,
+        montant: 0,
+        actif: true
+      };
+    } else {
+      item = {
+        ...item,
+        code: classification,
+        categorie: classification,
+        grade: item.grade || item.libelle || groupe,
+        echellon: String(echelon)
+      };
+    }
+    this.openEditDialog(item);
+  }
+
   constructor(
     private route: ActivatedRoute,
     private moduleNav: ModuleNavService,
@@ -78,7 +113,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
       if (this.type === 'grille-salariale') {
-        this.displayedColumns = ['code', 'libelle', 'echelle', 'echellon', 'description', 'montant', 'actions'];
+        this.displayedColumns = ['code', 'libelle', 'echelle', 'echellon', 'montant', 'actif', 'actions'];
       } else if (this.type === 'param-indemnite') {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else {
@@ -96,6 +131,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   }
 
   loadData(): void {
+    if (this.type === 'grille-salariale') {
+      const stored = localStorage.getItem('ref_grille-salariale');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!Array.isArray(parsed) || parsed.length !== 225) {
+            localStorage.removeItem('ref_grille-salariale');
+          }
+        } catch (e) {
+          localStorage.removeItem('ref_grille-salariale');
+        }
+      }
+    }
     this.dbRefService.getItems(this.type).subscribe({
       next: (items) => {
         this.dataSource.data = items;
@@ -148,20 +196,23 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openEditDialog(item: RefItem): void {
     this.isEditing = true;
     this.editingItem = item;
+    const catVal = item.categorie || item.code || '';
+    const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GRADE I' : (this.groupe2Classifications.includes(catVal) ? 'GRADE II' : 'GRADE III'));
+
     this.formGroup.reset({
-      code:          item.code,
-      libelle:       item.libelle,
+      code:          catVal,
+      libelle:       gradeVal,
       description:   item.description,
       actif:         item.actif,
       montant:       item.montant ?? 0,
       departementId: item.departementId ?? null,
       directionId:   item.directionId   ?? null,
-      echelle:       item.echelle || '',
+      echelle:       gradeVal,
       echellon:      item.echellon || '',
       typeIndemnite: item.typeIndemnite || item.libelle || '',
       fonction:      item.fonction || '',
-      grade:         item.grade || '',
-      categorie:     item.categorie || '',
+      grade:         gradeVal,
+      categorie:     catVal,
       taux:          item.taux ?? item.montant ?? 0
     });
     this.formGroup.get('code')?.enable();
@@ -172,22 +223,25 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     if (this.formGroup.invalid) return;
 
     const v = this.formGroup.getRawValue();
+    const catCode = v.categorie || v.code || this.editingItem?.code || '';
+    const gradeVal = v.grade || v.libelle || 'GRADE I';
+
     const item: RefItem = {
       id:            this.editingItem?.id,
-      code:          v.code,
-      libelle:       v.typeIndemnite || v.libelle || 'Indemnité',
-      description:   v.description || `Fonction: ${v.fonction || '-'}, Grade: ${v.grade || '-'}, Cat: ${v.categorie || '-'}`,
+      code:          catCode,
+      libelle:       gradeVal,
+      description:   `${gradeVal} (${catCode}) - Échelon ${v.echellon || 1}`,
       actif:         v.actif ?? true,
-      montant:       v.taux || v.montant || 0,
+      montant:       Number(v.montant ?? v.taux ?? 0),
       departementId: v.departementId || undefined,
       directionId:   v.directionId   || undefined,
-      echelle:       v.echelle || undefined,
-      echellon:      v.echellon || undefined,
+      echelle:       gradeVal,
+      echellon:      v.echellon ? String(v.echellon) : (this.editingItem?.echellon ? String(this.editingItem.echellon) : undefined),
       typeIndemnite: v.typeIndemnite || undefined,
       fonction:      v.fonction || undefined,
-      grade:         v.grade || undefined,
-      categorie:     v.categorie || undefined,
-      taux:          v.taux || v.montant || undefined
+      grade:         gradeVal,
+      categorie:     catCode,
+      taux:          v.taux !== undefined ? Number(v.taux) : undefined
     };
 
     if (this.isEditing && this.editingItem) {

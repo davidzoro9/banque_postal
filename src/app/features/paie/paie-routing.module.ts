@@ -8,6 +8,7 @@ import { CotisationsPaieComponent } from './elements/cotisations-paie/cotisation
 import { DsnComponent } from './declarations/dsn/dsn.component';
 import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
+import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
 
 const routes: Routes = [
   { path: '', component: PaieOverviewComponent },
@@ -15,9 +16,10 @@ const routes: Routes = [
   { path: 'bulletins/historique', component: HistoriqueBulletinsComponent },
   { path: 'elements/rubriques', component: RubriquesPaieComponent },
   { path: 'elements/cotisations', component: CotisationsPaieComponent },
+  { path: 'types-retenues', component: TypesRetenuesComponent },
+  { path: 'parametrage', component: ParametragePaieComponent },
   { path: 'declarations/dsn', component: DsnComponent },
   { path: 'declarations/urssaf', component: UrssafComponent },
-  { path: 'parametrage', component: ParametragePaieComponent },
   { path: '**', redirectTo: '' }
 ];
 
