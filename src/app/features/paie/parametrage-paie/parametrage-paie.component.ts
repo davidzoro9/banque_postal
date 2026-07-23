@@ -32,26 +32,6 @@ export interface ParametragePaieRule {
         </button>
       </div>
 
-      <!-- Summary KPI Cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-        <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Retenues Configurées</div>
-          <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ rules.length }}</div>
-          <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Retenues actives dans le système</div>
-        </mat-card>
-
-        <mat-card style="border-radius: 12px; border-left: 5px solid #0288D1; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Cumul Taux Part Employeur</div>
-          <div style="font-size: 26px; font-weight: 700; color: #0288D1; margin-top: 4px;">{{ getTotalPartEmployeur() | number:'1.1-2' }} %</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Taux global pris en charge employeur</div>
-        </mat-card>
-
-        <mat-card style="border-radius: 12px; border-left: 5px solid #7B1FA2; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Cumul Taux Part Agent</div>
-          <div style="font-size: 26px; font-weight: 700; color: #7B1FA2; margin-top: 4px;">{{ getTotalPartAgent() | number:'1.1-2' }} %</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Taux global prélevé sur l'agent</div>
-        </mat-card>
-
       <!-- Main Retenues Table -->
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px;">
         <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">

@@ -28,27 +28,6 @@ export interface TypeRetenue {
         </button>
       </div>
 
-      <!-- Stats Cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
-        <mat-card style="border-radius: 12px; border-left: 5px solid #0060B3; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Types de Retenues</div>
-          <div style="font-size: 26px; font-weight: 700; color: #0060B3; margin-top: 4px;">{{ typesRetenues.length }}</div>
-          <div style="font-size: 12px; color: #0060B3; margin-top: 2px;">Référentiel configuré</div>
-        </mat-card>
-
-        <mat-card style="border-radius: 12px; border-left: 5px solid #2E7D32; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Types Actifs</div>
-          <div style="font-size: 26px; font-weight: 700; color: #2E7D32; margin-top: 4px;">{{ getCountActifs() }}</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Disponibles pour le paramétrage</div>
-        </mat-card>
-
-        <mat-card style="border-radius: 12px; border-left: 5px solid #FFC700; padding: 16px; background: #fff;">
-          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Part Patronale / Salariale</div>
-          <div style="font-size: 26px; font-weight: 700; color: #004080; margin-top: 4px;">2 Parts Précises</div>
-          <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Part Employeur & Part Agent</div>
-        </mat-card>
-      </div>
-
       <!-- Filters & Search -->
       <mat-card style="border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; background: #fff;">
         <div style="display: flex; gap: 16px; align-items: center;">
