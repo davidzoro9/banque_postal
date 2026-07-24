@@ -9,39 +9,39 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
     label: 'Gestion administrative',
     icon: 'admin_panel_settings',
     children: [
-      { id: 'categorie',        label: 'Catégorie professionnelle', icon: 'category',          route: '/donnees-base/carriere/categorie'     },
-      { id: 'grille-salariale', label: 'Grille salariale',    icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
-      { id: 'type-indemnite',   label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-      { id: 'param-indemnite',  label: 'Paramétrage indemnité',icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-      { id: 'grade',            label: 'Grade',                    icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
-      { id: 'echelon',          label: 'Échelon / Niveau',         icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
-      { id: 'emploi',           label: 'Emploi',              icon: 'work',                route: '/donnees-base/admin/emploi'           },
-      { id: 'fonction',         label: 'Fonction',            icon: 'badge',               route: '/donnees-base/admin/fonction'         },
-      { id: 'departement',      label: 'Département',         icon: 'domain',              route: '/donnees-base/admin/departement'      },
-      { id: 'direction',        label: 'Direction',           icon: 'business',            route: '/donnees-base/admin/direction'        },
-      { id: 'service',          label: 'Service',             icon: 'group_work',          route: '/donnees-base/admin/service'          },
-      { id: 'agence',           label: 'Agence',              icon: 'store',               route: '/donnees-base/admin/agence'           },
-      { id: 'type-contrat',     label: 'Type contrat',        icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
-      { id: 'type-conge',       label: 'Type congé/absence',  icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
-      { id: 'ville',            label: 'Villes',              icon: 'location_city',        route: '/donnees-base/admin/ville'            },
-      { id: 'profil',           label: 'Profil / Rôle',       icon: 'admin_panel_settings', route: '/donnees-base/admin/profil'           },
+      { id: 'emploi',           label: 'Emploi',                   icon: 'work',                route: '/donnees-base/admin/emploi'           },
+      { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+      { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
+      { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
+      { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
+
+      { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+      { id: 'categorie',        label: 'Catégorie',                icon: 'category',           route: '/donnees-base/carriere/categorie'     },
+      { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
+      { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
+
+      { id: 'type-indemnite',   label: 'Type indemnité',           icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
+      { id: 'param-indemnite',  label: 'Indemnité',                icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      { id: 'types-retenues',   label: 'Type retenu',              icon: 'money_off',           route: '/paie/types-retenues'                 },
+      { id: 'param-paie-taux',  label: 'Retenu',                   icon: 'tune',                route: '/paie/parametrage'                    },
+
+      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
+      { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
+      { id: 'type-conge',       label: 'Type congé/absence',       icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
+      { id: 'ville',            label: 'Villes',                   icon: 'location_city',        route: '/donnees-base/admin/ville'            },
       { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
       { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
       { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',          route: '/donnees-base/carriere/type-evaluation'}
     ]
   },
   {
-    id: 'param-paie',
-    label: 'Paramétrage Paie & Retenues',
-    icon: 'tune',
+    id: 'paie-section',
+    label: 'Paie',
+    icon: 'payments',
     children: [
-      { id: 'types-retenues',   label: 'Type de retenue',     icon: 'money_off',           route: '/paie/types-retenues'                 },
-      { id: 'param-paie-taux',  label: 'Paramétrage retenue', icon: 'tune',                route: '/paie/parametrage'                    },
-      { id: 'type-indemnite-p', label: 'Type indemnité',      icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-      { id: 'param-indemnite-p',label: 'Paramétrage indemnité',icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-      { id: 'rubrique',         label: 'Rubrique de paie',    icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
-      { id: 'bareme',           label: 'Barème fiscal',       icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
-      { id: 'mode-paiement',    label: 'Mode de paiement',    icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     }
+      { id: 'rubrique',         label: 'Rubrique de paie',         icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
+      { id: 'bareme',           label: 'Barème fiscal',            icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
+      { id: 'mode-paiement',    label: 'Mode de paiement',         icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     }
     ]
   }
 ];
@@ -82,12 +82,6 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'liste-contrats', label: 'Liste des contrats', icon: 'list_alt', route: '/grh/contrats' },
         { id: 'renouvellements', label: 'Renouvellements', icon: 'autorenew', route: '/grh/contrats/renouvellements', badge: 3 }
       ]
-    },
-    {
-      id: 'parametres-rh',
-      label: 'Paramètres RH',
-      icon: 'manage_accounts',
-      route: '/grh/parametres-rh'
     }
   ],
   paie: [
@@ -128,7 +122,28 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       ]
     }
   ],
-  'donnees-base': FULL_REF_AND_PARAM_MENUS
+  'donnees-base': FULL_REF_AND_PARAM_MENUS,
+  'profils': [
+    {
+      id: 'securite-droits',
+      label: 'Sécurité & Droits',
+      icon: 'admin_panel_settings',
+      children: [
+        { id: 'profils-roles',   label: 'Profils & Rôles',          icon: 'badge',            route: '/profils/roles' },
+        { id: 'profil-ref',      label: 'Référentiel Profil / Rôle',icon: 'admin_panel_settings', route: '/donnees-base/admin/profil' },
+        { id: 'habilitations',   label: 'Matrice des Habilitations',icon: 'rule',             route: '/profils/habilitations' },
+        { id: 'utilisateurs',    label: 'Gestion des Utilisateurs', icon: 'manage_accounts',  route: '/profils/utilisateurs' }
+      ]
+    },
+    {
+      id: 'documentation',
+      label: 'Documentation & Aide',
+      icon: 'menu_book',
+      children: [
+        { id: 'manuel-utilisateur', label: "Manuel d'utilisation",  icon: 'auto_stories',    route: '/profils/manuel' }
+      ]
+    }
+  ]
 };
 
 export interface QuickLink {

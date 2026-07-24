@@ -1,0 +1,59 @@
+<div class="matrix-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>rule</mat-icon></div>
+      <div>
+        <h1>Matrice des Habilitations & Droits d'Accès</h1>
+        <p>Configuration fine des permissions d'accès aux modules et des droits d'action par profil utilisateur</p>
+      </div>
+    </div>
+    <button mat-raised-button class="btn-save" (click)="savePermissions()">
+      <mat-icon>save</mat-icon> Enregistrer la Matrice
+    </button>
+  </div>
+
+  @if (savedNotification) {
+    <div class="alert-success">
+      <mat-icon>check_circle</mat-icon>
+      Matrice des habilitations et droits d'accès enregistrée avec succès !
+    </div>
+  }
+
+  <!-- Table de la Matrice -->
+  <mat-card class="matrix-card">
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th style="width: 180px;">Module Applicatif</th>
+          <th>Action & Permission</th>
+          @for (r of roles; track r.code) {
+            <th style="text-align: center; width: 140px;">
+              <span class="role-badge" [style.background]="r.color + '15'" [style.color]="r.color">
+                {{ r.label }}
+              </span>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of matrix; track m.id) {
+          <tr>
+            <td>
+              <span class="module-chip">{{ m.moduleName }}</span>
+            </td>
+            <td>
+              <strong style="color: #1e293b; font-size: 13px;">{{ m.actionName }}</strong>
+              <div style="font-size: 11px; color: #64748b;">Code: <code>{{ m.actionCode }}</code></div>
+            </td>
+            @for (r of roles; track r.code) {
+              <td style="text-align: center;">
+                <mat-checkbox [checked]="m.rolesAccess[r.code]" (change)="toggleAccess(m, r.code)" color="primary"></mat-checkbox>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </mat-card>
+</div>

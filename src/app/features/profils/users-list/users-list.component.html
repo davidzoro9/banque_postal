@@ -1,0 +1,175 @@
+<div class="users-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>manage_accounts</mat-icon></div>
+      <div>
+        <h1>Gestion des Comptes Utilisateurs</h1>
+        <p>{{ usersList.length }} compte(s) utilisateur(s) enregistrés dans le système</p>
+      </div>
+    </div>
+    <button mat-raised-button class="btn-new" (click)="openAddModal()">
+      <mat-icon>person_add</mat-icon> Nouvel Utilisateur
+    </button>
+  </div>
+
+  <!-- Barre de Recherche et Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher un utilisateur...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Nom, email, identifiant...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Filtrer par Rôle</mat-label>
+          <mat-select [(ngModel)]="roleFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous les rôles —</mat-option>
+            <mat-option value="ADMIN">Administrateur</mat-option>
+            <mat-option value="DRH">Directeur RH</mat-option>
+            <mat-option value="GESTIONNAIRE_PAIE">Gestionnaire Paie</mat-option>
+            <mat-option value="VALIDATEUR">Validateur</mat-option>
+            <mat-option value="CONSULTANT">Consultant</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="statusFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous —</mat-option>
+            <mat-option value="active">Actif</mat-option>
+            <mat-option value="inactive">Inactif</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau des Utilisateurs -->
+  <mat-card class="table-card">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Identifiant</th>
+          <th>Adresse Email</th>
+          <th>Rôle / Profil</th>
+          <th style="text-align: center;">Dernier Accès</th>
+          <th style="text-align: center;">Statut</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of filteredUsers; track u.id) {
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" [style.background]="u.avatarColor">
+                  {{ u.prenom[0] }}{{ u.nom[0] }}
+                </div>
+                <div>
+                  <strong style="color: #1e293b; font-size: 14px;">{{ u.prenom }} {{ u.nom }}</strong>
+                  <div style="font-size: 11px; color: #64748b;">Créé le {{ u.dateCreation }}</div>
+                </div>
+              </div>
+            </td>
+            <td><code>{{ u.username }}</code></td>
+            <td><a [href]="'mailto:' + u.email" style="color: #0060B3; text-decoration: none;">{{ u.email }}</a></td>
+            <td>
+              <span class="role-chip" [class.admin]="u.role === 'ADMIN'" [class.drh]="u.role === 'DRH'" [class.paie]="u.role === 'GESTIONNAIRE_PAIE'">
+                {{ u.role }}
+              </span>
+            </td>
+            <td style="text-align: center; color: #475569; font-size: 12px;">{{ u.dernierAcces || '-' }}</td>
+            <td style="text-align: center;">
+              @if (u.actif) {
+                <span class="status-chip active">✅ Actif</span>
+              } @else {
+                <span class="status-chip inactive">🔴 Suspendu</span>
+              }
+            </td>
+            <td style="text-align: center;">
+              <div class="action-btns">
+                <button mat-icon-button color="primary" title="Modifier l'utilisateur" (click)="openEditModal(u)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button style="color: #eab308;" title="Réinitialiser le mot de passe" (click)="resetPassword(u)">
+                  <mat-icon>key</mat-icon>
+                </button>
+                <button mat-icon-button [title]="u.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(u)">
+                  <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" title="Supprimer" (click)="deleteUser(u)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </mat-card>
+
+  <!-- Modal Formulaire Utilisateur -->
+  @if (showDialog) {
+    <div class="modal-backdrop">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>{{ editingUser ? 'Modifier l\'Utilisateur' : 'Créer un Compte Utilisateur' }}</h2>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom</mat-label>
+              <input matInput [(ngModel)]="formModel.nom">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Prénom</mat-label>
+              <input matInput [(ngModel)]="formModel.prenom">
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Identifiant de connexion (Username)</mat-label>
+            <input matInput [(ngModel)]="formModel.username" placeholder="prenom.nom">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Adresse Email</mat-label>
+            <input matInput type="email" [(ngModel)]="formModel.email" placeholder="utilisateur@entreprise.com">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Rôle / Profil d'accès</mat-label>
+            <mat-select [(ngModel)]="formModel.role">
+              <mat-option value="ADMIN">Administrateur Système</mat-option>
+              <mat-option value="DRH">Directeur Ressources Humaines</mat-option>
+              <mat-option value="GESTIONNAIRE_PAIE">Gestionnaire de Paie</mat-option>
+              <mat-option value="VALIDATEUR">Validateur Hiérarchique</mat-option>
+              <mat-option value="CONSULTANT">Consultant / Auditeur</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          @if (!editingUser) {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Mot de passe initial</mat-label>
+              <input matInput type="password" [(ngModel)]="formModel.password">
+            </mat-form-field>
+          }
+        </div>
+        <div class="modal-footer">
+          <button mat-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" (click)="saveUser()">
+            <mat-icon>save</mat-icon> Enregistrer le compte
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

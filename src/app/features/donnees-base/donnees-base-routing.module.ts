@@ -25,7 +25,7 @@ const routes: Routes = [
 
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },
-  { path: 'carriere/grade',        component: DbRefListComponent, data: { title: 'Grade',               icon: 'military_tech',      type: 'grade'           } },
+  { path: 'carriere/grade',        component: DbRefListComponent, data: { title: 'Groupe',              icon: 'military_tech',      type: 'grade'           } },
   { path: 'carriere/echelon',      component: DbRefListComponent, data: { title: 'Échelon / Niveau',    icon: 'signal_cellular_alt',type: 'echelon'         } },
   { path: 'carriere/competences',  component: DbRefListComponent, data: { title: 'Référentiel compétences', icon: 'psychology',    type: 'competences'     } },
   { path: 'carriere/type-formation',component: DbRefListComponent,data: { title: 'Type de formation',   icon: 'school',             type: 'type-formation'  } },

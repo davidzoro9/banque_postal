@@ -41,22 +41,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   grades:         RefItem[] = [];   // pour Grille salariale et Paramétrage indemnité
   typesIndemnite: RefItem[] = [];   // pour Paramétrage indemnité
   fonctions:      RefItem[] = [];   // pour Paramétrage indemnité
-  categoriesList: string[]  = ['Catégorie I', 'Catégorie II', 'Catégorie III', 'Catégorie IV', 'Catégorie V', 'Catégorie VI', 'Catégorie VII', 'Catégorie VIII', 'Catégorie IX'];
+  categoriesList: string[]  = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
-  categories = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+  categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
-  // Grille salariale - listes par grade
-  groupe1Classifications = [
-    '1ÈRE CATEGORIE', '2ÈME CATEGORIE', '3ÈME CATEGORIE', '4ÈME CATEGORIE',
-    '5ÈME CATEGORIE', '6ÈME CATEGORIE', '7ÈME CATEGORIE'
-  ];
-  groupe2Classifications = [
-    'CLASSE I', 'CLASSE II', 'CLASSE III', 'CLASSE IV'
-  ];
-  groupe3Classifications = [
-    'CLASSE V', 'CLASSE VI', 'CLASSE VII', 'CLASSE VIII'
-  ];
+  // Grille salariale - listes par groupe
+  groupe1Classifications = ['1', '2', '3', '4', '5', '6', '7'];
+  groupe2Classifications = ['I', 'II', 'III', 'IV'];
+  groupe3Classifications = ['V', 'VI', 'VII', 'VIII'];
   echelonsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
   get allClassifications(): string[] {
@@ -64,10 +57,27 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   }
 
   getSalaryItem(classification: string, echelon: number): RefItem | undefined {
-    return this.dataSource.data.find(
-      item => (item.categorie === classification || item.code === classification)
-           && (item.echellon === String(echelon))
-    );
+    const classUpper = (classification || '').trim().toUpperCase();
+    return this.dataSource.data.find(item => {
+      const itemCat = (item.categorie || item.code || '').trim().toUpperCase();
+      const matchCat = itemCat === classUpper ||
+        (classUpper === '1' && (itemCat === '1ÈRE CATEGORIE' || itemCat === '1ERE CATEGORIE')) ||
+        (classUpper === '2' && (itemCat === '2ÈME CATEGORIE' || itemCat === '2EME CATEGORIE')) ||
+        (classUpper === '3' && (itemCat === '3ÈME CATEGORIE' || itemCat === '3EME CATEGORIE')) ||
+        (classUpper === '4' && (itemCat === '4ÈME CATEGORIE' || itemCat === '4EME CATEGORIE')) ||
+        (classUpper === '5' && (itemCat === '5ÈME CATEGORIE' || itemCat === '5EME CATEGORIE')) ||
+        (classUpper === '6' && (itemCat === '6ÈME CATEGORIE' || itemCat === '6EME CATEGORIE')) ||
+        (classUpper === '7' && (itemCat === '7ÈME CATEGORIE' || itemCat === '7EME CATEGORIE')) ||
+        (classUpper === 'I' && itemCat === 'CLASSE I') ||
+        (classUpper === 'II' && itemCat === 'CLASSE II') ||
+        (classUpper === 'III' && itemCat === 'CLASSE III') ||
+        (classUpper === 'IV' && itemCat === 'CLASSE IV') ||
+        (classUpper === 'V' && itemCat === 'CLASSE V') ||
+        (classUpper === 'VI' && itemCat === 'CLASSE VI') ||
+        (classUpper === 'VII' && itemCat === 'CLASSE VII') ||
+        (classUpper === 'VIII' && itemCat === 'CLASSE VIII');
+      return matchCat && String(item.echellon) === String(echelon);
+    });
   }
 
   getSalary(classification: string, echelon: number): number | null {
@@ -105,8 +115,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   openCellEdit(classification: string, echelon: number): void {
     let item = this.getSalaryItem(classification, echelon);
-    const groupe = this.groupe1Classifications.includes(classification) ? 'GRADE I' :
-                   (this.groupe2Classifications.includes(classification) ? 'GRADE II' : 'GRADE III');
+    const groupe = this.groupe1Classifications.includes(classification) ? 'GROUPE I' :
+                   (this.groupe2Classifications.includes(classification) ? 'GROUPE II' : 'GROUPE III');
     if (!item) {
       item = {
         code: classification,
@@ -184,10 +194,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   getGradeName(row: RefItem): string {
     const cat = row.categorie || row.code || '';
-    if (this.groupe1Classifications.includes(cat)) return 'GRADE I';
-    if (this.groupe2Classifications.includes(cat)) return 'GRADE II';
-    if (this.groupe3Classifications.includes(cat)) return 'GRADE III';
-    return row.grade || row.libelle || row.echelle || 'GRADE I';
+    if (this.groupe1Classifications.includes(cat)) return 'GROUPE I';
+    if (this.groupe2Classifications.includes(cat)) return 'GROUPE II';
+    if (this.groupe3Classifications.includes(cat)) return 'GROUPE III';
+    return row.grade || row.libelle || row.echelle || 'GROUPE I';
   }
 
   loadData(): void {
@@ -262,7 +272,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
     if (this.type === 'grille-salariale') {
       const catVal = item.categorie || item.code || '';
-      const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GRADE I' : (this.groupe2Classifications.includes(catVal) ? 'GRADE II' : 'GRADE III'));
+      const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GROUPE I' : (this.groupe2Classifications.includes(catVal) ? 'GROUPE II' : 'GROUPE III'));
 
       this.formGroup.reset({
         code:          catVal,
@@ -327,7 +337,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
     if (this.type === 'grille-salariale') {
       const catCode = v.categorie || v.code || this.editingItem?.code || '';
-      const gradeVal = v.grade || v.libelle || 'GRADE I';
+      const gradeVal = v.grade || v.libelle || 'GROUPE I';
       item = {
         id:            this.editingItem?.id,
         code:          catCode,

@@ -24,7 +24,7 @@
         <mat-label>Rechercher…</mat-label>
         <mat-icon matPrefix>search</mat-icon>
         <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
-               placeholder="Grade, catégorie, échelon, montant…">
+               placeholder="Groupe, catégorie, échelon, montant…">
         @if (searchQuery) {
           <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
             <mat-icon>close</mat-icon>
@@ -80,12 +80,12 @@
               </tr>
             </thead>
             <tbody>
-              <!-- GRADE I : AGENTS ET EMPLOYES -->
+              <!-- GROUPE I : AGENTS ET EMPLOYES -->
               @for (c of groupe1Classifications; track c; let i = $index) {
                 <tr>
                   @if (i === 0) {
                     <td [attr.rowspan]="groupe1Classifications.length" class="group-cell">
-                      <span>GRADE I</span>
+                      <span>GROUPE I</span>
                     </td>
                   }
                   <td class="class-name-cell">{{ c }}</td>
@@ -113,7 +113,7 @@
                 </tr>
               }
 
-              <!-- LIGNE DE SÉPARATION ÉCHELONS (GRADE II) -->
+              <!-- LIGNE DE SÉPARATION ÉCHELONS (GROUPE II) -->
               <tr class="section-divider">
                 <td colspan="17">ÉCHELONS</td>
               </tr>
@@ -121,7 +121,7 @@
                 <tr>
                   @if (i === 0) {
                     <td [attr.rowspan]="groupe2Classifications.length" class="group-cell">
-                      <span>GRADE II</span>
+                      <span>GROUPE II</span>
                     </td>
                   }
                   <td class="class-name-cell">{{ c }}</td>
@@ -149,12 +149,12 @@
                 </tr>
               }
 
-              <!-- GRADE III -->
+              <!-- GROUPE III -->
               @for (c of groupe3Classifications; track c; let i = $index) {
                 <tr>
                   @if (i === 0) {
                     <td [attr.rowspan]="groupe3Classifications.length" class="group-cell">
-                      <span>GRADE III</span>
+                      <span>GROUPE III</span>
                     </td>
                   }
                   <td class="class-name-cell">{{ c }}</td>
@@ -217,7 +217,7 @@
             </ng-container>
 
             <ng-container matColumnDef="grade">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Grade</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Groupe</th>
               <td mat-cell *matCellDef="let row">
                 <span class="code-chip" style="background: #e8f5e9; color: #2e7d32; font-weight: 700;">{{ getGradeName(row) }}</span>
               </td>
@@ -348,9 +348,9 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Grade</mat-label>
-          <mat-select formControlName="grade" placeholder="Sélectionner un grade">
-            <mat-option value="">— Tous les grades —</mat-option>
+          <mat-label>Groupe</mat-label>
+          <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
+            <mat-option value="">— Tous les groupes —</mat-option>
             @for (g of grades; track g.id) {
               <mat-option [value]="g.libelle">{{ g.libelle }} ({{ g.code }})</mat-option>
             }
@@ -433,11 +433,11 @@
 
       <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Grade</mat-label>
-          <mat-select formControlName="grade" placeholder="Sélectionner un grade">
-            <mat-option value="GRADE I">GRADE I (Agents et Employés)</mat-option>
-            <mat-option value="GRADE II">GRADE II (Agents de Maîtrise et Cadres moyens)</mat-option>
-            <mat-option value="GRADE III">GRADE III (Cadres et Cadres Supérieurs)</mat-option>
+          <mat-label>Groupe</mat-label>
+          <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
+            <mat-option value="GROUPE I">GROUPE I (Agents et Employés)</mat-option>
+            <mat-option value="GROUPE II">GROUPE II (Agents de Maîtrise et Cadres moyens)</mat-option>
+            <mat-option value="GROUPE III">GROUPE III (Cadres et Cadres Supérieurs)</mat-option>
           </mat-select>
         </mat-form-field>
       </div>

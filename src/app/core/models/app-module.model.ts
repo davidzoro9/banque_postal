@@ -48,5 +48,17 @@ export const APP_MODULES: AppModule[] = [
     description: 'Structure organisationnelle et référentiels de base',
     permissions: ['donnees-base.view']
   },
+  {
+    id: 'profils',
+    name: 'Profils & Habilitations',
+    shortName: 'PROFIL',
+    icon: 'admin_panel_settings',
+    color: '#0060B3',
+    gradientFrom: '#004080',
+    gradientTo: '#0060B3',
+    route: '/profils',
+    description: 'Gestion des profils, rôles, droits d\'accès, utilisateurs et manuel d\'utilisation',
+    permissions: ['profils.view']
+  }
 ];
 

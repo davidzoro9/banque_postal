@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -60,7 +60,7 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Grade</mat-label>
+              <mat-label>Groupe</mat-label>
               <mat-select formControlName="grade">
                 <mat-option value="">— Aucun —</mat-option>
                 @for (g of grades$ | async; track g.code) {
