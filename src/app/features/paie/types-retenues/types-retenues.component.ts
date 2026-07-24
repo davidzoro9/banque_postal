@@ -170,7 +170,7 @@ export class TypesRetenuesComponent implements OnInit {
   }
 
   chargerTypesRetenues(): void {
-    const saved = localStorage.getItem('sigrh_types_retenues_v2');
+    const saved = localStorage.getItem('sigrh_types_retenues_v3');
     if (saved) {
       try {
         this.typesRetenues = JSON.parse(saved);
@@ -178,21 +178,24 @@ export class TypesRetenuesComponent implements OnInit {
       } catch (e) {}
     }
 
-    // Default initial types as requested (Part Employeur, Part Agent & Standard types)
+    // Reference Types de Retenues sur Salaire
     this.typesRetenues = [
-      { id: 1, code: 'TR-PATRONALE', libelle: 'Part Employeur',           description: 'Part de cotisation patronale prise en charge directement par l\'entreprise', actif: true },
-      { id: 2, code: 'TR-SALARIALE', libelle: 'Part Agent',               description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'employé', actif: true },
-      { id: 3, code: 'TR-SOCIALE',   libelle: 'Cotisation Sociale (CNSS/CARFO)', description: 'Sécurité sociale obligatoire et régimes de retraite légaux', actif: true },
-      { id: 4, code: 'TR-FISCALE',   libelle: 'Retenue Fiscale (IUTS/TPA)', description: 'Impôts directs et taxes prélevés sur les traitements et salaires', actif: true },
-      { id: 5, code: 'TR-ASSURANCE', libelle: 'Assurance & Mutuelle Santé',description: 'Prélèvements pour mutuelle complémentaire et assurance groupe santé', actif: true },
-      { id: 6, code: 'TR-PRET',      libelle: 'Remboursement Prêt & Avance',description: 'Déduction pour remboursement des prêts internes ou acomptes sur salaire', actif: true }
+      { id: 1, code: 'TR-PATRONALE', libelle: 'Part Employeur',           description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
+      { id: 2, code: 'TR-SALARIALE', libelle: 'Part Agent',               description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'agent', actif: true },
+      { id: 3, code: 'TR-SOCIALE',   libelle: 'Cotisation Sociale (CNSS/CARFO)', description: 'Sécurité sociale obligatoire et régimes de retraite de base légaux', actif: true },
+      { id: 4, code: 'TR-RETRAITE',  libelle: 'Retraite Complémentaire (CRRAE)', description: 'Caisse de retraite complémentaire bancaire UMOA et fonds de pension', actif: true },
+      { id: 5, code: 'TR-FISCALE',   libelle: 'Retenue Fiscale (IUTS/TPA)', description: 'Impôt Unique sur Traitements & Salaires et Taxes patronales', actif: true },
+      { id: 6, code: 'TR-ASSURANCE', libelle: 'Assurance Groupe & Santé', description: 'Prélèvements pour assurance maladie complémentaire groupe entreprise', actif: true },
+      { id: 7, code: 'TR-MUTUELLE',  libelle: 'Mutuelle Interne (MUPER)',  description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel', actif: true },
+      { id: 8, code: 'TR-PRET',      libelle: 'Remboursement Prêt & Avance',description: 'Remboursement des prêts équipements, avances et acomptes sur salaire', actif: true },
+      { id: 9, code: 'TR-SYNDICAT',  libelle: 'Cotisation Syndicale',      description: 'Cotisation mensuelle d\'adhésion syndicale du personnel', actif: true }
     ];
 
     this.sauvegarderLocal();
   }
 
   sauvegarderLocal(): void {
-    localStorage.setItem('sigrh_types_retenues_v2', JSON.stringify(this.typesRetenues));
+    localStorage.setItem('sigrh_types_retenues_v3', JSON.stringify(this.typesRetenues));
   }
 
   getFilteredTypes(): TypeRetenue[] {

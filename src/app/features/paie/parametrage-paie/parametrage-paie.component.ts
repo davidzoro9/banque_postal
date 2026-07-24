@@ -287,7 +287,7 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   chargerTypesOptions(): void {
-    const savedTypes = localStorage.getItem('sigrh_types_retenues_v2');
+    const savedTypes = localStorage.getItem('sigrh_types_retenues_v3');
     if (savedTypes) {
       try {
         const parsed = JSON.parse(savedTypes);
@@ -299,7 +299,7 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   chargerRules(): void {
-    const saved = localStorage.getItem('sigrh_retenues_v7');
+    const saved = localStorage.getItem('sigrh_retenues_v8');
     if (saved) {
       try {
         this.rules = JSON.parse(saved);
@@ -307,62 +307,117 @@ export class ParametragePaieComponent implements OnInit {
       } catch (e) {}
     }
 
-    // Retenues avec 2 sous-lignes distinctes (Type & Taux)
+    // Référentiel des Retenues sur Salaire avec 2 sous-lignes distinctes (Type & Taux)
     this.rules = [
       {
         id: 1,
         code: 'RET-CNSS',
-        libelle: 'Cotisation Sociale CNSS',
-        partEmployeurType: 'Part Employeur',
+        libelle: 'Cotisation Sociale CNSS (Caisse Nationale)',
+        partEmployeurType: 'Part Employeur (CNSS Patronale)',
         partEmployeurPct: 16.0,
-        partAgentType: 'Part Agent',
+        partAgentType: 'Part Agent (CNSS Salariale)',
         partAgentPct: 5.5,
         actif: true,
-        description: 'Sécurité sociale obligatoire (Plafond 600 000 FCFA)'
+        description: 'Sécurité sociale obligatoire - Régime général (Plafond mensuel 600 000 FCFA)'
       },
       {
         id: 2,
-        code: 'RET-CRRAE',
-        libelle: 'Retraite Complémentaire CRRAE-UMOA',
-        partEmployeurType: 'Part Employeur',
-        partEmployeurPct: 10.0,
-        partAgentType: 'Part Agent',
-        partAgentPct: 6.0,
+        code: 'RET-CARFO',
+        libelle: 'Cotisation CARFO (Régime Autonome)',
+        partEmployeurType: 'Part Employeur (CARFO Patronale)',
+        partEmployeurPct: 14.0,
+        partAgentType: 'Part Agent (CARFO Salariale)',
+        partAgentPct: 8.0,
         actif: true,
-        description: 'Régime de retraite complémentaire bancaire UMOA'
+        description: 'Caisse Autonome de Retraite des Fonctionnaires et agents détachés'
       },
       {
         id: 3,
-        code: 'RET-IUTS',
-        libelle: 'Impôt Unique sur Traitements (IUTS)',
-        partEmployeurType: 'Part Employeur (Exonéré)',
-        partEmployeurPct: 0.0,
-        partAgentType: 'Part Agent (Retenue Fiscale)',
-        partAgentPct: 10.0,
+        code: 'RET-CRRAE',
+        libelle: 'Retraite Complémentaire CRRAE-UMOA',
+        partEmployeurType: 'Part Employeur (CRRAE Patronale)',
+        partEmployeurPct: 10.0,
+        partAgentType: 'Part Agent (CRRAE Salariale)',
+        partAgentPct: 6.0,
         actif: true,
-        description: 'Impôt direct retenu à la source selon le barème progressif'
+        description: 'Régime de retraite complémentaire bancaire UMOA par répartition avec épargne'
       },
       {
         id: 4,
-        code: 'RET-ASSUR',
-        libelle: 'Assurance Maladie Groupe',
-        partEmployeurType: 'Part Employeur (50%)',
-        partEmployeurPct: 50.0,
-        partAgentType: 'Part Agent (50%)',
-        partAgentPct: 50.0,
+        code: 'RET-IUTS',
+        libelle: 'Impôt Unique sur Traitements et Salaires (IUTS)',
+        partEmployeurType: 'Part Employeur (Exonéré)',
+        partEmployeurPct: 0.0,
+        partAgentType: 'Part Agent (Retenue Fiscale IUTS)',
+        partAgentPct: 10.0,
         actif: true,
-        description: 'Couverture santé groupe entreprise'
+        description: 'Impôt direct retenu à la source selon le barème progressif officiel (2% à 30%)'
       },
       {
         id: 5,
+        code: 'RET-TPA',
+        libelle: 'Taxe Patronale sur les Salaires (TPA/TFP)',
+        partEmployeurType: 'Part Employeur (Taxe Patronale TPA)',
+        partEmployeurPct: 3.0,
+        partAgentType: 'Part Agent (Exonéré)',
+        partAgentPct: 0.0,
+        actif: true,
+        description: 'Taxe patronale d\'apprentissage et de formation professionnelle versée au Trésor'
+      },
+      {
+        id: 6,
+        code: 'RET-ASSUR',
+        libelle: 'Assurance Maladie Groupe & Hospitalisation',
+        partEmployeurType: 'Part Employeur (Prise en charge 50%)',
+        partEmployeurPct: 50.0,
+        partAgentType: 'Part Agent (Cotisation 50%)',
+        partAgentPct: 50.0,
+        actif: true,
+        description: 'Couverture santé complémentaire groupe entreprise (Couverture 80% soins & pharmacie)'
+      },
+      {
+        id: 7,
         code: 'RET-MUTUELLE',
-        libelle: 'Mutuelle de Santé Interne',
+        libelle: 'Mutuelle de Santé & Entraide (MUPER)',
         partEmployeurType: 'Part Employeur',
         partEmployeurPct: 0.0,
-        partAgentType: 'Part Agent (Mutuelle)',
+        partAgentType: 'Part Agent (Cotisation Mutuelle 2%)',
         partAgentPct: 2.0,
         actif: true,
-        description: 'Cotisation mutuelle du personnel (2% du salaire de base)'
+        description: 'Cotisation mutuelle d\'entraide interne du personnel (Prêts d\'urgence & solidarité)'
+      },
+      {
+        id: 8,
+        code: 'RET-PRET-EQP',
+        libelle: 'Remboursement Prêt Équipement & Véhicule',
+        partEmployeurType: 'Part Employeur',
+        partEmployeurPct: 0.0,
+        partAgentType: 'Part Agent (Prélèvement Prêt)',
+        partAgentPct: 15.0,
+        actif: true,
+        description: 'Mensualité de remboursement de prêt interne équipement ou acquisition véhicule'
+      },
+      {
+        id: 9,
+        code: 'RET-AVANCE',
+        libelle: 'Remboursement Avance & Acompte sur Salaire',
+        partEmployeurType: 'Part Employeur',
+        partEmployeurPct: 0.0,
+        partAgentType: 'Part Agent (Acompte Salaire)',
+        partAgentPct: 10.0,
+        actif: true,
+        description: 'Récupération mensuelle des acomptes et avances sur salaire accordés au cours du mois'
+      },
+      {
+        id: 10,
+        code: 'RET-SYNDICAT',
+        libelle: 'Cotisation Syndicale du Personnel',
+        partEmployeurType: 'Part Employeur',
+        partEmployeurPct: 0.0,
+        partAgentType: 'Part Agent (Adhésion Syndicale)',
+        partAgentPct: 1.0,
+        actif: true,
+        description: 'Prélèvement d\'adhésion au syndicat des travailleurs de l\'établissement bancaire'
       }
     ];
 
@@ -370,7 +425,7 @@ export class ParametragePaieComponent implements OnInit {
   }
 
   sauvegarderLocal(): void {
-    localStorage.setItem('sigrh_retenues_v7', JSON.stringify(this.rules));
+    localStorage.setItem('sigrh_retenues_v8', JSON.stringify(this.rules));
   }
 
   ouvrirFormulaire(): void {
