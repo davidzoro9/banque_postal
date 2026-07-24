@@ -10,34 +10,6 @@
     </div>
   </div>
 
-  <div class="kpi-grid">
-    @for (kpi of kpis; track kpi.label) {
-      <mat-card class="kpi-card">
-        <mat-card-content>
-          <div class="kpi-icon" [style.background-color]="kpi.color + '1A'" [style.color]="kpi.color">
-            <mat-icon>{{ kpi.icon }}</mat-icon>
-          </div>
-          <div class="kpi-info">
-            <span class="kpi-value">{{ kpi.value }}</span>
-            <span class="kpi-label">{{ kpi.label }}</span>
-            <span class="kpi-sub">{{ kpi.sub }}</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
-    }
-  </div>
-
-  <div class="section-title">Actions rapides de paramétrage</div>
-  <div class="quick-actions-row">
-    @for (qa of quickActions; track qa.route) {
-      <button mat-raised-button class="qa-pill"
-              [style.background-color]="qa.color"
-              (click)="navigate(qa.route)">
-        <mat-icon>{{ qa.icon }}</mat-icon>{{ qa.label }}
-      </button>
-    }
-  </div>
-
   <div class="section-title">Espaces de paramétrage général</div>
   <div class="config-grid">
     @for (c of configuration; track c.section) {
