@@ -11,6 +11,7 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
     children: [
       { id: 'emploi',           label: 'Emploi',                   icon: 'work',                route: '/donnees-base/admin/emploi'           },
       { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
       { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
       { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
@@ -24,8 +25,6 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
       { id: 'param-indemnite',  label: 'Indemnité',                icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'types-retenues',   label: 'Type retenu',              icon: 'money_off',           route: '/paie/types-retenues'                 },
       { id: 'param-paie-taux',  label: 'Retenu',                   icon: 'tune',                route: '/paie/parametrage'                    },
-
-      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
       { id: 'ville',            label: 'Villes',                   icon: 'location_city',        route: '/donnees-base/admin/ville'            },
       { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
       { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
