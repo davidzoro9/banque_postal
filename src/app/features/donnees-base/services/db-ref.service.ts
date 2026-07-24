@@ -538,13 +538,29 @@ export class DbRefService {
     return of(items);
   }
 
-  private isSameItem(a: RefItem, b: RefItem, type: string): boolean {
-    if (a.id && b.id && a.id === b.id) return true;
+  private isSameItem(a: RefItem, b: RefItem, type: string, originalCode?: string): boolean {
+    if (a.id && b.id && String(a.id) === String(b.id)) return true;
+
+    const targetCode = (originalCode || b.code || '').trim().toUpperCase();
+    const aCode = (a.code || '').trim().toUpperCase();
+    const bCode = (b.code || '').trim().toUpperCase();
+
     if (type === 'grille-salariale') {
-      return (a.code?.toUpperCase() === b.code?.toUpperCase()) &&
-             (String(a.echellon) === String(b.echellon));
+      const aCat = (a.categorie || a.code || '').trim().toUpperCase();
+      const targetCat = (b.categorie || targetCode || '').trim().toUpperCase();
+      const aEch = String(a.echellon || '1').trim();
+      const bEch = String(b.echellon || '1').trim();
+      return (aCat === targetCat || aCode === targetCode) && (aEch === bEch);
     }
-    return a.code === b.code;
+
+    if (type === 'param-indemnite') {
+      const aTypeInd = (a.typeIndemnite || a.libelle || '').trim().toUpperCase();
+      const bTypeInd = (b.typeIndemnite || b.libelle || '').trim().toUpperCase();
+      return (aCode.length > 0 && (aCode === targetCode || aCode === bCode)) ||
+             (aTypeInd.length > 0 && aTypeInd === bTypeInd && a.grade === b.grade && a.fonction === b.fonction && a.categorie === b.categorie);
+    }
+
+    return (aCode.length > 0 && (aCode === targetCode || aCode === bCode));
   }
 
   // ─── ADD ───────────────────────────────────────────────────────────────────
@@ -552,36 +568,29 @@ export class DbRefService {
     const mapping = BACKEND_MAP[type];
     const currentList = this.getCurrentItems(type);
 
+    const addLocalState = (newItem: RefItem): RefItem[] => {
+      const newList = [...currentList.filter(i => !this.isSameItem(i, newItem, type)), newItem];
+      this.getSubject(type).next(newList);
+      this.saveMockItems(type, newList);
+      return newList;
+    };
+
     if (mapping) {
       const body = mapping.toBack(item);
       return this.http.post<any>(`${environment.apiUrl}/${mapping.segment}/create`, body).pipe(
         map(dto => mapping.toFront(dto)),
-        map(newItem => {
-          const subject = this.getSubject(type);
-          const newList = [...currentList.filter(i => !this.isSameItem(i, newItem, type)), newItem];
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return newList;
-        }),
+        map(newItem => addLocalState(newItem)),
         catchError(err => {
           console.warn(`[DbRefService] Backend post error for ${type}, updating local state:`, err);
-          const subject = this.getSubject(type);
-          const newItem: RefItem = { ...item, id: Date.now().toString() };
-          const newList = [...currentList.filter(i => !this.isSameItem(i, newItem, type)), newItem];
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return of(newList);
+          const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
+          return of(addLocalState(newItem));
         })
       );
     }
 
     // Mock
-    const subject = this.getSubject(type);
-    const newItem: RefItem = { ...item, id: Date.now().toString() };
-    const newList = [...currentList.filter(i => !this.isSameItem(i, newItem, type)), newItem];
-    subject.next(newList);
-    this.saveMockItems(type, newList);
-    return of(newList);
+    const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
+    return of(addLocalState(newItem));
   }
 
   // ─── UPDATE ────────────────────────────────────────────────────────────────
@@ -590,36 +599,35 @@ export class DbRefService {
     const id = updatedItem.id;
     const currentList = this.getCurrentItems(type);
 
-    if (mapping && id && !id.startsWith('mock_')) {
+    const updateLocalState = (itemToSave: RefItem): RefItem[] => {
+      let found = false;
+      const newList = currentList.map(i => {
+        if (this.isSameItem(i, itemToSave, type, originalCode)) {
+          found = true;
+          return { ...i, ...itemToSave };
+        }
+        return i;
+      });
+      const finalItems = found ? newList : [...currentList, itemToSave];
+      this.getSubject(type).next(finalItems);
+      this.saveMockItems(type, finalItems);
+      return finalItems;
+    };
+
+    if (mapping && id && !String(id).startsWith('mock_') && !String(id).startsWith('loc_')) {
       const body = mapping.toBackUpdate(updatedItem);
       return this.http.put<any>(`${environment.apiUrl}/${mapping.segment}/${id}`, body).pipe(
         map(dto => mapping.toFront(dto)),
-        map(updated => {
-          const subject = this.getSubject(type);
-          const newList = currentList.map(i => this.isSameItem(i, updatedItem, type) ? { ...i, ...updated } : i);
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return newList;
-        }),
+        map(updated => updateLocalState(updated)),
         catchError(err => {
           console.warn(`[DbRefService] Backend put error for ${type}, updating local state:`, err);
-          const subject = this.getSubject(type);
-          const newList = currentList.map(i => this.isSameItem(i, updatedItem, type) ? { ...i, ...updatedItem } : i);
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return of(newList);
+          return of(updateLocalState(updatedItem));
         })
       );
     }
 
-    // Mock
-    const subject = this.getSubject(type);
-    const newList = currentList.map(i =>
-      this.isSameItem(i, updatedItem, type) ? { ...i, ...updatedItem } : i
-    );
-    subject.next(newList);
-    this.saveMockItems(type, newList);
-    return of(newList);
+    // Local / Mock update
+    return of(updateLocalState(updatedItem));
   }
 
   // ─── DELETE ────────────────────────────────────────────────────────────────
@@ -627,37 +635,32 @@ export class DbRefService {
     const mapping = BACKEND_MAP[type];
     const subject = this.getSubject(type);
     const currentList = this.getCurrentItems(type);
-    const item = currentList.find(i => i.code === code);
+    const item = currentList.find(i => (i.code || '').toUpperCase() === (code || '').toUpperCase());
 
-    if (mapping && item?.id) {
+    const deleteLocalState = (): RefItem[] => {
+      const newList = currentList.filter(i => !this.isSameItem(i, { code } as RefItem, type, code));
+      subject.next(newList);
+      this.saveMockItems(type, newList);
+      return newList;
+    };
+
+    if (mapping && item?.id && !String(item.id).startsWith('mock_') && !String(item.id).startsWith('loc_')) {
       return this.http.delete(`${environment.apiUrl}/${mapping.segment}/${item.id}`, { responseType: 'text' }).pipe(
-        map(() => {
-          const newList = currentList.filter(i => i.code !== code && i.id !== item.id);
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return newList;
-        }),
+        map(() => deleteLocalState()),
         catchError(err => {
           console.warn(`[DbRefService] Backend delete error for ${type}, updating local state:`, err);
-          const newList = currentList.filter(i => i.code !== code && i.id !== item.id);
-          subject.next(newList);
-          this.saveMockItems(type, newList);
-          return of(newList);
+          return of(deleteLocalState());
         })
       );
     }
 
-    // Mock
-    const newList = currentList.filter(i => i.code !== code);
-    subject.next(newList);
-    this.saveMockItems(type, newList);
-    return of(newList);
+    return of(deleteLocalState());
   }
 
   // ─── TOGGLE STATUS ─────────────────────────────────────────────────────────
   toggleItemStatus(type: string, code: string): Observable<RefItem[]> {
     const currentList = this.getCurrentItems(type);
-    const item = currentList.find(i => i.code === code);
+    const item = currentList.find(i => (i.code || '').toUpperCase() === (code || '').toUpperCase());
     if (!item) return of(currentList);
 
     const updatedItem: RefItem = { ...item, actif: !item.actif };
