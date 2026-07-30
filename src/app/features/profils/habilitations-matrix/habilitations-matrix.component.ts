@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { AuthService } from '../../../core/services/auth.service';
 
 export interface ActionPermission {
   id: string;
@@ -51,13 +52,32 @@ export class HabilitationsMatrixComponent implements OnInit {
 
   savedNotification = false;
 
-  ngOnInit(): void {}
+  constructor(private authService: AuthService) {}
+
+  ngOnInit(): void {
+    const saved = localStorage.getItem('bpbf_habilitations_matrix');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsed.forEach((item: ActionPermission) => {
+            const found = this.matrix.find(m => m.actionCode === item.actionCode || m.id === item.id);
+            if (found && item.rolesAccess) {
+              found.rolesAccess = { ...item.rolesAccess };
+            }
+          });
+        }
+      } catch (e) {}
+    }
+  }
 
   toggleAccess(item: ActionPermission, roleCode: string): void {
     item.rolesAccess[roleCode] = !item.rolesAccess[roleCode];
   }
 
   savePermissions(): void {
+    localStorage.setItem('bpbf_habilitations_matrix', JSON.stringify(this.matrix));
+    this.authService.refreshUserPermissions();
     this.savedNotification = true;
     setTimeout(() => {
       this.savedNotification = false;

@@ -15,8 +15,6 @@
     </button>
   </div>
 
-
-
   <!-- Filtre / Recherche -->
   <mat-card class="filter-card">
     <mat-card-content>
@@ -24,7 +22,7 @@
         <mat-label>Rechercher…</mat-label>
         <mat-icon matPrefix>search</mat-icon>
         <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()"
-               placeholder="Groupe, catégorie, échelon, montant…">
+               placeholder="Code, libellé, description, montant…">
         @if (searchQuery) {
           <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
             <mat-icon>close</mat-icon>
@@ -205,6 +203,16 @@
               <td mat-cell *matCellDef="let row"><strong>{{ row.libelle }}</strong></td>
             </ng-container>
 
+            <!-- Colonne spécifique à Paramétrage Retenue -->
+            <ng-container matColumnDef="typeRetenue">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Type de retenue</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="code-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700;">
+                  {{ row.typeRetenue || row.typeIndemnite || 'Part Agent' }}
+                </span>
+              </td>
+            </ng-container>
+
             <!-- Colonnes spécifiques à Paramétrage Indemnité -->
             <ng-container matColumnDef="typeIndemnite">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Type d'indemnité</th>
@@ -247,10 +255,41 @@
             </ng-container>
 
             <ng-container matColumnDef="taux">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Taux (FCFA)</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'type-retenue-emploi' ? 'Taux / Pourcentage (%)' : 'Taux (FCFA)' }}</th>
               <td mat-cell *matCellDef="let row">
-                <span style="font-weight: 600; color: #2e7d32; font-size: 13px;">
-                  {{ formatMontant(row.taux ?? row.montant ?? 0) }} FCFA
+                <span style="font-weight: 700; color: #2e7d32; font-size: 13px;">
+                  @if (type === 'type-retenue-emploi') {
+                    {{ row.taux && row.taux > 0 ? row.taux + ' %' : (row.description?.includes('Barème') ? 'Barème Progressif' : (row.description?.includes('Variable') ? 'Montant Variable' : 'Mensualité Fixe')) }}
+                  } @else {
+                    {{ formatMontant(row.taux ?? row.montant ?? 0) }} FCFA
+                  }
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="tauxExoneration">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Taux Exonéré (%)</th>
+              <td mat-cell *matCellDef="let row">
+                <span style="font-weight: 700; color: #2e7d32; background: #e8f5e9; padding: 4px 10px; border-radius: 12px;">
+                  {{ row.tauxExoneration ?? 0 }} %
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="plafondExoneration">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Plafond Exonéré (FCFA)</th>
+              <td mat-cell *matCellDef="let row">
+                <span style="font-weight: 600; color: #333; background: #f5f5f5; padding: 4px 10px; border-radius: 12px;">
+                  {{ row.plafondExoneration && row.plafondExoneration > 0 ? (row.plafondExoneration | number:'1.0-0') + ' FCFA' : 'Sans plafond' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="tauxAbattement">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Taux d'abattement IUTS (%)</th>
+              <td mat-cell *matCellDef="let row">
+                <span style="font-weight: 700; color: #0060B3; background: #e3f2fd; padding: 4px 10px; border-radius: 12px;">
+                  {{ row.tauxAbattement ?? 20 }} %
                 </span>
               </td>
             </ng-container>
@@ -311,8 +350,44 @@
   
   <mat-dialog-content [formGroup]="formGroup" class="dialog-content" style="display: flex; flex-direction: column; gap: 16px; padding-top: 8px; min-width: 420px;">
     
-    <!-- CHAMPS DÉDIÉS POUR LE PARAMÉTRAGE D'INDEMNITÉ -->
-    @if (type === 'param-indemnite') {
+    <!-- CHAMPS DÉDIÉS POUR LE PARAMÉTRAGE DES RETENUES -->
+    @if (type === 'type-retenue-emploi') {
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Code (Référence)</mat-label>
+        <input matInput formControlName="code" placeholder="Ex: RET-CNSS-SAL">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Libellé de la retenue</mat-label>
+        <input matInput formControlName="libelle" placeholder="Ex: Cotisation Sociale CNSS (Caisse Nationale)">
+        @if (formGroup.get('libelle')?.hasError('required')) {
+          <mat-error>Le libellé est obligatoire</mat-error>
+        }
+      </mat-form-field>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Type de retenue</mat-label>
+          <mat-select formControlName="typeRetenue" placeholder="Sélectionner le type">
+            @for (tr of typesRetenueList; track tr) {
+              <mat-option [value]="tr">{{ tr }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Pourcentage / Taux (%)</mat-label>
+          <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon>
+          <input matInput type="number" formControlName="taux" placeholder="Ex: 5.5" min="0" max="100" step="0.1">
+          <mat-hint>0 si Barème ou Montant Variable</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Description & Détails de calcul</mat-label>
+        <textarea matInput formControlName="description" rows="3" placeholder="Ex: Cotisation sociale obligatoire à la charge du salarié (5,5% du brut plafonné)..."></textarea>
+      </mat-form-field>
+    } @else if (type === 'param-indemnite') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Code (Référence)</mat-label>
         <input matInput formControlName="code" placeholder="Ex: PI-001">
@@ -324,23 +399,29 @@
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Type d'indemnité</mat-label>
         <mat-select formControlName="typeIndemnite" placeholder="Sélectionner un type d'indemnité">
+          <mat-optgroup label="INDEMNITÉS LIÉES À L'EMPLOI (Ordinaires)">
+            <mat-option value="Parametrage Indemnité/Astreinte">Parametrage Indemnité/Astreinte</mat-option>
+            <mat-option value="Parametrage Indemnité/Logement">Parametrage Indemnité/Logement</mat-option>
+            <mat-option value="Parametrage Indemnité/Technicité">Parametrage Indemnité/Technicité</mat-option>
+            <mat-option value="Parametrage Indemnité/Resp.Financière">Parametrage Indemnité/Resp.Financière</mat-option>
+          </mat-optgroup>
+          <mat-optgroup label="INDEMNITÉS LIÉES À L'EMPLOI (Spécifiques)">
+            <mat-option value="Parametrage Indemnité/Spécifique">Parametrage Indemnité/Spécifique</mat-option>
+          </mat-optgroup>
+          <mat-optgroup label="INDEMNITÉS LIÉES À LA FONCTION">
+            <mat-option value="Parametrage Indemnité/Responsabilité">Parametrage Indemnité/Responsabilité</mat-option>
+          </mat-optgroup>
           @for (ti of typesIndemnite; track ti.id) {
             <mat-option [value]="ti.libelle">{{ ti.libelle }} ({{ ti.code }})</mat-option>
-          }
-          @if (typesIndemnite.length === 0) {
-            <mat-option value="Indemnité de Logement">Indemnité de Logement</mat-option>
-            <mat-option value="Indemnité de Transport">Indemnité de Transport</mat-option>
-            <mat-option value="Indemnité de Fonction">Indemnité de Fonction</mat-option>
-            <mat-option value="Indemnité de Responsabilité">Indemnité de Responsabilité</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Fonction de l'employé</mat-label>
+          <mat-label>Fonction de l'employé (Optionnel)</mat-label>
           <mat-select formControlName="fonction" placeholder="Sélectionner une fonction">
-            <mat-option value="">— Toutes les fonctions —</mat-option>
+            <mat-option value="">Agent simple (Sans fonction)</mat-option>
             @for (f of fonctions; track f.id) {
               <mat-option [value]="f.libelle">{{ f.libelle }} ({{ f.code }})</mat-option>
             }
@@ -350,7 +431,7 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Groupe</mat-label>
           <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
-            <mat-option value="">— Tous les groupes —</mat-option>
+            <mat-option value="">Tous les groupes</mat-option>
             @for (g of grades; track g.id) {
               <mat-option [value]="g.libelle">{{ g.libelle }} ({{ g.code }})</mat-option>
             }
@@ -362,7 +443,7 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Catégorie professionnelle</mat-label>
           <mat-select formControlName="categorie" placeholder="Sélectionner une catégorie">
-            <mat-option value="">— Toutes les catégories —</mat-option>
+            <mat-option value="">Toutes les catégories</mat-option>
             @for (c of categoriesList; track c) {
               <mat-option [value]="c">{{ c }}</mat-option>
             }
@@ -375,21 +456,27 @@
           <input matInput type="number" formControlName="taux" placeholder="Ex: 50000" min="0">
         </mat-form-field>
       </div>
+
+      <!-- Bandeau explicatif règle de non-cumul -->
+      <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: #795548; margin-top: 4px;">
+        <mat-icon style="color: #ff9800; font-size: 18px; width: 18px; height: 18px; margin-top: 2px;">info</mat-icon>
+        <div>
+          <strong>Règle de Non-Cumul BPBF :</strong>
+          <br>
+          • <em>Agent simple</em> : l'indemnité est calculée sur la base de sa <strong>Catégorie professionnelle (Emploi)</strong>.
+          <br>
+          • <em>Agent avec Fonction</em> : l'indemnité liée à la <strong>Fonction</strong> prévaut et <strong>ne se cumule pas</strong> avec l'indemnité liée à l'emploi.
+        </div>
+      </div>
     } @else if (type !== 'grille-salariale') {
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Code</mat-label>
-        <input matInput formControlName="code" placeholder="Ex: EMP-001">
-        @if (formGroup.get('code')?.hasError('required')) {
-          <mat-error>Le code est obligatoire</mat-error>
-        }
-        @if (formGroup.get('code')?.hasError('maxlength')) {
-          <mat-error>Le code ne doit pas dépasser 25 caractères</mat-error>
-        }
+        <mat-label>Code (Référence)</mat-label>
+        <input matInput formControlName="code" placeholder="Ex: CAT-001">
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Libellé</mat-label>
-        <input matInput formControlName="libelle" placeholder="Ex: Directeur Général">
+        <input matInput formControlName="libelle" placeholder="Ex: 1ÈRE CATEGORIE / Libellé de l'élément">
         @if (formGroup.get('libelle')?.hasError('required')) {
           <mat-error>Le libellé est obligatoire</mat-error>
         }
@@ -398,10 +485,52 @@
         }
       </mat-form-field>
 
-      @if (type === 'departement') {
+      <!-- Indication de Rattachement pour Direction et Département -->
+      @if (type === 'direction' || type === 'departement') {
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+          <mat-icon style="color: #0060B3;">domain</mat-icon>
+          <span style="font-size: 13px; color: #0369a1; font-weight: 600;">
+            Rattachement direct : Direction Générale (Siège Général)
+          </span>
+        </div>
+      }
+
+      @if (type === 'type-indemnite') {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <mat-form-field appearance="outline" style="width: 100%;">
+            <mat-label>Taux Exonéré (%)</mat-label>
+            <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon>
+            <input matInput type="number" formControlName="tauxExoneration" placeholder="Ex: 20" min="0" max="100">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="width: 100%;">
+            <mat-label>Plafond Exonéré (FCFA)</mat-label>
+            <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">shield</mat-icon>
+            <input matInput type="number" formControlName="plafondExoneration" placeholder="Ex: 70000" min="0">
+          </mat-form-field>
+        </div>
+      }
+
+      @if (type === 'categorie') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Directeur de ce département</mat-label>
-          <input matInput formControlName="description" placeholder="Ex: Jean Zongo">
+          <mat-label>Taux d'abattement IUTS (%)</mat-label>
+          <input matInput type="number" formControlName="tauxAbattement" placeholder="Ex: 20" min="0" max="100">
+          <mat-hint>Taux d'abattement sur le salaire brut servant à calculer l'IUTS</mat-hint>
+        </mat-form-field>
+      }
+
+      @if (type === 'departement' || type === 'direction') {
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Directeur de ce {{ type === 'departement' ? 'département' : 'cette direction' }}</mat-label>
+          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">person</mat-icon>
+          <mat-select formControlName="description" placeholder="Sélectionner le directeur">
+            <mat-option value="">Aucun responsable désigné</mat-option>
+            @for (emp of directeursList; track emp.libelle) {
+              <mat-option [value]="emp.libelle">
+                {{ emp.libelle }} @if (emp.description) { ({{ emp.description }}) }
+              </mat-option>
+            }
+          </mat-select>
         </mat-form-field>
       } @else {
         <mat-form-field appearance="outline" style="width: 100%;">
@@ -443,42 +572,25 @@
       </div>
     }
 
-    <!-- Select Département — pour Direction -->
-    @if (type === 'direction') {
-      <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Département rattaché</mat-label>
-        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
-        <mat-select formControlName="departementId" placeholder="Sélectionner un département">
-          <mat-option [value]="null">— Aucun —</mat-option>
-          @for (dep of departements; track dep.id) {
-            <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    }
-
-    <!-- Selects Direction + Département — pour Service -->
+    <!-- Select unique combiné Direction / Département — pour Service -->
     @if (type === 'service') {
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Direction rattachée</mat-label>
+        <mat-label>Rattachement (Direction ou Département)</mat-label>
         <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
-        <mat-select formControlName="directionId" placeholder="Sélectionner une direction">
-          <mat-option [value]="null">— Aucune —</mat-option>
-          @for (dir of directions; track dir.id) {
-            <mat-option [value]="dir.id">{{ dir.libelle }}</mat-option>
-          }
+        <mat-select formControlName="directionId" placeholder="Sélectionner une Direction ou un Département">
+          <mat-option value="">Aucun</mat-option>
+          <mat-optgroup label="Directions (Niveau 2)">
+            @for (dir of directions; track dir.id || dir.code) {
+              <mat-option [value]="dir.id || dir.code">[Direction] {{ dir.libelle }}</mat-option>
+            }
+          </mat-optgroup>
+          <mat-optgroup label="Départements (Niveau 2)">
+            @for (dep of departements; track dep.id || dep.code) {
+              <mat-option [value]="dep.id || dep.code">[Département] {{ dep.libelle }}</mat-option>
+            }
+          </mat-optgroup>
         </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Département rattaché</mat-label>
-        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">domain</mat-icon>
-        <mat-select formControlName="departementId" placeholder="Sélectionner un département">
-          <mat-option [value]="null">— Aucun —</mat-option>
-          @for (dep of departements; track dep.id) {
-            <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
-          }
-        </mat-select>
+        <mat-hint>Liste combinée des Directions et Départements de rattachement</mat-hint>
       </mat-form-field>
     }
 
@@ -498,7 +610,6 @@
 
   <mat-dialog-actions align="end" style="padding-top: 12px; margin-bottom: 0;">
     <button mat-button mat-dialog-close>Annuler</button>
-    <button mat-raised-button color="primary" [disabled]="formGroup.invalid" (click)="onSubmit()">Enregistrer</button>
+    <button mat-raised-button color="primary" (click)="onSubmit()">Enregistrer</button>
   </mat-dialog-actions>
 </ng-template>
-

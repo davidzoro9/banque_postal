@@ -1,4 +1,4 @@
-﻿<!-- Portail Employé - Mon Espace Paie BPBF -->
+<!-- Portail Employé - Mon Espace Paie BPBF -->
 <div style="min-height: 100vh; background: linear-gradient(135deg, #0A2744 0%, #1B4B9A 100%); padding: 0;">
 
   <!-- Barre de navigation employé -->
@@ -56,10 +56,10 @@
           <mat-icon>lock</mat-icon> Modifier mon mot de passe
         </h3>
         @if (mdpSuccess) {
-          <div style="background: #dcfce7; color: #166534; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600;">✅ {{ mdpSuccess }}</div>
+          <div style="background: #dcfce7; color: #166534; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600;">{{ mdpSuccess }}</div>
         }
         @if (mdpError) {
-          <div style="background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600;">❌ {{ mdpError }}</div>
+          <div style="background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600;">{{ mdpError }}</div>
         }
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
           <div>
@@ -123,8 +123,9 @@
               </div>
               @if (b.etat === 'VALIDE' || b.etat === 'CLOTURE') {
                 <span style="background: #22c55e; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px;">✅ VALIDÉ</span>
+                <span style="background: #22c55e; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px;">VALIDÉ</span>
               } @else {
-                <span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px;">🟠 EN COURS</span>
+                <span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px;">EN COURS</span>
               }
             </div>
           </div>
@@ -155,7 +156,7 @@
                 <td style="text-align: right;">-{{ b.impotIUTS | number:'1.0-0' }} FCFA</td>
               </tr>
               <tr style="background: #f0fdf4; border-radius: 8px;">
-                <td style="padding: 14px 12px; font-weight: 800; color: #16a34a; font-size: 16px;">💰 NET À PAYER</td>
+                <td style="padding: 14px 12px; font-weight: 800; color: #16a34a; font-size: 16px;">NET À PAYER</td>
                 <td style="text-align: right; font-weight: 800; color: #16a34a; font-size: 18px;">{{ b.salaireNet | number:'1.0-0' }} FCFA</td>
               </tr>
             </table>

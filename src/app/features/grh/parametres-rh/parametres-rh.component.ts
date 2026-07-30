@@ -216,7 +216,7 @@ export class ParametresRhComponent implements OnInit {
     if (!id) return;
     const item = this.getItems(tab).find(i => i.id === id);
     const label = item ? item.libelle : 'cet élément';
-    const msg = `⚠️ Attention - Conflit potentiel :\n\nL'élément "${label}" risque d'être déjà lié à des dossiers existants.\n\nIl est recommandé de le DÉSACTIVER au lieu de le supprimer pour éviter toute anomalie.\n\nVoulez-vous quand même le supprimer ?`;
+    const msg = `Attention - Conflit potentiel :\n\nL'élément "${label}" risque d'être déjà lié à des dossiers existants.\n\nIl est recommandé de le DÉSACTIVER au lieu de le supprimer pour éviter toute anomalie.\n\nVoulez-vous quand même le supprimer ?`;
     if (confirm(msg)) {
       if (tab === 'typesContrats') {
         const tItem = this.typesContrats.find(i => i.id === id);
@@ -248,7 +248,7 @@ export class ParametresRhComponent implements OnInit {
 
   toggleActif(item: ParamItem): void {
     if (item.actif) {
-      const msg = `⚠️ Notification de conflit :\n\nL'élément "${item.libelle}" (${item.code}) va être désactivé.\n\nUne fois désactivé, il n'apparaîtra plus dans les sélecteurs pour les nouvelles saisies, mais restera conservé sur les dossiers enregistrés.\n\nConfirmez-vous la désactivation ?`;
+      const msg = `Notification de conflit :\n\nL'élément "${item.libelle}" (${item.code}) va être désactivé.\n\nUne fois désactivé, il n'apparaîtra plus dans les sélecteurs pour les nouvelles saisies, mais restera conservé sur les dossiers enregistrés.\n\nConfirmez-vous la désactivation ?`;
       if (!confirm(msg)) return;
     }
     const tab = this.tabs[this.activeTab];

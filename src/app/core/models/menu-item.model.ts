@@ -5,5 +5,6 @@ export interface MenuItem {
   route?: string;
   children?: MenuItem[];
   badge?: number;
+  disabled?: boolean;
   permissions?: string[];
 }

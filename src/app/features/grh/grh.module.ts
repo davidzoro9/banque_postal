@@ -45,6 +45,7 @@ import { InfosProComponent } from './employes/sections/infos-pro/infos-pro.compo
 import { CategorieComponent } from './employes/sections/categorie/categorie.component';
 import { IndemnitesComponent } from './employes/sections/indemnites/indemnites.component';
 import { ExonerationsComponent } from './employes/sections/exonerations/exonerations.component';
+import { RetenuesComponent } from './employes/sections/retenues/retenues.component';
 import { SalaireComponent } from './employes/sections/salaire/salaire.component';
 import { DossierComponent } from './employes/sections/dossier/dossier.component';
 import { NotesRhComponent } from './employes/sections/notes-rh/notes-rh.component';
@@ -54,6 +55,7 @@ import { AbsencesFormComponent } from './absences/absences-form/absences-form.co
 import { AbsencesListComponent } from './absences/absences-list/absences-list.component';
 import { ContratsListComponent } from './contrats/contrats-list/contrats-list.component';
 import { ContratsForm } from './contrats/contrats-form/contrats-form';
+import { OrganigrammeComponent } from './organigramme/organigramme.component';
 
 @NgModule({
   declarations: [
@@ -68,6 +70,7 @@ import { ContratsForm } from './contrats/contrats-form/contrats-form';
     CategorieComponent,
     IndemnitesComponent,
     ExonerationsComponent,
+    RetenuesComponent,
     SalaireComponent,
     DossierComponent,
     NotesRhComponent,
@@ -76,7 +79,8 @@ import { ContratsForm } from './contrats/contrats-form/contrats-form';
     AbsencesFormComponent,
     AbsencesListComponent,
     ContratsListComponent,
-    ContratsForm
+    ContratsForm,
+    OrganigrammeComponent
   ],
   imports: [
     CommonModule,

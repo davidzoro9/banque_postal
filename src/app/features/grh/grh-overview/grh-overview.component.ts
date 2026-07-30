@@ -1,7 +1,5 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { ModuleNavService } from '../../../core/services/module-nav.service';
-import { APP_MODULES } from '../../../core/models/app-module.model';
 
 @Component({
   selector: 'app-grh-overview',
@@ -9,36 +7,46 @@ import { APP_MODULES } from '../../../core/models/app-module.model';
   styleUrls: ['./grh-overview.component.scss'],
   standalone: false
 })
-export class GrhOverviewComponent implements OnInit {
-  module = APP_MODULES.find(m => m.id === 'grh')!;
+export class GrhOverviewComponent {
 
-  kpis = [
-    { label: 'Effectif total',          value: '248', icon: 'badge',          color: '#0060B3', sub: '+3 ce mois' },
-    { label: 'Congés en attente',       value: '12',  icon: 'event_available', color: '#FFC700', sub: 'À valider' },
-    { label: 'Contrats à renouveler',   value: '3',   icon: 'autorenew',      color: '#E53935', sub: 'Dans 30 jours' }
+  sections = [
+    {
+      title: 'Gestion des Collaborateurs',
+      badge: '148 actifs',
+      icon: 'group',
+      color: '#0288d1',
+      description: 'Annuaire complet, fiches individuelles, identité, postes et réversion CNSS/CARFO.',
+      route: '/grh/employes'
+    },
+    {
+      title: 'Congés & Absences',
+      badge: '12 demandes',
+      icon: 'event_available',
+      color: '#2e7d32',
+      description: 'Suivi des soldes de congé, calendrier des présences, validation des demandes et absences.',
+      route: '/grh/conges'
+    },
+    {
+      title: 'Suivi des Contrats',
+      badge: '8 en attente',
+      icon: 'article',
+      color: '#f57c00',
+      description: 'Gestion des types de contrats (CDI, CDD, Stage) et alertes de renouvellement automatique.',
+      route: '/grh/contrats'
+    },
+    {
+      title: 'Organigramme & Structure',
+      badge: 'Vue hiérarchique',
+      icon: 'account_tree',
+      color: '#7b1fa2',
+      description: 'Visualisation dynamique de l\'organigramme, raccordement des directions et services.',
+      route: '/grh/organigramme'
+    }
   ];
 
-  quickActions = [
-    { label: 'Nouvel employé',  icon: 'person_add',     route: '/grh/employes/nouveau', color: '#0060B3' },
-    { label: 'Valider congés',  icon: 'event_available', route: '/grh/conges',           color: '#FFC700' },
-    { label: 'Organigramme',    icon: 'account_tree',    route: '/grh/organigramme',     color: '#0060B3' }
-  ];
+  constructor(private router: Router) {}
 
-  recentEmployees = [
-    { nom: 'Sophie Martin', poste: 'Analyste financier', dept: 'Finance', date: '03/06/2026', status: 'CDI' },
-    { nom: 'Thomas Bernard', poste: 'Développeur Full Stack', dept: 'IT', date: '01/06/2026', status: 'CDI' },
-    { nom: 'Claire Dubois', poste: 'Chargée RH', dept: 'RH', date: '27/05/2026', status: 'CDD' },
-    { nom: 'Marc Leroy', poste: 'Commercial', dept: 'Ventes', date: '20/05/2026', status: 'CDI' }
-  ];
-
-  constructor(public moduleNav: ModuleNavService, private router: Router) {}
-
-  ngOnInit(): void {
-    this.moduleNav.selectModule(this.module);
-  }
-
-  navigate(route: string): void {
+  navigateTo(route: string): void {
     this.router.navigate([route]);
   }
 }
-

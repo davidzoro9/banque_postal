@@ -5,13 +5,18 @@ import { MenuItem } from '../models/menu-item.model';
 
 const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
   {
+    id: 'db-dashboard',
+    label: 'Tableau de bord DB',
+    icon: 'dashboard',
+    route: '/donnees-base'
+  },
+  {
     id: 'gestion-admin',
     label: 'Gestion administrative',
     icon: 'admin_panel_settings',
     children: [
       { id: 'emploi',           label: 'Emploi',                   icon: 'work',                route: '/donnees-base/admin/emploi'           },
       { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
-      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
       { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
       { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
@@ -21,10 +26,14 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
       { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
       { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
 
-      { id: 'type-indemnite',   label: 'Type indemnité',           icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-      { id: 'param-indemnite',  label: 'Indemnité',                icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-      { id: 'types-retenues',   label: 'Type retenu',              icon: 'money_off',           route: '/paie/types-retenues'                 },
-      { id: 'param-paie-taux',  label: 'Retenu',                   icon: 'tune',                route: '/paie/parametrage'                    },
+      { id: 'type-indemnite',   label: "Type d'indemnité",         icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
+      { id: 'param-indemnite',  label: 'Indemnités (par poste)',   icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      { id: 'types-retenues',   label: 'Type de retenue',          icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
+      { id: 'param-paie-taux',  label: 'Retenues (par emploi)',    icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
+
+      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
+      { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
+      { id: 'type-conge',       label: 'Type congé/absence',       icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
       { id: 'ville',            label: 'Villes',                   icon: 'location_city',        route: '/donnees-base/admin/ville'            },
       { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
       { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
@@ -46,17 +55,19 @@ const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
 export const MODULE_MENUS: Record<string, MenuItem[]> = {
   grh: [
     {
+      id: 'grh-dashboard',
+      label: 'Tableau de bord GA',
+      icon: 'dashboard',
+      route: '/grh'
+    },
+    {
       id: 'employes',
       label: 'Employés',
       icon: 'badge',
       children: [
         { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
         { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
-        { id: 'fiche-infos-pro',    label: 'Poste & Structure',       icon: 'work',                  route: '__emp__/infos-pro'       },
         { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
-        { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
-        { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                   route: '__emp__/indemnites'      },
-        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',           route: '__emp__/exonerations'    },
         { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
         { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
         { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },
@@ -83,6 +94,12 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
   ],
   paie: [
     {
+      id: 'paie-dashboard',
+      label: 'Tableau de bord Paie',
+      icon: 'dashboard',
+      route: '/paie'
+    },
+    {
       id: 'bulletins',
       label: 'Bulletins de paie',
       icon: 'receipt_long',
@@ -105,8 +122,8 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Retenues sur Salaire',
       icon: 'money_off',
       children: [
-        { id: 'types-retenues',   label: 'Type de retenue',      icon: 'money_off', route: '/paie/types-retenues' },
-        { id: 'parametrage-paie', label: 'Paramétrage retenue',   icon: 'tune',      route: '/paie/parametrage' }
+        { id: 'types-retenues',   label: 'Type de retenue',      icon: 'money_off', route: '/donnees-base/admin/type-retenue-employe' },
+        { id: 'parametrage-paie', label: 'Retenues (par emploi)',icon: 'tune',      route: '/donnees-base/admin/type-retenue-emploi' }
       ]
     },
     {
@@ -121,6 +138,12 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
   ],
   'donnees-base': FULL_REF_AND_PARAM_MENUS,
   'profils': [
+    {
+      id: 'profils-dashboard',
+      label: 'Tableau de bord Profils',
+      icon: 'dashboard',
+      route: '/profils'
+    },
     {
       id: 'securite-droits',
       label: 'Sécurité & Droits',
@@ -147,66 +170,76 @@ export interface QuickLink {
   label: string;
   icon: string;
   route: string;
-  color: string;
+  color?: string;
 }
 
-@Injectable({ providedIn: 'root' })
-export class ModuleNavService {
-  readonly modules: AppModule[] = APP_MODULES;
-  private activeModuleSubject = new BehaviorSubject<AppModule | null>(null);
-  private drawerOpenSubject = new BehaviorSubject<boolean>(true);
-  private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
+export const QUICK_LINKS_PER_MODULE: Record<string, QuickLink[]> = {
+  grh: [
+    { label: 'Nouveau collaborateur', icon: 'person_add', route: '/grh/employes/nouveau', color: '#0060B3' },
+    { label: 'Demande de congé', icon: 'event_available', route: '/grh/conges/nouveau', color: '#0060B3' }
+  ],
+  paie: [
+    { label: 'Générer bulletins de paie', icon: 'calculate', route: '/paie/bulletins/generer', color: '#0060B3' },
+    { label: 'Ordres de virement', icon: 'account_balance', route: '/paie/virements', color: '#0060B3' }
+  ],
+  carrieres: [
+    { label: 'Nouvelle évaluation', icon: 'rate_review', route: '/carrieres/evaluations/nouvelle', color: '#0060B3' },
+    { label: 'Plan de formation', icon: 'school', route: '/carrieres/formations', color: '#0060B3' }
+  ],
+  'donnees-base': [
+    { label: 'Catégories Professionnelles', icon: 'category', route: '/donnees-base/carriere/categorie', color: '#0060B3' },
+    { label: 'Paramétrage des Indemnités', icon: 'paid', route: '/donnees-base/admin/param-indemnite', color: '#0060B3' }
+  ],
+  profils: [
+    { label: 'Comptes Utilisateurs', icon: 'manage_accounts', route: '/profils/utilisateurs', color: '#0060B3' },
+    { label: 'Matrice des Habilitations', icon: 'checklist_rtl', route: '/profils/habilitations', color: '#0060B3' }
+  ]
+};
 
-  activeModule$: Observable<AppModule | null> = this.activeModuleSubject.asObservable();
+@Injectable({
+  providedIn: 'root'
+})
+export class ModuleNavService {
+  private activeModuleSubject = new BehaviorSubject<AppModule>(APP_MODULES[0]);
+  activeModule$: Observable<AppModule> = this.activeModuleSubject.asObservable();
+
+  private drawerOpenSubject = new BehaviorSubject<boolean>(true);
   drawerOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
+
+  private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
   sidebarOpen$: Observable<boolean> = this.sidebarOpenSubject.asObservable();
 
-  get activeModule(): AppModule | null {
+  readonly modules = APP_MODULES;
+
+  selectModule(mod: AppModule): void {
+    this.activeModuleSubject.next(mod);
+  }
+
+  get activeModule(): AppModule {
     return this.activeModuleSubject.value;
   }
 
-  readonly quickLinks: QuickLink[] = [
-    { label: 'Employés',    icon: 'badge',         route: '/grh/employes',             color: '#0060B3' },
-    { label: 'Données Base',icon: 'storage',       route: '/donnees-base',             color: '#CC8800' },
-    { label: 'Bulletins',   icon: 'receipt_long',  route: '/paie/bulletins/historique', color: '#1B3A6B' },
-    { label: 'Organigramme',icon: 'account_tree',  route: '/grh/organigramme',         color: '#004080' }
-  ];
-
-  constructor() {
-    this.selectModule(APP_MODULES[0]);
-  }
-
-  selectModule(module: AppModule): void {
-    this.activeModuleSubject.next(module);
-  }
-
-  clearModule(): void {
-    this.activeModuleSubject.next(null);
-  }
-
-  getMenuItemsForModule(moduleId: string): MenuItem[] {
-    return MODULE_MENUS[moduleId] || [];
-  }
-
   getMenuForActiveModule(): MenuItem[] {
-    const active = this.activeModule;
-    return active ? this.getMenuItemsForModule(active.id) : [];
+    return MODULE_MENUS[this.activeModule.id] || [];
+  }
+
+  getQuickLinksForActiveModule(): QuickLink[] {
+    return QUICK_LINKS_PER_MODULE[this.activeModule.id] || [];
+  }
+
+  get quickLinks(): QuickLink[] {
+    return this.getQuickLinksForActiveModule();
   }
 
   toggleDrawer(): void {
     this.drawerOpenSubject.next(!this.drawerOpenSubject.value);
   }
 
-  setDrawerOpen(open: boolean): void {
-    this.drawerOpenSubject.next(open);
-  }
-
   toggleSidebar(): void {
     this.sidebarOpenSubject.next(!this.sidebarOpenSubject.value);
   }
 
-  setSidebarOpen(open: boolean): void {
-    this.sidebarOpenSubject.next(open);
+  clearModule(): void {
+    this.activeModuleSubject.next(APP_MODULES[0]);
   }
 }
-

@@ -2,7 +2,7 @@
   <div class="drawer-container">
 
     <!-- En-tête coloré du module -->
-    <div class="drawer-header"
+    <div class="drawer-header" style="cursor: pointer;" (click)="navigateToOverview()"
          [style.background]="'linear-gradient(135deg, ' + activeModule.gradientFrom + ', ' + activeModule.gradientTo + ')'">
       <div class="dh-icon">
         <mat-icon>{{ activeModule.icon }}</mat-icon>
@@ -22,21 +22,28 @@
         @if (item.children && item.children.length > 0) {
 
           <!-- Groupe avec enfants -->
-          <div class="menu-group">
-            <button class="group-header" (click)="toggleItem(item)">
+          <div class="menu-group" [class.group-disabled]="item.disabled">
+            <button class="group-header" 
+                    [class.disabled-btn]="item.disabled"
+                    [matTooltip]="item.disabled ? 'Fonctionnalité non activée pour le moment' : ''"
+                    (click)="item.disabled ? null : toggleItem(item)">
               <mat-icon class="group-icon">{{ item.icon }}</mat-icon>
               <span class="group-label">{{ item.label }}</span>
-              <mat-icon class="expand-icon" [class.rotated]="isExpanded(item)">
-                expand_more
-              </mat-icon>
+              @if (item.disabled) {
+                <span class="disabled-pill">Bientôt</span>
+              } @else {
+                <mat-icon class="expand-icon" [class.rotated]="isExpanded(item)">
+                  expand_more
+                </mat-icon>
+              }
             </button>
-            <div class="group-children" [class.open]="isExpanded(item)">
+            <div class="group-children" [class.open]="!item.disabled && isExpanded(item)">
               @for (child of item.children; track child.id) {
                 <button class="child-item"
                         [class.active]="isActiveRoute(child.route)"
-                        [class.ctx-disabled]="isFicheItem(child) && !currentEmpId"
-                        [matTooltip]="isFicheItem(child) && !currentEmpId ? 'Ouvrez d\'abord une fiche employé' : ''"
-                        (click)="navigateChild(child.route)">
+                        [class.ctx-disabled]="isFicheItem(child) && !isEmployeeSelected"
+                        [matTooltip]="isFicheItem(child) && !isEmployeeSelected ? 'Sélectionnez ou ouvrez d\'abord la fiche d\'un employé' : ''"
+                        (click)="(isFicheItem(child) && !isEmployeeSelected) ? null : navigateChild(child.route)">
                   <mat-icon class="child-icon">{{ child.icon }}</mat-icon>
                   <span class="child-label">{{ child.label }}</span>
                   @if (child.badge) {

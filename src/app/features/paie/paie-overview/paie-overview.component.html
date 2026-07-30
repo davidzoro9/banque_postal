@@ -1,40 +1,89 @@
-<div class="module-overview">
-  <div class="page-header"
-       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
-    <div class="ph-content">
-      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+<div class="profils-overview-page">
+  <!-- En-tête -->
+  <div class="header-banner" style="background: linear-gradient(135deg, #00875A 0%, #005236 100%);">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>payments</mat-icon>
+      </div>
       <div>
-        <h1>{{ module.name }}</h1>
-        <p>{{ module.description }}</p>
+        <h1>Gestion de la Paie</h1>
+        <p>Calcul automatique des salaires, bulletins de paie, cotisations sociales, retenues et déclarations réglementaires.</p>
       </div>
     </div>
   </div>
 
-  <mat-card class="table-card">
-    <mat-card-header>
-      <mat-card-title>Derniers bulletins générés</mat-card-title>
-      <button mat-button color="primary" (click)="navigate('/paie/bulletins/historique')" class="see-all-btn">
-        Tout l'historique <mat-icon>arrow_forward</mat-icon>
-      </button>
-    </mat-card-header>
-    <mat-card-content>
-      <table class="data-table">
-        <thead>
-          <tr><th>Employé</th><th>Poste</th><th>Salaire net</th><th>Salaire brut</th><th>Mois</th><th>État</th></tr>
-        </thead>
-        <tbody>
-          @for (b of recentBulletins; track b.employe) {
-            <tr>
-              <td><strong>{{ b.employe }}</strong></td>
-              <td>{{ b.poste }}</td>
-              <td class="amount">{{ b.net }}</td>
-              <td class="amount muted">{{ b.brut }}</td>
-              <td>{{ b.mois }}</td>
-              <td><span class="etat-badge" [class.sent]="b.etat === 'Envoyé'">{{ b.etat }}</span></td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </mat-card-content>
-  </mat-card>
+  <!-- Statistiques rapides -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e6f4ea; color: #00875A;">
+          <mat-icon>receipt_long</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">148</span>
+          <span class="stat-label">Bulletins de Paie</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e3f2fd; color: #0288d1;">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">68 450 000 F</span>
+          <span class="stat-label">Masse Salariale du Mois</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #fff3e0; color: #f57c00;">
+          <mat-icon>calculate</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">14</span>
+          <span class="stat-label">Rubriques Actives</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #f3e5f5; color: #7b1fa2;">
+          <mat-icon>send</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">100%</span>
+          <span class="stat-label">Déclarations Prêtes</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Sections principales -->
+  <h2 class="section-title">Espaces de Gestion de la Paie</h2>
+  <div class="sections-grid">
+    @for (s of sections; track s.title) {
+      <mat-card class="section-card" (click)="navigateTo(s.route)" matRipple>
+        <mat-card-header>
+          <div class="card-header-icon" [style.background]="s.color">
+            <mat-icon>{{ s.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ s.title }}</mat-card-title>
+          <span class="badge-chip">{{ s.badge }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ s.description }}</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary">
+            Accéder à la gestion <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
 </div>

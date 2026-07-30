@@ -108,14 +108,17 @@ export interface TypeRetenue {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            <div>
-              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Code *</label>
-              <input
-                type="text"
-                [(ngModel)]="formType.code"
-                placeholder="Ex: TR-PATRONALE, TR-SALARIALE..."
-                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; text-transform: uppercase;"
-              >
+            <!-- Code : Masqué à la création, affiché à l'édition -->
+            <div *ngIf="modeEdition" style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 12px; font-weight: 600; color: #64748b;">Code de référence généré :</span>
+              <span style="font-weight: 800; color: #0060B3; font-family: monospace; font-size: 14px; background: #e0f2fe; padding: 3px 10px; border-radius: 4px;">
+                {{ formType.code }}
+              </span>
+            </div>
+
+            <div *ngIf="!modeEdition" style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 10px 14px; border-radius: 8px; font-size: 12px; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">auto_awesome</mat-icon>
+              <span>Le code sera <strong>généré automatiquement</strong> lors de la création.</span>
             </div>
 
             <div>
@@ -123,7 +126,7 @@ export interface TypeRetenue {
               <input
                 type="text"
                 [(ngModel)]="formType.libelle"
-                placeholder="Ex: Part Employeur, Part Agent, Cotisation Sociale..."
+                placeholder="Ex: Part Agent, Part Employeur, Cotisation Sociale..."
                 style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;"
               >
             </div>
@@ -170,7 +173,7 @@ export class TypesRetenuesComponent implements OnInit {
   }
 
   chargerTypesRetenues(): void {
-    const saved = localStorage.getItem('sigrh_types_retenues_v3');
+    const saved = localStorage.getItem('sigrh_types_retenues_v4');
     if (saved) {
       try {
         this.typesRetenues = JSON.parse(saved);
@@ -180,22 +183,22 @@ export class TypesRetenuesComponent implements OnInit {
 
     // Reference Types de Retenues sur Salaire
     this.typesRetenues = [
-      { id: 1, code: 'TR-PATRONALE', libelle: 'Part Employeur',           description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
-      { id: 2, code: 'TR-SALARIALE', libelle: 'Part Agent',               description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'agent', actif: true },
-      { id: 3, code: 'TR-SOCIALE',   libelle: 'Cotisation Sociale (CNSS/CARFO)', description: 'Sécurité sociale obligatoire et régimes de retraite de base légaux', actif: true },
-      { id: 4, code: 'TR-RETRAITE',  libelle: 'Retraite Complémentaire (CRRAE)', description: 'Caisse de retraite complémentaire bancaire UMOA et fonds de pension', actif: true },
-      { id: 5, code: 'TR-FISCALE',   libelle: 'Retenue Fiscale (IUTS/TPA)', description: 'Impôt Unique sur Traitements & Salaires et Taxes patronales', actif: true },
-      { id: 6, code: 'TR-ASSURANCE', libelle: 'Assurance Groupe & Santé', description: 'Prélèvements pour assurance maladie complémentaire groupe entreprise', actif: true },
-      { id: 7, code: 'TR-MUTUELLE',  libelle: 'Mutuelle Interne (MUPER)',  description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel', actif: true },
-      { id: 8, code: 'TR-PRET',      libelle: 'Remboursement Prêt & Avance',description: 'Remboursement des prêts équipements, avances et acomptes sur salaire', actif: true },
-      { id: 9, code: 'TR-SYNDICAT',  libelle: 'Cotisation Syndicale',      description: 'Cotisation mensuelle d\'adhésion syndicale du personnel', actif: true }
+      { id: 1, code: 'TR-001', libelle: 'Part Agent (Salariale)',               description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'agent', actif: true },
+      { id: 2, code: 'TR-002', libelle: 'Part Employeur (Patronale)',           description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
+      { id: 3, code: 'TR-003', libelle: 'Cotisation Sociale (CNSS/CARFO)', description: 'Sécurité sociale obligatoire et régimes de retraite de base légaux', actif: true },
+      { id: 4, code: 'TR-004', libelle: 'Retraite Complémentaire (CRRAE)', description: 'Caisse de retraite complémentaire bancaire UMOA et fonds de pension', actif: true },
+      { id: 5, code: 'TR-005', libelle: 'Retenue Fiscale (IUTS/TPA)', description: 'Impôt Unique sur Traitements & Salaires et Taxes patronales', actif: true },
+      { id: 6, code: 'TR-006', libelle: 'Assurance Groupe & Santé', description: 'Prélèvements pour assurance maladie complémentaire groupe entreprise', actif: true },
+      { id: 7, code: 'TR-007', libelle: 'Mutuelle Interne (MUPER)',  description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel', actif: true },
+      { id: 8, code: 'TR-008', libelle: 'Remboursement Prêt & Avance',description: 'Remboursement des prêts équipements, avances et acomptes sur salaire', actif: true },
+      { id: 9, code: 'TR-009', libelle: 'Cotisation Syndicale',      description: 'Cotisation mensuelle d\'adhésion syndicale du personnel', actif: true }
     ];
 
     this.sauvegarderLocal();
   }
 
   sauvegarderLocal(): void {
-    localStorage.setItem('sigrh_types_retenues_v3', JSON.stringify(this.typesRetenues));
+    localStorage.setItem('sigrh_types_retenues_v4', JSON.stringify(this.typesRetenues));
   }
 
   getFilteredTypes(): TypeRetenue[] {
@@ -205,10 +208,6 @@ export class TypesRetenuesComponent implements OnInit {
         item.libelle.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(this.searchTerm.toLowerCase()));
     });
-  }
-
-  getCountActifs(): number {
-    return this.typesRetenues.filter(t => t.actif).length;
   }
 
   ouvrirFormulaire(): void {
@@ -228,8 +227,8 @@ export class TypesRetenuesComponent implements OnInit {
   }
 
   sauvegarderType(): void {
-    if (!this.formType.code || !this.formType.libelle) {
-      alert('Veuillez remplir le code et le libellé du type de retenue.');
+    if (!this.formType.libelle) {
+      alert('Veuillez remplir le libellé du type de retenue.');
       return;
     }
 
@@ -239,6 +238,9 @@ export class TypesRetenuesComponent implements OnInit {
         this.typesRetenues[idx] = { ...this.formType };
       }
     } else {
+      // Génération automatique du code lors de la création
+      const nextNum = this.typesRetenues.length + 1;
+      this.formType.code = `TR-${String(nextNum).padStart(3, '0')}`;
       this.formType.id = Date.now();
       this.typesRetenues.unshift({ ...this.formType });
     }
@@ -248,7 +250,7 @@ export class TypesRetenuesComponent implements OnInit {
   }
 
   supprimerType(item: TypeRetenue): void {
-    if (confirm(`Voulez-vous vraiment supprimer le type de retenue "${item.libelle}" ?`)) {
+    if (confirm(`Voulez-vous vraiment supprimer le type de retenue "${item.libelle}" (${item.code}) ?`)) {
       this.typesRetenues = this.typesRetenues.filter(t => t.id !== item.id);
       this.sauvegarderLocal();
     }

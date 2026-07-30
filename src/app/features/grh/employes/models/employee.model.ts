@@ -97,6 +97,7 @@ export interface Employee {
 
   // Informations professionnelles
   poste: string;
+  fonction?: string;
   service: string;
   direction: string;
   departement?: string;
@@ -106,6 +107,7 @@ export interface Employee {
   emailPro?: string;
   numeroPoste?: string;
   directeurHierarchique?: string;
+  organismeRetraite?: string;
 
   // Catégorie
   categoriePro: string;

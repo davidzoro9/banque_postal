@@ -1,28 +1,88 @@
-<div class="module-overview">
-  <div class="page-header"
-       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
-    <div class="ph-content">
-      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+<div class="profils-overview-page">
+  <!-- En-tête -->
+  <div class="header-banner" style="background: linear-gradient(135deg, #0060B3 0%, #004080 100%);">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>storage</mat-icon>
+      </div>
       <div>
-        <h1>{{ module.name }}</h1>
-        <p>{{ module.description }}</p>
+        <h1>Données de Base & Référentiels (DB)</h1>
+        <p>Paramétrage centralisé de la structure organisationnelle, grille salariale conventionnelle et référentiels du système SIGRH.</p>
       </div>
     </div>
   </div>
 
-  <div class="config-grid">
-    @for (c of configuration; track c.section) {
-      <mat-card class="config-card" (click)="navigate(c.route)" matRipple style="cursor: pointer;">
+  <!-- Statistiques rapides -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e3f2fd; color: #0288d1;">
+          <mat-icon>work</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">12</span>
+          <span class="stat-label">Postes & Emplois</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+          <mat-icon>domain</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">8</span>
+          <span class="stat-label">Directions & Depts</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #fff3e0; color: #f57c00;">
+          <mat-icon>table_chart</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">15</span>
+          <span class="stat-label">Grilles & Échelons</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #f3e5f5; color: #7b1fa2;">
+          <mat-icon>paid</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">10</span>
+          <span class="stat-label">Indemnités & Types</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Sections principales -->
+  <h2 class="section-title">Espaces de Paramétrage des Données de Base</h2>
+  <div class="sections-grid">
+    @for (s of sections; track s.title) {
+      <mat-card class="section-card" (click)="navigateTo(s.route)" matRipple>
+        <mat-card-header>
+          <div class="card-header-icon" [style.background]="s.color">
+            <mat-icon>{{ s.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ s.title }}</mat-card-title>
+          <span class="badge-chip">{{ s.badge }}</span>
+        </mat-card-header>
         <mat-card-content>
-          <div class="cfg-icon" [style.background-color]="c.color + '1A'" [style.color]="c.color">
-            <mat-icon>{{ c.icon }}</mat-icon>
-          </div>
-          <div class="cfg-info">
-            <h3>{{ c.section }}</h3>
-            <p>{{ c.desc }}</p>
-          </div>
-          <div class="cfg-count" [style.color]="c.color">{{ c.items }}</div>
+          <p>{{ s.description }}</p>
         </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary">
+            Accéder à la gestion <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
       </mat-card>
     }
   </div>

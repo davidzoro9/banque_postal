@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 export interface CotisationItem {
   id: number;
@@ -25,7 +25,7 @@ export interface TrancheIuts {
       <!-- Header -->
       <div class="page-header">
         <div>
-          <h2>⚙️ Paramétrage des Cotisations Sociales & Fiscalité (CNSS, CRRAE-UMOA, IUTS, TPA)</h2>
+          <h2>Paramétrage des Cotisations Sociales & Fiscalité (CNSS, CRRAE-UMOA, IUTS, TPA)</h2>
           <p class="subtitle">Gestion des taux de cotisations salariales, patronales et régimes de retraite complémentaires du secteur bancaire.</p>
         </div>
         <div class="header-actions">
@@ -520,7 +520,7 @@ export class CotisationsPaieComponent implements OnInit {
 
   sauvegarderTout(): void {
     localStorage.setItem('cotisations_paie', JSON.stringify(this.cotisations));
-    this.showNotification('✅ Taux de cotisations et barèmes d\'imposition enregistrés avec succès !');
+    this.showNotification('Taux de cotisations et barèmes d\'imposition enregistrés avec succès !');
   }
 
   private showNotification(msg: string): void {

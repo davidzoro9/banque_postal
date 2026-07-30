@@ -1,7 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { ModuleNavService } from '../../../core/services/module-nav.service';
-import { APP_MODULES } from '../../../core/models/app-module.model';
 
 @Component({
   selector: 'app-db-overview',
@@ -9,42 +7,46 @@ import { APP_MODULES } from '../../../core/models/app-module.model';
   styleUrls: ['./db-overview.component.scss'],
   standalone: false
 })
-export class DbOverviewComponent implements OnInit {
-  module = APP_MODULES.find(m => m.id === 'donnees-base')!;
+export class DbOverviewComponent {
 
-  kpis = [
-    { label: 'Entités & Structure',     value: '18', icon: 'domain',            color: '#CC8800', sub: 'Services & Agences BPBF' },
-    { label: 'Grilles & Indemnités',   value: '14', icon: 'table_chart',        color: '#0060B3', sub: 'Grille salariale BPBF' },
-    { label: 'Type de retenue',         value: '6',  icon: 'money_off',          color: '#0288D1', sub: 'Référentiel des types' },
-    { label: 'Paramétrage retenue',     value: '5',  icon: 'tune',               color: '#0060B3', sub: 'Taux % Employeur & % Agent' }
-  ];
-
-  quickActions = [
-    { label: 'Départements',        icon: 'domain',        route: '/donnees-base/admin/departement',      color: '#CC8800' },
-    { label: 'Grille Salariale',    icon: 'table_chart',   route: '/donnees-base/admin/grille-salariale', color: '#0060B3' },
-    { label: 'Type de retenue',     icon: 'money_off',     route: '/paie/types-retenues',                 color: '#0288D1' },
-    { label: 'Paramétrage retenue', icon: 'tune',          route: '/paie/parametrage',                    color: '#0060B3' }
-  ];
-
-  configuration = [
-    { section: 'Gestion Administrative',   items: '19 tables',icon: 'corporate_fare',        color: '#CC8800', desc: 'Emplois, fonctions, départements, agences, catégories, grades, échelons, compétences', route: '/donnees-base/admin/departement' },
-    { section: 'Salaires & Indemnités',    items: '5 grilles',icon: 'table_chart',          color: '#0060B3', desc: 'Grilles salariales, indemnités, types de contrats', route: '/donnees-base/admin/grille-salariale' },
-    { section: 'Paramétrage Paie & Retenues',items: '7 règles', icon: 'tune',               color: '#0060B3', desc: 'Taux % Part Employeur, Part Agent, barèmes et retenues', route: '/paie/parametrage' }
-  ];
-
-  constructor(public moduleNav: ModuleNavService, private router: Router) {}
-
-  ngOnInit(): void {
-    const isParam = this.router.url.includes('/parametrage');
-    const targetModule = APP_MODULES.find(m => m.id === (isParam ? 'parametrage' : 'donnees-base'));
-    if (targetModule) {
-      this.module = targetModule;
-      this.moduleNav.selectModule(this.module);
+  sections = [
+    {
+      title: 'Structure Organisationnelle',
+      badge: 'Emplois, Fonctions...',
+      icon: 'business',
+      color: '#0288d1',
+      description: 'Gestion des emplois, nominations, directions, départements, services, agences et types de contrat.',
+      route: '/donnees-base/admin/emploi'
+    },
+    {
+      title: 'Grille Salariale Conventionnelle',
+      badge: 'Catégories & Échelons',
+      icon: 'table_chart',
+      color: '#f57c00',
+      description: 'Définition des catégories professionnelles, groupes conventionnels et grilles de salaire de base brut.',
+      route: '/donnees-base/admin/grille-salariale'
+    },
+    {
+      title: 'Paramétrage des Indemnités',
+      badge: 'Types & Règles',
+      icon: 'paid',
+      color: '#2e7d32',
+      description: 'Configuration des types d\'indemnités, primes de fonction et règles d\'attribution par poste.',
+      route: '/donnees-base/admin/param-indemnite'
+    },
+    {
+      title: 'Rubriques de Paie & Barèmes',
+      badge: 'Paie & Fiscalité',
+      icon: 'calculate',
+      color: '#7b1fa2',
+      description: 'Paramétrage des rubriques de paie, barèmes IUTS, retenues et modes de paiement.',
+      route: '/donnees-base/paie/rubrique'
     }
-  }
+  ];
 
-  navigate(route: string): void {
+  constructor(private router: Router) {}
+
+  navigateTo(route: string): void {
     this.router.navigate([route]);
   }
 }
-

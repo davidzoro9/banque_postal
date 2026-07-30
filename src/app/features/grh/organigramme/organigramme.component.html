@@ -1,0 +1,124 @@
+<div class="organigramme-page">
+
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon-box">
+        <mat-icon>account_tree</mat-icon>
+      </div>
+      <div>
+        <h1>Organigramme Institutionnel BPBF</h1>
+        <p>Structure hiérarchique : Agence (Sommet) ➔ Directions & Départements (Même niveau 2) ➔ Services (Niveau 3)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sélecteur d'Agence -->
+  <mat-card class="agence-card">
+    <mat-card-content style="display:flex;align-items:center;gap:16px">
+      <mat-icon style="color:#0060B3;font-size:28px;width:28px;height:28px">store</mat-icon>
+      <div style="flex:1">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700">Sommet de la Structure — Niveau 1</div>
+        <div style="font-size:18px;font-weight:800;color:#0060B3">
+          {{ selectedAgence }}
+        </div>
+      </div>
+      <mat-form-field appearance="outline" style="width:260px;margin-bottom:-1.25em">
+        <mat-label>Changer d'agence</mat-label>
+        <mat-select [(ngModel)]="selectedAgence">
+          @for (a of agences; track a.code) {
+            <mat-option [value]="a.libelle">{{ a.libelle }}</mat-option>
+          }
+          @if (agences.length === 0) {
+            <mat-option value="Agence Centrale">Agence Centrale (Siège)</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Arbre Hiérarchique Visualisation -->
+  <div class="org-tree">
+    
+    <!-- Ligne verticale venant de l'Agence -->
+    <div class="tree-line-main"></div>
+
+    <!-- NIVEAU 2 : DIRECTIONS ET DÉPARTEMENTS AU MÊME NIVEAU HIÉRARCHIQUE -->
+    <div class="level-2-header">
+      <span class="level-badge">Niveau 2 : Directions & Départements (Au même niveau d'équivalence)</span>
+    </div>
+
+    <div class="level-2-grid">
+      
+      <!-- BLOC DIRECTIONS -->
+      <div class="unit-group-box directions-box">
+        <div class="group-title">
+          <mat-icon>corporate_fare</mat-icon>
+          <span>DIRECTIONS (BPBF)</span>
+        </div>
+        <div class="units-list">
+          @for (dir of directions; track dir.code) {
+            <div class="unit-card">
+              <div class="unit-card-header">
+                <mat-icon class="unit-icon">business</mat-icon>
+                <div class="unit-info">
+                  <span class="unit-code">{{ dir.code }}</span>
+                  <span class="unit-name">{{ dir.libelle }}</span>
+                </div>
+              </div>
+              <p class="unit-desc">{{ dir.description || 'Direction opérationnelle' }}</p>
+
+              <!-- Services rattachés à cette Direction -->
+              <div class="services-sub-list">
+                <div class="sub-label"><mat-icon>subdirectory_arrow_right</mat-icon> Services rattachés</div>
+                @for (srv of services; track srv.code) {
+                  <div class="service-chip">
+                    <mat-icon>home_repair_service</mat-icon>
+                    <span>{{ srv.libelle }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- BLOC DÉPARTEMENTS -->
+      <div class="unit-group-box departements-box">
+        <div class="group-title">
+          <mat-icon>account_balance</mat-icon>
+          <span>DÉPARTEMENTS (BPBF — Même niveau que les Directions)</span>
+        </div>
+        <div class="units-list">
+          @for (dep of departements; track dep.code) {
+            <div class="unit-card">
+              <div class="unit-card-header">
+                <mat-icon class="unit-icon" style="color:#2e7d32">domain</mat-icon>
+                <div class="unit-info">
+                  <span class="unit-code">{{ dep.code }}</span>
+                  <span class="unit-name">{{ dep.libelle }}</span>
+                </div>
+              </div>
+              <p class="unit-desc">
+                {{ dep.description ? 'Directeur : ' + dep.description : 'Département de supervision' }}
+              </p>
+
+              <!-- Services rattachés à ce Département -->
+              <div class="services-sub-list">
+                <div class="sub-label"><mat-icon>subdirectory_arrow_right</mat-icon> Services & Pôles de rattachement</div>
+                @for (srv of services; track srv.code) {
+                  <div class="service-chip">
+                    <mat-icon>home_repair_service</mat-icon>
+                    <span>{{ srv.libelle }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

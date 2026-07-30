@@ -9,12 +9,14 @@
     </div>
 
     @if (moduleNav.activeModule$ | async; as mod) {
-      <div class="module-badge">
+      <div class="module-badge"
+           [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + '14, ' + mod.gradientTo + '24)'"
+           [style.border-color]="mod.color + '40'">
         <div class="mod-icon"
              [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + ', ' + mod.gradientTo + ')'">
           <mat-icon>{{ mod.icon }}</mat-icon>
         </div>
-        <span class="mod-name">{{ mod.name }}</span>
+        <span class="mod-name" [style.color]="mod.color">{{ mod.name }}</span>
       </div>
     }
   </div>

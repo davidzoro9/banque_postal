@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { InactivityService } from './core/services/inactivity.service';
 
 @Component({
   selector: 'app-root',
@@ -6,4 +7,6 @@ import { Component } from '@angular/core';
   standalone: false,
   styleUrl: './app.scss'
 })
-export class App {}
+export class App {
+  constructor(private inactivityService: InactivityService) {}
+}

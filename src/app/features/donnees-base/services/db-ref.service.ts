@@ -16,10 +16,14 @@ export interface RefItem {
   echelle?:       string;   // utilisé par Grille salariale
   echellon?:      string;   // utilisé par Grille salariale
   typeIndemnite?: string;   // pour Paramétrage indemnité
+  typeRetenue?:   string;   // pour Paramétrage retenue (Part Agent, Part Employeur, Cotisation Sociale, etc.)
   fonction?:      string;   // pour Paramétrage indemnité
   grade?:         string;   // pour Paramétrage indemnité
   categorie?:     string;   // pour Paramétrage indemnité
-  taux?:          number;   // pour Paramétrage indemnité
+  taux?:          number;   // pour Paramétrage indemnité / Retenue
+  tauxAbattement?: number;  // pour Catégorie (Abattement brut pour IUTS)
+  tauxExoneration?: number; // pour Paramétrage indemnité (% Exonéré)
+  plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -33,7 +37,7 @@ const BACKEND_MAP: Record<string, {
   'emploi': {
     segment: 'emplois',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code || `EMP-${dto.id}`, libelle: dto.name || dto.libelle || dto.code || 'Emploi', description: dto.description || '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
@@ -82,10 +86,11 @@ const BACKEND_MAP: Record<string, {
       code: dto.code,
       libelle: dto.libelle,
       description: dto.description || '',
+      tauxAbattement: dto.tauxAbattement ?? (['V', 'VI', 'VII', 'VIII'].includes(dto.code) ? 20 : 25),
       actif: dto.actif ?? true
     }),
-    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, tauxAbattement: item.tauxAbattement, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, tauxAbattement: item.tauxAbattement, actif: item.actif }),
   },
   'grade': {
     segment: 'ref-data/grade',
@@ -103,7 +108,7 @@ const BACKEND_MAP: Record<string, {
   'fonction': {
     segment: 'fonctions',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code || `FCT-${dto.id}`, libelle: dto.name || dto.libelle || dto.code || 'Fonction', description: dto.description || '', actif: true }),
     toBack:  item => ({ code: item.code, name: item.libelle }),
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
@@ -135,7 +140,9 @@ const BACKEND_MAP: Record<string, {
       fonction: dto.fonction || '',
       grade: dto.grade || '',
       categorie: dto.categorie || '',
-      taux: dto.taux || dto.montant || 0
+      taux: dto.taux || dto.montant || 0,
+      tauxExoneration: dto.tauxExoneration || 0,
+      plafondExoneration: dto.plafondExoneration || 0
     }),
     toBack: item => ({
       code: item.code,
@@ -144,6 +151,8 @@ const BACKEND_MAP: Record<string, {
       grade: item.grade,
       categorie: item.categorie,
       taux: item.taux || item.montant || 0,
+      tauxExoneration: item.tauxExoneration || 0,
+      plafondExoneration: item.plafondExoneration || 0,
       actif: item.actif
     }),
     toBackUpdate: item => ({
@@ -154,6 +163,8 @@ const BACKEND_MAP: Record<string, {
       grade: item.grade,
       categorie: item.categorie,
       taux: item.taux || item.montant || 0,
+      tauxExoneration: item.tauxExoneration || 0,
+      plafondExoneration: item.plafondExoneration || 0,
       actif: item.actif
     }),
   },
@@ -175,16 +186,16 @@ const BACKEND_MAP: Record<string, {
   'type-retenue-employe': {
     segment: 'ref-data/retenue-employe',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif ?? true }),
     toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
     toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
   },
   'type-retenue-emploi': {
     segment: 'ref-data/retenue-emploi',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif }),
-    toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, typeRetenue: dto.typeRetenue || 'Part Agent', taux: dto.taux || 0, description: dto.description || '', actif: dto.actif ?? true }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle, typeRetenue: item.typeRetenue, taux: item.taux, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, typeRetenue: item.typeRetenue, taux: item.taux, description: item.description, actif: item.actif }),
   },
 };
 
@@ -234,15 +245,49 @@ function buildOfficialGridItems(): RefItem[] {
 // ─── Données mock pour les types sans backend ────────────────────────────────
 const MOCK_DATA: Record<string, RefItem[]> = {
   'type-indemnite': [
-    { code: 'TI-LOG',  libelle: 'Indemnité de logement',       description: 'Indemnité destinée à couvrir les frais de logement',           actif: true },
-    { code: 'TI-TPT',  libelle: 'Indemnité de transport',       description: 'Indemnité destinée à couvrir les frais de déplacement',        actif: true },
-    { code: 'TI-SUJ',  libelle: 'Indemnité de Sujétion',       description: 'Indemnité pour contraintes spécifiques de poste',              actif: true },
-    { code: 'TI-FCT',  libelle: 'Indemnité de fonction',        description: 'Indemnité liée à la fonction de nomination',                    actif: true },
-    { code: 'TI-CMP',  libelle: 'Indemnité compensatrice',      description: 'Indemnité pour sujétions ou contraintes particulières',        actif: true },
-    { code: 'TI-CSA',  libelle: 'Indemnité de caisse',          description: 'Indemnité pour gestion de fonds (Caissiers/Cash Point)',      actif: true },
-    { code: 'TI-ASTR', libelle: "Indemnité d'astreinte",        description: 'Indemnité pour disponibilité hors horaires normaux',           actif: true },
-    { code: 'TI-REPR', libelle: 'Indemnité de représentation',  description: 'Indemnité pour frais de représentation institutionnelle',      actif: true },
-    { code: 'TI-NOM',  libelle: 'Indemnité de nomination',      description: 'Indemnité globale pour une nomination à un poste de responsabilité', actif: true }
+    { code: 'TI-LOG',  libelle: 'Indemnité de logement',       description: 'Indemnité destinée à couvrir les frais de logement',           tauxExoneration: 20,  plafondExoneration: 70000, actif: true },
+    { code: 'TI-TPT',  libelle: 'Indemnité de transport',       description: 'Indemnité destinée à couvrir les frais de déplacement',        tauxExoneration: 0,   plafondExoneration: 70000, actif: true },
+    { code: 'TI-SUJ',  libelle: 'Indemnité de Sujétion',       description: 'Indemnité pour contraintes spécifiques de poste',              tauxExoneration: 100, plafondExoneration: 0,     actif: true },
+    { code: 'TI-FCT',  libelle: 'Indemnité de fonction',        description: 'Indemnité liée à la fonction de nomination',                    tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-CMP',  libelle: 'Indemnité compensatrice',      description: 'Indemnité pour sujétions ou contraintes particulières',        tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-CSA',  libelle: 'Indemnité de caisse',          description: 'Indemnité pour gestion de fonds (Caissiers/Cash Point)',      tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-ASTR', libelle: "Indemnité d'astreinte",        description: 'Indemnité pour disponibilité hors horaires normaux',           tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-REPR', libelle: 'Indemnité de représentation',  description: 'Indemnité pour frais de représentation institutionnelle',      tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-NOM',  libelle: 'Indemnité de nomination',      description: 'Indemnité globale pour une nomination à un poste de responsabilité', tauxExoneration: 0, plafondExoneration: 0, actif: true }
+  ],
+  'type-retenue-employe': [
+    { code: 'TR-PATRONALE', libelle: 'Part Employeur',                     description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
+    { code: 'TR-SALARIALE', libelle: 'Part Agent',                         description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'agent', actif: true },
+    { code: 'TR-SOCIALE',   libelle: 'Cotisation Sociale (CNSS/CARFO)',    description: 'Sécurité sociale obligatoire et régimes de retraite de base légaux', actif: true },
+    { code: 'TR-RETRAITE',  libelle: 'Retraite Complémentaire (CRRAE)',    description: 'Caisse de retraite complémentaire bancaire UMOA et fonds de pension', actif: true },
+    { code: 'TR-FISCALE',   libelle: 'Retenue Fiscale (IUTS/TPA)',         description: 'Impôt Unique sur Traitements & Salaires et Taxes patronales', actif: true },
+    { code: 'TR-ASSURANCE', libelle: 'Assurance Groupe & Santé',           description: 'Prélèvements pour assurance maladie complémentaire groupe entreprise', actif: true },
+    { code: 'TR-MUTUELLE',  libelle: 'Mutuelle Interne (MUPER)',           description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel', actif: true },
+    { code: 'TR-PRET',      libelle: 'Remboursement Prêt & Avance',        description: 'Remboursement des prêts équipements, avances et acomptes sur salaire', actif: true },
+    { code: 'TR-SYNDICAT',  libelle: 'Cotisation Syndicale',               description: 'Cotisation mensuelle d\'adhésion syndicale du personnel', actif: true }
+  ],
+  'type-retenue-emploi': [
+    { code: 'RET-CNSS-SAL', libelle: 'Cotisation Sociale CNSS (Part Agent)',       typeRetenue: 'Part Agent',                         taux: 5.5, description: 'Cotisation sociale obligatoire à la charge de l\'employé (5,5% du brut plafonné)', actif: true },
+    { code: 'RET-CNSS-PAT', libelle: 'Cotisation Sociale CNSS (Part Employeur)',   typeRetenue: 'Part Employeur',                     taux: 16.0,description: 'Cotisation patronale obligatoire sécurité sociale (16,0% sur masse salariale)', actif: true },
+    { code: 'RET-IUTS',     libelle: 'Impôt IUTS (Impôt sur Salaire)',            typeRetenue: 'Retenue Fiscale (IUTS/TPA)',         taux: 0,   description: 'Impôt Unique sur Traitements et Salaires prélevé à la source (Barème progressif)', actif: true },
+    { code: 'RET-CRRAE-SAL',libelle: 'Retraite Complémentaire CRRAE (Part Agent)',  typeRetenue: 'Retraite Complémentaire (CRRAE)',    taux: 3.0, description: 'Cotisation salariale fonds de pension complémentaire bancaire UMOA', actif: true },
+    { code: 'RET-CRRAE-PAT',libelle: 'Retraite Complémentaire CRRAE (Part Pat.)',  typeRetenue: 'Part Employeur',                     taux: 5.0, description: 'Contribution patronale retraite complémentaire bancaire UMOA', actif: true },
+    { code: 'RET-AM-SAL',   libelle: 'Assurance Maladie Groupe (Part Agent)',     typeRetenue: 'Assurance Groupe & Santé',           taux: 2.5, description: 'Part salariale couverture médicale maladie et hospitalisation (25%)', actif: true },
+    { code: 'RET-AM-PAT',   libelle: 'Assurance Maladie Groupe (Part Employeur)', typeRetenue: 'Part Employeur',                     taux: 7.5, description: 'Prise en charge patronale assurance maladie groupe (75%)', actif: true },
+    { code: 'RET-MUPER',    libelle: 'Mutuelle Interne du Personnel (MUPER)',     typeRetenue: 'Mutuelle Interne (MUPER)',           taux: 1.0, description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel BPBF', actif: true },
+    { code: 'RET-AVANCE',   libelle: 'Avance sur Salaire / Acompte',               typeRetenue: 'Remboursement Prêt & Avance',        taux: 0,   description: 'Remboursement mensuel des avances exceptionnelles sur solde (Montant Variable)', actif: true },
+    { code: 'RET-PRET-EQP', libelle: 'Prêt Équipement / Prêt interne BPBF',       typeRetenue: 'Remboursement Prêt & Avance',        taux: 0,   description: 'Échéance mensuelle pour remboursement de prêt personnel bancaire (Mensualité Fixe)', actif: true }
+  ],
+  'type-contrat': [
+    { code: 'CDI',   libelle: 'Contrat Durée Indéterminée (CDI)', description: 'Contrat de travail à durée indéterminée', actif: true },
+    { code: 'CDD',   libelle: 'Contrat Durée Déterminée (CDD)',   description: 'Contrat de travail à durée déterminée', actif: true },
+    { code: 'STAGE', libelle: 'Contrat de Stage',                 description: 'Stage de qualification ou perfectionnement', actif: true }
+  ],
+  'type-conge': [
+    { code: 'CONG-PAY', libelle: 'Congé Payé Annuel',           description: 'Droit légal de 30 jours calendaires par an', actif: true },
+    { code: 'CONG-MAL', libelle: 'Congé Maladie',              description: 'Absence pour raison médicale sous certificat', actif: true },
+    { code: 'CONG-MAT', libelle: 'Congé Maternité / Paternité', description: 'Repos parental légal', actif: true },
+    { code: 'CONG-EXC', libelle: 'Absence Exceptionnelle',     description: 'Événements familiaux ou autorisations spéciales', actif: true }
   ],
   'agence': [
     { code: 'AGN-001', libelle: 'Agence Centrale',          description: 'Siège social BPBF — Ouagadougou', actif: true  },
@@ -265,44 +310,65 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'SRV-004', libelle: 'Service Opérations de Guichet',       description: 'Gestion des opérations de caisse et transferts',          actif: true  },
     { code: 'SRV-005', libelle: 'Service Crédit & Engagements',        description: 'Analyse et octroi des prêts aux particuliers et pro',     actif: true  }
   ],
+  'emploi': [
+    { id: '1', code: 'EMP-001', libelle: 'Directeur Général', description: 'Direction et stratégie globale BPBF', actif: true },
+    { id: '2', code: 'EMP-002', libelle: 'Directeur de Département', description: 'Management et pilotage départemental', actif: true },
+    { id: '3', code: 'EMP-003', libelle: 'Chef de Service', description: 'Supervision opérationnelle des équipes', actif: true },
+    { id: '4', code: 'EMP-004', libelle: 'Analyste Financier / Comptable', description: 'Gestion financière et comptabilité bancaire', actif: true },
+    { id: '5', code: 'EMP-005', libelle: 'Ingénieur Monétique / SI', description: 'Systèmes d\'information et réseaux bancaires', actif: true },
+    { id: '6', code: 'EMP-006', libelle: 'Caissier Principal', description: 'Gestion des flux de caisse et coffre', actif: true },
+    { id: '7', code: 'EMP-007', libelle: 'Gestionnaire Cash Point', description: 'Gestion des points de retrait et services cash', actif: true },
+    { id: '8', code: 'EMP-008', libelle: 'Chargé de Clientèle Entreprises & PME', description: 'Gestion et développement du portefeuille pro et PME BPBF', actif: true },
+    { id: '9', code: 'EMP-009', libelle: 'Auditeur Interne & Contrôleur de Gestion', description: 'Évaluation des risques bancaires et contrôle de conformité', actif: true }
+  ],
+  'fonction': [
+    { id: '1',  code: 'FCT-001', libelle: 'Directeur Général (DG)',                   description: 'Nomination Direction Générale', actif: true },
+    { id: '2',  code: 'FCT-002', libelle: 'Directeur de Département',                 description: 'Nomination Direction / Management Département', actif: true },
+    { id: '3',  code: 'FCT-003', libelle: 'Responsable de Département',               description: 'Nomination Responsable Département', actif: true },
+    { id: '4',  code: 'FCT-004', libelle: 'Chef de Service',                          description: 'Nomination Chef de Service opérationnel', actif: true },
+    { id: '5',  code: 'FCT-005', libelle: "Chef d'Agence",                             description: 'Nomination Chef d\'Agence / Unité', actif: true },
+    { id: '6',  code: 'FCT-006', libelle: 'Caissier Principal',                       description: 'Nomination Caissier Principal (Coffre & Caisses)', actif: true },
+    { id: '7',  code: 'FCT-007', libelle: 'Gestionnaire Cash Point',                  description: 'Nomination Gestionnaire Points de Retrait & Monétique', actif: true },
+    { id: '8',  code: 'FCT-008', libelle: 'Caissier Auxiliaire',                      description: 'Nomination Caissier Auxiliaire', actif: true },
+    { id: '9',  code: 'FCT-009', libelle: 'Assistante de Direction',                  description: 'Nomination Secrétariat / Assistante DG/Direction', actif: true },
+    { id: '10', code: 'FCT-010', libelle: 'Agent de Liaison',                         description: 'Nomination Courrier et Liaison institutionnelle', actif: true },
+    { id: '11', code: 'FCT-011', libelle: 'Chauffeur',                                description: 'Nomination Conducteur de véhicule de service', actif: true },
+    { id: '12', code: 'FCT-012', libelle: 'Directeur des Ressources Humaines (DRH)',    description: 'Nomination Direction RH', actif: true },
+    { id: '13', code: 'FCT-013', libelle: 'Directeur des Opérations Bancaires (DOB)',   description: 'Nomination Exploitation Bancaire', actif: true },
+    { id: '14', code: 'FCT-014', libelle: 'Responsable Monétique & Cash Point',        description: 'Nomination Chef de Service Monétique', actif: true },
+    { id: '15', code: 'FCT-015', libelle: 'Responsable Paie & Administration',        description: 'Nomination Chef de Service Paie', actif: true },
+    { id: '16', code: 'FCT-016', libelle: 'Directeur Système d\'Information (DSI)',   description: 'Nomination Direction SI', actif: true },
+    { id: '17', code: 'FCT-017', libelle: 'Responsable Conformité & Risques',         description: 'Nomination Contrôle Interne & Risques', actif: true }
+  ],
   'param-indemnite': [
     // ─── GROUPE I : AGENTS, EMPLOYES & TECHNICIENS OPERATIONNELS ───────────────
-    // Logement: 35 000 | Transport: 30 000 | Sujétion: -
     { id: 'G1-LOG', code: 'PI-G1-LOG', libelle: 'Indemnité de Logement - Groupe I',    description: '1 à 7 — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '',                      grade: 'GROUPE I',   categorie: '1 à 7', montant: 35000,  taux: 35000  },
     { id: 'G1-TPT', code: 'PI-G1-TPT', libelle: 'Indemnité de Transport - Groupe I',   description: '1 à 7 — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '',                      grade: 'GROUPE I',   categorie: '1 à 7', montant: 30000,  taux: 30000  },
 
     // ─── GROUPE II : AGENTS DE MAITRISE & CADRES MOYENS ────────────────────────
-    // CLASSE I: Logement 45k + Transport 45k + Sujétion 20k = 110 000
     { id: 'G2C1-LOG', code: 'PI-G2-C1-LOG', libelle: 'Indemnité de Logement - Classe I',   description: 'Classe I — Logement BPBF',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 45000, taux: 45000 },
     { id: 'G2C1-TPT', code: 'PI-G2-C1-TPT', libelle: 'Indemnité de Transport - Classe I',  description: 'Classe I — Transport BPBF',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 45000, taux: 45000 },
     { id: 'G2C1-SUJ', code: 'PI-G2-C1-SUJ', libelle: 'Indemnité de Sujétion - Classe I',   description: 'Classe I — Sujétion BPBF',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 20000, taux: 20000 },
-    // CLASSE II: Logement 45k + Transport 45k + Sujétion 30k = 120 000
     { id: 'G2C2-LOG', code: 'PI-G2-C2-LOG', libelle: 'Indemnité de Logement - Classe II',  description: 'Classe II — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 45000, taux: 45000 },
     { id: 'G2C2-TPT', code: 'PI-G2-C2-TPT', libelle: 'Indemnité de Transport - Classe II', description: 'Classe II — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 45000, taux: 45000 },
     { id: 'G2C2-SUJ', code: 'PI-G2-C2-SUJ', libelle: 'Indemnité de Sujétion - Classe II',  description: 'Classe II — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 30000, taux: 30000 },
-    // CLASSE III: Logement 50k + Transport 50k + Sujétion 40k = 140 000
     { id: 'G2C3-LOG', code: 'PI-G2-C3-LOG', libelle: 'Indemnité de Logement - Classe III', description: 'Classe III — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 50000, taux: 50000 },
     { id: 'G2C3-TPT', code: 'PI-G2-C3-TPT', libelle: 'Indemnité de Transport - Classe III',description: 'Classe III — Transport BPBF',actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 50000, taux: 50000 },
     { id: 'G2C3-SUJ', code: 'PI-G2-C3-SUJ', libelle: 'Indemnité de Sujétion - Classe III', description: 'Classe III — Sujétion BPBF', actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 40000, taux: 40000 },
-    // CLASSE IV: Logement 60k + Transport 50k + Sujétion 50k = 160 000
     { id: 'G2C4-LOG', code: 'PI-G2-C4-LOG', libelle: 'Indemnité de Logement - Classe IV',  description: 'Classe IV — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 60000, taux: 60000 },
     { id: 'G2C4-TPT', code: 'PI-G2-C4-TPT', libelle: 'Indemnité de Transport - Classe IV', description: 'Classe IV — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 50000, taux: 50000 },
     { id: 'G2C4-SUJ', code: 'PI-G2-C4-SUJ', libelle: 'Indemnité de Sujétion - Classe IV',  description: 'Classe IV — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 50000, taux: 50000 },
 
     // ─── GROUPE III : CADRES & CADRES SUPERIEURS ───────────────────────────────
-    // CLASSE V: Logement 90k + Transport 60k + Sujétion 60k = 210 000
     { id: 'G3C5-LOG', code: 'PI-G3-C5-LOG', libelle: 'Indemnité de Logement - Classe V',   description: 'Classe V — Logement BPBF',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 90000,  taux: 90000  },
     { id: 'G3C5-TPT', code: 'PI-G3-C5-TPT', libelle: 'Indemnité de Transport - Classe V',  description: 'Classe V — Transport BPBF',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 60000,  taux: 60000  },
     { id: 'G3C5-SUJ', code: 'PI-G3-C5-SUJ', libelle: 'Indemnité de Sujétion - Classe V',   description: 'Classe V — Sujétion BPBF',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 60000,  taux: 60000  },
-    // CLASSE VI: Logement 100k + Transport 75k + Sujétion 60k = 235 000
     { id: 'G3C6-LOG', code: 'PI-G3-C6-LOG', libelle: 'Indemnité de Logement - Classe VI',  description: 'Classe VI — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 100000, taux: 100000 },
     { id: 'G3C6-TPT', code: 'PI-G3-C6-TPT', libelle: 'Indemnité de Transport - Classe VI', description: 'Classe VI — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 75000,  taux: 75000  },
     { id: 'G3C6-SUJ', code: 'PI-G3-C6-SUJ', libelle: 'Indemnité de Sujétion - Classe VI',  description: 'Classe VI — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 60000,  taux: 60000  },
-    // CLASSE VII: Logement 110k + Transport 80k + Sujétion 70k = 260 000
     { id: 'G3C7-LOG', code: 'PI-G3-C7-LOG', libelle: 'Indemnité de Logement - Classe VII', description: 'Classe VII — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 110000, taux: 110000 },
     { id: 'G3C7-TPT', code: 'PI-G3-C7-TPT', libelle: 'Indemnité de Transport - Classe VII',description: 'Classe VII — Transport BPBF',actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 80000,  taux: 80000  },
     { id: 'G3C7-SUJ', code: 'PI-G3-C7-SUJ', libelle: 'Indemnité de Sujétion - Classe VII', description: 'Classe VII — Sujétion BPBF', actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 70000,  taux: 70000  },
-    // CLASSE VIII: Logement 150k + Transport 100k + Sujétion 80k = 330 000
     { id: 'G3C8-LOG', code: 'PI-G3-C8-LOG', libelle: 'Indemnité de Logement - Classe VIII',description: 'Classe VIII — Logement BPBF',actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 150000, taux: 150000 },
     { id: 'G3C8-TPT', code: 'PI-G3-C8-TPT', libelle: 'Indemnité de Transport - Classe VIII',description: 'Classe VIII — Transport BPBF',actif:true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 100000, taux: 100000 },
     { id: 'G3C8-SUJ', code: 'PI-G3-C8-SUJ', libelle: 'Indemnité de Sujétion - Classe VIII',description: 'Classe VIII — Sujétion BPBF',actif:true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 80000,  taux: 80000  },
@@ -339,21 +405,21 @@ const MOCK_DATA: Record<string, RefItem[]> = {
   ],
   'grille-salariale': buildOfficialGridItems(),
   'categorie': [
-    { code: '1', libelle: '1ÈRE CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 95 945 FCFA)', actif: true },
-    { code: '2', libelle: '2ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 104 474 FCFA)', actif: true },
-    { code: '3', libelle: '3ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 107 135 FCFA)', actif: true },
-    { code: '4', libelle: '4ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 115 558 FCFA)', actif: true },
-    { code: '5', libelle: '5ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 128 831 FCFA)', actif: true },
-    { code: '6', libelle: '6ÈME CATEGORIE', description: 'Groupe I — Employé principal (Base 157 940 FCFA)', actif: true },
-    { code: '7', libelle: '7ÈME CATEGORIE', description: 'Groupe I — Agent de maîtrise (Base 176 441 FCFA)', actif: true },
-    { code: 'I',        libelle: 'CLASSE I',        description: 'Groupe II — Agent de maîtrise / Technicien (Base 173 090 FCFA)', actif: true },
-    { code: 'II',       libelle: 'CLASSE II',       description: 'Groupe II — Agent de maîtrise supérieur (Base 203 834 FCFA)', actif: true },
-    { code: 'III',      libelle: 'CLASSE III',      description: 'Groupe II — Cadre moyen (Base 278 697 FCFA)', actif: true },
-    { code: 'IV',       libelle: 'CLASSE IV',       description: 'Groupe II — Cadre supérieur (Base 405 758 FCFA)', actif: true },
-    { code: 'V',        libelle: 'CLASSE V',        description: 'Groupe III — Cadre de direction (Base 581 390 FCFA)', actif: true },
-    { code: 'VI',       libelle: 'CLASSE VI',       description: 'Groupe III — Chef de Département (Base 599 438 FCFA)', actif: true },
-    { code: 'VII',      libelle: 'CLASSE VII',      description: 'Groupe III — Directeur (Base 631 454 FCFA)', actif: true },
-    { code: 'VIII',     libelle: 'CLASSE VIII',     description: 'Groupe III — Directeur Général / Exécutif (Base 710 386 FCFA)', actif: true }
+    { code: '1', libelle: '1ÈRE CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 95 945 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '2', libelle: '2ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 104 474 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '3', libelle: '3ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 107 135 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '4', libelle: '4ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 115 558 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '5', libelle: '5ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 128 831 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '6', libelle: '6ÈME CATEGORIE', description: 'Groupe I — Employé principal (Base 157 940 FCFA)', tauxAbattement: 25, actif: true },
+    { code: '7', libelle: '7ÈME CATEGORIE', description: 'Groupe I — Agent de maîtrise (Base 176 441 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'I',        libelle: 'CLASSE I',        description: 'Groupe II — Agent de maîtrise / Technicien (Base 173 090 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'II',       libelle: 'CLASSE II',       description: 'Groupe II — Agent de maîtrise supérieur (Base 203 834 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'III',      libelle: 'CLASSE III',      description: 'Groupe II — Cadre moyen (Base 278 697 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'IV',       libelle: 'CLASSE IV',       description: 'Groupe II — Cadre supérieur (Base 405 758 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'V',        libelle: 'CLASSE V',        description: 'Groupe III — Cadre de direction (Base 581 390 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'VI',       libelle: 'CLASSE VI',       description: 'Groupe III — Chef de Département (Base 599 438 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'VII',      libelle: 'CLASSE VII',      description: 'Groupe III — Directeur (Base 631 454 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'VIII',     libelle: 'CLASSE VIII',     description: 'Groupe III — Directeur Général / Exécutif (Base 710 386 FCFA)', tauxAbattement: 20, actif: true }
   ],
   'grade': [
     { code: 'GROUPE I',   libelle: 'GROUPE I',   description: 'Agents et Employés (Catégories 1 à 7)', actif: true },
@@ -453,12 +519,12 @@ export class DbRefService {
   // ─── Charge depuis mock localStorage ──────────────────────────────────────
   private getMockItems(type: string): RefItem[] {
     if (type === 'categorie') {
-      const v4Key = 'ref_categorie_v4';
-      const stored = localStorage.getItem(v4Key);
+      const v5Key = 'ref_categorie_v5';
+      const stored = localStorage.getItem(v5Key);
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length === 15 && !parsed.some((x: any) => x.code?.includes('CATEGORIE') || x.code?.includes('CLASSE'))) {
+          if (Array.isArray(parsed) && parsed.length === 15) {
             return parsed;
           }
         } catch (e) {}
@@ -466,8 +532,42 @@ export class DbRefService {
       localStorage.removeItem('ref_categorie');
       localStorage.removeItem('ref_categorie_v2');
       localStorage.removeItem('ref_categorie_v3');
+      localStorage.removeItem('ref_categorie_v4');
       const initial = MOCK_DATA['categorie'];
-      localStorage.setItem(v4Key, JSON.stringify(initial));
+      localStorage.setItem(v5Key, JSON.stringify(initial));
+      return initial;
+    }
+
+    if (type === 'type-retenue-employe' || type === 'type-retenue-emploi') {
+      const vKey = `ref_${type}_v3`;
+      const stored = localStorage.getItem(vKey);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch (e) {}
+      }
+      const initial = MOCK_DATA[type] ?? [];
+      localStorage.setItem(vKey, JSON.stringify(initial));
+      return initial;
+    }
+
+    if (type === 'fonction') {
+      const v2Key = 'ref_fonction_v2';
+      const stored = localStorage.getItem(v2Key);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length >= 15) {
+            return parsed;
+          }
+        } catch (e) {}
+      }
+      localStorage.removeItem('ref_fonction');
+      const initial = MOCK_DATA['fonction'];
+      localStorage.setItem(v2Key, JSON.stringify(initial));
       return initial;
     }
 
@@ -513,10 +613,10 @@ export class DbRefService {
         }
       }
     }
-    const stored = localStorage.getItem(`ref_${type}`);
-    if (stored) {
+    const genericStored = localStorage.getItem(`ref_${type}`);
+    if (genericStored) {
       try {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(genericStored);
         if (type === 'grade' && Array.isArray(parsed) && parsed.some((x: any) => x.libelle?.includes('GRADE'))) {
           localStorage.removeItem(`ref_${type}`);
           const initial = MOCK_DATA[type] ?? [];
@@ -528,13 +628,15 @@ export class DbRefService {
         localStorage.removeItem(`ref_${type}`);
       }
     }
-    const initial = MOCK_DATA[type] ?? [];
-    localStorage.setItem(`ref_${type}`, JSON.stringify(initial));
-    return initial;
+    const genericInitial = MOCK_DATA[type] ?? [];
+    localStorage.setItem(`ref_${type}`, JSON.stringify(genericInitial));
+    return genericInitial;
   }
 
   private saveMockItems(type: string, items: RefItem[]): void {
-    const key = type === 'categorie' ? 'ref_categorie_v4' : `ref_${type}`;
+    let key = `ref_${type}`;
+    if (type === 'categorie') key = 'ref_categorie_v5';
+    if (type === 'type-retenue-employe' || type === 'type-retenue-emploi') key = `ref_${type}_v3`;
     localStorage.setItem(key, JSON.stringify(items));
   }
 
@@ -557,6 +659,16 @@ export class DbRefService {
         map(items => {
           if (!items || items.length === 0) {
             return this.getMockItems(type);
+          }
+          if (type === 'fonction' && items.length < 15) {
+            const mockList = this.getMockItems('fonction');
+            const merged = [...items];
+            for (const m of mockList) {
+              if (!merged.some(e => e.libelle.toLowerCase().trim() === m.libelle.toLowerCase().trim())) {
+                merged.push(m);
+              }
+            }
+            return merged;
           }
           return items;
         }),

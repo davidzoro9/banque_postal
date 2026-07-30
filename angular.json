@@ -6,33 +6,8 @@
     "hr-management": {
       "projectType": "application",
       "schematics": {
-        "@schematics/angular:component": {
-          "style": "scss",
-          "skipTests": true,
-          "standalone": false
-        },
-        "@schematics/angular:class": {
-          "skipTests": true
-        },
-        "@schematics/angular:directive": {
-          "skipTests": true,
-          "standalone": false
-        },
-        "@schematics/angular:guard": {
-          "skipTests": true
-        },
-        "@schematics/angular:interceptor": {
-          "skipTests": true
-        },
-        "@schematics/angular:pipe": {
-          "skipTests": true,
-          "standalone": false
-        },
-        "@schematics/angular:resolver": {
-          "skipTests": true
-        },
-        "@schematics/angular:service": {
-          "skipTests": true
+        "@angular/schematics:component": {
+          "style": "scss"
         }
       },
       "root": "",
@@ -42,6 +17,8 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/hr-management",
+            "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
@@ -91,6 +68,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
+            "host": "0.0.0.0",
+            "port": 4200,
             "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
@@ -128,8 +107,5 @@
         }
       }
     }
-  },
-  "cli": {
-    "analytics": "d60b3b54-1357-4d33-9ef3-5af4c91decc8"
   }
 }

@@ -20,6 +20,7 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
   menuItems: MenuItem[] = [];
   expandedItems = new Set<string>();
   currentEmpId: string | null = null;
+  private lastEmpId: string = 'EMP-001';
 
   constructor(
     public moduleNav: ModuleNavService,
@@ -27,43 +28,95 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     private authService: AuthService
   ) {}
 
+  get isEmployeeSelected(): boolean {
+    return !!this.currentEmpId;
+  }
+
+  private isItemPermitted(id: string): boolean {
+    switch (id) {
+      case 'donnees-base':
+      case 'gestion-admin':
+      case 'paie-section':
+        return this.authService.hasPermission('DB_VIEW');
+      case 'grille-salariale':
+        return this.authService.hasPermission('DB_GRILLE_EDIT');
+      case 'type-indemnite':
+      case 'param-indemnite':
+        return this.authService.hasPermission('DB_INDEMNITE_EDIT');
+      case 'emploi':
+      case 'fonction':
+      case 'agence':
+      case 'departement':
+      case 'direction':
+      case 'service':
+        return this.authService.hasPermission('DB_REF_EDIT');
+      case 'employes':
+      case 'liste-employes':
+      case 'fiche-employe':
+        return this.authService.hasPermission('EMP_VIEW');
+      case 'paie':
+      case 'bulletins':
+      case 'historique':
+        return this.authService.hasPermission('PAIE_VIEW');
+      case 'generer':
+        return this.authService.hasPermission('PAIE_GENERATE');
+      case 'valider':
+        return this.authService.hasPermission('PAIE_VALIDATE');
+      case 'cloture':
+        return this.authService.hasPermission('PAIE_CLOTURE');
+      case 'profils':
+      case 'securite-droits':
+        return this.authService.hasPermission('PROFIL_EDIT') || this.authService.hasPermission('USER_MANAGE');
+      case 'utilisateurs':
+        return this.authService.hasPermission('USER_MANAGE');
+      case 'habilitations':
+      case 'profils-roles':
+        return this.authService.hasPermission('PROFIL_EDIT');
+      case 'manuel-utilisateur':
+        return this.authService.hasPermission('MANUAL_VIEW');
+      default:
+        return true;
+    }
+  }
+
   ngOnInit(): void {
     this.moduleNav.activeModule$.pipe(takeUntil(this.destroy$)).subscribe(mod => {
       const isSameModule = this.activeModule?.id === mod?.id;
       this.activeModule = mod;
       
       const rawItems = this.moduleNav.getMenuForActiveModule();
-      this.menuItems = rawItems.filter(item => {
-        if (item.id === 'parametres-rh') {
-          return this.authService.currentUser?.role === 'ADMIN';
-        }
-        return true;
-      });
+      this.menuItems = rawItems
+        .filter(item => this.isItemPermitted(item.id))
+        .map(item => {
+          if (!item.children) return item;
+          const filteredChildren = item.children.filter(child => this.isItemPermitted(child.id));
+          return { ...item, children: filteredChildren };
+        })
+        .filter(item => !item.children || item.children.length > 0);
 
       if (!isSameModule) {
-        // Changement de module : on repart de zéro
         this.expandedItems.clear();
-        // Ouvre uniquement la section qui contient la route active
-        this.autoExpandActive();
+        this.expandedItems.add('employes');
       }
-      // Même module : on conserve l'état d'expansion choisi par l'utilisateur
     });
 
-    // Track current employee ID from the URL
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       takeUntil(this.destroy$)
     ).subscribe((e: any) => {
-      this.currentEmpId = this.extractEmpId(e.urlAfterRedirects || e.url);
-      if (this.currentEmpId) {
-        this.expandedItems.add('fiche-employe');
+      const empId = this.extractEmpId(e.urlAfterRedirects || e.url);
+      this.currentEmpId = empId;
+      if (empId) {
+        this.lastEmpId = empId;
+        this.expandedItems.add('employes');
       }
     });
 
-    // Also check current URL on init
-    this.currentEmpId = this.extractEmpId(this.router.url);
-    if (this.currentEmpId) {
-      this.expandedItems.add('fiche-employe');
+    const initEmpId = this.extractEmpId(this.router.url);
+    this.currentEmpId = initEmpId;
+    if (initEmpId) {
+      this.lastEmpId = initEmpId;
+      this.expandedItems.add('employes');
     }
   }
 
@@ -72,39 +125,23 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private autoExpandActive(): void {
-    const url = this.router.url;
-    for (const item of this.menuItems) {
-      if (item.children?.some(child => {
-        const r = this.resolveRoute(child.route);
-        return r && url.startsWith(r);
-      })) {
-        this.expandedItems.add(item.id);
-        return;
-      }
-    }
-    // Aucune route active trouvée : rien n'est ouvert
-  }
-
   private extractEmpId(url: string): string | null {
     const match = url.match(/\/grh\/employes\/([^\/\?]+)/);
     if (!match) return null;
-    // Exclude "nouveau" and "modifier" as they are not employee IDs
     const id = match[1];
     return (id === 'nouveau' || id === 'modifier') ? null : id;
   }
 
-  /** Resolve a route: replace __emp__ with current employee ID */
   resolveRoute(route: string | undefined): string | undefined {
     if (!route) return undefined;
     if (route.includes('__emp__')) {
-      if (!this.currentEmpId) return undefined;
-      return route.replace('__emp__', `/grh/employes/${this.currentEmpId}`);
+      const empId = this.currentEmpId || this.lastEmpId || 'EMP-001';
+      const cleanPath = route.replace('__emp__/', '').replace('__emp__', '');
+      return `/grh/employes/${empId}/${cleanPath}`;
     }
     return route;
   }
 
-  /** True if this item is a contextual fiche-employe link that requires an ID */
   isFicheItem(item: MenuItem): boolean {
     return !!(item.route?.includes('__emp__'));
   }
@@ -114,11 +151,16 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     this.router.navigate([mod.route]);
   }
 
+  navigateToOverview(): void {
+    if (this.activeModule) {
+      this.router.navigate([this.activeModule.route]);
+    }
+  }
+
   toggleItem(item: MenuItem): void {
     if (this.expandedItems.has(item.id)) {
       this.expandedItems.delete(item.id);
     } else {
-      this.expandedItems.clear(); // Ferme tous les autres groupes (accordéon)
       this.expandedItems.add(item.id);
     }
   }
@@ -133,16 +175,15 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
 
   navigateChild(route: string | undefined): void {
     if (!route) return;
-    if (route.includes('__emp__')) {
-      this.navigateFiche(route);
-    } else {
-      this.router.navigate([route]);
+    const target = this.resolveRoute(route);
+    if (target) {
+      this.router.navigateByUrl(target);
     }
   }
 
   navigateFiche(route: string | undefined): void {
     const resolved = this.resolveRoute(route);
-    if (resolved) this.router.navigate([resolved]);
+    if (resolved) this.router.navigateByUrl(resolved);
   }
 
   isActiveRoute(route: string | undefined): boolean {

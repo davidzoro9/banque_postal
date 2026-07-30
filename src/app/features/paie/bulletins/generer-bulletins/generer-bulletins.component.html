@@ -1,108 +1,91 @@
-<div style="padding: 24px; max-width: 1400px; margin: 0 auto;">
+<div class="paie-container">
   <!-- En-tête principal & Navigation de Période -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: linear-gradient(135deg, #1B4B9A, #0A2744); padding: 20px 24px; border-radius: 12px; color: white;">
-    <div>
-      <h1 style="margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-        <mat-icon style="font-size: 26px; width: 26px; height: 26px;">account_balance_wallet</mat-icon>
-        Gestion des Sessions de Paie - {{ periode }}
-      </h1>
-      <p style="margin: 4px 0 0; opacity: 0.85; font-size: 13px;">
-        Calcul automatique du salaire brut à partir du salaire de base, avec gestion des sessions ordinaires & extraordinaires
-      </p>
+  <div class="hero-header">
+    <div class="hero-title-group">
+      <div class="hero-icon">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Sessions de Paie — {{ periode }}</h1>
+        <p>Calcul automatique du salaire brut et net des agents de la Banque Postale du Burkina Faso</p>
+      </div>
     </div>
 
     <!-- Contrôle de Navigation des Mois -->
-    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; backdrop-filter: blur(4px);">
-      <button mat-icon-button style="color: white;" [disabled]="moisIndex === 0" (click)="changerMois(-1)" title="Mois Précédent (M-1)">
+    <div class="month-navigator">
+      <button mat-icon-button class="nav-btn" [disabled]="moisIndex === 0" (click)="changerMois(-1)" title="Mois Précédent (M-1)">
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <span style="font-weight: 800; font-size: 15px; min-width: 130px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;">
-        {{ periode }}
-      </span>
-      <button mat-icon-button style="color: white;" [disabled]="moisIndex === moisListe.length - 1" (click)="changerMois(1)" title="Mois Suivant">
+      <span class="month-text">{{ periode }}</span>
+      <button mat-icon-button class="nav-btn" [disabled]="moisIndex === moisListe.length - 1" (click)="changerMois(1)" title="Mois Suivant">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </div>
   </div>
 
-  <!-- Barre de sélection du Type de Session (Ordinaire vs Extraordinaire) -->
-  <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #1B4B9A;">
-    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <span style="font-weight: 700; color: #1e293b; font-size: 14px; margin-right: 8px;">Type de Session :</span>
-      
-      <button mat-raised-button 
-        [style.background]="sessionType === 'ORDINAIRE' ? '#1B4B9A' : '#f1f5f9'"
-        [style.color]="sessionType === 'ORDINAIRE' ? 'white' : '#334155'"
-        style="border-radius: 20px; font-weight: 600;" (click)="changerSession('ORDINAIRE')">
-        🟢 Session Ordinaire (Mensuelle)
-      </button>
+  <!-- Barre de sélection du Type de Session -->
+  <div class="control-bar">
+    <div class="session-switcher">
+      <span class="switcher-label">Type de Session :</span>
+      <div class="pill-group">
+        <button type="button" class="pill-btn" 
+          [class.active-ordinaire]="sessionType === 'ORDINAIRE'"
+          (click)="changerSession('ORDINAIRE')">
+          <span class="dot"></span>
+          Session Ordinaire (Mensuelle)
+        </button>
 
-      <button mat-raised-button 
-        [style.background]="sessionType === 'TREIZIEME_MOIS' ? '#d97706' : '#f1f5f9'"
-        [style.color]="sessionType === 'TREIZIEME_MOIS' ? 'white' : '#334155'"
-        style="border-radius: 20px; font-weight: 600;" (click)="changerSession('TREIZIEME_MOIS')">
-        🟡 Session Extraordinaire : 13ème Mois
-      </button>
-
-      <button mat-raised-button 
-        [style.background]="sessionType === 'QUATORZIEME_MOIS' ? '#2563eb' : '#f1f5f9'"
-        [style.color]="sessionType === 'QUATORZIEME_MOIS' ? 'white' : '#334155'"
-        style="border-radius: 20px; font-weight: 600;" (click)="changerSession('QUATORZIEME_MOIS')">
-        🔵 Session Extraordinaire : 14ème Mois
-      </button>
-
-      <button mat-raised-button 
-        [style.background]="sessionType === 'SOLDE_COMPTE' ? '#7c3aed' : '#f1f5f9'"
-        [style.color]="sessionType === 'SOLDE_COMPTE' ? 'white' : '#334155'"
-        style="border-radius: 20px; font-weight: 600;" (click)="changerSession('SOLDE_COMPTE')">
-        🟣 Session Solde de tout compte
-      </button>
+        <button type="button" class="pill-btn" 
+          [class.active-extraordinaire]="sessionType === 'EXTRAORDINAIRE'"
+          (click)="changerSession('EXTRAORDINAIRE')">
+          <span class="dot"></span>
+          Session Extraordinaire
+        </button>
+      </div>
     </div>
 
     <!-- Bouton Comparateur M-1 vs M -->
-    <button mat-stroked-button 
-      [color]="modeComparatifMminus1 ? 'warn' : 'primary'"
-      style="border-radius: 8px; font-weight: 700;" (click)="toggleModeComparatif()">
-      <mat-icon style="margin-right: 4px;">compare_arrows</mat-icon>
-      {{ modeComparatifMminus1 ? 'Masquer Vue Comparative' : 'Activer Vue Comparative (M-1 vs M)' }}
-    </button>
+    <div class="action-buttons">
+      <button mat-stroked-button class="comp-btn"
+        [color]="modeComparatifMminus1 ? 'warn' : 'primary'"
+        (click)="toggleModeComparatif()">
+        <mat-icon style="margin-right: 4px;">compare_arrows</mat-icon>
+        {{ modeComparatifMminus1 ? 'Masquer Vue Comparative' : 'Activer Vue Comparative (M-1 vs M)' }}
+      </button>
+    </div>
   </div>
 
   @if (isCalculating) {
-    <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="text-align: center; padding: 40px; background: white; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
       <mat-spinner diameter="40" style="margin: 0 auto 16px;"></mat-spinner>
-      <p style="font-size: 15px; color: #0060B3; font-weight: 600;">Extraction et calcul des bulletins de paie ({{ sessionType }}) pour {{ periode }}...</p>
+      <p style="font-size: 15px; color: #1E40AF; font-weight: 600;">Extraction et calcul des bulletins de paie ({{ sessionType }}) pour {{ periode }}...</p>
     </div>
   } @else {
-    <mat-card style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
-      <div style="padding: 16px 24px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 700; color: #0060B3; font-size: 15px; display: flex; align-items: center; gap: 8px;">
-          <mat-icon style="color: #2e7d32;">verified</mat-icon>
-          Bulletins Générés pour {{ periode }} ({{ bulletins.length }} employés)
+    <div class="table-card">
+      <div class="status-strip">
+        <div class="strip-info">
+          <mat-icon class="verified-icon">verified</mat-icon>
+          <span>Bulletins Générés pour {{ periode }} ({{ bulletins.length }} employés)</span>
           @if (sessionType !== 'ORDINAIRE') {
-            <span style="background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 800;">
-              SESSION EXTRAORDINAIRE
-            </span>
+            <span class="badge-tag extra">SESSION EXTRAORDINAIRE</span>
           }
           @if (sessionCloturee) {
-            <span style="background: #1B4B9A; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 800;">
-              🔒 SESSION CLÔTURÉE
-            </span>
+            <span class="badge-tag closed">SESSION CLÔTURÉE</span>
           }
-        </span>
+        </div>
 
         <!-- Barre de statut de validation -->
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 12px; color: #f59e0b; font-weight: 700;">🟠 {{ nbrGeneres }} à valider</span>
-          <span style="font-size: 12px; color: #16a34a; font-weight: 700;">✅ {{ nbrValides }} validés</span>
+        <div class="strip-actions">
+          <span class="count-pending">{{ nbrGeneres }} à valider</span>
+          <span class="count-valid">{{ nbrValides }} validés</span>
           @if (!sessionCloturee) {
             <button mat-raised-button
-              [style.background]="tousValides ? '#1B4B9A' : '#e2e8f0'"
+              [style.background]="tousValides ? '#1E40AF' : '#e2e8f0'"
               [style.color]="tousValides ? 'white' : '#94a3b8'"
               style="font-weight: 700; border-radius: 8px;"
               [disabled]="!tousValides"
               (click)="cloturerSession()">
-              🔒 Clôturer la Session
+              Clôturer la Session
             </button>
           }
           <button mat-stroked-button color="primary" (click)="imprimerBulletin()">
@@ -111,63 +94,63 @@
         </div>
       </div>
 
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+      <div class="table-responsive">
+        <table class="paie-table">
           <thead>
-            <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #334155; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">
-              <th style="padding: 12px 16px;">Employé / Matricule</th>
-              <th style="padding: 12px 16px;">Fonction / Groupe</th>
-              <th style="padding: 12px 16px;">Salaire Base</th>
-              <th style="padding: 12px 16px;">Indemnités</th>
-              <th style="padding: 12px 16px; background: #eff6ff;">Salaire Brut (Auto)</th>
-              <th style="padding: 12px 16px;">Retenues (CNSS/IUTS)</th>
-              <th style="padding: 12px 16px;">Net à Payer (FCFA)</th>
+            <tr>
+              <th>Employé / Matricule</th>
+              <th>Fonction / Groupe</th>
+              <th>Salaire Base</th>
+              <th>Indemnités</th>
+              <th style="background: #eff6ff;">Salaire Brut (Auto)</th>
+              <th>Retenues (CNSS/IUTS)</th>
+              <th>Net à Payer (FCFA)</th>
 
               <!-- Colonnes dynamiques du Mode Comparatif M-1 vs M -->
               @if (modeComparatifMminus1) {
-                <th style="padding: 12px 16px; background: #fef3c7; color: #78350f;">Net M-1</th>
-                <th style="padding: 12px 16px; background: #dcfce7; color: #14532d;">Écart (Δ)</th>
+                <th style="background: #fef3c7; color: #78350f;">Net M-1</th>
+                <th style="background: #dcfce7; color: #14532d;">Écart (Δ)</th>
               }
 
-              <th style="padding: 12px 16px; text-align: center;">Statut</th>
-              <th style="padding: 12px 16px; text-align: center;">Actions</th>
+              <th style="text-align: center;">Statut</th>
+              <th style="text-align: center;">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (b of bulletins; track b.employeeId) {
-              <tr class="data-row" style="border-bottom: 1px solid var(--border); transition: background 0.15s;">
-                <td style="padding: 12px 16px;">
+              <tr>
+                <td>
                   <strong style="color: #1e293b; font-size: 14px;">{{ b.employeeName }}</strong>
                   <div style="color: #64748b; font-size: 11px;">{{ b.matricule }}</div>
                 </td>
-                <td style="padding: 12px 16px;">
+                <td>
                   <div>{{ b.fonction }}</div>
-                  <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">{{ b.grade }} - {{ b.categorie }}</span>
+                  <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ b.grade }} - {{ b.categorie }}</span>
                 </td>
-                <td style="padding: 12px 16px; font-weight: 600; color: #475569;">
+                <td style="font-weight: 600; color: #475569;">
                   {{ (b.salaireBase || 0) | number:'1.0-0' }} FCFA
                 </td>
-                <td style="padding: 12px 16px; color: #2e7d32; font-weight: 600;">
+                <td class="sal-ind">
                   +{{ (b.totalIndemnites || 0) | number:'1.0-0' }} FCFA
                 </td>
-                <td style="padding: 12px 16px; font-weight: 700; color: #1e293b; background: #f8fafc;">
+                <td class="sal-brut" style="background: #f8fafc;">
                   {{ (b.salaireBrut || 0) | number:'1.0-0' }} FCFA
                 </td>
-                <td style="padding: 12px 16px; color: #c62828;">
+                <td class="sal-ret">
                   -{{ (b.totalRetenues || 0) | number:'1.0-0' }} FCFA
                 </td>
-                <td style="padding: 12px 16px;">
-                  <span style="font-weight: 800; color: #2e7d32; font-size: 14px; background: #e8f5e9; padding: 4px 10px; border-radius: 6px;">
+                <td>
+                  <span class="sal-net" style="background: #e8f5e9; padding: 4px 10px; border-radius: 6px; font-size: 14px;">
                     {{ (b.salaireNet || 0) | number:'1.0-0' }} FCFA
                   </span>
                 </td>
 
                 <!-- Données Comparatives M-1 vs M -->
                 @if (modeComparatifMminus1) {
-                  <td style="padding: 12px 16px; font-weight: 600; color: #64748b; background: #fffbeb;">
+                  <td style="font-weight: 600; color: #64748b; background: #fffbeb;">
                     {{ b.salaireNetM1 | number:'1.0-0' }} FCFA
                   </td>
-                  <td style="padding: 12px 16px; font-weight: 800; background: #f0fdf4;">
+                  <td style="font-weight: 800; background: #f0fdf4;">
                     <span [style.color]="b.ecartNet >= 0 ? '#166534' : '#991b1b'">
                       {{ b.ecartNet >= 0 ? '+' : '' }}{{ b.ecartNet | number:'1.0-0' }} FCFA
                     </span>
@@ -175,19 +158,19 @@
                 }
 
                 <!-- Badge de Statut de Validation -->
-                <td style="padding: 12px 16px; text-align: center;">
+                <td style="text-align: center;">
                   @if (b.etat === 'GENERE') {
-                    <span style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 11px; padding: 3px 10px; border-radius: 12px;">🟠 GÉNÉRÉ</span>
+                    <span class="badge-status genere">GÉNÉRÉ</span>
                   } @else if (b.etat === 'VALIDE') {
-                    <span style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 11px; padding: 3px 10px; border-radius: 12px;">✅ VALIDÉ</span>
+                    <span class="badge-status valide">VALIDÉ</span>
                     <div style="font-size: 10px; color: #64748b; margin-top: 2px;">{{ b.dateValidation }}</div>
                   } @else if (b.etat === 'CLOTURE') {
-                    <span style="background: #1B4B9A; color: white; font-weight: 700; font-size: 11px; padding: 3px 10px; border-radius: 12px;">🔒 CLÔTURÉ</span>
+                    <span class="badge-status cloture">CLÔTURÉ</span>
                   }
                 </td>
 
                 <!-- Boutons d'Action -->
-                <td style="padding: 12px 16px; text-align: center;">
+                <td style="text-align: center;">
                   <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                     <button mat-icon-button color="primary" title="Aperçu du bulletin" (click)="voirDetails(b)">
                       <mat-icon>visibility</mat-icon>
@@ -210,7 +193,7 @@
           </tbody>
         </table>
       </div>
-    </mat-card>
+    </div>
   }
 </div>
 
@@ -218,9 +201,9 @@
 @if (selectedBulletin) {
   <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
     <div style="background: white; border-radius: 12px; max-width: 650px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E40AF; padding-bottom: 12px; margin-bottom: 16px;">
         <div>
-          <h2 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 800;">
+          <h2 style="margin: 0; color: #1E40AF; font-size: 18px; font-weight: 800;">
             BULLETIN DE SALAIRE - {{ selectedBulletin.mois || periode }}
           </h2>
           <span style="font-size: 12px; color: #64748b;">Matricule: {{ selectedBulletin.matricule }} | Session: {{ selectedBulletin.sessionType }}</span>
@@ -235,7 +218,7 @@
         <div><strong>Période & Session:</strong> {{ selectedBulletin.mois || periode }}</div>
       </div>
 
-      <h3 style="font-size: 14px; font-weight: 700; color: #0060B3; margin-bottom: 8px;">Détails de la Rémunération :</h3>
+      <h3 style="font-size: 14px; font-weight: 700; color: #1E40AF; margin-bottom: 8px;">Détails de la Rémunération :</h3>
       <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px;">
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 8px 0;"><strong>Salaire de base (Grille Salariale)</strong></td>
@@ -250,8 +233,8 @@
           }
         }
         <tr style="border-top: 2px solid #cbd5e1; font-weight: 700; background: #f8fafc;">
-          <td style="padding: 8px 0; color: #0060B3;">TOTAL SALAIRE BRUT (Auto = Base + Indemnités)</td>
-          <td style="text-align: right; padding: 8px 0; color: #0060B3;">{{ selectedBulletin.salaireBrut | number:'1.0-0' }} FCFA</td>
+          <td style="padding: 8px 0; color: #1E40AF;">TOTAL SALAIRE BRUT (Auto = Base + Indemnités)</td>
+          <td style="text-align: right; padding: 8px 0; color: #1E40AF;">{{ selectedBulletin.salaireBrut | number:'1.0-0' }} FCFA</td>
         </tr>
         <tr style="color: #c62828;">
           <td style="padding: 6px 0; padding-left: 12px;">- Cotisation Sociale (CNSS 5.5%)</td>
@@ -261,7 +244,7 @@
           <td style="padding: 6px 0; padding-left: 12px;">- Retenue Impôt (IUTS)</td>
           <td style="text-align: right; padding: 6px 0;">-{{ selectedBulletin.impotIUTS | number:'1.0-0' }} FCFA</td>
         </tr>
-        <tr style="border-top: 2px solid #0060B3; background: #e8f5e9; font-size: 15px; font-weight: 800; color: #2e7d32;">
+        <tr style="border-top: 2px solid #1E40AF; background: #e8f5e9; font-size: 15px; font-weight: 800; color: #2e7d32;">
           <td style="padding: 10px 8px;">NET À PAYER</td>
           <td style="text-align: right; padding: 10px 8px;">{{ selectedBulletin.salaireNet | number:'1.0-0' }} FCFA</td>
         </tr>

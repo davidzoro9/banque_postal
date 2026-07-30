@@ -14,12 +14,12 @@ const routes: Routes = [
   { path: 'admin/service',         component: DbRefListComponent, data: { title: 'Service',             icon: 'group_work',         type: 'service'         } },
   { path: 'admin/grille-salariale',component: DbRefListComponent, data: { title: 'Grille salariale',    icon: 'table_chart',        type: 'grille-salariale'} },
   { path: 'admin/agence',          component: DbRefListComponent, data: { title: 'Agence',              icon: 'store',              type: 'agence'          } },
-  { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: 'Type indemnité',      icon: 'paid',               type: 'type-indemnite'  } },
-  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: "Paramétrage d'indemnité", icon: 'settings_suggest',   type: 'param-indemnite' } },
+  { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: "Types d'indemnité",  icon: 'paid',               type: 'type-indemnite'  } },
+  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: "Indemnités (par poste)", icon: 'settings_suggest',   type: 'param-indemnite' } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
-  { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenue (par employé)', icon: 'money_off', type: 'type-retenue-employe' } },
-  { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Types de retenue (par emploi)',  icon: 'money_off', type: 'type-retenue-emploi' } },
+  { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenue', icon: 'money_off', type: 'type-retenue-employe' } },
+  { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Retenues (par emploi)',  icon: 'tune', type: 'type-retenue-emploi' } },
   { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
   { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes (Burkina Faso)', icon: 'location_city', type: 'ville' } },
 
@@ -36,9 +36,16 @@ const routes: Routes = [
   { path: 'paie/bareme',           component: DbRefListComponent, data: { title: 'Barème fiscal',       icon: 'calculate',          type: 'bareme'          } },
   { path: 'paie/mode-paiement',    component: DbRefListComponent, data: { title: 'Mode de paiement',    icon: 'payments',           type: 'mode-paiement'   } },
 
-  // ─── Alias direct (sans préfixe admin/) ────────────────────────────────────
+  // ─── Alias direct (sans préfixe) ────────────────────────────────────
   { path: 'grille-salariale',      redirectTo: 'admin/grille-salariale', pathMatch: 'full' },
+  { path: 'type-indemnite',        redirectTo: 'admin/type-indemnite',   pathMatch: 'full' },
   { path: 'param-indemnite',       redirectTo: 'admin/param-indemnite',  pathMatch: 'full' },
+  { path: 'emploi',                redirectTo: 'admin/emploi',           pathMatch: 'full' },
+  { path: 'fonction',              redirectTo: 'admin/fonction',         pathMatch: 'full' },
+  { path: 'agence',                redirectTo: 'admin/agence',           pathMatch: 'full' },
+  { path: 'departement',           redirectTo: 'admin/departement',      pathMatch: 'full' },
+  { path: 'direction',             redirectTo: 'admin/direction',        pathMatch: 'full' },
+  { path: 'service',               redirectTo: 'admin/service',          pathMatch: 'full' },
 
   { path: '**', redirectTo: '' }
 ];

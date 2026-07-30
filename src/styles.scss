@@ -164,15 +164,27 @@ body {
   font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
   background: var(--app-bg);
   color: var(--on-surface);
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+// ─── Desactivation du gras global sur toute l'application ─────────────────
+body, html, p, span, td, th, div, label, input, select, textarea, button, a, li,
+.mat-mdc-cell, .mat-mdc-header-cell, .mat-mdc-button, .mat-mdc-card-title, .mat-mdc-card-subtitle, .mat-mdc-form-field,
+.mat-mdc-dialog-container, .mat-mdc-menu-panel, .mat-mdc-tab, .mat-mdc-chip, .mat-mdc-select, .mat-mdc-option {
+  font-weight: 400 !important;
+}
+
+b, strong, .font-bold {
+  font-weight: 600 !important;
+}
+
 // ─── Typography ───────────────────────────────────────────
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter', 'Roboto', sans-serif;
-  font-weight: 700;
+  font-weight: 500 !important;
   margin: 0;
 }
 
@@ -186,7 +198,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 // ─── Shared section form styles ───────────────────────────
-.section-page { max-width: 900px; margin: 0 auto; }
+.section-page { max-width: 1200px; margin: 0 auto; }
 
 .sec-breadcrumb {
   display: flex; align-items: center; gap: 6px;

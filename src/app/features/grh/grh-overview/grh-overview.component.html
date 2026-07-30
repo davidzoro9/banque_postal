@@ -1,58 +1,89 @@
-<div class="module-overview">
-
-  <div class="page-header"
-       [style.background]="'linear-gradient(135deg, ' + module.gradientFrom + ', ' + module.gradientTo + ')'">
-    <div class="ph-content">
-      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
+<div class="profils-overview-page">
+  <!-- En-tête -->
+  <div class="header-banner" style="background: linear-gradient(135deg, #0060B3 0%, #004080 100%);">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>people</mat-icon>
+      </div>
       <div>
-        <h1>{{ module.name }}</h1>
-        <p>{{ module.description }}</p>
+        <h1>Gestion Administrative (GA)</h1>
+        <p>Administration centralisée des collaborateurs, fiches individuelles, suivi des présences, congés et contrats.</p>
       </div>
     </div>
   </div>
 
-  <mat-card class="table-card">
-    <mat-card-header>
-      <mat-card-title>Dernières embauches</mat-card-title>
-      <button mat-button color="primary" (click)="navigate('/grh/employes')" class="see-all-btn">
-        Voir tous <mat-icon>arrow_forward</mat-icon>
-      </button>
-    </mat-card-header>
-    <mat-card-content>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Collaborateur</th>
-            <th>Poste</th>
-            <th>Département</th>
-            <th>Date d'embauche</th>
-            <th>Contrat</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (emp of recentEmployees; track emp.nom) {
-            <tr>
-              <td>
-                <div class="emp-cell">
-                  <div class="emp-avatar" [style.background-color]="module.gradientFrom">
-                    {{ emp.nom.charAt(0) }}
-                  </div>
-                  <span>{{ emp.nom }}</span>
-                </div>
-              </td>
-              <td>{{ emp.poste }}</td>
-              <td><span class="dept-chip">{{ emp.dept }}</span></td>
-              <td>{{ emp.date }}</td>
-              <td>
-                <span class="contract-badge" [class.cdd]="emp.status === 'CDD'">
-                  {{ emp.status }}
-                </span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </mat-card-content>
-  </mat-card>
+  <!-- Statistiques rapides -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e3f2fd; color: #0288d1;">
+          <mat-icon>badge</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">148</span>
+          <span class="stat-label">Collaborateurs Actifs</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
 
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+          <mat-icon>beach_access</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">12</span>
+          <span class="stat-label">Demandes de Congé</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #fff3e0; color: #f57c00;">
+          <mat-icon>event_busy</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">5</span>
+          <span class="stat-label">Absences Signalées</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #f3e5f5; color: #7b1fa2;">
+          <mat-icon>article</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">8</span>
+          <span class="stat-label">Contrats à Renouveler</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Sections principales -->
+  <h2 class="section-title">Espaces de Gestion Administrative</h2>
+  <div class="sections-grid">
+    @for (s of sections; track s.title) {
+      <mat-card class="section-card" (click)="navigateTo(s.route)" matRipple>
+        <mat-card-header>
+          <div class="card-header-icon" [style.background]="s.color">
+            <mat-icon>{{ s.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ s.title }}</mat-card-title>
+          <span class="badge-chip">{{ s.badge }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ s.description }}</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary">
+            Accéder à la gestion <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
 </div>
