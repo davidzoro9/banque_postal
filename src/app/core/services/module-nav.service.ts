@@ -3,20 +3,20 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { AppModule, APP_MODULES } from '../models/app-module.model';
 import { MenuItem } from '../models/menu-item.model';
 
-const FULL_REF_AND_PARAM_MENUS: MenuItem[] = [
+export const DONNEES_BASE_MENUS: MenuItem[] = [
   {
-    id: 'db-dashboard',
+    id: 'donnees-base-dashboard',
     label: 'Tableau de bord DB',
     icon: 'dashboard',
     route: '/donnees-base'
   },
   {
-    id: 'gestion-admin',
-    label: 'Gestion administrative',
-    icon: 'admin_panel_settings',
+    id: 'donnees-base',
+    label: 'Données de base',
+    icon: 'storage',
     children: [
-      { id: 'emploi',           label: 'Emploi',                   icon: 'work',                route: '/donnees-base/admin/emploi'           },
-      { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+      { id: 'emploi',           label: 'Poste / Emploi',           icon: 'work',                route: '/donnees-base/admin/emploi'           },
+      { id: 'fonction',         label: 'Fonction (Nomination)',    icon: 'badge',               route: '/donnees-base/admin/fonction'         },
       { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
       { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
@@ -67,7 +67,11 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
         { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
+        { id: 'fiche-infos-pro',    label: 'Poste & Structure',       icon: 'work',                  route: '__emp__/infos-pro'       },
         { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
+        { id: 'fiche-categorie',    label: 'Catégorie',               icon: 'military_tech',          route: '__emp__/categorie'       },
+        { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                  route: '__emp__/indemnites'      },
+        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',          route: '__emp__/exonerations'    },
         { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
         { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
         { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },
@@ -100,44 +104,38 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       route: '/paie'
     },
     {
-      id: 'bulletins',
-      label: 'Bulletins de paie',
-      icon: 'receipt_long',
+      id: 'paie-bulletins',
+      label: 'Gestion de la Paie',
+      icon: 'payments',
       children: [
-        { id: 'generer', label: 'Générer les bulletins', icon: 'add_circle_outline', route: '/paie/bulletins/generer' },
-        { id: 'historique', label: 'Historique', icon: 'history', route: '/paie/bulletins/historique' }
-      ]
-    },
-    {
-      id: 'elements',
-      label: 'Éléments de paie',
-      icon: 'calculate',
-      children: [
-        { id: 'rubriques', label: 'Rubriques de paie', icon: 'list', route: '/paie/elements/rubriques' },
-        { id: 'cotisations', label: 'Cotisations', icon: 'percent', route: '/paie/elements/cotisations' }
-      ]
-    },
-    {
-      id: 'retenues-group',
-      label: 'Retenues sur Salaire',
-      icon: 'money_off',
-      children: [
-        { id: 'types-retenues',   label: 'Type de retenue',      icon: 'money_off', route: '/donnees-base/admin/type-retenue-employe' },
-        { id: 'parametrage-paie', label: 'Retenues (par emploi)',icon: 'tune',      route: '/donnees-base/admin/type-retenue-emploi' }
-      ]
-    },
-    {
-      id: 'declarations',
-      label: 'Déclarations sociales',
-      icon: 'send',
-      children: [
-        { id: 'dsn', label: 'DSN', icon: 'description', route: '/paie/declarations/dsn' },
-        { id: 'urssaf', label: 'URSSAF', icon: 'account_balance', route: '/paie/declarations/urssaf' }
+        { id: 'bulletins', label: 'Bulletins de paie', icon: 'receipt', route: '/paie/bulletins' },
+        { id: 'generer',   label: 'Générer la paie',   icon: 'autorenew', route: '/paie/generer' },
+        { id: 'valider',   label: 'Valider la paie',   icon: 'verified', route: '/paie/valider' },
+        { id: 'cloture',   label: 'Clôture de paie',   icon: 'lock',     route: '/paie/cloture' },
+        { id: 'historique',label: 'Historique',        icon: 'history',  route: '/paie/historique' }
       ]
     }
   ],
-  'donnees-base': FULL_REF_AND_PARAM_MENUS,
-  'profils': [
+  carrieres: [
+    {
+      id: 'carrieres-dashboard',
+      label: 'Tableau de bord GPEC',
+      icon: 'dashboard',
+      route: '/carrieres'
+    },
+    {
+      id: 'carrieres-gpec',
+      label: 'GPEC & Formations',
+      icon: 'trending_up',
+      children: [
+        { id: 'evaluations', label: 'Évaluations', icon: 'star', route: '/carrieres/evaluations' },
+        { id: 'mobilite', label: 'Mobilité & Promotions', icon: 'alt_route', route: '/carrieres/mobilite' },
+        { id: 'formations', label: 'Plan de formation', icon: 'school', route: '/carrieres/formations' }
+      ]
+    }
+  ],
+  'donnees-base': DONNEES_BASE_MENUS,
+  profils: [
     {
       id: 'profils-dashboard',
       label: 'Tableau de bord Profils',
@@ -149,50 +147,11 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Sécurité & Droits',
       icon: 'admin_panel_settings',
       children: [
-        { id: 'profils-roles',   label: 'Profils & Rôles',          icon: 'badge',            route: '/profils/roles' },
-        { id: 'profil-ref',      label: 'Référentiel Profil / Rôle',icon: 'admin_panel_settings', route: '/donnees-base/admin/profil' },
-        { id: 'habilitations',   label: 'Matrice des Habilitations',icon: 'rule',             route: '/profils/habilitations' },
-        { id: 'utilisateurs',    label: 'Gestion des Utilisateurs', icon: 'manage_accounts',  route: '/profils/utilisateurs' }
-      ]
-    },
-    {
-      id: 'documentation',
-      label: 'Documentation & Aide',
-      icon: 'menu_book',
-      children: [
-        { id: 'manuel-utilisateur', label: "Manuel d'utilisation",  icon: 'auto_stories',    route: '/profils/manuel' }
+        { id: 'utilisateurs',   label: 'Gestion Utilisateurs',   icon: 'manage_accounts', route: '/profils/utilisateurs' },
+        { id: 'profils-roles',  label: 'Profils / Rôles',        icon: 'groups',          route: '/profils/roles' },
+        { id: 'habilitations',  label: 'Matrice Habilitations',  icon: 'rule',            route: '/profils/habilitations' }
       ]
     }
-  ]
-};
-
-export interface QuickLink {
-  label: string;
-  icon: string;
-  route: string;
-  color?: string;
-}
-
-export const QUICK_LINKS_PER_MODULE: Record<string, QuickLink[]> = {
-  grh: [
-    { label: 'Nouveau collaborateur', icon: 'person_add', route: '/grh/employes/nouveau', color: '#0060B3' },
-    { label: 'Demande de congé', icon: 'event_available', route: '/grh/conges/nouveau', color: '#0060B3' }
-  ],
-  paie: [
-    { label: 'Générer bulletins de paie', icon: 'calculate', route: '/paie/bulletins/generer', color: '#0060B3' },
-    { label: 'Ordres de virement', icon: 'account_balance', route: '/paie/virements', color: '#0060B3' }
-  ],
-  carrieres: [
-    { label: 'Nouvelle évaluation', icon: 'rate_review', route: '/carrieres/evaluations/nouvelle', color: '#0060B3' },
-    { label: 'Plan de formation', icon: 'school', route: '/carrieres/formations', color: '#0060B3' }
-  ],
-  'donnees-base': [
-    { label: 'Catégories Professionnelles', icon: 'category', route: '/donnees-base/carriere/categorie', color: '#0060B3' },
-    { label: 'Paramétrage des Indemnités', icon: 'paid', route: '/donnees-base/admin/param-indemnite', color: '#0060B3' }
-  ],
-  profils: [
-    { label: 'Comptes Utilisateurs', icon: 'manage_accounts', route: '/profils/utilisateurs', color: '#0060B3' },
-    { label: 'Matrice des Habilitations', icon: 'checklist_rtl', route: '/profils/habilitations', color: '#0060B3' }
   ]
 };
 
@@ -200,46 +159,49 @@ export const QUICK_LINKS_PER_MODULE: Record<string, QuickLink[]> = {
   providedIn: 'root'
 })
 export class ModuleNavService {
-  private activeModuleSubject = new BehaviorSubject<AppModule>(APP_MODULES[0]);
-  activeModule$: Observable<AppModule> = this.activeModuleSubject.asObservable();
+  modules = APP_MODULES;
+
+  private activeModuleSubject = new BehaviorSubject<AppModule | null>(APP_MODULES[0]);
+  activeModule$: Observable<AppModule | null> = this.activeModuleSubject.asObservable();
 
   private drawerOpenSubject = new BehaviorSubject<boolean>(true);
   drawerOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
+  sidebarOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
 
-  private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
-  sidebarOpen$: Observable<boolean> = this.sidebarOpenSubject.asObservable();
+  quickLinks = [
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard', color: '#0060B3' },
+    { label: 'Employés', route: '/grh/employes', icon: 'badge', color: '#0060B3' },
+    { label: 'Bulletins', route: '/paie/bulletins', icon: 'receipt', color: '#0060B3' },
+    { label: 'Profils', route: '/profils/utilisateurs', icon: 'manage_accounts', color: '#0060B3' }
+  ];
 
-  readonly modules = APP_MODULES;
-
-  selectModule(mod: AppModule): void {
-    this.activeModuleSubject.next(mod);
+  get activeModule(): AppModule | null {
+    return this.activeModuleSubject.getValue();
   }
 
-  get activeModule(): AppModule {
-    return this.activeModuleSubject.value;
+  get drawerOpen(): boolean {
+    return this.drawerOpenSubject.getValue();
   }
 
-  getMenuForActiveModule(): MenuItem[] {
-    return MODULE_MENUS[this.activeModule.id] || [];
-  }
-
-  getQuickLinksForActiveModule(): QuickLink[] {
-    return QUICK_LINKS_PER_MODULE[this.activeModule.id] || [];
-  }
-
-  get quickLinks(): QuickLink[] {
-    return this.getQuickLinksForActiveModule();
-  }
-
-  toggleDrawer(): void {
-    this.drawerOpenSubject.next(!this.drawerOpenSubject.value);
-  }
-
-  toggleSidebar(): void {
-    this.sidebarOpenSubject.next(!this.sidebarOpenSubject.value);
+  selectModule(module: AppModule): void {
+    this.activeModuleSubject.next(module);
   }
 
   clearModule(): void {
-    this.activeModuleSubject.next(APP_MODULES[0]);
+    this.activeModuleSubject.next(null);
+  }
+
+  toggleDrawer(): void {
+    this.drawerOpenSubject.next(!this.drawerOpen);
+  }
+
+  toggleSidebar(): void {
+    this.toggleDrawer();
+  }
+
+  getMenuForActiveModule(): MenuItem[] {
+    const mod = this.activeModule;
+    if (!mod) return [];
+    return MODULE_MENUS[mod.id] || [];
   }
 }

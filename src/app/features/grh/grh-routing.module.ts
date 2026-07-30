@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { GrhOverviewComponent } from './grh-overview/grh-overview.component';
 import { EmployeeListComponent } from './employes/employee-list/employee-list.component';
-import { EmployeeDetailComponent } from './employes/employee-detail/employee-detail.component';
 import { EmployeeFormComponent } from './employes/employee-form/employee-form.component';
 import { ParametresRhComponent } from './parametres-rh/parametres-rh.component';
 import { CongesFormComponent } from './conges/conges-form/conges-form.component';
@@ -41,7 +40,7 @@ const routes: Routes = [
   { path: 'employes/:id/salaire',            component: SalaireComponent },
   { path: 'employes/:id/dossier',            component: DossierComponent },
   { path: 'employes/:id/notes-rh',           component: NotesRhComponent },
-  { path: 'employes/:id',                    component: EmployeeDetailComponent },
+  { path: 'employes/:id',                    redirectTo: 'employes/:id/infos-personnelles', pathMatch: 'full' },
   { path: 'conges',                          component: CongesListComponent },
   { path: 'conges/nouveau',                  component: CongesFormComponent },
   { path: 'absences',                        component: AbsencesListComponent },

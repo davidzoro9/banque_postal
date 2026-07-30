@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
@@ -16,7 +16,7 @@ import { APP_MODULES } from '../../../../core/models/app-module.model';
   styleUrls: ['./employee-list.component.scss'],
   standalone: false
 })
-export class EmployeeListComponent implements OnInit, OnDestroy {
+export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -40,6 +40,10 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
     private router: Router
   ) {}
 
+  get totalEmployes(): number {
+    return this.dataSource.data.length;
+  }
+
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
     this.services = this.employeeService.getServices();
@@ -52,6 +56,11 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   applyFilters(): void {
@@ -67,7 +76,7 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   }
 
   viewEmployee(id: string): void {
-    this.router.navigate(['/grh/employes', id]);
+    this.router.navigate(['/grh/employes', id, 'infos-personnelles']);
   }
 
   editEmployee(id: string): void {
@@ -98,17 +107,7 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
     return colors[idx];
   }
 
-  getStatutStyle(statut: StatutEmploye): { background: string; color: string } {
+  getStatutStyle(statut: StatutEmploye) {
     return STATUT_COLORS[statut] || { background: '#f1f3f4', color: '#5f6368' };
   }
-
-  get totalEmployes(): number { return this.employeeService['employees'].length; }
-  get totalActifs(): number { return this.employeeService['employees'].filter((e: Employee) => e.statut === 'Actif').length; }
-  get totalEssai(): number { return this.employeeService['employees'].filter((e: Employee) => e.statut === "Période d'essai").length; }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
 }
-
