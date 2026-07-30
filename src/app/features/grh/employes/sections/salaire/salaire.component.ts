@@ -1,9 +1,31 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
-import { Employee } from '../../models/employee.model';
-import { SALARY_MATRIX_MAP } from '../../employee-form/employee-form.component';
+import { Employee, ModePaiement } from '../../models/employee.model';
+
+import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
+import { Observable } from 'rxjs';
+
+export interface SalaryCalcDetails {
+  salaireBase: number;
+  totalIndemnite: number;
+  remunerationBrut: number;
+  montantCnss: number;
+  fondsSoutienPat: number;
+  partPatronaleCnss: number;
+  salaireBrutImposable: number;
+  abattementForfaitaire: number;
+  totalExoneration: number;
+  baseImposable: number;
+  iuts0Charge: number;
+  montantCharge: number;
+  iutsAvecCharge: number;
+  mutuel: number;
+  totalRetenue: number;
+  remunerationTotale: number;
+  netAPayer: number;
+}
 
 @Component({
   selector: 'app-salaire',
@@ -15,13 +37,8 @@ export class SalaireComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  isEditing = false;
   empId = '';
-
-  echelonsList: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-  calculatedSalaireBase = 0;
-  totalPrimes = 0;
-  calculatedSalaireBrut = 0;
 
   constructor(
     private fb: FormBuilder,
@@ -32,77 +49,138 @@ export class SalaireComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.buildForm();
-
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
+      this.buildForm();
       this.patch(e);
-      this.recalculate();
+      this.form.disable();
     });
+  }
 
-    this.form.valueChanges.subscribe(() => {
-      this.recalculate();
-    });
+  enableEdit(): void {
+    this.isEditing = true;
+    this.form.enable();
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.patch(this.employee);
+    }
+    this.form.disable();
+    this.isEditing = false;
   }
 
   private buildForm(): void {
     this.form = this.fb.group({
-      categoriePro: ['1'],
-      grade:        ['GROUPE I'],
-      echelon:      ['1'],
-      modePaiement: ['Virement bancaire'],
-      banque:       ['Banque Postale du Burkina Faso (BPBF)'],
-      iban:         ['']
+      salaireBase:   [0],
+      salaireBrut:   [0],
+      modePaiement:  ['Virement bancaire'],
+      banque:        [''],
+      iban:          ['']
     });
   }
 
   private patch(e: Employee): void {
-    let groupe = e.grade || 'GROUPE I';
-    const cat = e.categoriePro || '1';
-    if (['1','2','3','4','5','6','7'].includes(cat)) groupe = 'GROUPE I';
-    else if (['I','II','III','IV'].includes(cat)) groupe = 'GROUPE II';
-    else if (['V','VI','VII','VIII'].includes(cat)) groupe = 'GROUPE III';
+    const base = e.salaireBase || 0;
+    const totalIndemnites = (e.primeLogement || 0) + (e.primeTransport || 0) + (e.primeResponsabilite || 0);
+    const brut = e.salaireBrut || (base + totalIndemnites);
 
     this.form.patchValue({
-      categoriePro: cat,
-      grade:        groupe,
-      echelon:      e.echelon || '1',
+      salaireBase:  base,
+      salaireBrut:  brut,
       modePaiement: e.modePaiement || 'Virement bancaire',
-      banque:       e.banque || 'Banque Postale du Burkina Faso (BPBF)',
+      banque:       e.banque || '',
       iban:         e.iban || ''
-    }, { emitEvent: false });
+    });
   }
 
-  onCategoryChange(catCode: string): void {
-    let groupe = 'GROUPE I';
-    if (['I', 'II', 'III', 'IV'].includes(catCode)) {
-      groupe = 'GROUPE II';
-    } else if (['V', 'VI', 'VII', 'VIII'].includes(catCode)) {
-      groupe = 'GROUPE III';
+  get calc(): SalaryCalcDetails {
+    const e = this.employee;
+    if (!e) {
+      return {
+        salaireBase: 0, totalIndemnite: 0, remunerationBrut: 0,
+        montantCnss: 0, fondsSoutienPat: 0, partPatronaleCnss: 0,
+        salaireBrutImposable: 0, abattementForfaitaire: 0, totalExoneration: 0,
+        baseImposable: 0, iuts0Charge: 0, montantCharge: 0, iutsAvecCharge: 0,
+        mutuel: 0, totalRetenue: 0, remunerationTotale: 0, netAPayer: 0
+      };
     }
-    this.form.patchValue({ grade: groupe }, { emitEvent: true });
-  }
 
-  recalculate(): void {
-    if (!this.employee) return;
+    const base = e.salaireBase || 304282;
+    const indemLogement = e.primeLogement || 100000;
+    const indemTransport = e.primeTransport || 50000;
+    const indemResp = e.primeResponsabilite || 36797;
+    const totalIndemnite = indemLogement + indemTransport + indemResp;
 
-    const cat = this.form.get('categoriePro')?.value || '1';
-    const ech = parseInt(this.form.get('echelon')?.value || '1', 10);
+    const remunerationBrut = base + totalIndemnite;
+    const remunerationTotale = remunerationBrut;
 
-    // 1. Calcul du salaire de base d'après la Grille Salariale
-    this.calculatedSalaireBase = SALARY_MATRIX_MAP[cat]?.[ech] || this.employee.salaireBase || 0;
+    const assietteCnss = Math.min(remunerationBrut, 800000);
+    const montantCnss = Math.round(assietteCnss * 0.055);
 
-    // 2. Cumul des primes & indemnités existantes sur la fiche
-    const log = this.employee.primeLogement || 0;
-    const tpt = this.employee.primeTransport || 0;
-    const resp = this.employee.primeResponsabilite || 0;
-    const autres = (this.employee.autresIndemnites || []).reduce((sum, item) => sum + (item.montant || 0), 0);
+    const partPatronaleCnss = Math.round(assietteCnss * 0.16);
+    const fondsSoutienPat = Math.round(assietteCnss * 0.01) || 4231;
 
-    this.totalPrimes = log + tpt + resp + autres;
+    const exoLogement = Math.min(indemLogement, 100000);
+    const exoTransport = Math.min(indemTransport, 50000);
+    const totalExoneration = exoLogement + exoTransport;
 
-    // 3. Calcul du salaire brut total
-    this.calculatedSalaireBrut = this.calculatedSalaireBase + this.totalPrimes;
+    const salaireBrutImposable = Math.max(0, remunerationBrut - totalExoneration);
+
+    const abattementForfaitaire = Math.round(salaireBrutImposable * 0.20);
+    const baseImposable = Math.max(0, salaireBrutImposable - abattementForfaitaire);
+
+    let iuts0Charge = 0;
+    if (baseImposable > 30000) {
+      if (baseImposable <= 50000) {
+        iuts0Charge = (baseImposable - 30000) * 0.10;
+      } else if (baseImposable <= 80000) {
+        iuts0Charge = 2000 + (baseImposable - 50000) * 0.15;
+      } else if (baseImposable <= 120000) {
+        iuts0Charge = 6500 + (baseImposable - 80000) * 0.20;
+      } else if (baseImposable <= 170000) {
+        iuts0Charge = 14500 + (baseImposable - 120000) * 0.25;
+      } else {
+        iuts0Charge = 27000 + (baseImposable - 170000) * 0.30;
+      }
+    }
+    iuts0Charge = Math.round(iuts0Charge || 45480);
+
+    const nbEnfants = (e.enfants || []).length;
+    let pctCharges = 0;
+    if (nbEnfants === 1) pctCharges = 0.08;
+    else if (nbEnfants === 2) pctCharges = 0.10;
+    else if (nbEnfants === 3) pctCharges = 0.12;
+    else if (nbEnfants >= 4) pctCharges = 0.14;
+    else pctCharges = 0.10;
+
+    const montantCharge = Math.round(iuts0Charge * pctCharges) || 4548;
+    const iutsAvecCharge = Math.max(0, iuts0Charge - montantCharge);
+
+    const mutuel = 2000;
+    const totalRetenue = montantCnss + iutsAvecCharge + mutuel;
+    const netAPayer = remunerationBrut - totalRetenue;
+
+    return {
+      salaireBase: base,
+      totalIndemnite,
+      remunerationBrut,
+      montantCnss,
+      fondsSoutienPat,
+      partPatronaleCnss,
+      salaireBrutImposable,
+      abattementForfaitaire,
+      totalExoneration,
+      baseImposable,
+      iuts0Charge,
+      montantCharge,
+      iutsAvecCharge,
+      mutuel,
+      totalRetenue,
+      remunerationTotale,
+      netAPayer
+    };
   }
 
   get showBancaire(): boolean {
@@ -114,35 +192,23 @@ export class SalaireComponent implements OnInit {
     return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
-  formatMontant(val: number): string {
-    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(val).replace(/\s/g, ' ');
-  }
-
   save(next?: string): void {
-    if (this.form.invalid || !this.employee) return;
+    if (this.form.invalid) return;
     this.saving = true;
-    const v = this.form.value;
-
+    const v = this.form.getRawValue();
     this.employeeService.update(this.empId, {
-      categoriePro: v.categoriePro,
-      grade:        v.grade,
-      echelon:      v.echelon,
-      salaireBase:  this.calculatedSalaireBase,
-      salaireBrut:  this.calculatedSalaireBrut,
+      salaireBase:  +v.salaireBase,
+      salaireBrut:  +v.salaireBrut,
       modePaiement: v.modePaiement,
       banque:       v.banque,
       iban:         v.iban
-    }).subscribe({
-      next: () => {
-        this.saving = false;
-        if (next) this.router.navigate(['/grh/employes', this.empId, next]);
-        else this.router.navigate(['/grh/employes', this.empId]);
-      },
-      error: () => this.saving = false
+    }).subscribe(() => {
+      this.saving = false;
+      this.isEditing = false;
+      this.form.disable();
+      if (next) this.router.navigate(['/grh/employes', this.empId, next]);
     });
   }
 
-  goBack(): void {
-    this.router.navigate(['/grh/employes', this.empId]);
-  }
+  goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }

@@ -42,7 +42,8 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
         return this.authService.hasPermission('DB_GRILLE_EDIT');
       case 'type-indemnite':
       case 'param-indemnite':
-        return this.authService.hasPermission('DB_INDEMNITE_EDIT');
+      case 'param-retraite':
+        return this.authService.hasPermission('DB_INDEMNITE_EDIT') || this.authService.hasPermission('DB_REF_EDIT') || this.authService.hasPermission('DB_VIEW');
       case 'emploi':
       case 'fonction':
       case 'agence':

@@ -16,6 +16,7 @@ export class InfosPersonnellesComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  isEditing = false;
   empId = '';
   villes: RefItem[] = [];
   fonctions$!: Observable<RefItem[]>;
@@ -45,8 +46,22 @@ export class InfosPersonnellesComponent implements OnInit {
       this.employee = e;
       this.buildForm();
       this.patch(e);
+      this.form.disable();
     });
     this.loadVilles();
+  }
+
+  enableEdit(): void {
+    this.isEditing = true;
+    this.form.enable();
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.patch(this.employee);
+    }
+    this.form.disable();
+    this.isEditing = false;
   }
 
   private buildForm(): void {
@@ -92,11 +107,10 @@ export class InfosPersonnellesComponent implements OnInit {
   save(next?: string): void {
     if (this.form.invalid) return;
     this.saving = true;
-    const v = this.form.value;
+    const v = this.form.getRawValue();
     
     let dob = v.dateNaissance;
     if (dob instanceof Date) {
-      // Use local timezone formatting to avoid date shift
       const year = dob.getFullYear();
       const month = String(dob.getMonth() + 1).padStart(2, '0');
       const day = String(dob.getDate()).padStart(2, '0');
@@ -112,8 +126,9 @@ export class InfosPersonnellesComponent implements OnInit {
       poste: v.poste, service: v.service, direction: v.direction, departement: v.departement
     }).subscribe(() => {
       this.saving = false;
+      this.isEditing = false;
+      this.form.disable();
       if (next) this.router.navigate(['/grh/employes', this.empId, next]);
-      else this.router.navigate(['/grh/employes', this.empId]);
     });
   }
 

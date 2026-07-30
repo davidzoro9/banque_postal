@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -36,9 +36,11 @@
 
         <div class="doc-toolbar">
           <span class="doc-count">{{ documents.length }} document(s)</span>
-          <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
-            <mat-icon>add</mat-icon> Ajouter un document
-          </button>
+          @if (isEditing) {
+            <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
+              <mat-icon>add</mat-icon> Ajouter un document
+            </button>
+          }
         </div>
 
         @if (showAddForm) {
@@ -114,9 +116,11 @@
                     <mat-icon>open_in_new</mat-icon>
                   </button>
                 }
-                <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
+                @if (isEditing) {
+                  <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
               </div>
             </div>
           }
@@ -127,16 +131,26 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
         <div class="sec-right">
-          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving">
-            Enregistrer
-          </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('notes-rh')" [disabled]="saving">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-            Enregistrer et continuer
-            <mat-icon>arrow_forward</mat-icon>
-          </button>
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
         </div>
       </div>
     </mat-card-actions>

@@ -16,6 +16,8 @@ export class InfosProComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  isEditing = false;
+  isCreationMode = false;
   empId = '';
   
   services$!: Observable<RefItem[]>;
@@ -35,6 +37,9 @@ export class InfosProComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
+    this.isCreationMode = this.route.snapshot.queryParamMap.get('mode') === 'creation';
+    this.isEditing = this.isCreationMode;
+
     this.services$ = this.dbRefService.getItems('service');
     this.directions$ = this.dbRefService.getItems('direction');
     this.departements$ = this.dbRefService.getItems('departement');
@@ -45,7 +50,23 @@ export class InfosProComponent implements OnInit {
       this.employee = e;
       this.buildForm();
       this.patch(e);
+      if (!this.isCreationMode) {
+        this.form.disable();
+      }
     });
+  }
+
+  enableEdit(): void {
+    this.isEditing = true;
+    this.form.enable();
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.patch(this.employee);
+    }
+    this.form.disable();
+    this.isEditing = false;
   }
 
   private buildForm(): void {
@@ -54,14 +75,15 @@ export class InfosProComponent implements OnInit {
       service:      [''],
       direction:    [''],
       departement:  [''],
-      statut:       ['Actif']
+      statut:       ['Actif'],
+      dateEmbauche: ['']
     });
   }
 
   private patch(e: Employee): void {
     this.form.patchValue({
       poste: e.poste, service: e.service, direction: e.direction, departement: e.departement,
-      statut: e.statut
+      statut: e.statut, dateEmbauche: e.dateEmbauche
     });
   }
 
@@ -73,14 +95,19 @@ export class InfosProComponent implements OnInit {
   save(next?: string): void {
     if (this.form.invalid) return;
     this.saving = true;
-    const v = this.form.value;
+    const v = this.form.getRawValue();
     this.employeeService.update(this.empId, {
       poste: v.poste, service: v.service, direction: v.direction, departement: v.departement,
-      statut: v.statut
+      statut: v.statut, dateEmbauche: v.dateEmbauche
     }).subscribe(() => {
       this.saving = false;
-      if (next) this.router.navigate(['/grh/employes', this.empId, next]);
-      else this.router.navigate(['/grh/employes', this.empId]);
+      if (this.isCreationMode && next) {
+        this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
+      } else {
+        this.isEditing = false;
+        this.form.disable();
+        this.router.navigate(['/grh/employes', this.empId]);
+      }
     });
   }
 

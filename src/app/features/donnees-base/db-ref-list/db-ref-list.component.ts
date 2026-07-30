@@ -61,11 +61,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
-  // Grille salariale - listes par groupe
-  groupe1Classifications = ['1', '2', '3', '4', '5', '6', '7'];
-  groupe2Classifications = ['I', 'II', 'III', 'IV'];
-  groupe3Classifications = ['V', 'VI', 'VII', 'VIII'];
-  echelonsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  // Grille salariale - listes par groupe (utilisant les codes officiels C1..C7, CL1..CL8)
+  groupe1Classifications = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+  groupe2Classifications = ['CL1', 'CL2', 'CL3', 'CL4'];
+  groupe3Classifications = ['CL5', 'CL6', 'CL7', 'CL8'];
+  echelonsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
   get allClassifications(): string[] {
     return [...this.groupe1Classifications, ...this.groupe2Classifications, ...this.groupe3Classifications];
@@ -73,25 +73,29 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   getSalaryItem(classification: string, echelon: number): RefItem | undefined {
     const classUpper = (classification || '').trim().toUpperCase();
+    const echCode = `E${echelon}`;
     return this.dataSource.data.find(item => {
       const itemCat = (item.categorie || item.code || '').trim().toUpperCase();
+      const itemEch = String(item.echellon || '').trim().toUpperCase();
       const matchCat = itemCat === classUpper ||
-        (classUpper === '1' && (itemCat === '1ÈRE CATEGORIE' || itemCat === '1ERE CATEGORIE')) ||
-        (classUpper === '2' && (itemCat === '2ÈME CATEGORIE' || itemCat === '2EME CATEGORIE')) ||
-        (classUpper === '3' && (itemCat === '3ÈME CATEGORIE' || itemCat === '3EME CATEGORIE')) ||
-        (classUpper === '4' && (itemCat === '4ÈME CATEGORIE' || itemCat === '4EME CATEGORIE')) ||
-        (classUpper === '5' && (itemCat === '5ÈME CATEGORIE' || itemCat === '5EME CATEGORIE')) ||
-        (classUpper === '6' && (itemCat === '6ÈME CATEGORIE' || itemCat === '6EME CATEGORIE')) ||
-        (classUpper === '7' && (itemCat === '7ÈME CATEGORIE' || itemCat === '7EME CATEGORIE')) ||
-        (classUpper === 'I' && itemCat === 'CLASSE I') ||
-        (classUpper === 'II' && itemCat === 'CLASSE II') ||
-        (classUpper === 'III' && itemCat === 'CLASSE III') ||
-        (classUpper === 'IV' && itemCat === 'CLASSE IV') ||
-        (classUpper === 'V' && itemCat === 'CLASSE V') ||
-        (classUpper === 'VI' && itemCat === 'CLASSE VI') ||
-        (classUpper === 'VII' && itemCat === 'CLASSE VII') ||
-        (classUpper === 'VIII' && itemCat === 'CLASSE VIII');
-      return matchCat && String(item.echellon) === String(echelon);
+        (classUpper === 'C1' && (itemCat === '1' || itemCat === '1ÈRE CATEGORIE' || itemCat === '1ERE CATEGORIE')) ||
+        (classUpper === 'C2' && (itemCat === '2' || itemCat === '2ÈME CATEGORIE' || itemCat === '2EME CATEGORIE')) ||
+        (classUpper === 'C3' && (itemCat === '3' || itemCat === '3ÈME CATEGORIE' || itemCat === '3EME CATEGORIE')) ||
+        (classUpper === 'C4' && (itemCat === '4' || itemCat === '4ÈME CATEGORIE' || itemCat === '4EME CATEGORIE')) ||
+        (classUpper === 'C5' && (itemCat === '5' || itemCat === '5ÈME CATEGORIE' || itemCat === '5EME CATEGORIE')) ||
+        (classUpper === 'C6' && (itemCat === '6' || itemCat === '6ÈME CATEGORIE' || itemCat === '6EME CATEGORIE')) ||
+        (classUpper === 'C7' && (itemCat === '7' || itemCat === '7ÈME CATEGORIE' || itemCat === '7EME CATEGORIE')) ||
+        (classUpper === 'CL1' && (itemCat === 'I' || itemCat === 'CLASSE I')) ||
+        (classUpper === 'CL2' && (itemCat === 'II' || itemCat === 'CLASSE II')) ||
+        (classUpper === 'CL3' && (itemCat === 'III' || itemCat === 'CLASSE III')) ||
+        (classUpper === 'CL4' && (itemCat === 'IV' || itemCat === 'CLASSE IV')) ||
+        (classUpper === 'CL5' && (itemCat === 'V' || itemCat === 'CLASSE V')) ||
+        (classUpper === 'CL6' && (itemCat === 'VI' || itemCat === 'CLASSE VI')) ||
+        (classUpper === 'CL7' && (itemCat === 'VII' || itemCat === 'CLASSE VII')) ||
+        (classUpper === 'CL8' && (itemCat === 'VIII' || itemCat === 'CLASSE VIII'));
+
+      const matchEch = itemEch === echCode || itemEch === String(echelon) || itemEch === `ÉCHELON ${echelon}` || itemEch === `ECHELON ${echelon}`;
+      return matchCat && matchEch;
     });
   }
 
@@ -103,6 +107,46 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   getSalaryFormatted(classification: string, echelon: number): string {
     const val = this.getSalary(classification, echelon);
     return val !== null ? this.formatMontant(val) : '-';
+  }
+
+  getCatCodeDisplay(raw: string): string {
+    if (!raw) return '-';
+    const s = raw.trim().toUpperCase();
+    if (s.startsWith('C') || s.startsWith('CL')) return s;
+    if (s === '1' || s.includes('1ÈRE') || s.includes('1ERE')) return 'C1';
+    if (s === '2' || s.includes('2ÈME') || s.includes('2EME')) return 'C2';
+    if (s === '3' || s.includes('3ÈME') || s.includes('3EME')) return 'C3';
+    if (s === '4' || s.includes('4ÈME') || s.includes('4EME')) return 'C4';
+    if (s === '5' || s.includes('5ÈME') || s.includes('5EME')) return 'C5';
+    if (s === '6' || s.includes('6ÈME') || s.includes('6EME')) return 'C6';
+    if (s === '7' || s.includes('7ÈME') || s.includes('7EME')) return 'C7';
+    if (s === 'I' || s === 'CLASSE I') return 'CL1';
+    if (s === 'II' || s === 'CLASSE II') return 'CL2';
+    if (s === 'III' || s === 'CLASSE III') return 'CL3';
+    if (s === 'IV' || s === 'CLASSE IV') return 'CL4';
+    if (s === 'V' || s === 'CLASSE V') return 'CL5';
+    if (s === 'VI' || s === 'CLASSE VI') return 'CL6';
+    if (s === 'VII' || s === 'CLASSE VII') return 'CL7';
+    if (s === 'VIII' || s === 'CLASSE VIII') return 'CL8';
+    return s;
+  }
+
+  getEchelonCodeDisplay(raw: any): string {
+    if (!raw) return 'E01';
+    const str = String(raw).trim().toUpperCase();
+    if (str.startsWith('E') && !str.startsWith('ECH')) {
+      const num = parseInt(str.substring(1), 10);
+      if (!isNaN(num)) {
+        return num < 10 ? `E0${num}` : `E${num}`;
+      }
+      return str;
+    }
+    const numStr = str.replace(/[^0-9]/g, '');
+    if (numStr) {
+      const num = parseInt(numStr, 10);
+      return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    return str;
   }
 
   formatMontant(value: number): string {
@@ -195,9 +239,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
       if (this.type === 'grille-salariale') {
-        this.displayedColumns = ['grade', 'categorie', 'echellon', 'montant', 'actif', 'actions'];
+        this.displayedColumns = ['categorie', 'echellon', 'montant', 'actif', 'actions'];
       } else if (this.type === 'param-indemnite') {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
+      } else if (this.type === 'param-retraite') {
+        this.displayedColumns = ['code', 'libelle', 'taux', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {
         this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {

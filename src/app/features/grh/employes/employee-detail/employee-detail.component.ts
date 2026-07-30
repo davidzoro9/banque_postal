@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Employee, STATUT_COLORS, StatutEmploye } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -18,7 +18,7 @@ export const EMPLOYEE_SECTIONS: SectionDef[] = [
   { id: 'infos-personnelles', title: 'Informations personnelles', subtitle: 'État civil, coordonnées, contacts urgence', icon: 'person', route: 'infos-personnelles', isComplete: e => !!(e.nom && e.adresse && e.telephone) },
   { id: 'infos-pro', title: 'Poste & Structure', subtitle: 'Fonction, service, direction, département, statut', icon: 'work', route: 'infos-pro', isComplete: e => !!(e.poste || e.service) },
   { id: 'famille', title: 'Famille', subtitle: 'Conjoint, enfants, personnes à charge', icon: 'family_restroom', route: 'famille', isComplete: _ => true },
-  { id: 'categorie', title: 'Catégorie', subtitle: 'Catégorie professionnelle, grade, échelon', icon: 'military_tech', route: 'categorie', isComplete: e => !!(e.categoriePro) },
+  { id: 'categorie', title: 'Situation professionnelle', subtitle: 'Catégorie, échelon, salaire brut', icon: 'military_tech', route: 'categorie', isComplete: e => !!(e.categoriePro) },
   { id: 'indemnites', title: 'Indemnités', subtitle: 'Primes de logement, transport, responsabilité', icon: 'paid', route: 'indemnites', isComplete: e => e.primeLogement > 0 || e.primeTransport > 0 || e.autresIndemnites.length > 0 },
   { id: 'exonerations', title: 'Exonérations', subtitle: 'Exonérations fiscales, sociales et avantages', icon: 'receipt_long', route: 'exonerations', isComplete: e => (e.exonerationsFiscales || []).length > 0 || (e.exonerationsSociales || []).length > 0 || (e.avantagesParticuliers || []).length > 0 },
   { id: 'salaire', title: 'Informations sur le salaire', subtitle: 'Salaire de base, brut, compte bancaire', icon: 'account_balance_wallet', route: 'salaire', isComplete: e => e.salaireBase > 0 },

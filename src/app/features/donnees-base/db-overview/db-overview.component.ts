@@ -35,6 +35,14 @@ export class DbOverviewComponent {
       route: '/donnees-base/admin/param-indemnite'
     },
     {
+      title: 'Paramétrage des Âges de Retraite',
+      badge: 'Retraite & Âges légaux',
+      icon: 'event_repeat',
+      color: '#00897b',
+      description: 'Configuration des âges légaux de départ à la retraite (Non-cadres 60 ans, Cadres 65 ans).',
+      route: '/donnees-base/admin/param-retraite'
+    },
+    {
       title: 'Rubriques de Paie & Barèmes',
       badge: 'Paie & Fiscalité',
       icon: 'calculate',

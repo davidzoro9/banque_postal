@@ -15,7 +15,7 @@
       <div class="emp-ctx-avatar">{{ initials }}</div>
       <div>
         <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
-        <div class="emp-ctx-sub">{{ employee.matricule }} — {{ employee.poste }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
       </div>
     </div>
   }
@@ -23,8 +23,8 @@
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">paid</mat-icon>
-      <mat-card-title>Indemnités & Primes du Collaborateur</mat-card-title>
-      <mat-card-subtitle>Attribution et calcul automatique d'après les éléments réglementaires (Barème BPBF)</mat-card-subtitle>
+      <mat-card-title>Indemnités</mat-card-title>
+      <mat-card-subtitle>Primes et autres indemnités</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -35,132 +35,30 @@
       @if (employee) {
         <form [formGroup]="form">
 
-          <!-- EN-TÊTE DE CALCUL : ÉLÉMENTS QUI PERMETTENT LE CALCUL -->
-          <div class="calc-box">
-            <div class="calc-title">
-              <mat-icon style="color: #0060B3;">tune</mat-icon>
-              <span>Éléments d'attribution & Critères de calcul pour cet employé</span>
-            </div>
-            <p class="calc-sub">Modifier ces critères recalculera immédiatement la grille des indemnités ci-dessous selon le paramétrage général.</p>
+          <p class="form-section-label">Primes et indemnités attribuées</p>
+          <div class="form-grid-3">
+            <mat-form-field appearance="outline" class="readonly-field">
+              <mat-label>Indemnité de logement (FCFA)</mat-label>
+              <input matInput formControlName="primeLogement" type="number" min="0" readonly [readonly]="true">
+              <mat-icon matSuffix style="color: #64748b; font-size: 18px;">lock</mat-icon>
+            </mat-form-field>
 
-            <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
-              <!-- 1. Groupe Conventionnel -->
-              <mat-form-field appearance="outline">
-                <mat-label>Groupe Conventionnel</mat-label>
-                <mat-select formControlName="grade">
-                  @for (g of gradesList; track g) {
-                    <mat-option [value]="g">{{ g }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+            <mat-form-field appearance="outline" class="readonly-field">
+              <mat-label>Indemnité de transport (FCFA)</mat-label>
+              <input matInput formControlName="primeTransport" type="number" min="0" readonly [readonly]="true">
+              <mat-icon matSuffix style="color: #64748b; font-size: 18px;">lock</mat-icon>
+            </mat-form-field>
 
-              <!-- 2. Catégorie / Classe -->
-              <mat-form-field appearance="outline">
-                <mat-label>Catégorie / Classe</mat-label>
-                <mat-select formControlName="categoriePro" (selectionChange)="onCategoryChange($event.value)">
-                  <mat-optgroup label="GROUPE I : AGENTS ET EMPLOYES">
-                    <mat-option value="1">1ÈRE CATEGORIE</mat-option>
-                    <mat-option value="2">2ÈME CATEGORIE</mat-option>
-                    <mat-option value="3">3ÈME CATEGORIE</mat-option>
-                    <mat-option value="4">4ÈME CATEGORIE</mat-option>
-                    <mat-option value="5">5ÈME CATEGORIE</mat-option>
-                    <mat-option value="6">6ÈME CATEGORIE</mat-option>
-                    <mat-option value="7">7ÈME CATEGORIE</mat-option>
-                  </mat-optgroup>
-                  <mat-optgroup label="GROUPE II : AGENTS DE MAITRISE & CADRES MOYENS">
-                    <mat-option value="I">CLASSE I</mat-option>
-                    <mat-option value="II">CLASSE II</mat-option>
-                    <mat-option value="III">CLASSE III</mat-option>
-                    <mat-option value="IV">CLASSE IV</mat-option>
-                  </mat-optgroup>
-                  <mat-optgroup label="GROUPE III : CADRES ET CADRES SUPERIEURS">
-                    <mat-option value="V">CLASSE V</mat-option>
-                    <mat-option value="VI">CLASSE VI</mat-option>
-                    <mat-option value="VII">CLASSE VII</mat-option>
-                    <mat-option value="VIII">CLASSE VIII</mat-option>
-                  </mat-optgroup>
-                </mat-select>
-              </mat-form-field>
-
-              <!-- 3. Fonction / Nomination -->
-              <mat-form-field appearance="outline">
-                <mat-label>Fonction (Nomination)</mat-label>
-                <mat-select formControlName="fonction">
-                  <mat-option value="">— Aucune nomination (Agent simple) —</mat-option>
-                  @for (f of fonctions$ | async; track f.code) {
-                    <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-            </div>
+            <mat-form-field appearance="outline" class="readonly-field">
+              <mat-label>Prime de responsabilité (FCFA)</mat-label>
+              <input matInput formControlName="primeResponsabilite" type="number" min="0" readonly [readonly]="true">
+              <mat-icon matSuffix style="color: #64748b; font-size: 18px;">lock</mat-icon>
+            </mat-form-field>
           </div>
 
-          <!-- TABLEAU DES INDEMNITÉS CALCULÉES SELON LE BARÈME (IMAGE 1 STYLE) -->
-          <p class="form-section-label" style="margin-top: 24px; font-weight: 700;">Grille des indemnités résultantes de l'agent</p>
-
-          <div class="table-container">
-            <table class="indem-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Type d'indemnité</th>
-                  <th>Fonction</th>
-                  <th>Groupe</th>
-                  <th>Catégorie / Classe</th>
-                  <th style="text-align: right;">Taux (FCFA)</th>
-                  <th style="text-align: center;">Statut</th>
-                  <th style="text-align: center;">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @if (applicableIndemnites.length === 0) {
-                  <tr>
-                    <td colspan="8" class="empty-row">Aucune indemnité paramétrée pour cette combinaison (Groupe, Catégorie, Fonction)</td>
-                  </tr>
-                }
-                @for (item of applicableIndemnites; track item.code + $index) {
-                  <tr [class.disabled-row]="!item.applied">
-                    <td>
-                      <span class="code-badge">{{ item.code }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ item.typeIndemnite }}</strong>
-                    </td>
-                    <td>{{ item.fonction }}</td>
-                    <td>
-                      <span class="groupe-pill">{{ item.grade }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ item.categorie }}</strong>
-                    </td>
-                    <td style="text-align: right;">
-                      <span class="taux-badge">{{ formatMontant(item.taux) }} FCFA</span>
-                    </td>
-                    <td style="text-align: center;">
-                      @if (item.applied) {
-                        <span class="status-active">
-                          <mat-icon style="font-size:14px;width:14px;height:14px;vertical-align:middle;">check_circle</mat-icon> Actif
-                        </span>
-                      } @else {
-                        <span class="status-inactive">Inactif</span>
-                      }
-                    </td>
-                    <td style="text-align: center;">
-                      <button mat-icon-button type="button" (click)="toggleApplied(item)" [matTooltip]="item.applied ? 'Désactiver cette indemnité' : 'Activer cette indemnité'">
-                        <mat-icon [style.color]="item.applied ? '#16a34a' : '#94a3b8'">
-                          {{ item.applied ? 'toggle_on' : 'toggle_off' }}
-                        </mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          <div class="total-box">
-            <span class="total-lbl">Total indemnités attribuées</span>
-            <span class="total-val">{{ formatMontant(totalIndemnites) }} FCFA</span>
+          <div class="total-box" style="margin-top: 24px; padding: 16px 20px; background: rgba(0,96,179,0.06); border: 1px solid rgba(0,96,179,0.15); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: #333; font-size: 15px;">Total indemnités</span>
+            <span style="font-weight: 800; font-size: 18px; color: #0060B3;">{{ totalIndemnites | number:'1.0-0' }} FCFA</span>
           </div>
 
         </form>
@@ -169,14 +67,13 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
-        <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || !employee">
-          @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-          @else { <mat-icon>save</mat-icon> }
-          Enregistrer les indemnités
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
         </button>
       </div>
     </mat-card-actions>
   </mat-card>
 
 </div>
+

@@ -22,7 +22,7 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
 
-  displayedColumns = ['avatar', 'matricule', 'nom', 'poste', 'service', 'statut', 'dateEmbauche', 'actions'];
+  displayedColumns = ['avatar', 'matricule', 'nom', 'poste', 'service', 'statut', 'dateEmbauche', 'dateRetraite', 'actions'];
   dataSource = new MatTableDataSource<Employee>();
 
   searchQuery = '';
@@ -76,11 +76,11 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   viewEmployee(id: string): void {
-    this.router.navigate(['/grh/employes', id, 'infos-personnelles']);
+    this.router.navigate(['/grh/employes', id]);
   }
 
   editEmployee(id: string): void {
-    this.router.navigate(['/grh/employes', id, 'modifier']);
+    this.router.navigate(['/grh/employes', id]);
   }
 
   deleteEmployee(id: string, event: Event): void {
@@ -107,7 +107,54 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
     return colors[idx];
   }
 
+  getDateRetraite(emp: Employee): { dateStr: string; yearsLeft: number | null } {
+    let birthDate: Date | null = null;
+    if (emp.dateNaissance) {
+      birthDate = new Date(emp.dateNaissance);
+    }
+
+    const fonction = (emp.fonction || emp.poste || '').toLowerCase();
+    const cat = (emp.categoriePro || '').toUpperCase();
+
+    // 1. Détermination de l'âge de retraite d'abord par la Fonction si elle existe, sinon par la Catégorie
+    let ageRetraite = 60;
+    if (fonction.includes('directeur') || fonction.includes('cadre') || fonction.includes('responsable') || fonction.includes('chef')) {
+      ageRetraite = 65;
+    } else if (cat.startsWith('CL') || cat.includes('CADRE')) {
+      ageRetraite = 65;
+    } else if (cat.startsWith('C')) {
+      ageRetraite = 60;
+    }
+
+    if (!birthDate || isNaN(birthDate.getTime())) {
+      if (emp.dateEmbauche) {
+        const emb = new Date(emp.dateEmbauche);
+        if (!isNaN(emb.getTime())) {
+          const retYear = emb.getFullYear() + 35;
+          const retDate = new Date(retYear, emb.getMonth(), emb.getDate());
+          const now = new Date();
+          const yearsLeft = retYear - now.getFullYear();
+          return {
+            dateStr: retDate.toLocaleDateString('fr-FR'),
+            yearsLeft
+          };
+        }
+      }
+      return { dateStr: '—', yearsLeft: null };
+    }
+
+    const retYear = birthDate.getFullYear() + ageRetraite;
+    const retDate = new Date(retYear, birthDate.getMonth(), birthDate.getDate());
+    const now = new Date();
+    const yearsLeft = Math.ceil((retDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+
+    return {
+      dateStr: retDate.toLocaleDateString('fr-FR'),
+      yearsLeft: Math.max(0, yearsLeft)
+    };
+  }
+
   getStatutStyle(statut: StatutEmploye) {
-    return STATUT_COLORS[statut] || { background: '#f1f3f4', color: '#5f6368' };
+    return STATUT_COLORS[statut] || { color: '#0060B3', background: '#e0f2fe' };
   }
 }

@@ -13,6 +13,7 @@ export class DossierComponent implements OnInit {
   employee?: Employee;
   empId = '';
   saving = false;
+  isEditing = false;
   documents: DocumentRH[] = [];
   showAddForm = false;
 
@@ -35,6 +36,18 @@ export class DossierComponent implements OnInit {
       this.employee = e;
       this.documents = [...e.documents];
     });
+  }
+
+  enableEdit(): void {
+    this.isEditing = true;
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.documents = [...this.employee.documents];
+    }
+    this.showAddForm = false;
+    this.isEditing = false;
   }
 
   get initials(): string {
@@ -105,8 +118,8 @@ export class DossierComponent implements OnInit {
     this.employeeService.update(this.empId, { documents: this.documents }).subscribe({
       next: () => {
         this.saving = false;
+        this.isEditing = false;
         if (next) this.router.navigate(['/grh/employes', this.empId, next]);
-        else this.router.navigate(['/grh/employes', this.empId]);
       },
       error: (err) => {
         this.saving = false;

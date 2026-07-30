@@ -14,6 +14,7 @@ export class NotesRhComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  isEditing = false;
   empId = '';
 
   constructor(
@@ -30,7 +31,22 @@ export class NotesRhComponent implements OnInit {
       this.employee = e;
       this.buildForm();
       this.patch(e);
+      this.form.disable();
     });
+  }
+
+  enableEdit(): void {
+    this.isEditing = true;
+    this.form.enable();
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.buildForm();
+      this.patch(this.employee);
+    }
+    this.form.disable();
+    this.isEditing = false;
   }
 
   private buildForm(): void {
@@ -68,9 +84,9 @@ export class NotesRhComponent implements OnInit {
     return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
-  save(navigateToHub = false): void {
+  save(): void {
     this.saving = true;
-    const v = this.form.value;
+    const v = this.form.getRawValue();
 
     const formattedEvaluations = (v.evaluations || []).map((ev: any) => {
       let d = ev.date;
@@ -88,7 +104,8 @@ export class NotesRhComponent implements OnInit {
       evaluations:  formattedEvaluations
     }).subscribe(() => {
       this.saving = false;
-      this.router.navigate(['/grh/employes', this.empId]);
+      this.isEditing = false;
+      this.form.disable();
     });
   }
 

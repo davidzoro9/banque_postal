@@ -12,9 +12,11 @@ export interface ContactUrgence {
 
 export interface Enfant {
   nom: string;
-  prenom: string;
+  prenom?: string;
+  numActe?: string;
+  sexe: Sexe | string;
+  status?: string;
   dateNaissance: string;
-  sexe: Sexe;
 }
 
 export interface PersonneCharge {

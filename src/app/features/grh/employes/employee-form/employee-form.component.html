@@ -8,21 +8,21 @@
 
   <mat-card class="section-card">
     <mat-card-header>
-      <mat-icon mat-card-avatar style="color:#0060B3">person_add</mat-icon>
-      <mat-card-title>Formulaire d'enregistrement d'un collaborateur</mat-card-title>
-      <mat-card-subtitle>
-        Saisie des informations de base (Identité, Poste, Retraite CNSS/CARFO, Grille Salariale & Raccordement)
-      </mat-card-subtitle>
+      <mat-icon mat-card-avatar style="color:#0060B3; font-size: 28px; width: 28px; height: 28px;">person</mat-icon>
+      <mat-card-title>Informations personnelles</mat-card-title>
+      <mat-card-subtitle>État civil et coordonnées</mat-card-subtitle>
     </mat-card-header>
 
-    <mat-card-content>
+    <mat-card-content style="padding-top: 16px;">
       <form [formGroup]="form">
 
-        <p class="form-section-label">Identité personnelle</p>
-        <div class="form-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
+        <!-- SECTION ÉTAT CIVIL -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">ÉTAT CIVIL</p>
+        
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
           <mat-form-field appearance="outline">
             <mat-label>Nom</mat-label>
-            <input matInput formControlName="nom" placeholder="Ex: OUEDRAOGO">
+            <input matInput formControlName="nom" placeholder="SAWADOGO">
             @if (form.get('nom')?.hasError('required')) {
               <mat-error>Le nom est obligatoire</mat-error>
             }
@@ -30,10 +30,23 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Prénom</mat-label>
-            <input matInput formControlName="prenom" placeholder="Ex: Moussa">
+            <input matInput formControlName="prenom" placeholder="Abdoulaye">
             @if (form.get('prenom')?.hasError('required')) {
               <mat-error>Le prénom est obligatoire</mat-error>
             }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nom de jeune fille</mat-label>
+            <input matInput formControlName="nomJeuneFille" placeholder="Nom de jeune fille">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Sexe</mat-label>
+            <mat-select formControlName="sexe">
+              <mat-option value="M">Masculin</mat-option>
+              <mat-option value="F">Féminin</mat-option>
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -44,193 +57,69 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Pers. à charge (Calculé)</mat-label>
-            <input matInput type="number" formControlName="nombrePersonnesCharge" placeholder="0" min="0">
-            <mat-hint>Mise à jour via l'onglet Famille</mat-hint>
+            <mat-label>Lieu de naissance</mat-label>
+            <mat-select formControlName="lieuNaissance">
+              @for (v of villes; track v) {
+                <mat-option [value]="v">{{ v }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nationalité</mat-label>
+            <input matInput formControlName="nationalite" placeholder="Burkinabè">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>N° CNI / Pièce d'identité</mat-label>
+            <input matInput formControlName="numeroCNI" placeholder="B12345678">
           </mat-form-field>
         </div>
 
-        <p class="form-section-label">Grille Salariale & Classification Conventionnelle</p>
-        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-          <!-- 1. Catégorie Professionnelle -->
-          <mat-form-field appearance="outline">
-            <mat-label>Catégorie Professionnelle</mat-label>
-            <mat-select formControlName="categoriePro" (selectionChange)="onCategoryChange($event.value)">
-              <mat-option value="">— Sélectionner une catégorie —</mat-option>
-              <mat-optgroup label="GROUPE I : AGENTS ET EMPLOYES">
-                <mat-option value="1">1ÈRE CATEGORIE</mat-option>
-                <mat-option value="2">2ÈME CATEGORIE</mat-option>
-                <mat-option value="3">3ÈME CATEGORIE</mat-option>
-                <mat-option value="4">4ÈME CATEGORIE</mat-option>
-                <mat-option value="5">5ÈME CATEGORIE</mat-option>
-                <mat-option value="6">6ÈME CATEGORIE</mat-option>
-                <mat-option value="7">7ÈME CATEGORIE</mat-option>
-              </mat-optgroup>
-              <mat-optgroup label="GROUPE II : AGENTS DE MAITRISE & CADRES MOYENS">
-                <mat-option value="I">CLASSE I</mat-option>
-                <mat-option value="II">CLASSE II</mat-option>
-                <mat-option value="III">CLASSE III</mat-option>
-                <mat-option value="IV">CLASSE IV</mat-option>
-              </mat-optgroup>
-              <mat-optgroup label="GROUPE III : CADRES ET CADRES SUPERIEURS">
-                <mat-option value="V">CLASSE V</mat-option>
-                <mat-option value="VI">CLASSE VI</mat-option>
-                <mat-option value="VII">CLASSE VII</mat-option>
-                <mat-option value="VIII">CLASSE VIII</mat-option>
-              </mat-optgroup>
-            </mat-select>
-          </mat-form-field>
-
-          <!-- 2. Groupe Conventionnel -->
-          <mat-form-field appearance="outline">
-            <mat-label>Groupe Conventionnel</mat-label>
-            <mat-select formControlName="grade">
-              <mat-option value="GROUPE I">GROUPE I (Agents et Employés)</mat-option>
-              <mat-option value="GROUPE II">GROUPE II (Maîtrise & Cadres moyens)</mat-option>
-              <mat-option value="GROUPE III">GROUPE III (Cadres Supérieurs)</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <!-- 3. Échelon -->
-          <mat-form-field appearance="outline">
-            <mat-label>Échelon</mat-label>
-            <mat-select formControlName="echelon" (selectionChange)="recalcSalary()">
-              @for (ech of echelonsList; track ech) {
-                <mat-option [value]="'' + ech">Échelon {{ ech }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <!-- Encadré Vérification Salaire de Base calculé -->
-        @if (calculatedSalary > 0) {
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <mat-icon style="color: #16a34a;">check_circle</mat-icon>
-              <span style="font-size: 13px; color: #15803d; font-weight: 600;">
-                Vérification Grille Salariale : {{ getSelectedCategoryLabel() }} — Échelon {{ form.get('echelon')?.value }}
-              </span>
-            </div>
-            <div style="font-size: 16px; font-weight: 800; color: #15803d;">
-              {{ formatMontant(calculatedSalary) }} FCFA (Salaire de base brut)
-            </div>
-          </div>
-        }
-
-        <p class="form-section-label">Poste, Organisme de Réversion & Statut</p>
-        <div class="form-grid-2">
-          <mat-form-field appearance="outline">
-            <mat-label>Matricule</mat-label>
-            <input matInput formControlName="matricule" placeholder="Ex: EMP-001">
-            @if (form.get('matricule')?.hasError('required')) {
-              <mat-error>Le matricule est obligatoire</mat-error>
-            }
+        <!-- SECTION COORDONNÉES -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">COORDONNÉES</p>
+        
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <mat-form-field appearance="outline" style="grid-column: span 2;">
+            <mat-label>Adresse</mat-label>
+            <input matInput formControlName="adresse" placeholder="Avenue Kwamé Nkrumah, Zone Commerciale">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Organisme de Réversion / Retraite</mat-label>
-            <mat-select formControlName="organismeRetraite">
-              <mat-option value="CNSS">CNSS (Caisse Nationale de Sécurité Sociale - Secteur Privé/Parapublic)</mat-option>
-              <mat-option value="CARFO">CARFO (Caisse Autonome de Retraite des Fonctionnaires - Secteur Public)</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Statut</mat-label>
-            <mat-select formControlName="statut">
-              @for (s of statuts; track s) {
-                <mat-option [value]="s">{{ s }}</mat-option>
+            <mat-label>Ville</mat-label>
+            <mat-select formControlName="ville">
+              @for (v of villes; track v) {
+                <mat-option [value]="v">{{ v }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Emploi / Poste</mat-label>
-            <mat-select formControlName="poste">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (e of emplois$ | async; track e.code) {
-                <mat-option [value]="e.libelle">{{ e.libelle }}</mat-option>
-              }
-            </mat-select>
+            <mat-label>Code postal</mat-label>
+            <input matInput formControlName="codePostal" placeholder="Code postal">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Fonction (Nomination)</mat-label>
-            <mat-select formControlName="fonction">
-              <mat-option value="">— Aucune nomination (Agent simple) —</mat-option>
-              @for (f of fonctions$ | async; track f.code) {
-                <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
-              }
-            </mat-select>
+            <mat-label>Pays</mat-label>
+            <input matInput formControlName="pays" placeholder="Burkina Faso">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Type de contrat</mat-label>
-            <mat-select formControlName="typeContrat">
-              @for (c of contrats$ | async; track c.code) {
-                <mat-option [value]="c.code">{{ c.libelle }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Date d'embauche</mat-label>
-            <input matInput [matDatepicker]="pickerEmbauche" formControlName="dateEmbauche" placeholder="JJ/MM/AAAA">
-            <mat-datepicker-toggle matIconSuffix [for]="pickerEmbauche"></mat-datepicker-toggle>
-            <mat-datepicker #pickerEmbauche></mat-datepicker>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Email professionnel</mat-label>
-            <input matInput formControlName="emailPro" type="email" placeholder="collaborateur@bpbf.bf">
-          </mat-form-field>
-        </div>
-
-        <p class="form-section-label">Structure & Rattachement</p>
-        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-          <mat-form-field appearance="outline">
-            <mat-label>Direction</mat-label>
-            <mat-select formControlName="direction">
-              <mat-option value="">— Aucune —</mat-option>
-              @for (dir of directions$ | async; track dir.code) {
-                <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Département</mat-label>
-            <mat-select formControlName="departement">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (dep of departements$ | async; track dep.code) {
-                <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Service</mat-label>
-            <mat-select formControlName="service">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (srv of services$ | async; track srv.code) {
-                <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
-              }
-            </mat-select>
+            <mat-label>Téléphone</mat-label>
+            <input matInput formControlName="telephone" placeholder="+226 70 20 11 22">
           </mat-form-field>
         </div>
 
       </form>
     </mat-card-content>
 
-    <mat-card-actions>
-      <div class="sec-actions">
-        <button mat-button (click)="cancel()">Annuler</button>
-        <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
-          @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-          @else { <mat-icon>save</mat-icon> }
-          {{ isEdit ? 'Enregistrer les modifications' : 'Créer le collaborateur' }}
-        </button>
-      </div>
+    <mat-card-actions style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; background-color: #fafafa; border-top: 1px solid #e2e8f0;">
+      <button mat-button (click)="cancel()">Annuler</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid" style="border-radius: 8px; font-weight: 600;">
+        @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+        @else { <mat-icon style="margin-right: 4px;">arrow_forward</mat-icon> }
+        {{ isEdit ? 'Enregistrer les modifications' : 'Enregistrer et continuer' }}
+      </button>
     </mat-card-actions>
   </mat-card>
 

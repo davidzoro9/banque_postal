@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -194,16 +194,26 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
         <div class="sec-right">
-          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
-            Enregistrer
-          </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('famille')" [disabled]="saving || form.invalid">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-            Enregistrer et continuer
-            <mat-icon>arrow_forward</mat-icon>
-          </button>
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
         </div>
       </div>
     </mat-card-actions>

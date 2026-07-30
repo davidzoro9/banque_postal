@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -24,7 +24,7 @@
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">work</mat-icon>
       <mat-card-title>Informations professionnelles</mat-card-title>
-      <mat-card-subtitle>Poste, service, département et statut</mat-card-subtitle>
+      <mat-card-subtitle>Poste, service, département, statut et date de prise de fonction</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -40,7 +40,6 @@
           <mat-form-field appearance="outline">
             <mat-label>Matricule</mat-label>
             <input matInput [value]="employee.matricule" readonly>
-            <mat-hint>Généré automatiquement</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -50,6 +49,13 @@
               <mat-option [value]="s">{{ s }}</mat-option>
               }
             </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de prise de fonction</mat-label>
+            <input matInput [matDatepicker]="pickerEmbauche" formControlName="dateEmbauche" placeholder="JJ/MM/AAAA">
+            <mat-datepicker-toggle matIconSuffix [for]="pickerEmbauche"></mat-datepicker-toggle>
+            <mat-datepicker #pickerEmbauche></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -93,40 +99,38 @@
           </mat-form-field>
         </div>
 
-        <!-- Bloc info : contrat géré dans le menu Contrats -->
-        <div class="contrat-info-banner">
-          <mat-icon class="banner-icon">info_outline</mat-icon>
-          <div class="banner-content">
-            <span class="banner-title">Gestion des contrats</span>
-            <span class="banner-desc">
-              Le contrat de cet employé est géré depuis le menu
-              <strong>Contrats</strong>. Retrouvez-y l'historique,
-              la création et la modification des contrats.
-            </span>
-          </div>
-          <button mat-stroked-button color="primary" class="banner-btn" (click)="goToContrats()">
-            <mat-icon>open_in_new</mat-icon>
-            Voir les contrats
-          </button>
-        </div>
-
       </form>
       }
     </mat-card-content>
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
         <div class="sec-right">
-          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
-            Enregistrer
-          </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('infos-personnelles')"
-            [disabled]="saving || form.invalid">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-            Enregistrer et continuer
-            <mat-icon>arrow_forward</mat-icon>
-          </button>
+          @if (isCreationMode) {
+            <button mat-raised-button color="primary" class="btn-next" (click)="save('categorie')" [disabled]="saving || form.invalid">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer et continuer
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          } @else if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
         </div>
       </div>
     </mat-card-actions>

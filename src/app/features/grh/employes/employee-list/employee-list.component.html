@@ -131,10 +131,20 @@
             </td>
           </ng-container>
 
-          <!-- Colonne date d'embauche -->
+          <!-- Colonne date de prise de fonction -->
           <ng-container matColumnDef="dateEmbauche">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Embauche</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Prise de fonction</th>
             <td mat-cell *matCellDef="let emp">{{ emp.dateEmbauche | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <!-- Colonne date de retraite calculée -->
+          <ng-container matColumnDef="dateRetraite">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Date de retraite</th>
+            <td mat-cell *matCellDef="let emp">
+              <span style="font-weight: 600; color: #0060B3;">
+                {{ getDateRetraite(emp).dateStr }}
+              </span>
+            </td>
           </ng-container>
 
           <!-- Colonne actions -->

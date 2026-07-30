@@ -24,6 +24,8 @@ import { SalaireComponent } from './employes/sections/salaire/salaire.component'
 import { DossierComponent } from './employes/sections/dossier/dossier.component';
 import { NotesRhComponent } from './employes/sections/notes-rh/notes-rh.component';
 
+import { EmployeeDetailComponent } from './employes/employee-detail/employee-detail.component';
+
 const routes: Routes = [
   { path: '', component: GrhOverviewComponent },
   { path: 'organigramme',                    component: OrganigrammeComponent },
@@ -40,7 +42,7 @@ const routes: Routes = [
   { path: 'employes/:id/salaire',            component: SalaireComponent },
   { path: 'employes/:id/dossier',            component: DossierComponent },
   { path: 'employes/:id/notes-rh',           component: NotesRhComponent },
-  { path: 'employes/:id',                    redirectTo: 'employes/:id/infos-personnelles', pathMatch: 'full' },
+  { path: 'employes/:id',                    component: EmployeeDetailComponent },
   { path: 'conges',                          component: CongesListComponent },
   { path: 'conges/nouveau',                  component: CongesFormComponent },
   { path: 'absences',                        component: AbsencesListComponent },

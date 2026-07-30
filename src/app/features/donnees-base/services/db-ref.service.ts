@@ -199,24 +199,22 @@ const BACKEND_MAP: Record<string, {
   },
 };
 
-const SALARY_MATRIX: Record<string, { groupe: string; values: number[] }> = {
-  '1':  { groupe: 'GROUPE I', values: [95945, 105540, 116093, 127703, 140473, 154520, 169972, 186970, 205667, 226233, 248857, 273742, 301117, 331228, 364351] },
-  '2':  { groupe: 'GROUPE I', values: [104474, 114921, 126414, 139055, 152960, 168256, 185082, 203590, 223949, 246344, 270979, 298077, 327884, 360673, 396740] },
-  '3':  { groupe: 'GROUPE I', values: [107135, 117849, 129633, 142597, 156856, 172542, 189796, 208776, 229653, 252619, 277881, 305669, 336236, 369859, 406845] },
-  '4':  { groupe: 'GROUPE I', values: [115558, 127114, 139825, 153808, 169188, 186107, 204718, 225190, 247709, 272480, 299728, 329700, 362671, 398938, 438831] },
-  '5':  { groupe: 'GROUPE I', values: [128831, 141714, 155886, 171474, 188621, 207484, 228232, 251055, 276161, 303777, 334154, 367570, 404327, 444760, 489236] },
-  '6':  { groupe: 'GROUPE I', values: [157940, 173734, 191107, 210218, 231240, 254364, 279800, 307780, 338558, 372414, 409656, 450621, 495683, 545252, 599777] },
-  '7':  { groupe: 'GROUPE I', values: [176441, 194085, 213494, 234843, 258327, 284160, 312576, 343834, 378217, 416039, 457643, 503407, 553747, 609122, 670034] },
-
-  'I':    { groupe: 'GROUPE II', values: [173090, 190399, 209439, 230383, 253421, 278763, 306639, 337303, 371034, 408137, 448951, 493846, 543231, 597554, 657309] },
-  'II':   { groupe: 'GROUPE II', values: [203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059] },
-  'III':  { groupe: 'GROUPE II', values: [278697, 306567, 337223, 370946, 408040, 448844, 493729, 543102, 597412, 657153, 722868, 795155, 874671, 962138, 1058351] },
-  'IV':   { groupe: 'GROUPE II', values: [405758, 446334, 490967, 540064, 594070, 653477, 718825, 790708, 869778, 956756, 1052432, 1157675, 1273442, 1400787, 1540865] },
-
-  'V':    { groupe: 'GROUPE III', values: [581390, 639529, 703482, 773830, 851213, 936334, 1029968, 1132965, 1246261, 1370887, 1507976, 1658774, 1824651, 2007116, 2207828] },
-  'VI':   { groupe: 'GROUPE III', values: [599438, 659382, 725320, 797852, 877637, 965401, 1061941, 1168135, 1284949, 1413443, 1554788, 1710267, 1881293, 2069423, 2276365] },
-  'VII':  { groupe: 'GROUPE III', values: [631454, 694599, 764059, 840465, 924512, 1016963, 1118659, 1230525, 1353578, 1488936, 1637829, 1801612, 1981773, 2179950, 2397946] },
-  'VIII': { groupe: 'GROUPE III', values: [710386, 781425, 859567, 945524, 1040076, 1144084, 1258492, 1384341, 1522775, 1675053, 1842558, 2026814, 2229496, 2452445, 2697690] }
+const SALARY_MATRIX: Record<string, { catCode: string; groupe: string; values: number[] }> = {
+  '1':     { catCode: 'C1',  groupe: 'GROUPE I',   values: [95945, 105540, 116093, 127703, 140473, 154520, 169972, 186970, 205667, 226233, 248857, 273742, 301117, 331228, 364351] },
+  '2':     { catCode: 'C2',  groupe: 'GROUPE I',   values: [104474, 114921, 126414, 139055, 152960, 168256, 185082, 203590, 223949, 246344, 270979, 298077, 327884, 360673, 396740] },
+  '3':     { catCode: 'C3',  groupe: 'GROUPE I',   values: [107135, 117849, 129633, 142597, 156856, 172542, 189796, 208776, 229653, 252619, 277881, 305669, 336236, 369859, 406845] },
+  '4':     { catCode: 'C4',  groupe: 'GROUPE I',   values: [115558, 127114, 139825, 153808, 169188, 186107, 204718, 225190, 247709, 272480, 299728, 329700, 362671, 398938, 438831] },
+  '5':     { catCode: 'C5',  groupe: 'GROUPE I',   values: [128831, 141714, 155886, 171474, 188621, 207484, 228232, 251055, 276161, 303777, 334154, 367570, 404327, 444760, 489236] },
+  '6':     { catCode: 'C6',  groupe: 'GROUPE I',   values: [157940, 173734, 191107, 210218, 231240, 254364, 279800, 307780, 338558, 372414, 409656, 450621, 495683, 545252, 599777] },
+  '7':     { catCode: 'C7',  groupe: 'GROUPE I',   values: [176441, 194085, 213494, 234843, 258327, 284160, 312576, 343834, 378217, 416039, 457643, 503407, 553747, 609122, 670034] },
+  'I':    { catCode: 'CL1', groupe: 'GROUPE II',  values: [173090, 190399, 209439, 230383, 253421, 278763, 306639, 337303, 371034, 408137, 448951, 493846, 543231, 597554, 657309] },
+  'II':   { catCode: 'CL2', groupe: 'GROUPE II',  values: [203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059] },
+  'III':  { catCode: 'CL3', groupe: 'GROUPE II',  values: [278697, 306567, 337223, 370946, 408040, 448844, 493729, 543102, 597412, 657153, 722868, 795155, 874671, 962138, 1058351] },
+  'IV':   { catCode: 'CL4', groupe: 'GROUPE II',  values: [405758, 446334, 490967, 540064, 594070, 653477, 718825, 790708, 869778, 956756, 1052432, 1157675, 1273442, 1400787, 1540865] },
+  'V':    { catCode: 'CL5', groupe: 'GROUPE III', values: [581390, 639529, 703482, 773830, 851213, 936334, 1029968, 1132965, 1246261, 1370887, 1507976, 1658774, 1824651, 2007116, 2207828] },
+  'VI':   { catCode: 'CL6', groupe: 'GROUPE III', values: [599438, 659382, 725320, 797852, 877637, 965401, 1061941, 1168135, 1284949, 1413443, 1554788, 1710267, 1881293, 2069423, 2276365] },
+  'VII':  { catCode: 'CL7', groupe: 'GROUPE III', values: [631454, 694599, 764059, 840465, 924512, 1016963, 1118659, 1230525, 1353578, 1488936, 1637829, 1801612, 1981773, 2179950, 2397946] },
+  'VIII': { catCode: 'CL8', groupe: 'GROUPE III', values: [710386, 781425, 859567, 945524, 1040076, 1144084, 1258492, 1384341, 1522775, 1675053, 1842558, 2026814, 2229496, 2452445, 2697690] }
 };
 
 function buildOfficialGridItems(): RefItem[] {
@@ -224,16 +222,17 @@ function buildOfficialGridItems(): RefItem[] {
   let idCounter = 1;
   for (const [code, info] of Object.entries(SALARY_MATRIX)) {
     info.values.forEach((amount, index) => {
-      const ech = String(index + 1);
+      const echNum = index + 1;
+      const echCode = echNum < 10 ? `E0${echNum}` : `E${echNum}`;
       items.push({
         id: String(idCounter++),
-        code: code,
+        code: info.catCode,
         libelle: info.groupe,
         grade: info.groupe,
-        categorie: code,
+        categorie: info.catCode,
         echelle: info.groupe,
-        echellon: ech,
-        description: `${info.groupe} (${code}) - Échelon ${ech}`,
+        echellon: echCode,
+        description: `${info.groupe} (${info.catCode}) - ${echCode}`,
         montant: amount,
         actif: true
       });
@@ -277,6 +276,12 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'RET-MUPER',    libelle: 'Mutuelle Interne du Personnel (MUPER)',     typeRetenue: 'Mutuelle Interne (MUPER)',           taux: 1.0, description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel BPBF', actif: true },
     { code: 'RET-AVANCE',   libelle: 'Avance sur Salaire / Acompte',               typeRetenue: 'Remboursement Prêt & Avance',        taux: 0,   description: 'Remboursement mensuel des avances exceptionnelles sur solde (Montant Variable)', actif: true },
     { code: 'RET-PRET-EQP', libelle: 'Prêt Équipement / Prêt interne BPBF',       typeRetenue: 'Remboursement Prêt & Avance',        taux: 0,   description: 'Échéance mensuelle pour remboursement de prêt personnel bancaire (Mensualité Fixe)', actif: true }
+  ],
+  'param-retraite': [
+    { code: 'RET-FCT-DIR',  libelle: 'Fonction : Directeur / Direction',         taux: 65, description: 'Âge légal de départ à la retraite pour la fonction Directeur (65 ans)', actif: true },
+    { code: 'RET-FCT-RESP', libelle: 'Fonction : Chef de département / Responsable', taux: 65, description: 'Âge légal de départ à la retraite pour les responsables et chefs de département (65 ans)', actif: true },
+    { code: 'RET-CAT-CL',   libelle: 'Catégorie : Cadres (CL1 à CL8)',          taux: 65, description: 'Âge légal de départ à la retraite pour les catégories cadres (65 ans)', actif: true },
+    { code: 'RET-CAT-C',    libelle: 'Catégorie : Non-Cadres (C1 à C7)',        taux: 60, description: 'Âge légal de départ à la retraite pour les catégories non-cadres (60 ans)', actif: true }
   ],
   'type-contrat': [
     { code: 'CDI',   libelle: 'Contrat Durée Indéterminée (CDI)', description: 'Contrat de travail à durée indéterminée', actif: true },
@@ -405,43 +410,43 @@ const MOCK_DATA: Record<string, RefItem[]> = {
   ],
   'grille-salariale': buildOfficialGridItems(),
   'categorie': [
-    { code: '1', libelle: '1ÈRE CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 95 945 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '2', libelle: '2ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 104 474 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '3', libelle: '3ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 107 135 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '4', libelle: '4ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 115 558 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '5', libelle: '5ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 128 831 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '6', libelle: '6ÈME CATEGORIE', description: 'Groupe I — Employé principal (Base 157 940 FCFA)', tauxAbattement: 25, actif: true },
-    { code: '7', libelle: '7ÈME CATEGORIE', description: 'Groupe I — Agent de maîtrise (Base 176 441 FCFA)', tauxAbattement: 25, actif: true },
-    { code: 'I',        libelle: 'CLASSE I',        description: 'Groupe II — Agent de maîtrise / Technicien (Base 173 090 FCFA)', tauxAbattement: 25, actif: true },
-    { code: 'II',       libelle: 'CLASSE II',       description: 'Groupe II — Agent de maîtrise supérieur (Base 203 834 FCFA)', tauxAbattement: 25, actif: true },
-    { code: 'III',      libelle: 'CLASSE III',      description: 'Groupe II — Cadre moyen (Base 278 697 FCFA)', tauxAbattement: 25, actif: true },
-    { code: 'IV',       libelle: 'CLASSE IV',       description: 'Groupe II — Cadre supérieur (Base 405 758 FCFA)', tauxAbattement: 25, actif: true },
-    { code: 'V',        libelle: 'CLASSE V',        description: 'Groupe III — Cadre de direction (Base 581 390 FCFA)', tauxAbattement: 20, actif: true },
-    { code: 'VI',       libelle: 'CLASSE VI',       description: 'Groupe III — Chef de Département (Base 599 438 FCFA)', tauxAbattement: 20, actif: true },
-    { code: 'VII',      libelle: 'CLASSE VII',      description: 'Groupe III — Directeur (Base 631 454 FCFA)', tauxAbattement: 20, actif: true },
-    { code: 'VIII',     libelle: 'CLASSE VIII',     description: 'Groupe III — Directeur Général / Exécutif (Base 710 386 FCFA)', tauxAbattement: 20, actif: true }
+    { code: 'C1',  libelle: '1ÈRE CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 95 945 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C2',  libelle: '2ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 104 474 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C3',  libelle: '3ÈME CATEGORIE', description: 'Groupe I — Agent d\'exécution (Base 107 135 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C4',  libelle: '4ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 115 558 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C5',  libelle: '5ÈME CATEGORIE', description: 'Groupe I — Employé qualifié (Base 128 831 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C6',  libelle: '6ÈME CATEGORIE', description: 'Groupe I — Employé principal (Base 157 940 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'C7',  libelle: '7ÈME CATEGORIE', description: 'Groupe I — Agent de maîtrise (Base 176 441 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'CL1', libelle: 'CLASSE I',        description: 'Groupe II — Agent de maîtrise / Technicien (Base 173 090 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'CL2', libelle: 'CLASSE II',       description: 'Groupe II — Agent de maîtrise supérieur (Base 203 834 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'CL3', libelle: 'CLASSE III',      description: 'Groupe II — Cadre moyen (Base 278 697 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'CL4', libelle: 'CLASSE IV',       description: 'Groupe II — Cadre supérieur (Base 405 758 FCFA)', tauxAbattement: 25, actif: true },
+    { code: 'CL5', libelle: 'CLASSE V',        description: 'Groupe III — Cadre de direction (Base 581 390 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'CL6', libelle: 'CLASSE VI',       description: 'Groupe III — Chef de Département (Base 599 438 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'CL7', libelle: 'CLASSE VII',      description: 'Groupe III — Directeur (Base 631 454 FCFA)', tauxAbattement: 20, actif: true },
+    { code: 'CL8', libelle: 'CLASSE VIII',     description: 'Groupe III — Directeur Général / Exécutif (Base 710 386 FCFA)', tauxAbattement: 20, actif: true }
   ],
   'grade': [
-    { code: 'GROUPE I',   libelle: 'GROUPE I',   description: 'Agents et Employés (Catégories 1 à 7)', actif: true },
-    { code: 'GROUPE II',  libelle: 'GROUPE II',  description: 'Classes I à IV (Agents de Maîtrise et Cadres moyens)', actif: true },
-    { code: 'GROUPE III', libelle: 'GROUPE III', description: 'Classes V à VIII (Cadres et Cadres Supérieurs)', actif: true }
+    { code: 'GROUPE I',   libelle: 'GROUPE I',   description: 'Agents et Employés (Catégories C1 à C7)', actif: true },
+    { code: 'GROUPE II',  libelle: 'GROUPE II',  description: 'Classes CL1 à CL4 (Agents de Maîtrise et Cadres moyens)', actif: true },
+    { code: 'GROUPE III', libelle: 'GROUPE III', description: 'Classes CL5 à CL8 (Cadres et Cadres Supérieurs)', actif: true }
   ],
   'echelon': [
-    { code: 'ECH-01', libelle: 'Échelon 1',  description: 'Échelon de base (Base 100%)', actif: true },
-    { code: 'ECH-02', libelle: 'Échelon 2',  description: 'Progression échelon 2 (+10%)', actif: true },
-    { code: 'ECH-03', libelle: 'Échelon 3',  description: 'Progression échelon 3 (+21%)', actif: true },
-    { code: 'ECH-04', libelle: 'Échelon 4',  description: 'Progression échelon 4 (+33%)', actif: true },
-    { code: 'ECH-05', libelle: 'Échelon 5',  description: 'Progression échelon 5 (+46%)', actif: true },
-    { code: 'ECH-06', libelle: 'Échelon 6',  description: 'Progression échelon 6 (+61%)', actif: true },
-    { code: 'ECH-07', libelle: 'Échelon 7',  description: 'Progression échelon 7 (+77%)', actif: true },
-    { code: 'ECH-08', libelle: 'Échelon 8',  description: 'Progression échelon 8 (+95%)', actif: true },
-    { code: 'ECH-09', libelle: 'Échelon 9',  description: 'Progression échelon 9 (+114%)', actif: true },
-    { code: 'ECH-10', libelle: 'Échelon 10', description: 'Progression échelon 10 (+135%)', actif: true },
-    { code: 'ECH-11', libelle: 'Échelon 11', description: 'Progression échelon 11 (+158%)', actif: true },
-    { code: 'ECH-12', libelle: 'Échelon 12', description: 'Progression échelon 12 (+183%)', actif: true },
-    { code: 'ECH-13', libelle: 'Échelon 13', description: 'Progression échelon 13 (+211%)', actif: true },
-    { code: 'ECH-14', libelle: 'Échelon 14', description: 'Progression échelon 14 (+241%)', actif: true },
-    { code: 'ECH-15', libelle: 'Échelon 15', description: 'Progression échelon 15 (+274%)', actif: true }
+    { code: 'E01', libelle: 'Échelon 1',  description: 'Échelon de base (Base 100%)', actif: true },
+    { code: 'E02', libelle: 'Échelon 2',  description: 'Progression échelon 2 (+10%)', actif: true },
+    { code: 'E03', libelle: 'Échelon 3',  description: 'Progression échelon 3 (+21%)', actif: true },
+    { code: 'E04', libelle: 'Échelon 4',  description: 'Progression échelon 4 (+33%)', actif: true },
+    { code: 'E05', libelle: 'Échelon 5',  description: 'Progression échelon 5 (+46%)', actif: true },
+    { code: 'E06', libelle: 'Échelon 6',  description: 'Progression échelon 6 (+61%)', actif: true },
+    { code: 'E07', libelle: 'Échelon 7',  description: 'Progression échelon 7 (+77%)', actif: true },
+    { code: 'E08', libelle: 'Échelon 8',  description: 'Progression échelon 8 (+95%)', actif: true },
+    { code: 'E09', libelle: 'Échelon 9',  description: 'Progression échelon 9 (+114%)', actif: true },
+    { code: 'E10', libelle: 'Échelon 10', description: 'Progression échelon 10 (+135%)', actif: true },
+    { code: 'E11', libelle: 'Échelon 11', description: 'Progression échelon 11 (+158%)', actif: true },
+    { code: 'E12', libelle: 'Échelon 12', description: 'Progression échelon 12 (+183%)', actif: true },
+    { code: 'E13', libelle: 'Échelon 13', description: 'Progression échelon 13 (+211%)', actif: true },
+    { code: 'E14', libelle: 'Échelon 14', description: 'Progression échelon 14 (+241%)', actif: true },
+    { code: 'E15', libelle: 'Échelon 15', description: 'Progression échelon 15 (+274%)', actif: true }
   ],
   'competences': [
     { code: 'CMP-001', libelle: 'Leadership',        description: 'Capacité à diriger',         actif: true },
@@ -605,7 +610,7 @@ export class DbRefService {
           if (type === 'grade' && parsed.some((x: any) => x.code?.includes('GRADE') || x.libelle?.includes('GRADE') || x.code?.startsWith('GRD-'))) {
             localStorage.removeItem(`ref_${type}`);
           }
-          if (type === 'echelon' && parsed.length < 15) {
+          if (type === 'echelon' && (parsed.length < 15 || parsed.some((x: any) => x.code?.startsWith('ECH-') || x.code === 'E1'))) {
             localStorage.removeItem(`ref_${type}`);
           }
         } catch (e) {
@@ -618,6 +623,12 @@ export class DbRefService {
       try {
         const parsed = JSON.parse(genericStored);
         if (type === 'grade' && Array.isArray(parsed) && parsed.some((x: any) => x.libelle?.includes('GRADE'))) {
+          localStorage.removeItem(`ref_${type}`);
+          const initial = MOCK_DATA[type] ?? [];
+          localStorage.setItem(`ref_${type}`, JSON.stringify(initial));
+          return initial;
+        }
+        if (type === 'categorie' && Array.isArray(parsed) && parsed.some((x: any) => !x.code?.startsWith('C'))) {
           localStorage.removeItem(`ref_${type}`);
           const initial = MOCK_DATA[type] ?? [];
           localStorage.setItem(`ref_${type}`, JSON.stringify(initial));

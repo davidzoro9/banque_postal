@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -24,7 +24,6 @@
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">family_restroom</mat-icon>
       <mat-card-title>Famille</mat-card-title>
-      <mat-card-subtitle>Conjoint, enfants et personnes à charge</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -35,46 +34,114 @@
       @if (employee) {
         <form [formGroup]="form">
 
-          <p class="form-section-label">Composition de la famille</p>
-          <div class="array-block">
-            <div class="array-block-header">
-              <span>{{ membresFamille.length }} membre(s) enregistré(s)</span>
-              <button mat-stroked-button type="button" (click)="addMembre()">
-                <mat-icon>add</mat-icon> Ajouter un membre
-              </button>
+          <!-- Section Conjoint(e) -->
+          <h3 style="color: #00897b; font-weight: 700; margin-top: 8px; margin-bottom: 16px; font-size: 18px;">Conjoint(e)</h3>
+          
+          <div class="form-grid-2" style="margin-bottom: 24px;">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom du conjoint(e)</mat-label>
+              <input matInput formControlName="conjointNom">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Téléphone</mat-label>
+              <input matInput formControlName="conjointTelephone">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date de naissance</mat-label>
+              <input matInput [matDatepicker]="pickerConj" formControlName="conjointDateNaissance" placeholder="JJ/MM/AAAA">
+              <mat-datepicker-toggle matIconSuffix [for]="pickerConj"></mat-datepicker-toggle>
+              <mat-datepicker #pickerConj></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Mail</mat-label>
+              <input matInput formControlName="conjointMail" type="email">
+            </mat-form-field>
+
+            <div style="display: flex; align-items: center; gap: 8px; grid-column: span 2; padding-top: 4px;">
+              <mat-checkbox formControlName="conjointTravail" color="primary">
+                <span style="font-weight: 600; color: #333;">Travail</span>
+              </mat-checkbox>
             </div>
-            <div formArrayName="membresFamille">
-              @if (membresFamille.length === 0) {
-                <p class="arr-empty">Aucun membre de la famille enregistré</p>
-              }
-              @for (m of membresFamille.controls; track $index) {
-                <div [formGroupName]="$index" class="arr-row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Nom</mat-label>
-                    <input matInput formControlName="nom" placeholder="Nom de famille">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Prénom</mat-label>
-                    <input matInput formControlName="prenom" placeholder="Prénoms">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Lien de parenté</mat-label>
-                    <mat-select formControlName="lien">
-                      <mat-option value="Conjoint">Conjoint / Conjointe</mat-option>
-                      <mat-option value="Enfant">Enfant</mat-option>
-                      <mat-option value="Père">Père</mat-option>
-                      <mat-option value="Mère">Mère</mat-option>
-                      <mat-option value="Frère">Frère</mat-option>
-                      <mat-option value="Sœur">Sœur</mat-option>
-                      <mat-option value="Autre">Autre personne à charge</mat-option>
-                    </mat-select>
-                  </mat-form-field>
-                  <button mat-icon-button color="warn" type="button" (click)="removeMembre($index)">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </div>
-              }
-            </div>
+          </div>
+
+          <mat-divider style="margin: 20px 0;"></mat-divider>
+
+          <!-- Tableau d'enfants & personnes à charge -->
+          <div formArrayName="enfants" class="table-container" style="overflow-x: auto; margin-top: 16px;">
+            <table class="custom-family-table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 2px solid #e0e0e0; text-align: left;">
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px;">Nom et Prénoms</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 110px;">N° acte</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 130px;">Sexe</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 220px;">Status</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 160px;">Date naissance</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 200px;">Age</th>
+                  @if (isEditing) {
+                    <th style="padding: 10px 8px; width: 48px;"></th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (enf of enfants.controls; track $index) {
+                  <tr [formGroupName]="$index" style="border-bottom: 1px solid #eeeeee;">
+                    <td style="padding: 6px 8px;">
+                      <input matInput formControlName="nom" placeholder="Nom et prénom" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                    </td>
+                    <td style="padding: 6px 8px;">
+                      <input matInput formControlName="numActe" placeholder="Ex: 1601" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                    </td>
+                    <td style="padding: 6px 8px;">
+                      <select formControlName="sexe" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
+                        @for (s of sexeOptions; track s) {
+                          <option [value]="s">{{ s }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td style="padding: 6px 8px;">
+                      <select formControlName="status" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
+                        @for (st of statusOptions; track st) {
+                          <option [value]="st">{{ st }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td style="padding: 6px 8px;">
+                      <input matInput type="date" formControlName="dateNaissance" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
+                    </td>
+                    <td style="padding: 6px 8px; font-weight: 600; font-size: 13px;">
+                      <span [style.color]="computeAge(enf.get('dateNaissance')?.value).isOverLimit ? '#d32f2f' : '#2e7d32'">
+                        {{ computeAge(enf.get('dateNaissance')?.value).text }}
+                      </span>
+                    </td>
+                    @if (isEditing) {
+                      <td style="padding: 6px 8px; text-align: center;">
+                        <button mat-icon-button color="warn" type="button" (click)="removeEnfant($index)">
+                          <mat-icon style="font-size: 18px;">delete</mat-icon>
+                        </button>
+                      </td>
+                    }
+                  </tr>
+                }
+                @if (enfants.length === 0) {
+                  <tr>
+                    <td colspan="7" style="padding: 16px; text-align: center; color: #757575; font-style: italic;">
+                      Aucun enfant ou personne à charge enregistré
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (isEditing) {
+              <div style="margin-top: 12px;">
+                <button mat-button type="button" color="primary" (click)="addEnfant()" style="font-weight: 600; color: #00897b;">
+                  <mat-icon>add</mat-icon> Ajouter une ligne
+                </button>
+              </div>
+            }
           </div>
 
         </form>
@@ -83,20 +150,29 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
         <div class="sec-right">
-          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving">
-            Enregistrer
-          </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('categorie')" [disabled]="saving">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-            Enregistrer et continuer
-            <mat-icon>arrow_forward</mat-icon>
-          </button>
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
         </div>
       </div>
     </mat-card-actions>
   </mat-card>
 
 </div>
-

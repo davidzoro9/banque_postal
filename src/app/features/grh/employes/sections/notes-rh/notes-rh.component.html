@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -46,9 +46,11 @@
           <div class="array-block">
             <div class="array-block-header">
               <span>{{ evaluations.length }} évaluation(s)</span>
-              <button mat-stroked-button type="button" (click)="addEvaluation()">
-                <mat-icon>add</mat-icon> Ajouter
-              </button>
+              @if (isEditing) {
+                <button mat-stroked-button type="button" (click)="addEvaluation()">
+                  <mat-icon>add</mat-icon> Ajouter une évaluation
+                </button>
+              }
             </div>
             <div formArrayName="evaluations">
               @if (evaluations.length === 0) {
@@ -80,11 +82,13 @@
                       <textarea matInput formControlName="commentaire" rows="2"></textarea>
                     </mat-form-field>
                   </div>
-                  <div style="display:flex;justify-content:flex-end;margin-top:4px">
-                    <button mat-stroked-button color="warn" type="button" (click)="removeEvaluation($index)">
-                      <mat-icon>delete_outline</mat-icon> Supprimer
-                    </button>
-                  </div>
+                  @if (isEditing) {
+                    <div style="display:flex;justify-content:flex-end;margin-top:4px">
+                      <button mat-stroked-button color="warn" type="button" (click)="removeEvaluation($index)">
+                        <mat-icon>delete_outline</mat-icon> Supprimer
+                      </button>
+                    </div>
+                  }
                   @if ($index < evaluations.length - 1) {
                     <mat-divider style="margin:12px 0"></mat-divider>
                   }
@@ -115,13 +119,26 @@
 
     <mat-card-actions>
       <div class="sec-actions">
-        <button mat-button (click)="goBack()">Annuler</button>
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
         <div class="sec-right">
-          <button mat-raised-button color="primary" class="btn-next" (click)="save(true)" [disabled]="saving">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-            Enregistrer et terminer
-            <mat-icon>check_circle</mat-icon>
-          </button>
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
         </div>
       </div>
     </mat-card-actions>

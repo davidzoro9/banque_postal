@@ -1,22 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 import { Observable } from 'rxjs';
-
-export interface ApplicableIndemnite {
-  id?: string;
-  code: string;
-  typeIndemnite: string;
-  fonction: string;
-  grade: string;
-  categorie: string;
-  taux: number;
-  applied: boolean;
-  description?: string;
-}
 
 @Component({
   selector: 'app-indemnites',
@@ -28,15 +16,11 @@ export class IndemnitesComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  isEditing = false;
+  isCreationMode = false;
   empId = '';
-
-  allParams: RefItem[] = [];
-  fonctions$!: Observable<RefItem[]>;
-
-  gradesList = ['GROUPE I', 'GROUPE II', 'GROUPE III'];
-  categoriesList = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-
-  applicableIndemnites: ApplicableIndemnite[] = [];
+  indemnites$!: Observable<RefItem[]>;
+  typesList: RefItem[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -48,112 +32,192 @@ export class IndemnitesComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.fonctions$ = this.dbRefService.getItems('fonction');
+    this.isCreationMode = this.route.snapshot.queryParamMap.get('mode') === 'creation';
+    this.isEditing = this.isCreationMode;
 
-    this.form = this.fb.group({
-      grade:        ['GROUPE I'],
-      categoriePro: ['1'],
-      fonction:     ['']
+    this.indemnites$ = this.dbRefService.getItems('type-indemnite');
+    
+    this.dbRefService.getItems('type-indemnite').subscribe(list => {
+      this.typesList = list;
     });
 
-    // 1. Charge les règles de paramétrage d'indemnité depuis Données de base
-    this.dbRefService.getItems('param-indemnite').subscribe(params => {
-      this.allParams = params || [];
+    this.employeeService.getById(this.empId).subscribe(e => {
+      if (!e) { this.router.navigate(['/grh/employes']); return; }
+      this.employee = e;
+      this.buildForm();
 
-      // 2. Charge l'employé
-      this.employeeService.getById(this.empId).subscribe(e => {
-        if (!e) { this.router.navigate(['/grh/employes']); return; }
-        this.employee = e;
-
-        let initialGrade = e.grade || 'GROUPE I';
-        let initialCat   = e.categoriePro || '1';
-
-        if (['1','2','3','4','5','6','7'].includes(initialCat)) initialGrade = 'GROUPE I';
-        else if (['I','II','III','IV'].includes(initialCat)) initialGrade = 'GROUPE II';
-        else if (['V','VI','VII','VIII'].includes(initialCat)) initialGrade = 'GROUPE III';
-
+      this.dbRefService.getItems('param-indemnite').subscribe(paramList => {
+        const computed = this.computeIndemnites(e, paramList || []);
+        
         this.form.patchValue({
-          grade: initialGrade,
-          categoriePro: initialCat,
-          fonction: e.fonction || ''
+          primeLogement:      computed.logement,
+          primeTransport:     computed.transport,
+          primeResponsabilite: computed.responsabilite
         });
 
-        this.recalculateIndemnites();
+        this.employeeService.update(this.empId, {
+          primeLogement:      computed.logement,
+          primeTransport:     computed.transport,
+          primeResponsabilite: computed.responsabilite
+        }).subscribe();
       });
-    });
 
-    // Écoute des modifs sur les paramètres de calcul
-    this.form.valueChanges.subscribe(() => {
-      this.recalculateIndemnites();
+      this.patch(e);
+      if (!this.isCreationMode) {
+        this.form.disable();
+      }
     });
   }
 
-  onCategoryChange(cat: string): void {
-    let groupe = 'GROUPE I';
-    if (['I', 'II', 'III', 'IV'].includes(cat)) {
-      groupe = 'GROUPE II';
-    } else if (['V', 'VI', 'VII', 'VIII'].includes(cat)) {
-      groupe = 'GROUPE III';
+  enableEdit(): void {
+    this.isEditing = true;
+    this.form.enable();
+  }
+
+  cancelEdit(): void {
+    if (this.employee) {
+      this.patch(this.employee);
     }
-    this.form.patchValue({ grade: groupe }, { emitEvent: true });
+    this.form.disable();
+    this.isEditing = false;
   }
 
-  recalculateIndemnites(): void {
-    const grade = this.form?.get('grade')?.value || 'GROUPE I';
-    const cat   = (this.form?.get('categoriePro')?.value || '1').trim().toUpperCase();
-    const fct   = (this.form?.get('fonction')?.value || '').trim().toLowerCase();
-
-    this.applicableIndemnites = [];
-
-    this.allParams.forEach(p => {
-      if (p.actif === false) return;
-
-      const pGrade = (p.grade || '').trim().toUpperCase();
-      const pCat   = (p.categorie || '').trim().toUpperCase();
-      const pFct   = (p.fonction || '').trim().toLowerCase();
-
-      const matchGrade = !pGrade || pGrade === grade.trim().toUpperCase();
-
-      let matchCat = false;
-      if (!pCat) {
-        matchCat = true;
-      } else if (pCat === '1 À 7' || pCat === '1 A 7' || pCat === '1-7') {
-        matchCat = ['1','2','3','4','5','6','7'].includes(cat);
-      } else {
-        matchCat = pCat === cat;
-      }
-
-      let matchFct = false;
-      if (!pFct) {
-        matchFct = true;
-      } else if (fct && (pFct.includes(fct) || fct.includes(pFct))) {
-        matchFct = true;
-      }
-
-      if (matchGrade && matchCat && matchFct) {
-        this.applicableIndemnites.push({
-          id: p.id,
-          code: p.code || 'PI-REF',
-          typeIndemnite: p.typeIndemnite || p.libelle || 'Indemnité',
-          fonction: p.fonction || '-',
-          grade: p.grade || grade,
-          categorie: p.categorie || cat,
-          taux: p.taux || p.montant || 0,
-          applied: true,
-          description: p.description
-        });
-      }
+  private buildForm(): void {
+    this.form = this.fb.group({
+      primeLogement:      [0, [Validators.min(0)]],
+      primeTransport:     [0, [Validators.min(0)]],
+      primeResponsabilite: [0, [Validators.min(0)]],
+      autresIndemnites:   this.fb.array([])
     });
   }
 
-  toggleApplied(item: ApplicableIndemnite): void {
-    item.applied = !item.applied;
+  private patch(e: Employee): void {
+    this.form.patchValue({
+      primeLogement:      e.primeLogement || 0,
+      primeTransport:     e.primeTransport || 0,
+      primeResponsabilite: e.primeResponsabilite || 0
+    });
+    if (e.autresIndemnites && e.autresIndemnites.length > 0) {
+      this.autres.clear();
+      e.autresIndemnites.forEach(item => this.autres.push(this.fb.group({
+        code:    [item.code || ''],
+        libelle: [item.libelle || ''],
+        montant: [item.montant || 0]
+      })));
+    }
   }
+
+  onTypeChange(index: number, code: string): void {
+    const found = this.typesList.find(t => t.code === code);
+    const row = this.autres.at(index) as FormGroup;
+    if (row && found) {
+      row.patchValue({
+        libelle: found.libelle,
+        montant: found.montant || 0
+      });
+    }
+  }
+
+  // Calcul dynamique des indemnités : 
+  // - Pour un employé simple : Logement & Transport habituels
+  // - S'il a une fonction spécifique : ajout de l'indemnité associée à la fonction
+  private computeIndemnites(e: Employee, paramList: RefItem[] = []): { logement: number; transport: number; responsabilite: number } {
+    let logement = 0;
+    let transport = 0;
+    let responsabilite = 0;
+
+    const catUpper = (e.categoriePro || '').toUpperCase();
+    const gradeUpper = (e.grade || '').toUpperCase();
+    const fonctionUpper = (e.fonction || (e as any).emploi || (e as any).poste || '').toUpperCase();
+
+    // 1. Recherche prioritaire dans les Données de Base (param-indemnite)
+    if (paramList && paramList.length > 0) {
+      paramList.forEach(p => {
+        if (p.actif ?? true) {
+          const m = p.taux || p.montant || 0;
+          const lib = (p.typeIndemnite || p.libelle || '').toLowerCase();
+          const pFonction = (p.fonction || '').toUpperCase();
+          const pGrade = (p.grade || '').toUpperCase();
+          const pCat = (p.categorie || '').toUpperCase();
+
+          const matchesCat = !pCat || catUpper.includes(pCat) || pCat.includes(catUpper);
+          const matchesGrade = !pGrade || gradeUpper.includes(pGrade) || pGrade.includes(gradeUpper);
+          const matchesFonction = pFonction && (fonctionUpper.includes(pFonction) || pFonction.includes(pFonction));
+
+          if (lib.includes('logement') && (matchesCat || matchesGrade)) {
+            logement = m;
+          }
+          if (lib.includes('transport') && (matchesCat || matchesGrade)) {
+            transport = m;
+          }
+          if ((lib.includes('responsabilit') || lib.includes('fonction')) && matchesFonction) {
+            responsabilite = m;
+          }
+        }
+      });
+    }
+
+    // 2. Barème par défaut pour les indemnités habituelles (Logement & Transport selon Catégorie/Groupe)
+    if (!logement) {
+      if (gradeUpper.includes('GROUPE III') || catUpper.includes('VI') || catUpper.includes('VII') || catUpper.includes('VIII') || catUpper.includes('V')) {
+        logement = 200000;
+      } else if (gradeUpper.includes('GROUPE II') || catUpper.includes('I') || catUpper.includes('II') || catUpper.includes('III') || catUpper.includes('IV')) {
+        logement = 150000;
+      } else {
+        logement = 100000;
+      }
+    }
+
+    if (!transport) {
+      if (gradeUpper.includes('GROUPE III') || catUpper.includes('VI') || catUpper.includes('VII') || catUpper.includes('VIII') || catUpper.includes('V')) {
+        transport = 100000;
+      } else if (gradeUpper.includes('GROUPE II') || catUpper.includes('I') || catUpper.includes('II') || catUpper.includes('III') || catUpper.includes('IV')) {
+        transport = 75000;
+      } else {
+        transport = 50000;
+      }
+    }
+
+    // 3. Indemnité de Fonction / Responsabilité : appliquée seulement si l'employé occupe une fonction spécifique
+    if (!responsabilite && fonctionUpper) {
+      if (fonctionUpper.includes('DIRECTEUR') || fonctionUpper.includes('RESPONSABLE') || fonctionUpper.includes('CHEF DE DEPARTEMENT') || fonctionUpper.includes('CEO')) {
+        responsabilite = 150000;
+      } else if (fonctionUpper.includes('CHEF DE SERVICE') || fonctionUpper.includes('MANAGER') || fonctionUpper.includes('SUPERVISEUR')) {
+        responsabilite = 100000;
+      } else if (fonctionUpper.includes('CAISSIER') || fonctionUpper.includes('GERANT')) {
+        responsabilite = 50000;
+      } else {
+        responsabilite = 0; // Simple employé : pas de prime de fonction
+      }
+    }
+
+    return { logement, transport, responsabilite };
+  }
+
+  get autres(): FormArray { return this.form.get('autresIndemnites') as FormArray; }
+  
+  addAutre(): void {
+    if (!this.isEditing) {
+      this.isEditing = true;
+      this.form.enable();
+    }
+    const newGroup = this.fb.group({
+      code:    [''],
+      libelle: [''],
+      montant: [0]
+    });
+    this.autres.push(newGroup);
+    newGroup.enable();
+  }
+  
+  removeAutre(i: number): void { this.autres.removeAt(i); }
 
   get totalIndemnites(): number {
-    return this.applicableIndemnites
-      .filter(i => i.applied)
-      .reduce((sum, i) => sum + i.taux, 0);
+    if (!this.form) return 0;
+    const v = this.form.value;
+    const std = (v.primeLogement || 0) + (v.primeTransport || 0) + (v.primeResponsabilite || 0);
+    const aut = (v.autresIndemnites || []).reduce((acc: number, item: any) => acc + (item.montant || 0), 0);
+    return std + aut;
   }
 
   get initials(): string {
@@ -161,49 +225,29 @@ export class IndemnitesComponent implements OnInit {
     return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
-  save(): void {
-    if (!this.employee) return;
+  save(next?: string): void {
     this.saving = true;
-
-    const appliedList = this.applicableIndemnites.filter(i => i.applied);
-
-    let log = 0;
-    let tpt = 0;
-    let resp = 0;
-    const autres: any[] = [];
-
-    appliedList.forEach(item => {
-      const type = item.typeIndemnite.toLowerCase();
-      if (type.includes('logement')) log += item.taux;
-      else if (type.includes('transport')) tpt += item.taux;
-      else if (type.includes('responsabilit') || type.includes('sujét') || type.includes('fonction')) resp += item.taux;
-      else autres.push({ code: item.code, libelle: item.typeIndemnite, montant: item.taux });
-    });
-
-    const updateData: Partial<Employee> = {
-      grade: this.form.get('grade')?.value,
-      categoriePro: this.form.get('categoriePro')?.value,
-      fonction: this.form.get('fonction')?.value,
-      primeLogement: log,
-      primeTransport: tpt,
-      primeResponsabilite: resp,
-      autresIndemnites: autres
-    };
-
-    this.employeeService.update(this.empId, updateData).subscribe({
-      next: () => {
-        this.saving = false;
+    const v = this.form.getRawValue();
+    this.employeeService.update(this.empId, {
+      primeLogement:       v.primeLogement,
+      primeTransport:      v.primeTransport,
+      primeResponsabilite: v.primeResponsabilite,
+      autresIndemnites:    v.autresIndemnites
+    }).subscribe(() => {
+      this.saving = false;
+      if (this.isCreationMode && next) {
+        this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
+      } else {
+        this.isEditing = false;
+        this.form.disable();
         this.router.navigate(['/grh/employes', this.empId]);
-      },
-      error: () => this.saving = false
+      }
     });
   }
 
-  goBack(): void {
-    this.router.navigate(['/grh/employes', this.empId]);
+  goNext(next: string): void {
+    this.router.navigate(['/grh/employes', this.empId, next]);
   }
 
-  formatMontant(val: number): string {
-    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(val).replace(/\s/g, ' ');
-  }
+  goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }
