@@ -1,4 +1,4 @@
-﻿<div class="section-page">
+<div class="section-page">
 
   <div class="sec-breadcrumb">
     <span class="link" (click)="goBack()">Employés</span>
@@ -15,7 +15,7 @@
       <div class="emp-ctx-avatar">{{ initials }}</div>
       <div>
         <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
-        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }} — {{ employee.poste }}</div>
       </div>
     </div>
   }
@@ -23,8 +23,8 @@
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">account_balance_wallet</mat-icon>
-      <mat-card-title>Informations sur le salaire</mat-card-title>
-      <mat-card-subtitle>Salaire de base, brut et mode de paiement</mat-card-subtitle>
+      <mat-card-title>Informations sur le salaire & Rémunération</mat-card-title>
+      <mat-card-subtitle>Calcul automatique selon la Grille Salariale (Barème Officiel BPBF) et le cumul des Primes & Indemnités</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -35,27 +35,106 @@
       @if (employee) {
         <form [formGroup]="form">
 
-          <p class="form-section-label">Rémunération</p>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Salaire de base (FCFA)</mat-label>
-              <input matInput formControlName="salaireBase" type="number" min="0">
-            </mat-form-field>
+          <!-- PARAMÈTRES DE CALCUL (SÉLECTION DES ÉLÉMENTS QUI DÉTERMINENT LA GRILLE) -->
+          <div class="calc-box">
+            <div class="calc-title">
+              <mat-icon style="color: #0060B3;">tune</mat-icon>
+              <span>Éléments de classification pour le calcul du Salaire de Base</span>
+            </div>
+            <p class="calc-sub">Modifier ces critères ajuste directement le salaire de base calculé d'après la Matrice Salariale Réglementaire.</p>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Salaire brut (FCFA)</mat-label>
-              <input matInput formControlName="salaireBrut" type="number" min="0">
-            </mat-form-field>
+            <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+              <!-- 1. Catégorie Professionnelle -->
+              <mat-form-field appearance="outline">
+                <mat-label>Catégorie Professionnelle</mat-label>
+                <mat-select formControlName="categoriePro" (selectionChange)="onCategoryChange($event.value)">
+                  <mat-optgroup label="GROUPE I : AGENTS ET EMPLOYES">
+                    <mat-option value="1">1ÈRE CATEGORIE</mat-option>
+                    <mat-option value="2">2ÈME CATEGORIE</mat-option>
+                    <mat-option value="3">3ÈME CATEGORIE</mat-option>
+                    <mat-option value="4">4ÈME CATEGORIE</mat-option>
+                    <mat-option value="5">5ÈME CATEGORIE</mat-option>
+                    <mat-option value="6">6ÈME CATEGORIE</mat-option>
+                    <mat-option value="7">7ÈME CATEGORIE</mat-option>
+                  </mat-optgroup>
+                  <mat-optgroup label="GROUPE II : AGENTS DE MAITRISE & CADRES MOYENS">
+                    <mat-option value="I">CLASSE I</mat-option>
+                    <mat-option value="II">CLASSE II</mat-option>
+                    <mat-option value="III">CLASSE III</mat-option>
+                    <mat-option value="IV">CLASSE IV</mat-option>
+                  </mat-optgroup>
+                  <mat-optgroup label="GROUPE III : CADRES ET CADRES SUPERIEURS">
+                    <mat-option value="V">CLASSE V</mat-option>
+                    <mat-option value="VI">CLASSE VI</mat-option>
+                    <mat-option value="VII">CLASSE VII</mat-option>
+                    <mat-option value="VIII">CLASSE VIII</mat-option>
+                  </mat-optgroup>
+                </mat-select>
+              </mat-form-field>
+
+              <!-- 2. Groupe Conventionnel -->
+              <mat-form-field appearance="outline">
+                <mat-label>Groupe Conventionnel</mat-label>
+                <mat-select formControlName="grade">
+                  <mat-option value="GROUPE I">GROUPE I (Agents et Employés)</mat-option>
+                  <mat-option value="GROUPE II">GROUPE II (Maîtrise & Cadres moyens)</mat-option>
+                  <mat-option value="GROUPE III">GROUPE III (Cadres Supérieurs)</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <!-- 3. Échelon -->
+              <mat-form-field appearance="outline">
+                <mat-label>Échelon</mat-label>
+                <mat-select formControlName="echelon">
+                  @for (ech of echelonsList; track ech) {
+                    <mat-option [value]="'' + ech">Échelon {{ ech }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
           </div>
 
-          <p class="form-section-label">Mode de paiement</p>
+          <!-- RÉSULTATS DU CALCUL DE LA RÉMUNÉRATION (LECTURE SEULE / DYNAMIQUE) -->
+          <p class="form-section-label" style="font-weight: 700;">Synthèse de la Rémunération Calculée</p>
+
+          <div class="salary-summary-grid">
+            <div class="sal-card base-card">
+              <div class="sal-card-header">
+                <mat-icon>table_chart</mat-icon>
+                <span>Salaire de base (Grille)</span>
+              </div>
+              <div class="sal-card-value">{{ formatMontant(calculatedSalaireBase) }} FCFA</div>
+              <div class="sal-card-sub">Déterminé par la Grille (Cat. {{ form.get('categoriePro')?.value }}, Échelon {{ form.get('echelon')?.value }})</div>
+            </div>
+
+            <div class="sal-card primes-card">
+              <div class="sal-card-header">
+                <mat-icon>payments</mat-icon>
+                <span>Cumul Primes & Indemnités</span>
+              </div>
+              <div class="sal-card-value">+{{ formatMontant(totalPrimes) }} FCFA</div>
+              <div class="sal-card-sub">Issu de l'onglet Indemnités (Logement, Transport, etc.)</div>
+            </div>
+
+            <div class="sal-card brut-card">
+              <div class="sal-card-header">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <span>Salaire Brut Total</span>
+              </div>
+              <div class="sal-card-value">{{ formatMontant(calculatedSalaireBrut) }} FCFA</div>
+              <div class="sal-card-sub">Salaire de Base + Total des Primes et Indemnités</div>
+            </div>
+          </div>
+
+          <!-- MODE ET COORDONNÉES DE PAIEMENT -->
+          <p class="form-section-label" style="margin-top: 28px;">Mode de paiement & Règlement</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
               <mat-label>Mode de paiement</mat-label>
               <mat-select formControlName="modePaiement">
-                <mat-option value="">— Aucun —</mat-option>
-                <mat-option value="Chèque">Chèque</mat-option>
                 <mat-option value="Virement bancaire">Virement bancaire</mat-option>
+                <mat-option value="Chèque">Chèque bancaire</mat-option>
+                <mat-option value="Espèces">Espèces / Caisse</mat-option>
               </mat-select>
             </mat-form-field>
           </div>
@@ -65,26 +144,15 @@
             <div class="form-grid-2">
               <mat-form-field appearance="outline">
                 <mat-label>Banque</mat-label>
-                <input matInput formControlName="banque" placeholder="Ex: BICIAB, BOA, BIB…">
+                <input matInput formControlName="banque" placeholder="Ex: Banque Postale du Burkina Faso (BPBF)">
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>IBAN / Numéro de compte</mat-label>
-                <input matInput formControlName="iban" placeholder="BF…">
+                <input matInput formControlName="iban" placeholder="Ex: BF01 01001 012345678902 50">
               </mat-form-field>
             </div>
           }
-
-          <div class="salary-summary">
-            <div class="sal-item">
-              <span class="sal-lbl">Salaire de base</span>
-              <span class="sal-val">{{ form.get('salaireBase')?.value | number:'1.0-0' }} FCFA</span>
-            </div>
-            <div class="sal-item">
-              <span class="sal-lbl">Salaire brut</span>
-              <span class="sal-val highlight">{{ form.get('salaireBrut')?.value | number:'1.0-0' }} FCFA</span>
-            </div>
-          </div>
 
         </form>
       }
@@ -94,13 +162,11 @@
       <div class="sec-actions">
         <button mat-button (click)="goBack()">Annuler</button>
         <div class="sec-right">
-          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+          <button mat-stroked-button color="primary" (click)="save()" [disabled]="saving || !employee">
             Enregistrer
           </button>
-          <button mat-raised-button color="primary" class="btn-next" (click)="save('dossier')" [disabled]="saving || form.invalid">
-            @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+          <button mat-raised-button color="primary" class="btn-next" (click)="save('dossier')" [disabled]="saving || !employee">
             Enregistrer et continuer
-            <mat-icon>arrow_forward</mat-icon>
           </button>
         </div>
       </div>
@@ -108,4 +174,3 @@
   </mat-card>
 
 </div>
-
