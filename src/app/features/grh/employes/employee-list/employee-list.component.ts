@@ -116,14 +116,46 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
     const fonction = (emp.fonction || emp.poste || '').toLowerCase();
     const cat = (emp.categoriePro || '').toUpperCase();
 
-    // 1. Détermination de l'âge de retraite d'abord par la Fonction si elle existe, sinon par la Catégorie
+    // 1. Détermination du Groupe de l'employé via le Paramétrage Groupe (catégories rattachées)
+    let groupe = '';
+    try {
+      const storedParamGroupes = localStorage.getItem('ref_param-groupe') || localStorage.getItem('ref_grade');
+      if (storedParamGroupes) {
+        const pgList = JSON.parse(storedParamGroupes);
+        const match = pgList.find((g: any) => Array.isArray(g.categories) && g.categories.includes(cat));
+        if (match) {
+          groupe = match.grade || match.libelle || match.code || '';
+        }
+      }
+    } catch (e) {}
+
+    if (!groupe) {
+      if (cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8')) {
+        groupe = 'GROUPE III';
+      } else if (cat.startsWith('CL1') || cat.startsWith('CL2') || cat.startsWith('CL3') || cat.startsWith('CL4')) {
+        groupe = 'GROUPE II';
+      } else if (cat.startsWith('C')) {
+        groupe = 'GROUPE I';
+      } else {
+        groupe = 'GROUPE I';
+      }
+    }
+
+    // 2. Récupération de l'âge de retraite paramétré dans les données de base pour ce Groupe
     let ageRetraite = 60;
-    if (fonction.includes('directeur') || fonction.includes('cadre') || fonction.includes('responsable') || fonction.includes('chef')) {
-      ageRetraite = 65;
-    } else if (cat.startsWith('CL') || cat.includes('CADRE')) {
-      ageRetraite = 65;
-    } else if (cat.startsWith('C')) {
-      ageRetraite = 60;
+    try {
+      const storedParams = localStorage.getItem('ref_param-retraite');
+      if (storedParams) {
+        const list = JSON.parse(storedParams);
+        const param = list.find((p: any) => (p.libelle && p.libelle.includes(groupe)) || (p.grade && p.grade.includes(groupe)) || (p.code && p.code.includes(groupe)));
+        if (param && (param.taux || param.montant)) {
+          ageRetraite = Number(param.taux || param.montant);
+        }
+      } else {
+        ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
+      }
+    } catch (e) {
+      ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
     }
 
     if (!birthDate || isNaN(birthDate.getTime())) {

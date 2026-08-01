@@ -24,6 +24,7 @@ export interface RefItem {
   tauxAbattement?: number;  // pour Catégorie (Abattement brut pour IUTS)
   tauxExoneration?: number; // pour Paramétrage indemnité (% Exonéré)
   plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
+  categories?: string[];    // pour Groupe (Liste des codes de catégories rattachées)
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -224,11 +225,12 @@ function buildOfficialGridItems(): RefItem[] {
     info.values.forEach((amount, index) => {
       const echNum = index + 1;
       const echCode = echNum < 10 ? `E0${echNum}` : `E${echNum}`;
+      const gradeConcat = `${info.catCode}${echCode}`;
       items.push({
         id: String(idCounter++),
         code: info.catCode,
         libelle: info.groupe,
-        grade: info.groupe,
+        grade: gradeConcat,
         categorie: info.catCode,
         echelle: info.groupe,
         echellon: echCode,
@@ -278,10 +280,10 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'RET-PRET-EQP', libelle: 'Prêt Équipement / Prêt interne BPBF',       typeRetenue: 'Remboursement Prêt & Avance',        taux: 0,   description: 'Échéance mensuelle pour remboursement de prêt personnel bancaire (Mensualité Fixe)', actif: true }
   ],
   'param-retraite': [
-    { code: 'RET-FCT-DIR',  libelle: 'Fonction : Directeur / Direction',         taux: 65, description: 'Âge légal de départ à la retraite pour la fonction Directeur (65 ans)', actif: true },
-    { code: 'RET-FCT-RESP', libelle: 'Fonction : Chef de département / Responsable', taux: 65, description: 'Âge légal de départ à la retraite pour les responsables et chefs de département (65 ans)', actif: true },
-    { code: 'RET-CAT-CL',   libelle: 'Catégorie : Cadres (CL1 à CL8)',          taux: 65, description: 'Âge légal de départ à la retraite pour les catégories cadres (65 ans)', actif: true },
-    { code: 'RET-CAT-C',    libelle: 'Catégorie : Non-Cadres (C1 à C7)',        taux: 60, description: 'Âge légal de départ à la retraite pour les catégories non-cadres (60 ans)', actif: true }
+    { code: 'RET-GRP-1', grade: 'GROUPE I',   libelle: 'GROUPE I',   taux: 58, description: 'GROUPE I : Employés & Techniciens Opérationnels (58 ans)', actif: true },
+    { code: 'RET-GRP-2', grade: 'GROUPE II',  libelle: 'GROUPE II',  taux: 60, description: 'GROUPE II : Agents de Maîtrise & Cadres Moyens (60 ans)', actif: true },
+    { code: 'RET-GRP-3', grade: 'GROUPE III', libelle: 'GROUPE III', taux: 60, description: 'GROUPE III : Cadres & Cadres Supérieurs (60 ans)', actif: true },
+    { code: 'RET-GRP-4', grade: 'GROUPE IV',  libelle: 'GROUPE IV',  taux: 63, description: 'GROUPE IV : Hors Catégorie & Médecins / Spécialistes (63 ans)', actif: true }
   ],
   'type-contrat': [
     { code: 'CDI',   libelle: 'Contrat Durée Indéterminée (CDI)', description: 'Contrat de travail à durée indéterminée', actif: true },
@@ -347,66 +349,48 @@ const MOCK_DATA: Record<string, RefItem[]> = {
   ],
   'param-indemnite': [
     // ─── GROUPE I : AGENTS, EMPLOYES & TECHNICIENS OPERATIONNELS ───────────────
-    { id: 'G1-LOG', code: 'PI-G1-LOG', libelle: 'Indemnité de Logement - Groupe I',    description: '1 à 7 — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '',                      grade: 'GROUPE I',   categorie: '1 à 7', montant: 35000,  taux: 35000  },
-    { id: 'G1-TPT', code: 'PI-G1-TPT', libelle: 'Indemnité de Transport - Groupe I',   description: '1 à 7 — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '',                      grade: 'GROUPE I',   categorie: '1 à 7', montant: 30000,  taux: 30000  },
+    { id: 'G1-LOG', code: 'PI-G1-LOG', libelle: 'Indemnité de Logement - Groupe I',    description: 'Logement BPBF (Groupe I - Catégories C1 à C7)', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 35000,  taux: 35000  },
+    { id: 'G1-TPT', code: 'PI-G1-TPT', libelle: 'Indemnité de Transport - Groupe I',   description: 'Transport BPBF (Groupe I - Catégories C1 à C7)', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 30000,  taux: 30000  },
 
     // ─── GROUPE II : AGENTS DE MAITRISE & CADRES MOYENS ────────────────────────
-    { id: 'G2C1-LOG', code: 'PI-G2-C1-LOG', libelle: 'Indemnité de Logement - Classe I',   description: 'Classe I — Logement BPBF',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 45000, taux: 45000 },
-    { id: 'G2C1-TPT', code: 'PI-G2-C1-TPT', libelle: 'Indemnité de Transport - Classe I',  description: 'Classe I — Transport BPBF',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 45000, taux: 45000 },
-    { id: 'G2C1-SUJ', code: 'PI-G2-C1-SUJ', libelle: 'Indemnité de Sujétion - Classe I',   description: 'Classe I — Sujétion BPBF',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'I',   montant: 20000, taux: 20000 },
-    { id: 'G2C2-LOG', code: 'PI-G2-C2-LOG', libelle: 'Indemnité de Logement - Classe II',  description: 'Classe II — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 45000, taux: 45000 },
-    { id: 'G2C2-TPT', code: 'PI-G2-C2-TPT', libelle: 'Indemnité de Transport - Classe II', description: 'Classe II — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 45000, taux: 45000 },
-    { id: 'G2C2-SUJ', code: 'PI-G2-C2-SUJ', libelle: 'Indemnité de Sujétion - Classe II',  description: 'Classe II — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'II',  montant: 30000, taux: 30000 },
-    { id: 'G2C3-LOG', code: 'PI-G2-C3-LOG', libelle: 'Indemnité de Logement - Classe III', description: 'Classe III — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 50000, taux: 50000 },
-    { id: 'G2C3-TPT', code: 'PI-G2-C3-TPT', libelle: 'Indemnité de Transport - Classe III',description: 'Classe III — Transport BPBF',actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 50000, taux: 50000 },
-    { id: 'G2C3-SUJ', code: 'PI-G2-C3-SUJ', libelle: 'Indemnité de Sujétion - Classe III', description: 'Classe III — Sujétion BPBF', actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'III', montant: 40000, taux: 40000 },
-    { id: 'G2C4-LOG', code: 'PI-G2-C4-LOG', libelle: 'Indemnité de Logement - Classe IV',  description: 'Classe IV — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 60000, taux: 60000 },
-    { id: 'G2C4-TPT', code: 'PI-G2-C4-TPT', libelle: 'Indemnité de Transport - Classe IV', description: 'Classe IV — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 50000, taux: 50000 },
-    { id: 'G2C4-SUJ', code: 'PI-G2-C4-SUJ', libelle: 'Indemnité de Sujétion - Classe IV',  description: 'Classe IV — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'IV',  montant: 50000, taux: 50000 },
+    { id: 'G2C1-LOG', code: 'PI-G2-C1-LOG', libelle: 'Indemnité de Logement - Groupe II',   description: 'Logement BPBF (Groupe II - Classes CL1 à CL4)',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 45000, taux: 45000 },
+    { id: 'G2C1-TPT', code: 'PI-G2-C1-TPT', libelle: 'Indemnité de Transport - Groupe II',  description: 'Transport BPBF (Groupe II - Classes CL1 à CL4)',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 45000, taux: 45000 },
+    { id: 'G2C1-SUJ', code: 'PI-G2-C1-SUJ', libelle: 'Indemnité de Sujétion - Groupe II',   description: 'Sujétion BPBF (Groupe II - Classes CL1 à CL4)',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 30000, taux: 30000 },
 
     // ─── GROUPE III : CADRES & CADRES SUPERIEURS ───────────────────────────────
-    { id: 'G3C5-LOG', code: 'PI-G3-C5-LOG', libelle: 'Indemnité de Logement - Classe V',   description: 'Classe V — Logement BPBF',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 90000,  taux: 90000  },
-    { id: 'G3C5-TPT', code: 'PI-G3-C5-TPT', libelle: 'Indemnité de Transport - Classe V',  description: 'Classe V — Transport BPBF',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 60000,  taux: 60000  },
-    { id: 'G3C5-SUJ', code: 'PI-G3-C5-SUJ', libelle: 'Indemnité de Sujétion - Classe V',   description: 'Classe V — Sujétion BPBF',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'V',   montant: 60000,  taux: 60000  },
-    { id: 'G3C6-LOG', code: 'PI-G3-C6-LOG', libelle: 'Indemnité de Logement - Classe VI',  description: 'Classe VI — Logement BPBF',  actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 100000, taux: 100000 },
-    { id: 'G3C6-TPT', code: 'PI-G3-C6-TPT', libelle: 'Indemnité de Transport - Classe VI', description: 'Classe VI — Transport BPBF', actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 75000,  taux: 75000  },
-    { id: 'G3C6-SUJ', code: 'PI-G3-C6-SUJ', libelle: 'Indemnité de Sujétion - Classe VI',  description: 'Classe VI — Sujétion BPBF',  actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VI',  montant: 60000,  taux: 60000  },
-    { id: 'G3C7-LOG', code: 'PI-G3-C7-LOG', libelle: 'Indemnité de Logement - Classe VII', description: 'Classe VII — Logement BPBF', actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 110000, taux: 110000 },
-    { id: 'G3C7-TPT', code: 'PI-G3-C7-TPT', libelle: 'Indemnité de Transport - Classe VII',description: 'Classe VII — Transport BPBF',actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 80000,  taux: 80000  },
-    { id: 'G3C7-SUJ', code: 'PI-G3-C7-SUJ', libelle: 'Indemnité de Sujétion - Classe VII', description: 'Classe VII — Sujétion BPBF', actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VII', montant: 70000,  taux: 70000  },
-    { id: 'G3C8-LOG', code: 'PI-G3-C8-LOG', libelle: 'Indemnité de Logement - Classe VIII',description: 'Classe VIII — Logement BPBF',actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 150000, taux: 150000 },
-    { id: 'G3C8-TPT', code: 'PI-G3-C8-TPT', libelle: 'Indemnité de Transport - Classe VIII',description: 'Classe VIII — Transport BPBF',actif:true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 100000, taux: 100000 },
-    { id: 'G3C8-SUJ', code: 'PI-G3-C8-SUJ', libelle: 'Indemnité de Sujétion - Classe VIII',description: 'Classe VIII — Sujétion BPBF',actif:true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'VIII',montant: 80000,  taux: 80000  },
+    { id: 'G3C5-LOG', code: 'PI-G3-C5-LOG', libelle: 'Indemnité de Logement - Groupe III',   description: 'Logement BPBF (Groupe III - Classes CL5 à CL8)',   actif: true, typeIndemnite: 'Indemnité de logement',  fonction: '', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 100000, taux: 100000 },
+    { id: 'G3C5-TPT', code: 'PI-G3-C5-TPT', libelle: 'Indemnité de Transport - Groupe III',  description: 'Transport BPBF (Groupe III - Classes CL5 à CL8)',  actif: true, typeIndemnite: 'Indemnité de transport', fonction: '', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 75000,  taux: 75000  },
+    { id: 'G3C5-SUJ', code: 'PI-G3-C5-SUJ', libelle: 'Indemnité de Sujétion - Groupe III',   description: 'Sujétion BPBF (Groupe III - Classes CL5 à CL8)',   actif: true, typeIndemnite: 'Indemnité de Sujétion',  fonction: '', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 60000,  taux: 60000  },
 
     // ─── INDEMNITÉS DE NOMINATION (POSTE / FONCTION) ──────────────────────────
-    { id: 'NOM-DIR-FCT', code: 'PI-NOM-DIR-FCT', libelle: 'Ind. Fonction - Dir. Département',  description: 'Directeur Département — Indemnité de fonction',      actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 150000, taux: 150000 },
-    { id: 'NOM-DIR-TPT', code: 'PI-NOM-DIR-TPT', libelle: 'Ind. Transport - Dir. Département', description: 'Directeur Département — Indemnité de transport',     actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 100000, taux: 100000 },
-    { id: 'NOM-DIR-LOG', code: 'PI-NOM-DIR-LOG', libelle: 'Ind. Logement - Dir. Département',  description: 'Directeur Département — Indemnité de logement',      actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 200000, taux: 200000 },
-    { id: 'NOM-DIR-CMP', code: 'PI-NOM-DIR-CMP', libelle: 'Ind. Compensatrice - Dir. Dépt.',   description: 'Directeur Département — Indemnité compensatrice',    actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 100000, taux: 100000 },
+    { id: 'NOM-DIR-FCT', code: 'PI-NOM-DIR-FCT', libelle: 'Ind. Fonction - Dir. Département',  description: 'Directeur Département — Indemnité de fonction',      actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 150000, taux: 150000 },
+    { id: 'NOM-DIR-TPT', code: 'PI-NOM-DIR-TPT', libelle: 'Ind. Transport - Dir. Département', description: 'Directeur Département — Indemnité de transport',     actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 100000, taux: 100000 },
+    { id: 'NOM-DIR-LOG', code: 'PI-NOM-DIR-LOG', libelle: 'Ind. Logement - Dir. Département',  description: 'Directeur Département — Indemnité de logement',      actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 200000, taux: 200000 },
+    { id: 'NOM-DIR-CMP', code: 'PI-NOM-DIR-CMP', libelle: 'Ind. Compensatrice - Dir. Dépt.',   description: 'Directeur Département — Indemnité compensatrice',    actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Directeur de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 100000, taux: 100000 },
 
-    { id: 'NOM-RESP-FCT', code: 'PI-NOM-RESP-FCT', libelle: 'Ind. Fonction - Resp. Département',  description: 'Responsable Département — Indemnité de fonction',  actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 100000, taux: 100000 },
-    { id: 'NOM-RESP-TPT', code: 'PI-NOM-RESP-TPT', libelle: 'Ind. Transport - Resp. Département', description: 'Responsable Département — Indemnité de transport', actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 75000,  taux: 75000  },
-    { id: 'NOM-RESP-LOG', code: 'PI-NOM-RESP-LOG', libelle: 'Ind. Logement - Resp. Département',  description: 'Responsable Département — Indemnité de logement',  actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 150000, taux: 150000 },
-    { id: 'NOM-RESP-CMP', code: 'PI-NOM-RESP-CMP', libelle: 'Ind. Compensatrice - Resp. Dépt.',   description: 'Responsable Département — Indemnité compensatrice', actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'Nomination', montant: 75000,  taux: 75000  },
+    { id: 'NOM-RESP-FCT', code: 'PI-NOM-RESP-FCT', libelle: 'Ind. Fonction - Resp. Département',  description: 'Responsable Département — Indemnité de fonction',  actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 100000, taux: 100000 },
+    { id: 'NOM-RESP-TPT', code: 'PI-NOM-RESP-TPT', libelle: 'Ind. Transport - Resp. Département', description: 'Responsable Département — Indemnité de transport', actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 75000,  taux: 75000  },
+    { id: 'NOM-RESP-LOG', code: 'PI-NOM-RESP-LOG', libelle: 'Ind. Logement - Resp. Département',  description: 'Responsable Département — Indemnité de logement',  actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 150000, taux: 150000 },
+    { id: 'NOM-RESP-CMP', code: 'PI-NOM-RESP-CMP', libelle: 'Ind. Compensatrice - Resp. Dépt.',   description: 'Responsable Département — Indemnité compensatrice', actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Responsable de Département', grade: 'GROUPE III', categorie: 'CL5, CL6, CL7, CL8', categories: ['CL5', 'CL6', 'CL7', 'CL8'], montant: 75000,  taux: 75000  },
 
-    { id: 'NOM-CS-FCT', code: 'PI-NOM-CS-FCT', libelle: 'Ind. Fonction - Chef de Service',   description: 'Chef de Service — Indemnité de fonction',           actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'Nomination', montant: 80000,  taux: 80000  },
-    { id: 'NOM-CS-TPT', code: 'PI-NOM-CS-TPT', libelle: 'Ind. Transport - Chef de Service',  description: 'Chef de Service — Indemnité de transport',          actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'Nomination', montant: 75000,  taux: 75000  },
-    { id: 'NOM-CS-LOG', code: 'PI-NOM-CS-LOG', libelle: 'Ind. Logement - Chef de Service',   description: 'Chef de Service — Indemnité de logement',           actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'Nomination', montant: 120000, taux: 120000 },
-    { id: 'NOM-CS-CMP', code: 'PI-NOM-CS-CMP', libelle: 'Ind. Compensatrice - Chef de Service',description: 'Chef de Service — Indemnité compensatrice',         actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'Nomination', montant: 75000,  taux: 75000  },
+    { id: 'NOM-CS-FCT', code: 'PI-NOM-CS-FCT', libelle: 'Ind. Fonction - Chef de Service',   description: 'Chef de Service — Indemnité de fonction',           actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 80000,  taux: 80000  },
+    { id: 'NOM-CS-TPT', code: 'PI-NOM-CS-TPT', libelle: 'Ind. Transport - Chef de Service',  description: 'Chef de Service — Indemnité de transport',          actif: true, typeIndemnite: 'Indemnité de transport',     fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 75000,  taux: 75000  },
+    { id: 'NOM-CS-LOG', code: 'PI-NOM-CS-LOG', libelle: 'Ind. Logement - Chef de Service',   description: 'Chef de Service — Indemnité de logement',           actif: true, typeIndemnite: 'Indemnité de logement',      fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 120000, taux: 120000 },
+    { id: 'NOM-CS-CMP', code: 'PI-NOM-CS-CMP', libelle: 'Ind. Compensatrice - Chef de Service',description: 'Chef de Service — Indemnité compensatrice',         actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: 'Chef de Service', grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 75000,  taux: 75000  },
 
-    { id: 'NOM-CA-FCT', code: 'PI-NOM-CA-FCT', libelle: "Ind. Fonction - Chef d'Agence",    description: "Chef d'Agence — Indemnité de fonction",              actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'Nomination', montant: 75000,  taux: 75000  },
-    { id: 'NOM-CA-TPT', code: 'PI-NOM-CA-TPT', libelle: "Ind. Transport - Chef d'Agence",   description: "Chef d'Agence — Indemnité de transport",             actif: true, typeIndemnite: 'Indemnité de transport',     fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'Nomination', montant: 75000,  taux: 75000  },
-    { id: 'NOM-CA-LOG', code: 'PI-NOM-CA-LOG', libelle: "Ind. Logement - Chef d'Agence",    description: "Chef d'Agence — Indemnité de logement",              actif: true, typeIndemnite: 'Indemnité de logement',      fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'Nomination', montant: 100000, taux: 100000 },
-    { id: 'NOM-CA-CMP', code: 'PI-NOM-CA-CMP', libelle: "Ind. Compensatrice - Chef d'Agence",description: "Chef d'Agence — Indemnité compensatrice",            actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'Nomination', montant: 75000,  taux: 75000  },
+    { id: 'NOM-CA-FCT', code: 'PI-NOM-CA-FCT', libelle: "Ind. Fonction - Chef d'Agence",    description: "Chef d'Agence — Indemnité de fonction",              actif: true, typeIndemnite: 'Indemnité de fonction',      fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 75000,  taux: 75000  },
+    { id: 'NOM-CA-TPT', code: 'PI-NOM-CA-TPT', libelle: "Ind. Transport - Chef d'Agence",   description: "Chef d'Agence — Indemnité de transport",             actif: true, typeIndemnite: 'Indemnité de transport',     fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 75000,  taux: 75000  },
+    { id: 'NOM-CA-LOG', code: 'PI-NOM-CA-LOG', libelle: "Ind. Logement - Chef d'Agence",    description: "Chef d'Agence — Indemnité de logement",              actif: true, typeIndemnite: 'Indemnité de logement',      fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 100000, taux: 100000 },
+    { id: 'NOM-CA-CMP', code: 'PI-NOM-CA-CMP', libelle: "Ind. Compensatrice - Chef d'Agence",description: "Chef d'Agence — Indemnité compensatrice",            actif: true, typeIndemnite: 'Indemnité compensatrice',    fonction: "Chef d'Agence",   grade: 'GROUPE II', categorie: 'CL1, CL2, CL3, CL4', categories: ['CL1', 'CL2', 'CL3', 'CL4'], montant: 75000,  taux: 75000  },
 
     // ─── INDEMNITÉS SPÉCIALES (CASH POINT, ASTREINTE, CAISSE) ─────────────────
-    { id: 'SP-CPRINC',  code: 'PI-SP-CAISSE-PRINC',  libelle: 'Ind. de Caisse - Caissier Principal',      description: 'Caissier Principal — Indemnité de caisse',          actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Caissier Principal',         grade: 'GROUPE I', categorie: 'Spéciale', montant: 40000, taux: 40000 },
-    { id: 'SP-CGEST-A', code: 'PI-SP-GEST-ASTR',      libelle: "Ind. d'Astreinte - Gestionnaire Cash Point", description: 'Gestionnaire Cash Point — Astreinte',              actif: true, typeIndemnite: "Indemnité d'astreinte",       fonction: 'Gestionnaire Cash Point',    grade: 'GROUPE I', categorie: 'Spéciale', montant: 50000, taux: 50000 },
-    { id: 'SP-CGEST-C', code: 'PI-SP-GEST-CAISSE',    libelle: 'Ind. de Caisse - Gestionnaire Cash Point',  description: 'Gestionnaire Cash Point — Caisse',                 actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Gestionnaire Cash Point',    grade: 'GROUPE I', categorie: 'Spéciale', montant: 25000, taux: 25000 },
-    { id: 'SP-CAUX',    code: 'PI-SP-CAISSE-AUX',     libelle: 'Ind. de Caisse - Caissier Auxiliaire',       description: 'Caissier Auxiliaire — Indemnité de caisse',        actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Caissier Auxiliaire',        grade: 'GROUPE I', categorie: 'Spéciale', montant: 25000, taux: 25000 },
-    { id: 'SP-CHAUF',   code: 'PI-SP-CHAUF',           libelle: 'Ind. de Transport - Chauffeur',              description: 'Chauffeur — Indemnité de transport',               actif: true, typeIndemnite: 'Indemnité de transport',       fonction: 'Chauffeur',                  grade: 'GROUPE I', categorie: 'Spéciale', montant: 15000, taux: 15000 },
-    { id: 'SP-ASST',    code: 'PI-SP-ASST-DIR',        libelle: 'Ind. - Assistante de Direction',             description: 'Assistante de Direction — Indemnité spéciale',     actif: true, typeIndemnite: 'Indemnité de représentation', fonction: 'Assistante de Direction',    grade: 'GROUPE I', categorie: 'Spéciale', montant: 30000, taux: 30000 },
-    { id: 'SP-ALIAIS',  code: 'PI-SP-AGENT-LIAISON',   libelle: "Ind. - Agent de Liaison",                    description: "Agent de Liaison — Indemnité spéciale",           actif: true, typeIndemnite: 'Indemnité de représentation', fonction: 'Agent de Liaison',           grade: 'GROUPE I', categorie: 'Spéciale', montant: 15000, taux: 15000 }
+    { id: 'SP-CPRINC',  code: 'PI-SP-CAISSE-PRINC',  libelle: 'Ind. de Caisse - Caissier Principal',      description: 'Caissier Principal — Indemnité de caisse',          actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Caissier Principal',         grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 40000, taux: 40000 },
+    { id: 'SP-CGEST-A', code: 'PI-SP-GEST-ASTR',      libelle: "Ind. d'Astreinte - Gestionnaire Cash Point", description: 'Gestionnaire Cash Point — Astreinte',              actif: true, typeIndemnite: "Indemnité d'astreinte",       fonction: 'Gestionnaire Cash Point',    grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 50000, taux: 50000 },
+    { id: 'SP-CGEST-C', code: 'PI-SP-GEST-CAISSE',    libelle: 'Ind. de Caisse - Gestionnaire Cash Point',  description: 'Gestionnaire Cash Point — Caisse',                 actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Gestionnaire Cash Point',    grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 25000, taux: 25000 },
+    { id: 'SP-CAUX',    code: 'PI-SP-CAISSE-AUX',     libelle: 'Ind. de Caisse - Caissier Auxiliaire',       description: 'Caissier Auxiliaire — Indemnité de caisse',        actif: true, typeIndemnite: 'Indemnité de caisse',         fonction: 'Caissier Auxiliaire',        grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 25000, taux: 25000 },
+    { id: 'SP-CHAUF',   code: 'PI-SP-CHAUF',           libelle: 'Ind. de Transport - Chauffeur',              description: 'Chauffeur — Indemnité de transport',               actif: true, typeIndemnite: 'Indemnité de transport',       fonction: 'Chauffeur',                  grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 15000, taux: 15000 },
+    { id: 'SP-ASST',    code: 'PI-SP-ASST-DIR',        libelle: 'Ind. - Assistante de Direction',             description: 'Assistante de Direction — Indemnité spéciale',     actif: true, typeIndemnite: 'Indemnité de représentation', fonction: 'Assistante de Direction',    grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 30000, taux: 30000 },
+    { id: 'SP-ALIAIS',  code: 'PI-SP-AGENT-LIAISON',   libelle: "Ind. - Agent de Liaison",                    description: "Agent de Liaison — Indemnité spéciale",           actif: true, typeIndemnite: 'Indemnité de représentation', fonction: 'Agent de Liaison',           grade: 'GROUPE I', categorie: 'C1, C2, C3, C4, C5, C6, C7', categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], montant: 15000, taux: 15000 }
   ],
   'grille-salariale': buildOfficialGridItems(),
   'categorie': [
@@ -427,9 +411,16 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'CL8', libelle: 'CLASSE VIII',     description: 'Groupe III — Directeur Général / Exécutif (Base 710 386 FCFA)', tauxAbattement: 20, actif: true }
   ],
   'grade': [
-    { code: 'GROUPE I',   libelle: 'GROUPE I',   description: 'Agents et Employés (Catégories C1 à C7)', actif: true },
-    { code: 'GROUPE II',  libelle: 'GROUPE II',  description: 'Classes CL1 à CL4 (Agents de Maîtrise et Cadres moyens)', actif: true },
-    { code: 'GROUPE III', libelle: 'GROUPE III', description: 'Classes CL5 à CL8 (Cadres et Cadres Supérieurs)', actif: true }
+    { code: 'GROUPE I',   libelle: 'GROUPE I',   description: 'AGENTS, EMPLOYES et TECHNICIENS OPERATIONNELS', actif: true },
+    { code: 'GROUPE II',  libelle: 'GROUPE II',  description: 'AGENTS DE MAITRISE et CADRES MOYENS', actif: true },
+    { code: 'GROUPE III', libelle: 'GROUPE III', description: 'CADRES et CADRES SUPERIEURS', actif: true },
+    { code: 'GROUPE IV',  libelle: 'GROUPE IV',  description: 'HORS CATEGORIE / Cadres Dirigeants & Spécialistes', actif: true }
+  ],
+  'param-groupe': [
+    { code: 'PG-GRP-1', grade: 'GROUPE I',   libelle: 'GROUPE I',   categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'], description: 'Catégories C1 à C7 rattachées au Groupe I', actif: true },
+    { code: 'PG-GRP-2', grade: 'GROUPE II',  libelle: 'GROUPE II',  categories: ['CL1', 'CL2', 'CL3', 'CL4'], description: 'Classes CL1 à CL4 rattachées au Groupe II', actif: true },
+    { code: 'PG-GRP-3', grade: 'GROUPE III', libelle: 'GROUPE III', categories: ['CL5', 'CL6', 'CL7', 'CL8'], description: 'Classes CL5 à CL8 rattachées au Groupe III', actif: true },
+    { code: 'PG-GRP-4', grade: 'GROUPE IV',  libelle: 'GROUPE IV',  categories: ['CL9', 'CL10'], description: 'Classes CL9 à CL10 rattachées au Groupe IV', actif: true }
   ],
   'echelon': [
     { code: 'E01', libelle: 'Échelon 1',  description: 'Échelon de base (Base 100%)', actif: true },
@@ -590,17 +581,24 @@ export class DbRefService {
       }
     }
     if (type === 'param-indemnite') {
-      const stored = localStorage.getItem('ref_param-indemnite');
+      const v6Key = 'ref_param-indemnite_v6';
+      const stored = localStorage.getItem(v6Key);
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (!Array.isArray(parsed) || parsed.length < 35 || parsed.some((x: any) => x.categorie?.includes('CATEGORIE') || x.grade?.includes('GRADE'))) {
-            localStorage.removeItem('ref_param-indemnite');
+          if (Array.isArray(parsed) && parsed.length >= 20) {
+            return parsed;
           }
-        } catch (e) {
-          localStorage.removeItem('ref_param-indemnite');
-        }
+        } catch (e) {}
       }
+      localStorage.removeItem('ref_param-indemnite');
+      localStorage.removeItem('ref_param-indemnite_v2');
+      localStorage.removeItem('ref_param-indemnite_v3');
+      localStorage.removeItem('ref_param-indemnite_v4');
+      localStorage.removeItem('ref_param-indemnite_v5');
+      const initial = MOCK_DATA['param-indemnite'];
+      localStorage.setItem(v6Key, JSON.stringify(initial));
+      return initial;
     }
     if (type === 'grade' || type === 'echelon') {
       const stored = localStorage.getItem(`ref_${type}`);

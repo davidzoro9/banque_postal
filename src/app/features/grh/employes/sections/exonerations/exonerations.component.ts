@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 import { Employee } from '../../models/employee.model';
+import { calculateOfficialIUTS } from '../../../../../core/utils/iuts-calculator.utils';
 
 @Component({
   selector: 'app-exonerations',
@@ -80,36 +81,53 @@ export class ExonerationsComponent implements OnInit {
   }
 
   private computeExonerations(e: Employee, paramList: RefItem[]): void {
-    const base = e.salaireBase || 304282;
-    const logement = e.primeLogement || 45000;
-    const transport = e.primeTransport || 45000;
-    const fonction = e.primeResponsabilite || 75000;
+    const sBase = e.salaireBase || 304282;
+    const pLog = e.primeLogement || 0;
+    const pTrans = e.primeTransport || 0;
+    const pResp = e.primeResponsabilite || 0;
 
-    // Règles d'exonération issues des Données de Base:
-    // 1. Indemnité de logement : 20% du salaire de base, plafond 75 000 FCFA
-    const exoLogement = Math.min(logement, Math.min(base * 0.20, 75000));
+    const indemnitesList: Array<{ libelle: string; montant: number }> = [];
+    if (pLog > 0) indemnitesList.push({ libelle: 'Indemnité de logement', montant: pLog });
+    if (pTrans > 0) indemnitesList.push({ libelle: 'Indemnité de transport', montant: pTrans });
+    if (pResp > 0) indemnitesList.push({ libelle: 'Indemnité de fonction', montant: pResp });
 
-    // 2. Indemnité de transport : 5% du salaire de base, plafond 30 000 FCFA
-    const exoTransport = Math.min(transport, Math.min(base * 0.05, 30000));
+    if (e.autresIndemnites && e.autresIndemnites.length > 0) {
+      e.autresIndemnites.forEach(ai => {
+        if (ai.montant > 0) indemnitesList.push({ libelle: ai.libelle, montant: ai.montant });
+      });
+    }
 
-    // 3. Indemnité de fonction : 5% du salaire de base, plafond 50 000 FCFA
-    const exoFonction = fonction > 0 ? Math.min(fonction, Math.min(base * 0.05, 50000)) : 0;
+    const nCharges = (e.enfants?.length || 0) + (e.conjoint ? 1 : 0);
+
+    const calc = calculateOfficialIUTS(sBase, indemnitesList, {
+      vehiculeFourni: e.vehiculeFourni,
+      logementFourni: e.logementFourni,
+      nombreChargesFamille: nCharges
+    });
 
     this.fiscales.clear();
     this.sociales.clear();
 
-    if (exoLogement > 0) {
-      this.fiscales.push(this.fb.group({ libelle: ['Indemnité de logement'], montant: [Math.round(exoLogement)] }));
-      this.sociales.push(this.fb.group({ libelle: ['Indemnité de logement'], montant: [Math.round(exoLogement)] }));
+    if (calc.abattementForfaitaire > 0) {
+      this.fiscales.push(this.fb.group({ libelle: ['Abattement forfaitaire 20% (Frais pro.)'], montant: [calc.abattementForfaitaire] }));
     }
-    if (exoTransport > 0) {
-      this.fiscales.push(this.fb.group({ libelle: ['Indemnité de transport'], montant: [Math.round(exoTransport)] }));
-      this.sociales.push(this.fb.group({ libelle: ['Indemnité de transport'], montant: [Math.round(exoTransport)] }));
+
+    if (calc.exoLogement > 0) {
+      this.fiscales.push(this.fb.group({ libelle: ['Exonération logement (Plafond 75 000 FCFA / 20% SB)'], montant: [calc.exoLogement] }));
+      this.sociales.push(this.fb.group({ libelle: ['Exonération logement'], montant: [calc.exoLogement] }));
     }
-    if (exoFonction > 0) {
-      this.fiscales.push(this.fb.group({ libelle: ['Indemnité de fonction'], montant: [Math.round(exoFonction)] }));
-      this.sociales.push(this.fb.group({ libelle: ['Indemnité de fonction'], montant: [Math.round(exoFonction)] }));
+
+    if (calc.exoTransport > 0) {
+      this.fiscales.push(this.fb.group({ libelle: ['Exonération transport (Plafond 30 000 FCFA / 5% SB)'], montant: [calc.exoTransport] }));
+      this.sociales.push(this.fb.group({ libelle: ['Exonération transport'], montant: [calc.exoTransport] }));
     }
+
+    calc.exoFonctionsDetails.forEach((f: { libelle: string; montantServi: number; exoReelle: number }) => {
+      if (f.exoReelle > 0) {
+        this.fiscales.push(this.fb.group({ libelle: [`Exonération ${f.libelle} (Plafond 50 000 FCFA / 5% SB)`], montant: [f.exoReelle] }));
+        this.sociales.push(this.fb.group({ libelle: [`Exonération ${f.libelle}`], montant: [f.exoReelle] }));
+      }
+    });
 
     (this.employee?.avantagesParticuliers || []).forEach(av => this.avantages.push(this.fb.control(av)));
 

@@ -68,7 +68,85 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   echelonsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
   get allClassifications(): string[] {
-    return [...this.groupe1Classifications, ...this.groupe2Classifications, ...this.groupe3Classifications];
+    return [...this.groupe1Classifications, ...this.groupe2Classifications, ...this.groupe3Classifications, 'CL9', 'CL10'];
+  }
+
+  paramGroupesList: RefItem[] = [];
+  availableCategoriesForSelectedGroup: string[] = [];
+
+  getGroupKey(str: string): string {
+    if (!str) return '';
+    const s = str.trim().toUpperCase();
+    if (/\bGROUPE\s+IV\b|\bGRP-4\b/i.test(s)) return 'GRP-4';
+    if (/\bGROUPE\s+III\b|\bGRP-3\b/i.test(s)) return 'GRP-3';
+    if (/\bGROUPE\s+II\b|\bGRP-2\b/i.test(s)) return 'GRP-2';
+    if (/\bGROUPE\s+I\b|\bGRP-1\b/i.test(s)) return 'GRP-1';
+    return '';
+  }
+
+  getCategoriesForGroupe(groupeName: string): string[] {
+    if (!groupeName) return [];
+    const targetKey = this.getGroupKey(groupeName);
+    if (!targetKey) return [];
+
+    // 1. Chercher dans paramGroupesList configuré par l'utilisateur
+    const found = this.paramGroupesList.find(p => {
+      const pKey = this.getGroupKey(p.grade || p.libelle || p.code || '');
+      return pKey === targetKey;
+    });
+    if (found && Array.isArray(found.categories) && found.categories.length > 0) {
+      return found.categories;
+    }
+
+    // 2. Fallback par défaut si non trouvé dans paramGroupesList
+    if (targetKey === 'GRP-4') return ['CL9', 'CL10'];
+    if (targetKey === 'GRP-3') return this.groupe3Classifications; // ['CL5', 'CL6', 'CL7', 'CL8']
+    if (targetKey === 'GRP-2') return this.groupe2Classifications; // ['CL1', 'CL2', 'CL3', 'CL4']
+    if (targetKey === 'GRP-1') return this.groupe1Classifications; // ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+
+    return [];
+  }
+
+  onGrilleGroupeChange(groupeName: string): void {
+    this.availableCategoriesForSelectedGroup = this.getCategoriesForGroupe(groupeName);
+    const defaultCat = this.availableCategoriesForSelectedGroup.length > 0 ? this.availableCategoriesForSelectedGroup[0] : 'C1';
+    this.formGroup.patchValue({
+      grade: groupeName,
+      libelle: groupeName,
+      categorie: defaultCat,
+      code: defaultCat
+    });
+  }
+
+  onIndemniteGroupeChange(groupeName: string): void {
+    if (!groupeName) {
+      this.availableCategoriesForSelectedGroup = [];
+      this.formGroup.patchValue({ categories: [], categorie: '' });
+      return;
+    }
+    this.availableCategoriesForSelectedGroup = this.getCategoriesForGroupe(groupeName);
+    const autoChecked = [...this.availableCategoriesForSelectedGroup];
+    this.formGroup.patchValue({
+      categories: autoChecked,
+      categorie: autoChecked.join(', ')
+    });
+  }
+
+  onGrilleCatChange(cat: string): void {
+    let groupe = 'GROUPE I';
+    if (this.groupe3Classifications.includes(cat) || cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8')) {
+      groupe = 'GROUPE III';
+    } else if (this.groupe2Classifications.includes(cat) || cat.startsWith('CL1') || cat.startsWith('CL2') || cat.startsWith('CL3') || cat.startsWith('CL4')) {
+      groupe = 'GROUPE II';
+    } else {
+      groupe = 'GROUPE I';
+    }
+    this.formGroup.patchValue({
+      grade: groupe,
+      libelle: groupe,
+      code: cat,
+      categorie: cat
+    });
   }
 
   getSalaryItem(classification: string, echelon: number): RefItem | undefined {
@@ -149,6 +227,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     return str;
   }
 
+  getGradeConcat(row: any): string {
+    if (!row) return '-';
+    const cat = this.getCatCodeDisplay(row.categorie || row.code);
+    const ech = this.getEchelonCodeDisplay(row.echellon);
+    return `${cat}${ech}`;
+  }
+
   formatMontant(value: number): string {
     if (!value && value !== 0) return '-';
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value).replace(/\s/g, ' ');
@@ -225,6 +310,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       fonction:      [''],
       grade:         [''],
       categorie:       [''],
+      categories:      [[]],
       taux:            [0, [Validators.min(0)]],
       tauxExoneration: [0, [Validators.min(0), Validators.max(100)]],
       plafondExoneration: [0, [Validators.min(0)]],
@@ -239,15 +325,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.icon   = data['icon']   ?? 'list';
       this.type   = data['type']   ?? '';
       if (this.type === 'grille-salariale') {
-        this.displayedColumns = ['categorie', 'echellon', 'montant', 'actif', 'actions'];
+        this.displayedColumns = ['gradeConcat', 'categorie', 'echellon', 'montant', 'actif', 'actions'];
       } else if (this.type === 'param-indemnite') {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-retraite') {
-        this.displayedColumns = ['code', 'libelle', 'taux', 'description', 'actif', 'actions'];
+        this.displayedColumns = ['grade', 'taux', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {
         this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {
         this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'taux', 'description', 'actif', 'actions'];
+      } else if (this.type === 'grade') {
+        this.displayedColumns = ['libelle', 'description', 'actif', 'actions'];
+      } else if (this.type === 'param-groupe') {
+        this.displayedColumns = ['grade', 'categories', 'description', 'actif', 'actions'];
       } else if (this.type === 'categorie') {
         this.displayedColumns = ['code', 'libelle', 'tauxAbattement', 'actif', 'actions'];
       } else {
@@ -262,6 +352,16 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
+    this.dataSource.sortingDataAccessor = (item: RefItem, property: string) => {
+      if (property === 'gradeConcat') return this.getGradeConcat(item);
+      if (property === 'categorie') return this.getCatCodeDisplay(item.categorie || item.code);
+      if (property === 'echellon') return this.getEchelonCodeDisplay(item.echellon);
+      return (item as any)[property];
+    };
+    this.dataSource.filterPredicate = (data: RefItem, filter: string) => {
+      const searchStr = (Object.values(data).join(' ') + ' ' + this.getGradeConcat(data)).toLowerCase();
+      return searchStr.includes(filter);
+    };
   }
 
   getGradeName(row: RefItem): string {
@@ -286,12 +386,24 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       });
     } else {
       this.dbRefService.getItems(this.type).subscribe(items => {
+        if (this.type === 'param-indemnite') {
+          (items || []).forEach(item => {
+            if (!item.categories || item.categories.length === 0 || !item.categories.some(c => c.startsWith('C') || c.startsWith('CL'))) {
+              const cats = this.getCategoriesForGroupe(item.grade || '');
+              if (cats.length > 0) {
+                item.categories = [...cats];
+                item.categorie = cats.join(', ');
+              }
+            }
+          });
+        }
         this.dataSource.data = items;
       });
     }
   }
 
   loadHierarchyData(): void {
+    this.dbRefService.getItems('grade').subscribe(items => this.grades = items);
     if (this.type === 'direction' || this.type === 'departement') {
       this.dbRefService.getItems('agence').subscribe(items => this.agences = items);
       this.employeeService.getAll().subscribe((emps: any[]) => {
@@ -335,8 +447,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     }
     if (this.type === 'grille-salariale' || this.type === 'param-indemnite') {
       this.dbRefService.getItems('grade').subscribe(items => this.grades = items);
+      this.dbRefService.getItems('param-groupe').subscribe(items => this.paramGroupesList = items);
     } else {
       this.grades = [];
+      this.paramGroupesList = [];
     }
     if (this.type === 'param-indemnite') {
       this.dbRefService.getItems('type-indemnite').subscribe(items => this.typesIndemnite = items);
@@ -385,10 +499,24 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.editingItem = null;
     this.formGroup.reset({
       code: '', libelle: '', description: '', actif: true,
-      montant: 0, departementId: null, directionId: null, echelle: '', echellon: '',
-      typeIndemnite: '', typeRetenue: 'Part Agent', fonction: '', grade: '', categorie: '', taux: 0,
+      montant: 0, departementId: null, directionId: null, echelle: '', echellon: this.type === 'grille-salariale' ? '1' : '',
+      typeIndemnite: '', typeRetenue: 'Part Agent', fonction: '', grade: this.type === 'grille-salariale' ? 'GROUPE I' : '', categorie: this.type === 'grille-salariale' ? 'C1' : '', taux: 0,
       tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25
     });
+    if (this.type === 'grille-salariale') {
+      const initialGroupe = this.grades.length > 0 ? (this.grades[0].libelle || this.grades[0].code) : 'GROUPE I';
+      this.availableCategoriesForSelectedGroup = this.getCategoriesForGroupe(initialGroupe);
+      const initialCat = this.availableCategoriesForSelectedGroup.length > 0 ? this.availableCategoriesForSelectedGroup[0] : 'C1';
+      this.formGroup.patchValue({
+        grade: initialGroupe,
+        libelle: initialGroupe,
+        categorie: initialCat,
+        code: initialCat,
+        echellon: '1'
+      });
+    } else if (this.type === 'param-indemnite') {
+      this.availableCategoriesForSelectedGroup = [];
+    }
     this.setupValidators();
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '560px' });
@@ -401,19 +529,21 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     const defaultAbattement = item.tauxAbattement ?? (['V', 'VI', 'VII', 'VIII'].includes(item.code) ? 20 : 25);
 
     if (this.type === 'grille-salariale') {
-      const catVal = item.categorie || item.code || '';
-      const gradeVal = item.grade || (this.groupe1Classifications.includes(catVal) ? 'GROUPE I' : (this.groupe2Classifications.includes(catVal) ? 'GROUPE II' : 'GROUPE III'));
+      const catVal = item.categorie || item.code || 'C1';
+      const gradeVal = item.grade || (this.groupe3Classifications.includes(catVal) ? 'GROUPE III' : (this.groupe2Classifications.includes(catVal) ? 'GROUPE II' : 'GROUPE I'));
+
+      this.availableCategoriesForSelectedGroup = this.getCategoriesForGroupe(gradeVal);
 
       this.formGroup.reset({
         code:          catVal,
         libelle:       gradeVal,
-        description:   item.description,
-        actif:         item.actif,
+        description:   item.description || `${gradeVal} (${catVal}) - Échelon ${item.echellon || 1}`,
+        actif:         item.actif ?? true,
         montant:       item.montant ?? 0,
         departementId: item.departementId ?? null,
         directionId:   item.directionId   ?? null,
         echelle:       gradeVal,
-        echellon:      item.echellon || '',
+        echellon:      String(item.echellon || '1'),
         typeIndemnite: '',
         typeRetenue:   'Part Agent',
         fonction:      '',
@@ -423,6 +553,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         tauxAbattement: defaultAbattement
       });
     } else if (this.type === 'param-indemnite') {
+      const gradeVal = item.grade || '';
+      this.availableCategoriesForSelectedGroup = gradeVal ? this.getCategoriesForGroupe(gradeVal) : [];
+      const itemCats = Array.isArray(item.categories) && item.categories.length > 0
+        ? item.categories
+        : (item.categorie ? item.categorie.split(',').map(c => c.trim()) : (gradeVal ? [...this.availableCategoriesForSelectedGroup] : []));
+
       this.formGroup.reset({
         code:          item.code || '',
         libelle:       item.typeIndemnite || item.libelle || '',
@@ -436,8 +572,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         typeIndemnite: item.typeIndemnite || item.libelle || '',
         typeRetenue:   'Part Agent',
         fonction:      item.fonction || '',
-        grade:         item.grade || '',
-        categorie:     item.categorie || '',
+        grade:         gradeVal,
+        categorie:     itemCats.join(', '),
+        categories:    itemCats,
         taux:          item.taux ?? item.montant ?? 0,
         tauxExoneration: item.tauxExoneration ?? 0,
         plafondExoneration: item.plafondExoneration ?? 0,
@@ -460,6 +597,70 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         grade:         item.grade || '',
         categorie:     item.categorie || '',
         taux:          item.taux ?? 0,
+        tauxExoneration: 0,
+        plafondExoneration: 0,
+      });
+    } else if (this.type === 'grade') {
+      this.formGroup.reset({
+        code:          item.code || item.libelle || '',
+        libelle:       item.libelle || item.code || '',
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       0,
+        departementId: null,
+        directionId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: '',
+        typeRetenue:   'Part Agent',
+        fonction:      '',
+        grade:         item.libelle || '',
+        categorie:     '',
+        categories:    [],
+        taux:          0,
+        tauxExoneration: 0,
+        plafondExoneration: 0,
+        tauxAbattement:  defaultAbattement
+      });
+    } else if (this.type === 'param-groupe') {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.grade || item.libelle || '',
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       0,
+        departementId: null,
+        directionId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: '',
+        typeRetenue:   'Part Agent',
+        fonction:      '',
+        grade:         item.grade || item.libelle || '',
+        categorie:     '',
+        categories:    item.categories || [],
+        taux:          0,
+        tauxExoneration: 0,
+        plafondExoneration: 0,
+        tauxAbattement:  defaultAbattement
+      });
+    } else if (this.type === 'param-retraite') {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.libelle || item.grade || 'GROUPE I',
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       item.taux ?? item.montant ?? 60,
+        departementId: null,
+        directionId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: '',
+        typeRetenue:   'Part Agent',
+        fonction:      '',
+        grade:         item.libelle || item.grade || 'GROUPE I',
+        categorie:     '',
+        taux:          item.taux ?? item.montant ?? 60,
         tauxExoneration: 0,
         plafondExoneration: 0,
         tauxAbattement:  25
@@ -513,18 +714,57 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         categorie:     catCode
       };
     } else if (this.type === 'param-indemnite') {
+      const selectedCats = Array.isArray(v.categories) && v.categories.length > 0
+        ? v.categories
+        : (v.categorie ? v.categorie.split(',').map((c: string) => c.trim()) : []);
+      const catDisplay = selectedCats.join(', ');
       item = {
         id:            this.editingItem?.id,
         code:          v.code || this.editingItem?.code || `PI-${Date.now()}`,
         libelle:       v.typeIndemnite || v.libelle || 'Indemnité',
-        description:   `Fonction: ${v.fonction || '-'}, Grade: ${v.grade || '-'}, Cat: ${v.categorie || '-'}`,
+        description:   `Fonction: ${v.fonction || '-'}, Grade: ${v.grade || '-'}, Cat: ${catDisplay || '-'}`,
         actif:         v.actif ?? true,
         montant:       Number(v.taux ?? v.montant ?? 0),
         typeIndemnite: v.typeIndemnite || v.libelle || '',
         fonction:      v.fonction || '',
         grade:         v.grade || '',
-        categorie:     v.categorie || '',
+        categorie:     catDisplay,
+        categories:    selectedCats,
         taux:          Number(v.taux ?? v.montant ?? 0)
+      };
+    } else if (this.type === 'grade') {
+      const gName = v.libelle || v.code || 'GROUPE I';
+      item = {
+        id:            this.editingItem?.id,
+        code:          gName,
+        libelle:       gName,
+        description:   v.description || '',
+        actif:         v.actif ?? true
+      };
+    } else if (this.type === 'param-groupe') {
+      const grp = v.grade || v.libelle || 'GROUPE I';
+      item = {
+        id:            this.editingItem?.id,
+        code:          v.code || `PG-${grp.replace(/\s+/g, '-')}`,
+        grade:         grp,
+        libelle:       grp,
+        description:   v.description || '',
+        actif:         v.actif ?? true,
+        categories:    Array.isArray(v.categories) ? v.categories : []
+      };
+    } else if (this.type === 'param-retraite') {
+      const grp = v.libelle || v.grade || 'GROUPE I';
+      const ageVal = Number(v.taux ?? v.montant ?? 60);
+      const codeVal = v.code || `RET-${grp.replace(/\s+/g, '-')}`;
+      item = {
+        id:            this.editingItem?.id,
+        code:          codeVal,
+        libelle:       grp,
+        description:   v.description || `${grp} : ${ageVal} ans`,
+        actif:         v.actif ?? true,
+        taux:          ageVal,
+        montant:       ageVal,
+        grade:         grp
       };
     } else if (this.type === 'type-retenue-emploi') {
       item = {

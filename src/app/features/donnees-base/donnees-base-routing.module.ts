@@ -15,7 +15,7 @@ const routes: Routes = [
   { path: 'admin/grille-salariale',component: DbRefListComponent, data: { title: 'Grille salariale',    icon: 'table_chart',        type: 'grille-salariale'} },
   { path: 'admin/agence',          component: DbRefListComponent, data: { title: 'Agence',              icon: 'store',              type: 'agence'          } },
   { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: 'Liste des indemnités',icon: 'paid',               type: 'type-indemnite'  } },
-  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: 'Indemnités par poste',icon: 'settings_suggest',   type: 'param-indemnite' } },
+  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: 'Indemnités',          icon: 'settings_suggest',   type: 'param-indemnite' } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
   { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Liste des retenues', icon: 'money_off', type: 'type-retenue-employe' } },
@@ -27,6 +27,7 @@ const routes: Routes = [
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },
   { path: 'carriere/grade',        component: DbRefListComponent, data: { title: 'Groupe',              icon: 'military_tech',      type: 'grade'           } },
+  { path: 'carriere/param-groupe', component: DbRefListComponent, data: { title: 'Paramétrage Groupe',  icon: 'tune',               type: 'param-groupe'    } },
   { path: 'carriere/echelon',      component: DbRefListComponent, data: { title: 'Échelon / Niveau',    icon: 'signal_cellular_alt',type: 'echelon'         } },
   { path: 'carriere/competences',  component: DbRefListComponent, data: { title: 'Référentiel compétences', icon: 'psychology',    type: 'competences'     } },
   { path: 'carriere/type-formation',component: DbRefListComponent,data: { title: 'Type de formation',   icon: 'school',             type: 'type-formation'  } },

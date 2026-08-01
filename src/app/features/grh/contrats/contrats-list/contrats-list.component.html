@@ -72,17 +72,14 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              <button mat-icon-button color="primary" matTooltip="Voir">
+              <button mat-icon-button color="primary" (click)="voirContrat(row); $event.stopPropagation()" matTooltip="Voir les détails">
                 <mat-icon>visibility</mat-icon>
-              </button>
-              <button mat-icon-button matTooltip="Modifier">
-                <mat-icon>edit</mat-icon>
               </button>
             </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row" style="cursor: pointer;" (click)="voirContrat(row)"></tr>
 
           <tr class="mat-row" *matNoDataRow>
             <td [attr.colspan]="displayedColumns.length" class="no-data">
@@ -97,3 +94,42 @@
   </mat-card>
 
 </div>
+
+<ng-template #viewDialogTpl>
+  <h2 mat-dialog-title style="color: #0060B3; font-weight: 700;">Détail du contrat de travail</h2>
+  <mat-dialog-content>
+    @if (selectedContrat) {
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px; padding-top: 8px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Employé :</strong>
+          <span style="font-weight: 700; color: #0f172a;">{{ selectedContrat.employe }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Type de contrat :</strong>
+          <span>{{ selectedContrat.type }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Service :</strong>
+          <span>{{ selectedContrat.service || 'Non assigné' }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Date de début :</strong>
+          <span>{{ selectedContrat.dateDebut | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Date de fin :</strong>
+          <span>{{ selectedContrat.dateFin === '-' ? 'Indéterminée (CDI)' : (selectedContrat.dateFin | date:'dd/MM/yyyy') }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-bottom: 6px;">
+          <strong style="color: #64748b;">Statut du contrat :</strong>
+          <span class="statut-badge" [style.background]="statutStyle(selectedContrat.statut).background" [style.color]="statutStyle(selectedContrat.statut).color">
+            {{ selectedContrat.statut }}
+          </span>
+        </div>
+      </div>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close color="primary">Fermer</button>
+  </mat-dialog-actions>
+</ng-template>

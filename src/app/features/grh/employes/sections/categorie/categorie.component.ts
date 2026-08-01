@@ -59,178 +59,20 @@ export interface EchelonOption {
 })
 export class CategorieComponent implements OnInit {
   employee?: Employee;
-  form!: FormGroup;
-  saving = false;
-  isEditing = false;
-  isCreationMode = false;
   empId = '';
-  
-  categories$!: Observable<RefItem[]>;
-  echelons$!: Observable<RefItem[]>;
-
-  readonly availableCategories = [
-    { code: 'C1',  label: 'C1' },
-    { code: 'C2',  label: 'C2' },
-    { code: 'C3',  label: 'C3' },
-    { code: 'C4',  label: 'C4' },
-    { code: 'C5',  label: 'C5' },
-    { code: 'C6',  label: 'C6' },
-    { code: 'C7',  label: 'C7' },
-    { code: 'CL1', label: 'CL1' },
-    { code: 'CL2', label: 'CL2' },
-    { code: 'CL3', label: 'CL3' },
-    { code: 'CL4', label: 'CL4' },
-    { code: 'CL5', label: 'CL5' },
-    { code: 'CL6', label: 'CL6' },
-    { code: 'CL7', label: 'CL7' },
-    { code: 'CL8', label: 'CL8' }
-  ];
-
-  availableEchelons: EchelonOption[] = [];
 
   constructor(
-    private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService,
-    private dbRefService: DbRefService
+    private employeeService: EmployeeService
   ) {}
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.isCreationMode = this.route.snapshot.queryParamMap.get('mode') === 'creation';
-    this.isEditing = this.isCreationMode;
-    
-    this.categories$ = this.dbRefService.getItems('categorie');
-    this.echelons$ = this.dbRefService.getItems('echelon');
-
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
-      this.buildForm();
-      this.patch(e);
-      if (!this.isCreationMode) {
-        this.form.disable();
-      }
-
-      this.form.get('categoriePro')?.valueChanges.subscribe(cat => this.onCategoryChange(cat));
-      this.form.get('echelon')?.valueChanges.subscribe(() => this.autoUpdateSalary());
     });
-  }
-
-  enableEdit(): void {
-    this.isEditing = true;
-    this.form.enable();
-    const cat = this.form.get('categoriePro')?.value;
-    if (!cat) {
-      this.form.get('echelon')?.disable();
-    }
-  }
-
-  cancelEdit(): void {
-    if (this.employee) {
-      this.patch(this.employee);
-    }
-    this.form.disable();
-    this.isEditing = false;
-  }
-
-  private buildForm(): void {
-    this.form = this.fb.group({
-      categoriePro: [''],
-      echelon:      [''],
-      salaireBase:  [0],
-      salaireBrut:  [0]
-    });
-  }
-
-  private patch(e: Employee): void {
-    const rawCat = parseCategoryCode(e.categoriePro || '') || e.categoriePro || '';
-    const rawEch = e.echelon || 'E01';
-
-    this.form.patchValue({
-      categoriePro: rawCat,
-      echelon:      rawEch,
-      salaireBase:  e.salaireBase || 0,
-      salaireBrut:  e.salaireBrut || 0
-    });
-
-    this.onCategoryChange(rawCat);
-  }
-
-  onCategoryChange(catVal: string): void {
-    const catCode = parseCategoryCode(catVal);
-    if (!catCode || !SALARY_MATRIX[catCode]) {
-      this.availableEchelons = [];
-      this.form.get('echelon')?.disable();
-      this.form.patchValue({ echelon: '', salaireBase: 0, salaireBrut: 0 }, { emitEvent: false });
-      return;
-    }
-
-    const matrixInfo = SALARY_MATRIX[catCode];
-    this.availableEchelons = matrixInfo.values.map((val, idx) => {
-      const num = (idx + 1).toString().padStart(2, '0');
-      const code = `E${num}`;
-      return {
-        code,
-        label: `${code} — ${val.toLocaleString('fr-FR')} FCFA`,
-        baseSalary: val
-      };
-    });
-
-    if (this.isEditing) {
-      this.form.get('echelon')?.enable();
-    }
-
-    const currentEch = this.form.get('echelon')?.value;
-    if (currentEch && !this.availableEchelons.some(e => e.code === currentEch)) {
-      this.form.patchValue({ echelon: 'E01' }, { emitEvent: true });
-    } else {
-      this.autoUpdateSalary();
-    }
-  }
-
-  private autoUpdateSalary(): void {
-    if (!this.form) return;
-
-    const rawCat = (this.form.get('categoriePro')?.value || '').trim();
-    const rawEch = (this.form.get('echelon')?.value || '').trim();
-
-    const catCode = parseCategoryCode(rawCat);
-    if (!catCode || !SALARY_MATRIX[catCode]) return;
-
-    const matrixInfo = SALARY_MATRIX[catCode];
-    
-    const echNum = parseInt(rawEch.replace(/[^0-9]/g, ''), 10) || 1;
-    const echIdx = Math.max(0, Math.min(14, echNum - 1));
-
-    const baseSal = matrixInfo.values[echIdx] || matrixInfo.values[0];
-    const groupe = matrixInfo.groupe;
-
-    let logement = 100000;
-    let transport = 50000;
-    if (groupe.includes('GROUPE III') || catCode.startsWith('CL') || catCode === 'C6' || catCode === 'C7') {
-      logement = 200000;
-      transport = 100000;
-    } else if (groupe.includes('GROUPE II') || catCode === 'C4' || catCode === 'C5') {
-      logement = 150000;
-      transport = 75000;
-    }
-
-    const brut = baseSal + logement + transport;
-
-    this.form.patchValue({
-      salaireBase: baseSal,
-      salaireBrut: brut
-    }, { emitEvent: false });
-  }
-
-  reinitialiserSelonGrille(): void {
-    this.autoUpdateSalary();
-  }
-
-  annuler(): void {
-    this.cancelEdit();
   }
 
   get initials(): string {
@@ -238,29 +80,28 @@ export class CategorieComponent implements OnInit {
     return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
-  save(): void {
-    if (this.form.invalid) return;
-    this.saving = true;
-    const v = this.form.getRawValue();
+  get summary() {
+    const e = this.employee;
+    if (!e) return null;
 
-    const rawCat = (v.categoriePro || '').trim();
-    const catCode = parseCategoryCode(rawCat);
-    const matrixInfo = catCode ? SALARY_MATRIX[catCode] : null;
-    const groupe = matrixInfo ? matrixInfo.groupe : '';
+    const cat = parseCategoryCode(e.categoriePro) || e.categoriePro || 'C3';
+    let ech = (e.echelon || 'E01').trim();
+    if (ech) {
+      const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(num)) ech = num < 10 ? `E0${num}` : `E${num}`;
+    }
+    const computedGrade = (e.grade && e.grade.length >= 3 && !e.grade.includes('GROUPE')) ? e.grade : `${cat}${ech}`;
 
-    this.employeeService.update(this.empId, {
-      categoriePro: catCode || v.categoriePro,
-      echelon:      v.echelon,
-      echelle:      groupe,
-      grade:        groupe,
-      salaireBase:  +v.salaireBase || +v.salaireBrut,
-      salaireBrut:  +v.salaireBrut
-    } as any).subscribe(() => {
-      this.saving = false;
-      this.isEditing = false;
-      this.form.disable();
-      this.router.navigate(['/grh/employes', this.empId]);
-    });
+    const base = e.salaireBase || 304282;
+    const totalIndemnites = (e.primeLogement || 0) + (e.primeTransport || 0) + (e.primeResponsabilite || 0);
+
+    return {
+      grade: computedGrade,
+      categorie: cat,
+      echelon: ech,
+      salaireBase: base,
+      totalIndemnites: totalIndemnites
+    };
   }
 
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }

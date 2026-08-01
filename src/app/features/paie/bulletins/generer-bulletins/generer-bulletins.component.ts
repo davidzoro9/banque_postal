@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { EmployeeService } from '../../../grh/employes/services/employee.service';
 import { Employee } from '../../../grh/employes/models/employee.model';
+import { calculateOfficialIUTS } from '../../../../core/utils/iuts-calculator.utils';
 
 @Component({
   selector: 'app-generer-bulletins',
@@ -95,50 +96,40 @@ export class GenererBulletinsComponent implements OnInit {
     const pTrans = emp.primeTransport || 0;
     const pResp = emp.primeResponsabilite || 0;
 
-    const indemnitesDetails: any[] = [];
-    if (pLog > 0) indemnitesDetails.push({ typeIndemnite: 'Indemnité de Logement', montant: pLog });
-    if (pTrans > 0) indemnitesDetails.push({ typeIndemnite: 'Indemnité de Transport', montant: pTrans });
-    if (pResp > 0) indemnitesDetails.push({ typeIndemnite: 'Indemnité de Responsabilité', montant: pResp });
+    const indemnitesList: Array<{ libelle: string; montant: number }> = [];
+    if (pLog > 0) indemnitesList.push({ libelle: 'Indemnité de Logement', montant: pLog });
+    if (pTrans > 0) indemnitesList.push({ libelle: 'Indemnité de Transport', montant: pTrans });
+    if (pResp > 0) indemnitesList.push({ libelle: 'Indemnité de Responsabilité', montant: pResp });
 
     if (emp.autresIndemnites && emp.autresIndemnites.length > 0) {
       emp.autresIndemnites.forEach(ai => {
-        indemnitesDetails.push({ typeIndemnite: ai.libelle, montant: ai.montant });
+        if (ai.montant > 0) indemnitesList.push({ libelle: ai.libelle, montant: ai.montant });
       });
     }
 
-    let totalExonere = 0;
-    if (pLog > 0) {
-      const exoLogCalc = Math.round(pLog * 0.20);
-      totalExonere += (exoLogCalc > 75000) ? 75000 : exoLogCalc;
-    }
-    if (pTrans > 0) {
-      const exoTransCalc = Math.round(pTrans * 0.05);
-      totalExonere += (exoTransCalc > 30000) ? 30000 : exoTransCalc;
-    }
+    const nCharges = (emp.enfants?.length || 0) + (emp.conjoint ? 1 : 0);
 
-    const totalIndemnites = indemnitesDetails.reduce((sum, item) => sum + item.montant, 0);
-    const salaireBrut = sBase + totalIndemnites;
-    const salaireImposable = Math.max(0, salaireBrut - totalExonere);
-    const cotisationCNSS = Math.round(salaireImposable * 0.055);
-    const impotIUTS = Math.round(salaireImposable * 0.10);
-    const totalRetenues = cotisationCNSS + impotIUTS;
-    const salaireNet = salaireBrut - totalRetenues;
+    const calc = calculateOfficialIUTS(sBase, indemnitesList, {
+      vehiculeFourni: emp.vehiculeFourni,
+      logementFourni: emp.logementFourni,
+      nombreChargesFamille: nCharges
+    });
 
     return {
       employeeId: emp.id,
       employeeName: `${emp.prenom} ${emp.nom}`.trim(),
       matricule: emp.matricule,
-      fonction: emp.poste || emp.service || 'Agent',
+      fonction: emp.fonction || emp.poste || emp.service || 'Agent',
       grade: emp.grade || 'GRADE I',
       categorie: emp.categoriePro || 'CLASSE I',
-      salaireBase: sBase,
-      totalIndemnites,
-      salaireBrut,
-      cotisationCNSS,
-      impotIUTS,
-      totalRetenues,
-      salaireNet,
-      indemnitesDetails
+      salaireBase: calc.salaireBase,
+      totalIndemnites: calc.totalIndemnites,
+      salaireBrut: calc.remunerationTotale,
+      cotisationCNSS: calc.cotisationCNSS,
+      impotIUTS: calc.iutsNet,
+      totalRetenues: calc.totalRetenues,
+      salaireNet: calc.salaireNet,
+      indemnitesDetails: indemnitesList.map(i => ({ typeIndemnite: i.libelle, montant: i.montant }))
     };
   }
 
@@ -190,21 +181,23 @@ export class GenererBulletinsComponent implements OnInit {
       copy.sessionType = this.sessionType;
 
       let baseSal = copy.salaireBase || 150000;
-      let indemnites = copy.indemnitesDetails || [];
-      let totalInd = copy.totalIndemnites || 0;
+      let indemnites: Array<{typeIndemnite: string; montant: number}> = copy.indemnitesDetails || [];
 
       if (this.sessionType === 'EXTRAORDINAIRE') {
         indemnites.push({ typeIndemnite: 'Prime / Gratification Extraordinaire', montant: baseSal });
-        totalInd += baseSal;
       }
 
+      // Recalcul avec le barème officiel IUTS
+      const indList = indemnites.map(i => ({ libelle: i.typeIndemnite, montant: i.montant }));
+      const calc = calculateOfficialIUTS(baseSal, indList, {});
+
       copy.indemnitesDetails = indemnites;
-      copy.totalIndemnites = totalInd;
-      copy.salaireBrut = baseSal + totalInd;
-      copy.cotisationCNSS = Math.round(copy.salaireBrut * 0.055);
-      copy.impotIUTS = Math.round(copy.salaireBrut * 0.10);
-      copy.totalRetenues = copy.cotisationCNSS + copy.impotIUTS;
-      copy.salaireNet = copy.salaireBrut - copy.totalRetenues;
+      copy.totalIndemnites = calc.totalIndemnites;
+      copy.salaireBrut = calc.remunerationTotale;
+      copy.cotisationCNSS = calc.cotisationCNSS;
+      copy.impotIUTS = calc.iutsNet;
+      copy.totalRetenues = calc.totalRetenues;
+      copy.salaireNet = calc.salaireNet;
 
       // État initial : GENERE (non encore validé par le RH)
       copy.etat = 'GENERE';

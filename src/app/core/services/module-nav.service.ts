@@ -21,13 +21,14 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
 
-      { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
       { id: 'categorie',        label: 'Catégorie',                icon: 'category',           route: '/donnees-base/carriere/categorie'     },
+      { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+      { id: 'param-groupe',     label: 'Paramétrage Groupe',       icon: 'tune',                route: '/donnees-base/carriere/param-groupe'   },
       { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
       { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
 
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-      { id: 'param-indemnite',  label: 'Indemnités par poste',     icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      { id: 'param-indemnite',  label: 'Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
       { id: 'types-retenues',   label: 'Liste des retenues',       icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
       { id: 'param-paie-taux',  label: 'Retenues par emploi',      icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
@@ -68,14 +69,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
         { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
-        { id: 'fiche-infos-pro',    label: 'Poste & Structure',       icon: 'work',                  route: '__emp__/infos-pro'       },
-        { id: 'fiche-famille',      label: 'Famille',                 icon: 'family_restroom',        route: '__emp__/famille'         },
-        { id: 'fiche-categorie',    label: 'Situation professionnelle',icon: 'military_tech',          route: '__emp__/categorie'       },
-        { id: 'fiche-indemnites',   label: 'Indemnités',              icon: 'paid',                  route: '__emp__/indemnites'      },
-        { id: 'fiche-exonerations', label: 'Exonérations',            icon: 'receipt_long',          route: '__emp__/exonerations'    },
-        { id: 'fiche-salaire',      label: 'Info. sur le salaire',    icon: 'account_balance_wallet', route: '__emp__/salaire'         },
-        { id: 'fiche-dossier',      label: 'Dossier individuel',      icon: 'folder_open',            route: '__emp__/dossier'         },
-        { id: 'fiche-notes-rh',     label: 'Notes RH',                icon: 'note_alt',               route: '__emp__/notes-rh'        },
+        { id: 'fiche-infos-pro',    label: 'Informations professionnelles', icon: 'work',          route: '__emp__/infos-pro'       }
       ]
     },
     {

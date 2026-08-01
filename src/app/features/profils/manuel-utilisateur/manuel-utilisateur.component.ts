@@ -46,7 +46,7 @@ export class ManuelUtilisateurComponent implements OnInit {
       content: [
         'Pour inscrire un nouveau collaborateur, naviguez vers "Gestion Administrative" -> "Employés" et cliquez sur "Nouveau".',
         'Fiche Personnelle : Saisissez l\'état civil, le matricule, l\'adresse et les pièces d\'identité.',
-        'Poste & Structure : Rattached l\'employé à une Direction, un Département, un Service et un Emploi.',
+        'Informations professionnelles : Rattaché l\'employé à une Direction, un Département, un Service et un Emploi.',
         'Carrière & Rémunération : Sélectionnez le Groupe (I, II, III), la Catégorie (1..7 ou I..VIII) et l\'Échelon (1..15). Le salaire de base et les indemnités seront automatiquement calculés.',
         'Documents & Contrat : Joignez les contrats numérisés et définissez les dates d\'embauche et d\'essai.'
       ],

@@ -17,8 +17,7 @@ export class DossierComponent implements OnInit {
   documents: DocumentRH[] = [];
   showAddForm = false;
 
-  newDoc = { libelle: '', categorie: 'Contrat' as DocumentRH['categorie'] };
-  readonly categories: DocumentRH['categorie'][] = ['Contrat', 'Diplôme', 'Pièce administrative', 'Document numérisé'];
+  newDoc = { libelle: '' };
 
   selectedFileName = '';
   selectedFileBase64 = '';
@@ -75,12 +74,11 @@ export class DossierComponent implements OnInit {
     const doc: DocumentRH = {
       id:        `doc-${Date.now()}`,
       libelle:   this.newDoc.libelle.trim(),
-      categorie: this.newDoc.categorie,
       dateAjout: new Date().toISOString().slice(0, 10),
       url:       this.selectedFileBase64 || undefined
     };
     this.documents = [...this.documents, doc];
-    this.newDoc = { libelle: '', categorie: 'Contrat' };
+    this.newDoc = { libelle: '' };
     this.selectedFileName = '';
     this.selectedFileBase64 = '';
     this.showAddForm = false;
@@ -103,14 +101,15 @@ export class DossierComponent implements OnInit {
     }
   }
 
-  getCatIcon(cat: DocumentRH['categorie']): string {
-    const map: Record<DocumentRH['categorie'], string> = {
+  getCatIcon(cat?: string): string {
+    if (!cat) return 'description';
+    const map: Record<string, string> = {
       'Contrat':              'description',
       'Diplôme':              'school',
       'Pièce administrative': 'badge',
       'Document numérisé':    'scanner'
     };
-    return map[cat] || 'insert_drive_file';
+    return map[cat] || 'description';
   }
 
   save(next?: string): void {

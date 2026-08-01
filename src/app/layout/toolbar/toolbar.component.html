@@ -72,11 +72,6 @@
       <mat-icon>settings</mat-icon>
     </button>
 
-    <!-- Quick access sidebar -->
-    <button mat-icon-button class="action-btn" (click)="toggleSidebar()" matTooltip="Raccourcis">
-      <mat-icon>bookmark</mat-icon>
-    </button>
-
     <!-- User menu -->
     <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
       <div class="avatar">{{ authService.getInitials() }}</div>

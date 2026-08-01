@@ -66,25 +66,83 @@ export class InfosPersonnellesComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      nom:           [''],
-      prenom:        [''],
-      nomJeuneFille: [''],
-      sexe:          ['M'],
-      dateNaissance: [''],
-      lieuNaissance: [''],
-      nationalite:   [''],
-      numeroCNI:     [''],
-      adresse:       [''],
-      ville:         [''],
-      codePostal:    [''],
-      pays:          [''],
-      telephone:     [''],
-      email:         ['', [Validators.email]],
-      poste:         [''],
-      service:       [''],
-      direction:     [''],
-      departement:   ['']
+      nom:                    [''],
+      prenom:                 [''],
+      nomJeuneFille:          [''],
+      sexe:                   ['M'],
+      dateNaissance:          [''],
+      lieuNaissance:          [''],
+      nationalite:            [''],
+      numeroCNI:              [''],
+      // Éducation
+      dernierDiplome:         [''],
+      diplomeRecrutement:     [''],
+      brancheEtude:           [''],
+      ecoleUniversite:        [''],
+      // Retraite
+      ageRetraite:            [60],
+      dateRetraite:           [''],
+      // Coordonnées
+      adresse:                [''],
+      ville:                  [''],
+      codePostal:             [''],
+      pays:                   ['Burkina Faso'],
+      telephone:              [''],
+      email:                  ['', [Validators.email]],
+      // Contact d'urgence
+      contactUrgenceNom:      [''],
+      contactUrgenceTelephone:[''],
+      contactUrgenceLien:     ['']
     });
+
+    this.form.get('dateNaissance')?.valueChanges.subscribe(() => this.calculateRetraite());
+    this.form.get('ageRetraite')?.valueChanges.subscribe(() => this.calculateRetraite());
+  }
+
+  private calculateRetraite(): void {
+    const dob = this.form.get('dateNaissance')?.value;
+    const cat = (this.employee?.categoriePro || '').toUpperCase();
+    const fonction = (this.employee?.fonction || this.employee?.poste || '').toLowerCase();
+
+    let groupe = 'GROUPE I';
+    if (cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8') || cat.includes('CADRE SUP')) {
+      groupe = 'GROUPE III';
+    } else if (cat.startsWith('CL1') || cat.startsWith('CL2') || cat.startsWith('CL3') || cat.startsWith('CL4') || cat.includes('CLASSE')) {
+      groupe = 'GROUPE II';
+    } else if (cat.startsWith('C')) {
+      groupe = 'GROUPE I';
+    } else if (fonction.includes('directeur') || fonction.includes('responsable')) {
+      groupe = 'GROUPE III';
+    }
+
+    let age = 60;
+    try {
+      const storedParams = localStorage.getItem('ref_param-retraite');
+      if (storedParams) {
+        const list = JSON.parse(storedParams);
+        const param = list.find((p: any) => (p.libelle && p.libelle.includes(groupe)) || (p.grade && p.grade.includes(groupe)) || (p.code && p.code.includes(groupe)));
+        if (param && (param.taux || param.montant)) {
+          age = Number(param.taux || param.montant);
+        }
+      } else {
+        age = groupe === 'GROUPE III' ? 65 : 60;
+      }
+    } catch (e) {
+      age = groupe === 'GROUPE III' ? 65 : 60;
+    }
+
+    this.form.get('ageRetraite')?.setValue(age, { emitEvent: false });
+
+    if (dob) {
+      const d = new Date(dob);
+      if (!isNaN(d.getTime())) {
+        d.setFullYear(d.getFullYear() + age);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        this.form.get('dateRetraite')?.setValue(`${yyyy}-${mm}-${dd}`, { emitEvent: false });
+      }
+    }
   }
 
   private patch(e: Employee): void {
@@ -92,11 +150,16 @@ export class InfosPersonnellesComponent implements OnInit {
       nom: e.nom, prenom: e.prenom, nomJeuneFille: e.nomJeuneFille || '',
       sexe: e.sexe, dateNaissance: e.dateNaissance, lieuNaissance: e.lieuNaissance,
       nationalite: e.nationalite, numeroCNI: e.numeroCNI,
+      dernierDiplome: e.dernierDiplome || '', diplomeRecrutement: e.diplomeRecrutement || '',
+      brancheEtude: e.brancheEtude || '', ecoleUniversite: e.ecoleUniversite || '',
+      ageRetraite: e.ageRetraite || 60, dateRetraite: e.dateRetraite || '',
       adresse: e.adresse, ville: e.ville, codePostal: e.codePostal,
-      pays: e.pays, telephone: e.telephone, email: e.email,
-      poste: e.poste || '', service: e.service || '',
-      direction: e.direction || '', departement: e.departement || ''
+      pays: e.pays || 'Burkina Faso', telephone: e.telephone, email: e.email,
+      contactUrgenceNom: e.contactUrgenceNom || (e.contactsUrgence?.[0]?.nom ? `${e.contactsUrgence[0].prenom || ''} ${e.contactsUrgence[0].nom}`.trim() : ''),
+      contactUrgenceTelephone: e.contactUrgenceTelephone || e.contactsUrgence?.[0]?.telephone || '',
+      contactUrgenceLien: e.contactUrgenceLien || e.contactsUrgence?.[0]?.lien || ''
     });
+    this.calculateRetraite();
   }
 
   get initials(): string {
@@ -121,9 +184,14 @@ export class InfosPersonnellesComponent implements OnInit {
       nom: v.nom, prenom: v.prenom, nomJeuneFille: v.nomJeuneFille,
       sexe: v.sexe, dateNaissance: dob, lieuNaissance: v.lieuNaissance,
       nationalite: v.nationalite, numeroCNI: v.numeroCNI,
+      dernierDiplome: v.dernierDiplome, diplomeRecrutement: v.diplomeRecrutement,
+      brancheEtude: v.brancheEtude, ecoleUniversite: v.ecoleUniversite,
+      ageRetraite: v.ageRetraite, dateRetraite: v.dateRetraite,
       adresse: v.adresse, ville: v.ville, codePostal: v.codePostal,
       pays: v.pays, telephone: v.telephone, email: v.email,
-      poste: v.poste, service: v.service, direction: v.direction, departement: v.departement
+      contactUrgenceNom: v.contactUrgenceNom,
+      contactUrgenceTelephone: v.contactUrgenceTelephone,
+      contactUrgenceLien: v.contactUrgenceLien
     }).subscribe(() => {
       this.saving = false;
       this.isEditing = false;

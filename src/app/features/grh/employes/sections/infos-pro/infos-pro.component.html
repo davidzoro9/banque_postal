@@ -51,52 +51,176 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" class="span-2">
             <mat-label>Date de prise de fonction</mat-label>
             <input matInput [matDatepicker]="pickerEmbauche" formControlName="dateEmbauche" placeholder="JJ/MM/AAAA">
             <mat-datepicker-toggle matIconSuffix [for]="pickerEmbauche"></mat-datepicker-toggle>
             <mat-datepicker #pickerEmbauche></mat-datepicker>
           </mat-form-field>
+        </div>
+
+        <p class="form-section-label">Affectation Professionnelle (Fonction & Structure)</p>
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Fonction / Nomination</mat-label>
+            <mat-select formControlName="fonction">
+              <mat-option value="Agent simple">Agent simple (Sans nomination)</mat-option>
+              <mat-option value="DIRECTEUR DE DEPARTEMENT">DIRECTEUR DE DEPARTEMENT</mat-option>
+              <mat-option value="RESPONSABLE DE DEPARTEMENT">RESPONSABLE DE DEPARTEMENT</mat-option>
+              <mat-option value="CHEF DE SERVICE">CHEF DE SERVICE</mat-option>
+              <mat-option value="CHEF D'AGENCE">CHEF D'AGENCE</mat-option>
+              <mat-option value="CUSTOM_NEW">+ Ajouter une nouvelle nomination...</mat-option>
+            </mat-select>
+          </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Poste occupé</mat-label>
-            <mat-select formControlName="poste">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (f of fonctions$ | async; track f.code) {
-              <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
+            <mat-label>Emploi / Emploi occupé</mat-label>
+            <input matInput formControlName="poste" placeholder="Ex: Informaticien, Comptable, Analyste...">
+          </mat-form-field>
+
+          <!-- Si saisie d'une nomination personnalisée -->
+          @if (form.get('fonction')?.value === 'CUSTOM_NEW') {
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Intitulé de la nouvelle nomination</mat-label>
+              <input matInput formControlName="customFonction" placeholder="Ex: DIRECTEUR DE L'AUDIT INTERNE">
+            </mat-form-field>
+          }
+
+          <!-- Si DIRECTEUR DE DEPARTEMENT ou RESPONSABLE DE DEPARTEMENT -> Sélection dynamique du Département -->
+          @if (form.get('fonction')?.value === 'DIRECTEUR DE DEPARTEMENT' || form.get('fonction')?.value === 'RESPONSABLE DE DEPARTEMENT') {
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Département de nomination*</mat-label>
+              <mat-select formControlName="direction">
+                <mat-option value="">— Choisir le département —</mat-option>
+                @for (item of directionsAndDepartements$ | async; track item.code) {
+                  <mat-option [value]="item.libelle">{{ item.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
+          <!-- Si CHEF DE SERVICE -> Sélection dynamique du Service -->
+          @if (form.get('fonction')?.value === 'CHEF DE SERVICE') {
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Service de nomination*</mat-label>
+              <mat-select formControlName="service">
+                <mat-option value="">— Choisir le service —</mat-option>
+                @for (srv of services$ | async; track srv.code) {
+                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
+          <!-- Si CHEF D'AGENCE -> Sélection dynamique de l'Agence -->
+          @if (form.get('fonction')?.value === "CHEF D'AGENCE") {
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Agence de nomination*</mat-label>
+              <mat-select formControlName="agence">
+                <mat-option value="">— Choisir l'agence —</mat-option>
+                @for (ag of agences$ | async; track ag.code) {
+                  <mat-option [value]="ag.libelle">{{ ag.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
+          <!-- Champs généraux de rattachement structurel -->
+          @if (form.get('fonction')?.value !== 'CHEF DE SERVICE') {
+            <mat-form-field appearance="outline">
+              <mat-label>Service (Optionnel)</mat-label>
+              <mat-select formControlName="service">
+                <mat-option value="">— Aucun service —</mat-option>
+                @for (srv of services$ | async; track srv.code) {
+                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
+          @if (form.get('fonction')?.value !== 'DIRECTEUR DE DEPARTEMENT' && form.get('fonction')?.value !== 'RESPONSABLE DE DEPARTEMENT') {
+            <mat-form-field appearance="outline">
+              <mat-label>Direction / Département</mat-label>
+              <mat-select formControlName="direction">
+                <mat-option value="">— Aucune direction / département —</mat-option>
+                @for (item of directionsAndDepartements$ | async; track item.code) {
+                  <mat-option [value]="item.libelle">{{ item.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+        </div>
+
+        <p class="form-section-label">Classification & Grille salariale</p>
+        <div class="form-grid-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Catégorie / Classe</mat-label>
+            <mat-select formControlName="categoriePro">
+              @for (c of availableCategories; track c.code) {
+                <mat-option [value]="c.code">{{ c.label }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Service</mat-label>
-            <mat-select formControlName="service">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (srv of services$ | async; track srv.code) {
-              <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+            <mat-label>Échelon</mat-label>
+            <mat-select formControlName="echelon">
+              @for (ech of availableEchelons; track ech.code) {
+                <mat-option [value]="ech.code">{{ ech.label }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
 
+          <mat-form-field appearance="outline" class="readonly-field">
+            <mat-label>Grade calculé</mat-label>
+            <input matInput formControlName="grade" readonly>
+            <mat-icon matSuffix style="color: #0060B3;">verified</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <p class="form-section-label">Avantages en nature</p>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:16px;">
+          <mat-checkbox formControlName="vehiculeFourni" color="primary">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:600; font-size:14px;">🚗 Véhicule de fonction fourni</span>
+              <span style="font-size:11px; color:#64748b;">L'indemnité de transport sera exclue du calcul IUTS</span>
+            </div>
+          </mat-checkbox>
+          <mat-checkbox formControlName="logementFourni" color="primary">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:600; font-size:14px;">🏠 Logement de fonction fourni</span>
+              <span style="font-size:11px; color:#64748b;">L'indemnité de logement sera exclue du calcul IUTS</span>
+            </div>
+          </mat-checkbox>
+        </div>
+
+        <p class="form-section-label">Mode de paiement & Coordonnées bancaires</p>
+        <div class="form-grid-2">
           <mat-form-field appearance="outline">
-            <mat-label>Direction</mat-label>
-            <mat-select formControlName="direction">
-              <mat-option value="">— Aucune —</mat-option>
-              @for (dir of directions$ | async; track dir.code) {
-              <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
-              }
+            <mat-label>Mode de paiement</mat-label>
+            <mat-select formControlName="modePaiement">
+              <mat-option value="Virement bancaire">Virement bancaire</mat-option>
+              <mat-option value="Chèque">Chèque</mat-option>
+              <mat-option value="Espèces">Espèces</mat-option>
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Département</mat-label>
-            <mat-select formControlName="departement">
-              <mat-option value="">— Aucun —</mat-option>
-              @for (dep of departements$ | async; track dep.code) {
-              <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
-              }
-            </mat-select>
+            <mat-label>Intitulé du compte</mat-label>
+            <input matInput formControlName="intituleCompte" placeholder="Ex: SAWADOGO Abdoulaye">
           </mat-form-field>
+
+          @if (showBancaire) {
+            <mat-form-field appearance="outline">
+              <mat-label>Nom de la banque</mat-label>
+              <input matInput formControlName="banque" placeholder="Ex: BOA, Coris Bank, BICIAB...">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>IBAN / Numéro de compte</mat-label>
+              <input matInput formControlName="iban" placeholder="BF...">
+            </mat-form-field>
+          }
         </div>
 
       </form>
@@ -112,7 +236,7 @@
 
         <div class="sec-right">
           @if (isCreationMode) {
-            <button mat-raised-button color="primary" class="btn-next" (click)="save('categorie')" [disabled]="saving || form.invalid">
+            <button mat-raised-button color="primary" class="btn-next" (click)="save('indemnites')" [disabled]="saving || form.invalid">
               @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
               Enregistrer et continuer
               <mat-icon>arrow_forward</mat-icon>

@@ -46,18 +46,9 @@
         @if (showAddForm) {
           <div class="add-doc-form" style="display: flex; flex-direction: column; gap: 12px; background: var(--surface-variant); padding: 16px; border-radius: 8px; margin-bottom: 16px; width: 100%;">
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; width: 100%;">
-              <mat-form-field appearance="outline" style="flex:2; min-width: 200px;">
+              <mat-form-field appearance="outline" style="flex:1; min-width: 250px;">
                 <mat-label>Libellé du document *</mat-label>
-                <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023">
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" style="flex:1; min-width: 150px;">
-                <mat-label>Catégorie *</mat-label>
-                <mat-select [(ngModel)]="newDoc.categorie">
-                  @for (cat of categories; track cat) {
-                    <mat-option [value]="cat">{{ cat }}</mat-option>
-                  }
-                </mat-select>
+                <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023, Diplôme Master, CNI...">
               </mat-form-field>
             </div>
 
@@ -100,12 +91,11 @@
             <div class="doc-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
               <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0;" [style.cursor]="doc.url ? 'pointer' : 'default'" (click)="doc.url && openFile(doc)" [matTooltip]="doc.url ? 'Cliquez pour ouvrir/télécharger' : ''">
                 <div class="doc-icon" style="color: var(--active-color); display: flex; align-items: center; justify-content: center; background: rgba(22,48,89,0.06); width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;">
-                  <mat-icon>{{ getCatIcon(doc.categorie) }}</mat-icon>
+                  <mat-icon>description</mat-icon>
                 </div>
                 <div class="doc-body" style="display: flex; flex-direction: column; min-width: 0;">
                   <span class="doc-libelle" style="font-weight: 600; font-size: 13px;" [style.color]="doc.url ? 'var(--active-color)' : 'var(--on-surface)'" [style.text-decoration]="doc.url ? 'underline' : 'none'">{{ doc.libelle }}</span>
                   <div class="doc-meta" style="display: flex; gap: 12px; font-size: 11px; margin-top: 4px; flex-wrap: wrap;">
-                    <span class="doc-cat" style="color: var(--active-color); font-weight: 600;">{{ doc.categorie }}</span>
                     <span class="doc-date" style="color: var(--on-surface-3);">Ajouté le {{ doc.dateAjout }}</span>
                   </div>
                 </div>

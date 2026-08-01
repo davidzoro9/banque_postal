@@ -39,7 +39,7 @@ export interface ExonerationItem {
 export interface DocumentRH {
   id: string;
   libelle: string;
-  categorie: 'Contrat' | 'Diplôme' | 'Pièce administrative' | 'Document numérisé';
+  categorie?: string;
   dateAjout: string;
   url?: string;
 }
@@ -73,6 +73,16 @@ export interface Employee {
   nationalite: string;
   numeroCNI: string;
 
+  // Éducation
+  dernierDiplome?: string;
+  diplomeRecrutement?: string;
+  brancheEtude?: string;
+  ecoleUniversite?: string;
+
+  // Retraite
+  ageRetraite?: number;
+  dateRetraite?: string;
+
   // Coordonnées
   adresse: string;
   ville: string;
@@ -82,6 +92,9 @@ export interface Employee {
   email: string;
 
   // Contacts d'urgence
+  contactUrgenceNom?: string;
+  contactUrgenceTelephone?: string;
+  contactUrgenceLien?: string;
   contactsUrgence: ContactUrgence[];
 
   // Photo
@@ -103,6 +116,7 @@ export interface Employee {
   service: string;
   direction: string;
   departement?: string;
+  agence?: string;
   dateEmbauche: string;
   statut: StatutEmploye;
   typeContrat: TypeContrat;
@@ -122,6 +136,8 @@ export interface Employee {
   primeLogement: number;
   primeTransport: number;
   primeResponsabilite: number;
+  vehiculeFourni?: boolean;
+  logementFourni?: boolean;
   autresIndemnites: IndemniteItem[];
 
   // Exonérations
@@ -135,6 +151,7 @@ export interface Employee {
   modePaiement: ModePaiement;
   banque?: string;
   iban?: string;
+  intituleCompte?: string;
 
   // Dossier individuel
   documents: DocumentRH[];

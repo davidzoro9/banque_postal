@@ -114,45 +114,66 @@ export interface TrancheIuts {
             <h3>Barème Progressif de l'IUTS & Abattements pour Charges Familiales</h3>
           </div>
 
-          <p style="font-size: 13px; color: #475569; margin-bottom: 16px;">
-            L'IUTS est calculé par tranches sur le revenu net imposable après abattement forfaitaire professionnel.
+          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
+            L'IUTS est calculé par tranches progressives sur la <strong>Base Imposable Nette</strong> = Salaire Brut − Abattement Forfaitaire − Exonérations légales.<br>
+            La base imposable est arrondie à la <strong>centaine inférieure</strong> (TRUNC -2).
           </p>
+          <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:12px; color:#92400e;">
+            <strong>⚖️ Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
+            • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000 FCFA</strong>)<br>
+            • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000 FCFA</strong>)<br>
+            • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000 FCFA</strong>) — sans cumul
+          </div>
 
           <div class="iuts-settings-row">
             <div class="setting-item">
-              <label>Abattement Forfaitaire Pro (%) :</label>
+              <label>Abattement Forfaitaire 20% (Art. 111 CGI) :</label>
               <input type="number" [(ngModel)]="abattementPro" class="setting-input"> %
             </div>
             <div class="setting-item">
-              <label>Réduction 1ère personne à charge :</label>
+              <label>Réduction 1 personne à charge :</label>
               <input type="number" [(ngModel)]="reductionCharge1" class="setting-input"> %
             </div>
             <div class="setting-item">
-              <label>Réduction 2ème personne :</label>
+              <label>Réduction 2 personnes à charge :</label>
               <input type="number" [(ngModel)]="reductionCharge2" class="setting-input"> %
             </div>
             <div class="setting-item">
-              <label>Plafond Réduction Charges :</label>
+              <label>Réduction 3 personnes à charge :</label>
+              <input type="number" [(ngModel)]="reductionCharge3" class="setting-input"> %
+            </div>
+            <div class="setting-item">
+              <label>Réduction 4+ personnes à charge :</label>
               <input type="number" [(ngModel)]="maxReductionCharge" class="setting-input"> %
             </div>
           </div>
 
-          <h4 style="margin-top: 20px; font-size: 14px; color: #1e293b;">Tranches de l'IUTS (Grille Légale)</h4>
+          <h4 style="margin-top: 20px; font-size: 14px; color: #1e293b;">Tranches de l'IUTS — Barème Officiel Burkina Faso (Circulaire MINEFID N°2020-0432)</h4>
           <table class="iuts-table">
             <thead>
               <tr>
-                <th>Tranche de Salaire Imposable (FCFA)</th>
-                <th>Taux d'imposition (%)</th>
+                <th>Tranche de Base Imposable (FCFA)</th>
+                <th>Taux marginal (%)</th>
+                <th>Cumul Impôt sur tranche (indicatif)</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let t of tranchesIuts">
+              <tr *ngFor="let t of tranchesIuts; let i = index">
                 <td>
                   <span *ngIf="t.max !== null">De {{ t.min | number }} FCFA à {{ t.max | number }} FCFA</span>
                   <span *ngIf="t.max === null">Plus de {{ t.min | number }} FCFA</span>
                 </td>
                 <td>
                   <input type="number" [(ngModel)]="t.taux" class="rate-input"> %
+                </td>
+                <td style="font-size:12px; color:#64748b;">
+                  <span *ngIf="i===0">0</span>
+                  <span *ngIf="i===1">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===2">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===3">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===4">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===5">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===6">illimité</span>
                 </td>
               </tr>
             </tbody>
@@ -434,10 +455,11 @@ export class CotisationsPaieComponent implements OnInit {
   successMessage = '';
   showAddModal = false;
 
-  abattementPro = 20;
-  reductionCharge1 = 8;
-  reductionCharge2 = 10;
-  maxReductionCharge = 18;
+  abattementPro = 20;         // 20% du salaire de base (Frais professionnels - Art. 111 CGI)
+  reductionCharge1 = 8;       // -8% IUTS pour 1 personne à charge
+  reductionCharge2 = 10;      // -10% IUTS pour 2 personnes à charge
+  reductionCharge3 = 12;      // -12% IUTS pour 3 personnes à charge
+  maxReductionCharge = 14;    // -14% IUTS pour 4+ personnes à charge (plafond)
 
   defaultCotisations: CotisationItem[] = [
     { id: 1, code: 'CNSS-01', nom: 'CNSS (Régime Général)', typeOrganisme: 'Caisse Nationale de Sécurité Sociale', partEmploye: 5.5, partEmployeur: 16.0, assiette: 'Salaire brut imposable', actif: true },
@@ -450,14 +472,15 @@ export class CotisationsPaieComponent implements OnInit {
 
   cotisations: CotisationItem[] = [];
 
+  // Barème IUTS officiel Burkina Faso - Circulaire MINEFID N°2020-0432/MINEFID/SG/DGI
   tranchesIuts: TrancheIuts[] = [
-    { min: 0, max: 30000, taux: 0 },
-    { min: 30001, max: 50000, taux: 2 },
-    { min: 50001, max: 80000, taux: 5 },
-    { min: 80001, max: 120000, taux: 10 },
-    { min: 120001, max: 170000, taux: 15 },
-    { min: 170001, max: 250000, taux: 20 },
-    { min: 250001, max: null, taux: 25 }
+    { min: 0,      max: 30000,  taux: 0  },
+    { min: 30001,  max: 50000,  taux: 10 },
+    { min: 50001,  max: 80000,  taux: 15 },
+    { min: 80001,  max: 120000, taux: 18 },
+    { min: 120001, max: 170000, taux: 21 },
+    { min: 170001, max: 250000, taux: 23 },
+    { min: 250001, max: null,   taux: 25 }
   ];
 
   newCotisation: Partial<CotisationItem> = {

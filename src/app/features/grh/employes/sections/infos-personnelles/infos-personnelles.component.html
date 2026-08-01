@@ -70,22 +70,53 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Lieu de naissance</mat-label>
-              <mat-select formControlName="lieuNaissance">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (v of villes; track v.id) {
-                  <mat-option [value]="v.libelle">{{ v.libelle }}</mat-option>
-                }
-              </mat-select>
+              <input matInput formControlName="lieuNaissance" placeholder="Ex: Ouagadougou">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Nationalité</mat-label>
-              <input matInput formControlName="nationalite">
+              <input matInput formControlName="nationalite" placeholder="Ex: Burkinabè">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>N° CNI / Pièce d'identité</mat-label>
-              <input matInput formControlName="numeroCNI">
+              <mat-label>Pièce d'identité</mat-label>
+              <input matInput formControlName="numeroCNI" placeholder="N° CNI ou Passeport">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Éducation</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Dernier diplôme</mat-label>
+              <input matInput formControlName="dernierDiplome" placeholder="Ex: Master / Licence">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Diplôme de recrutement</mat-label>
+              <input matInput formControlName="diplomeRecrutement" placeholder="Ex: Baccalauréat / BEPC">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Branche d'étude</mat-label>
+              <input matInput formControlName="brancheEtude" placeholder="Ex: Informatique, Gestion, Droit">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ecole / Université</mat-label>
+              <input matInput formControlName="ecoleUniversite" placeholder="Ex: Université Joseph Ki-Zerbo">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Informations de Retraite</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Âge de retraite (ans)</mat-label>
+              <input matInput type="number" formControlName="ageRetraite" placeholder="Ex: 60">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date retraite</mat-label>
+              <input matInput formControlName="dateRetraite" readonly placeholder="Date de départ à la retraite">
             </mat-form-field>
           </div>
 
@@ -97,13 +128,8 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Ville</mat-label>
-              <mat-select formControlName="ville">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (v of villes; track v.id) {
-                  <mat-option [value]="v.libelle">{{ v.libelle }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Ville de résidence</mat-label>
+              <input matInput formControlName="ville" placeholder="Ex: Ouagadougou">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -127,65 +153,22 @@
             </mat-form-field>
           </div>
 
-          <p class="form-section-label">Affectation Professionnelle (Fonction & Structure)</p>
+          <p class="form-section-label">Contact d'urgence à prévenir en cas d'urgence</p>
           <div class="form-grid-2">
             <mat-form-field appearance="outline">
-              <mat-label>Fonction / Poste occupé</mat-label>
-              <mat-select formControlName="poste">
-                <mat-option value="">— Sélectionner une fonction —</mat-option>
-                @for (f of fonctions$ | async; track f.id || f.code) {
-                  <mat-option [value]="f.libelle">{{ f.libelle }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Nom & Prénom du contact</mat-label>
+              <input matInput formControlName="contactUrgenceNom" placeholder="Ex: Sawadogo Jean">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Service</mat-label>
-              <mat-select formControlName="service">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (srv of services$ | async; track srv.id || srv.code) {
-                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Téléphone du contact</mat-label>
+              <input matInput formControlName="contactUrgenceTelephone" placeholder="+226 70 00 00 00">
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Direction</mat-label>
-              <mat-select formControlName="direction">
-                <mat-option value="">— Aucune —</mat-option>
-                @for (dir of directions$ | async; track dir.id || dir.code) {
-                  <mat-option [value]="dir.libelle">{{ dir.libelle }}</mat-option>
-                }
-              </mat-select>
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Lien de parenté / Relation</mat-label>
+              <input matInput formControlName="contactUrgenceLien" placeholder="Ex: Conjoint, Frère, Père">
             </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Département</mat-label>
-              <mat-select formControlName="departement">
-                <mat-option value="">— Aucun —</mat-option>
-                @for (dep of departements$ | async; track dep.id || dep.code) {
-                  <mat-option [value]="dep.libelle">{{ dep.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </div>
-
-          <!-- Bloc info : contacts d'urgence gérés dans le menu Famille -->
-          <div class="contact-info-banner">
-            <mat-icon class="banner-icon">info_outline</mat-icon>
-            <div class="banner-content">
-              <span class="banner-title">Contacts d'urgence</span>
-              <span class="banner-desc">
-                Les contacts d'urgence de cet employé sont gérés depuis le menu
-                <strong>Famille</strong>. Retrouvez-y les membres de la famille
-                et les personnes à contacter en cas d'urgence.
-              </span>
-            </div>
-            <button mat-stroked-button color="primary" class="banner-btn"
-                    (click)="goToFamille()">
-              <mat-icon>open_in_new</mat-icon>
-              Voir la famille
-            </button>
           </div>
 
         </form>

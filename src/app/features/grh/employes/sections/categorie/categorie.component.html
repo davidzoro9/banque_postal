@@ -7,7 +7,7 @@
       <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
       <span class="sep">›</span>
     }
-    <span class="current">Situation professionnelle</span>
+    <span class="current">Situation salariale</span>
   </div>
 
   @if (employee) {
@@ -23,8 +23,8 @@
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">military_tech</mat-icon>
-      <mat-card-title>Situation professionnelle</mat-card-title>
-      <mat-card-subtitle>Catégorie, échelon et salaire brut</mat-card-subtitle>
+      <mat-card-title>Situation salariale</mat-card-title>
+      <mat-card-subtitle>Résumé de la grille salariale, classification et niveau de rémunération (Lecture seule)</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -32,41 +32,39 @@
         <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
       }
 
-      @if (employee) {
-        <form [formGroup]="form">
+      @if (employee && summary) {
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Grade</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0060B3;">{{ summary.grade }}</span>
+            </div>
 
-          <p class="form-section-label">Classification & Rémunération</p>
-          <div class="form-grid-2">
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Catégorie / Classe</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ summary.categorie }}</span>
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Catégorie</mat-label>
-              <mat-select formControlName="categoriePro">
-                <mat-option value="">— Sélectionner une catégorie —</mat-option>
-                @for (c of availableCategories; track c.code) {
-                  <mat-option [value]="c.code">{{ c.label }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Échelon</mat-label>
-              <mat-select formControlName="echelon">
-                @if (availableEchelons.length === 0) {
-                  <mat-option value="">— Sélectionner d'abord une catégorie —</mat-option>
-                }
-                @for (ech of availableEchelons; track ech.code) {
-                  <mat-option [value]="ech.code">{{ ech.label }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Salaire brut (FCFA)</mat-label>
-              <input matInput formControlName="salaireBrut" type="number" min="0" readonly>
-            </mat-form-field>
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Échelon</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ summary.echelon }}</span>
+            </div>
           </div>
 
-        </form>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+              <span style="display: block; font-size: 12px; color: #475569; font-weight: 700; text-transform: uppercase;">Salaire de Base</span>
+              <span style="font-size: 20px; font-weight: 800; color: #1e293b;">{{ summary.salaireBase | number:'1.0-0' }} FCFA</span>
+            </div>
+
+            <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+              <span style="display: block; font-size: 12px; color: #475569; font-weight: 700; text-transform: uppercase;">Total des Indemnités</span>
+              <span style="font-size: 20px; font-weight: 800; color: #166534;">+ {{ summary.totalIndemnites | number:'1.0-0' }} FCFA</span>
+            </div>
+          </div>
+
+        </div>
       }
     </mat-card-content>
 
@@ -76,29 +74,6 @@
           <mat-icon>arrow_back</mat-icon>
           Retour au menu
         </button>
-
-        <div class="sec-right">
-          @if (isCreationMode) {
-            <button mat-raised-button color="primary" class="btn-next" (click)="save()" [disabled]="saving || form.invalid">
-              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-              Enregistrer
-              <mat-icon>check_circle</mat-icon>
-            </button>
-          } @else if (!isEditing) {
-            <button mat-raised-button color="primary" (click)="enableEdit()">
-              <mat-icon>edit</mat-icon>
-              Modifier
-            </button>
-          } @else {
-            <button mat-button (click)="cancelEdit()" [disabled]="saving">
-              Annuler
-            </button>
-            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
-              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-              Enregistrer
-            </button>
-          }
-        </div>
       </div>
     </mat-card-actions>
   </mat-card>

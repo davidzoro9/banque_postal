@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
+import { MatDialog } from '@angular/material/dialog';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
 import { CongeService, Conge } from '../services/conge.service';
@@ -16,17 +17,20 @@ import { CongeService, Conge } from '../services/conge.service';
 export class CongesListComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('viewDialogTpl') viewDialogTpl!: TemplateRef<any>;
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
   displayedColumns = ['employe', 'type', 'dateDebut', 'dateFin', 'nbJours', 'statut', 'actions'];
   dataSource = new MatTableDataSource<Conge>([]);
   searchQuery = '';
   conges: Conge[] = [];
+  selectedConge?: Conge;
 
   constructor(
     private router: Router, 
     private moduleNav: ModuleNavService,
-    private congeService: CongeService
+    private congeService: CongeService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -57,6 +61,11 @@ export class CongesListComponent implements OnInit {
 
   nouveauConge(): void {
     this.router.navigate(['/grh/conges/nouveau']);
+  }
+
+  voirConge(conge: Conge): void {
+    this.selectedConge = conge;
+    this.dialog.open(this.viewDialogTpl, { width: '540px' });
   }
 
   get totalEnAttente(): number { return this.conges.filter(c => c.statut === 'En attente').length; }

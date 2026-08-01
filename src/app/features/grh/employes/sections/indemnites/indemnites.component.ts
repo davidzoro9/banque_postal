@@ -21,6 +21,7 @@ export class IndemnitesComponent implements OnInit {
   empId = '';
   indemnites$!: Observable<RefItem[]>;
   typesList: RefItem[] = [];
+  avantageSaved = false;
 
   constructor(
     private fb: FormBuilder,
@@ -87,6 +88,8 @@ export class IndemnitesComponent implements OnInit {
       primeLogement:      [0, [Validators.min(0)]],
       primeTransport:     [0, [Validators.min(0)]],
       primeResponsabilite: [0, [Validators.min(0)]],
+      vehiculeFourni:     [false],
+      logementFourni:     [false],
       autresIndemnites:   this.fb.array([])
     });
   }
@@ -95,7 +98,9 @@ export class IndemnitesComponent implements OnInit {
     this.form.patchValue({
       primeLogement:      e.primeLogement || 0,
       primeTransport:     e.primeTransport || 0,
-      primeResponsabilite: e.primeResponsabilite || 0
+      primeResponsabilite: e.primeResponsabilite || 0,
+      vehiculeFourni:     e.vehiculeFourni || false,
+      logementFourni:     e.logementFourni || false
     });
     if (e.autresIndemnites && e.autresIndemnites.length > 0) {
       this.autres.clear();
@@ -126,70 +131,92 @@ export class IndemnitesComponent implements OnInit {
     let transport = 0;
     let responsabilite = 0;
 
-    const catUpper = (e.categoriePro || '').toUpperCase();
-    const gradeUpper = (e.grade || '').toUpperCase();
-    const fonctionUpper = (e.fonction || (e as any).emploi || (e as any).poste || '').toUpperCase();
+    const catUpper = (e.categoriePro || '').trim().toUpperCase();
+    const gradeUpper = (e.grade || '').trim().toUpperCase();
+    const fonctionUpper = (e.fonction || (e as any).emploi || (e as any).poste || '').trim().toUpperCase();
 
-    // 1. Recherche prioritaire dans les Données de Base (param-indemnite)
+    const isNominated = !!fonctionUpper && !fonctionUpper.includes('AGENT SIMPLE') && !fonctionUpper.includes('SANS FONCTION');
+
     if (paramList && paramList.length > 0) {
-      paramList.forEach(p => {
-        if (p.actif ?? true) {
-          const m = p.taux || p.montant || 0;
-          const lib = (p.typeIndemnite || p.libelle || '').toLowerCase();
-          const pFonction = (p.fonction || '').toUpperCase();
-          const pGrade = (p.grade || '').toUpperCase();
-          const pCat = (p.categorie || '').toUpperCase();
+      // 1. Si l'employé occupe une fonction de nomination (Directeur, Responsable, Chef de Service, Chef d'Agence, etc.)
+      if (isNominated) {
+        paramList.forEach(p => {
+          if (p.actif ?? true) {
+            const pFonction = (p.fonction || '').trim().toUpperCase();
+            if (pFonction && (fonctionUpper.includes(pFonction) || pFonction.includes(fonctionUpper))) {
+              const m = p.taux || p.montant || 0;
+              const lib = (p.typeIndemnite || p.libelle || '').toLowerCase();
+              if (lib.includes('logement')) logement = m;
+              if (lib.includes('transport')) transport = m;
+              if (lib.includes('fonction') || lib.includes('responsabilit')) responsabilite = m;
+            }
+          }
+        });
+      }
 
-          const matchesCat = !pCat || catUpper.includes(pCat) || pCat.includes(catUpper);
-          const matchesGrade = !pGrade || gradeUpper.includes(pGrade) || pGrade.includes(gradeUpper);
-          const matchesFonction = pFonction && (fonctionUpper.includes(pFonction) || pFonction.includes(pFonction));
+      // 2. Si pas d'indemnité spécifique trouvée par fonction (ou si Agent simple), recherche par Catégorie / Groupe
+      if (!logement || !transport) {
+        paramList.forEach(p => {
+          if (p.actif ?? true) {
+            const pFonction = (p.fonction || '').trim().toUpperCase();
+            if (!pFonction || pFonction.includes('AGENT SIMPLE') || pFonction.includes('SANS FONCTION')) {
+              const m = p.taux || p.montant || 0;
+              const lib = (p.typeIndemnite || p.libelle || '').toLowerCase();
+              const pGrade = (p.grade || '').trim().toUpperCase();
+              const pCats = Array.isArray(p.categories) ? p.categories : (p.categorie ? p.categorie.split(',').map(c => c.trim().toUpperCase()) : []);
 
-          if (lib.includes('logement') && (matchesCat || matchesGrade)) {
-            logement = m;
+              const matchesCat = pCats.length > 0 ? pCats.some(c => c === catUpper) : false;
+              const matchesGrade = pGrade ? (gradeUpper.includes(pGrade) || pGrade.includes(gradeUpper)) : false;
+
+              if (!logement && lib.includes('logement') && (matchesCat || matchesGrade)) {
+                logement = m;
+              }
+              if (!transport && lib.includes('transport') && (matchesCat || matchesGrade)) {
+                transport = m;
+              }
+            }
           }
-          if (lib.includes('transport') && (matchesCat || matchesGrade)) {
-            transport = m;
-          }
-          if ((lib.includes('responsabilit') || lib.includes('fonction')) && matchesFonction) {
-            responsabilite = m;
-          }
-        }
-      });
+        });
+      }
     }
 
-    // 2. Barème par défaut pour les indemnités habituelles (Logement & Transport selon Catégorie/Groupe)
+    // 3. Fallbacks selon la grille BPBF si non trouvés dans paramList
+    if (isNominated) {
+      if (!responsabilite) {
+        if (fonctionUpper.includes('DIRECTEUR DE DEPARTEMENT')) responsabilite = 150000;
+        else if (fonctionUpper.includes('RESPONSABLE DE DEPARTEMENT')) responsabilite = 100000;
+        else if (fonctionUpper.includes('CHEF DE SERVICE')) responsabilite = 80000;
+        else if (fonctionUpper.includes("CHEF D'AGENCE") || fonctionUpper.includes('CHEF DAGENCE')) responsabilite = 75000;
+      }
+      if (!logement) {
+        if (fonctionUpper.includes('DIRECTEUR DE DEPARTEMENT')) logement = 200000;
+        else if (fonctionUpper.includes('RESPONSABLE DE DEPARTEMENT')) logement = 150000;
+        else if (fonctionUpper.includes('CHEF DE SERVICE')) logement = 120000;
+        else if (fonctionUpper.includes("CHEF D'AGENCE") || fonctionUpper.includes('CHEF DAGENCE')) logement = 100000;
+      }
+      if (!transport) {
+        if (fonctionUpper.includes('DIRECTEUR DE DEPARTEMENT')) transport = 100000;
+        else if (fonctionUpper.includes('RESPONSABLE DE DEPARTEMENT')) transport = 75000;
+        else if (fonctionUpper.includes('CHEF DE SERVICE')) transport = 75000;
+        else if (fonctionUpper.includes("CHEF D'AGENCE") || fonctionUpper.includes('CHEF DAGENCE')) transport = 75000;
+      }
+    }
+
+    // Fallback Agent Simple
     if (!logement) {
-      if (gradeUpper.includes('GROUPE III') || catUpper.includes('VI') || catUpper.includes('VII') || catUpper.includes('VIII') || catUpper.includes('V')) {
-        logement = 200000;
-      } else if (gradeUpper.includes('GROUPE II') || catUpper.includes('I') || catUpper.includes('II') || catUpper.includes('III') || catUpper.includes('IV')) {
-        logement = 150000;
-      } else {
-        logement = 100000;
-      }
+      if (gradeUpper.includes('GROUPE III') || ['CL5', 'CL6', 'CL7', 'CL8'].includes(catUpper)) logement = 100000;
+      else if (gradeUpper.includes('GROUPE II') || ['CL1', 'CL2', 'CL3', 'CL4'].includes(catUpper)) logement = 45000;
+      else logement = 35000;
     }
-
     if (!transport) {
-      if (gradeUpper.includes('GROUPE III') || catUpper.includes('VI') || catUpper.includes('VII') || catUpper.includes('VIII') || catUpper.includes('V')) {
-        transport = 100000;
-      } else if (gradeUpper.includes('GROUPE II') || catUpper.includes('I') || catUpper.includes('II') || catUpper.includes('III') || catUpper.includes('IV')) {
-        transport = 75000;
-      } else {
-        transport = 50000;
-      }
+      if (gradeUpper.includes('GROUPE III') || ['CL5', 'CL6', 'CL7', 'CL8'].includes(catUpper)) transport = 75000;
+      else if (gradeUpper.includes('GROUPE II') || ['CL1', 'CL2', 'CL3', 'CL4'].includes(catUpper)) transport = 45000;
+      else transport = 30000;
     }
 
-    // 3. Indemnité de Fonction / Responsabilité : appliquée seulement si l'employé occupe une fonction spécifique
-    if (!responsabilite && fonctionUpper) {
-      if (fonctionUpper.includes('DIRECTEUR') || fonctionUpper.includes('RESPONSABLE') || fonctionUpper.includes('CHEF DE DEPARTEMENT') || fonctionUpper.includes('CEO')) {
-        responsabilite = 150000;
-      } else if (fonctionUpper.includes('CHEF DE SERVICE') || fonctionUpper.includes('MANAGER') || fonctionUpper.includes('SUPERVISEUR')) {
-        responsabilite = 100000;
-      } else if (fonctionUpper.includes('CAISSIER') || fonctionUpper.includes('GERANT')) {
-        responsabilite = 50000;
-      } else {
-        responsabilite = 0; // Simple employé : pas de prime de fonction
-      }
-    }
+    // 4. Exonération si Véhicule / Logement fourni par la banque
+    if (e.vehiculeFourni) transport = 0;
+    if (e.logementFourni) logement = 0;
 
     return { logement, transport, responsabilite };
   }
@@ -232,6 +259,8 @@ export class IndemnitesComponent implements OnInit {
       primeLogement:       v.primeLogement,
       primeTransport:      v.primeTransport,
       primeResponsabilite: v.primeResponsabilite,
+      vehiculeFourni:      v.vehiculeFourni,
+      logementFourni:      v.logementFourni,
       autresIndemnites:    v.autresIndemnites
     }).subscribe(() => {
       this.saving = false;
@@ -247,6 +276,55 @@ export class IndemnitesComponent implements OnInit {
 
   goNext(next: string): void {
     this.router.navigate(['/grh/employes', this.empId, next]);
+  }
+
+  toggleVehicule(): void {
+    if (!this.employee) return;
+    this.employee.vehiculeFourni = !this.employee.vehiculeFourni;
+    this.employeeService.update(this.empId, { vehiculeFourni: this.employee.vehiculeFourni }).subscribe(() => {
+      this.showAvantageSaved();
+      // Recalculer les indemnités
+      this.dbRefService.getItems('param-indemnite').subscribe(paramList => {
+        const computed = this.computeIndemnites(this.employee!, paramList || []);
+        this.form.patchValue({
+          primeLogement:  computed.logement,
+          primeTransport: computed.transport,
+          primeResponsabilite: computed.responsabilite
+        });
+        this.employeeService.update(this.empId, {
+          primeLogement: computed.logement,
+          primeTransport: computed.transport,
+          primeResponsabilite: computed.responsabilite
+        }).subscribe();
+      });
+    });
+  }
+
+  toggleLogement(): void {
+    if (!this.employee) return;
+    this.employee.logementFourni = !this.employee.logementFourni;
+    this.employeeService.update(this.empId, { logementFourni: this.employee.logementFourni }).subscribe(() => {
+      this.showAvantageSaved();
+      // Recalculer les indemnités
+      this.dbRefService.getItems('param-indemnite').subscribe(paramList => {
+        const computed = this.computeIndemnites(this.employee!, paramList || []);
+        this.form.patchValue({
+          primeLogement:  computed.logement,
+          primeTransport: computed.transport,
+          primeResponsabilite: computed.responsabilite
+        });
+        this.employeeService.update(this.empId, {
+          primeLogement: computed.logement,
+          primeTransport: computed.transport,
+          primeResponsabilite: computed.responsabilite
+        }).subscribe();
+      });
+    });
+  }
+
+  private showAvantageSaved(): void {
+    this.avantageSaved = true;
+    setTimeout(() => this.avantageSaved = false, 3000);
   }
 
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }

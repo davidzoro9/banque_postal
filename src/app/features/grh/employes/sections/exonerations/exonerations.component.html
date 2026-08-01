@@ -98,29 +98,6 @@
           <mat-icon>arrow_back</mat-icon>
           Retour au menu
         </button>
-
-        <div class="sec-right">
-          @if (isCreationMode) {
-            <button mat-raised-button color="primary" class="btn-next" (click)="save()" [disabled]="saving">
-              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-              Enregistrer et terminer
-              <mat-icon>check_circle</mat-icon>
-            </button>
-          } @else if (!isEditing) {
-            <button mat-raised-button color="primary" (click)="enableEdit()">
-              <mat-icon>edit</mat-icon>
-              Modifier
-            </button>
-          } @else {
-            <button mat-button (click)="cancelEdit()" [disabled]="saving">
-              Annuler
-            </button>
-            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
-              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-              Enregistrer
-            </button>
-          }
-        </div>
       </div>
     </mat-card-actions>
   </mat-card>

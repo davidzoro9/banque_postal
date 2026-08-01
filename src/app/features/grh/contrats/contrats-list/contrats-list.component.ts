@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
+import { MatDialog } from '@angular/material/dialog';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
 import { ContratService, Contrat } from '../services/contrat.service';
@@ -16,17 +17,20 @@ import { ContratService, Contrat } from '../services/contrat.service';
 export class ContratsListComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild('viewDialogTpl') viewDialogTpl!: TemplateRef<any>;
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
   displayedColumns = ['employe', 'type', 'service', 'dateDebut', 'dateFin', 'statut', 'actions'];
   dataSource = new MatTableDataSource<Contrat>([]);
   searchQuery = '';
   contrats: Contrat[] = [];
+  selectedContrat?: Contrat;
 
   constructor(
     private router: Router, 
     private moduleNav: ModuleNavService,
-    private contratService: ContratService
+    private contratService: ContratService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -53,6 +57,11 @@ export class ContratsListComponent implements OnInit {
 
   applyFilter(): void {
     this.dataSource.filter = this.searchQuery.trim().toLowerCase();
+  }
+
+  voirContrat(contrat: Contrat): void {
+    this.selectedContrat = contrat;
+    this.dialog.open(this.viewDialogTpl, { width: '540px' });
   }
 
   get totalActifs(): number       { return this.contrats.filter(c => c.statut === 'Actif').length; }

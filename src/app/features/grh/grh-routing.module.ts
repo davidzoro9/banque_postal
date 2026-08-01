@@ -36,6 +36,7 @@ const routes: Routes = [
   { path: 'employes/:id/famille',            component: FamilleComponent },
   { path: 'employes/:id/infos-pro',          component: InfosProComponent },
   { path: 'employes/:id/categorie',          component: CategorieComponent },
+  { path: 'employes/:id/situation-salariale', component: CategorieComponent },
   { path: 'employes/:id/indemnites',         component: IndemnitesComponent },
   { path: 'employes/:id/exonerations',       component: ExonerationsComponent },
   { path: 'employes/:id/retenues',           component: RetenuesComponent },

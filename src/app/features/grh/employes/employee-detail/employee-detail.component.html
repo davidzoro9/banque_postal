@@ -37,36 +37,27 @@
         </span>
       </div>
       <div class="ph-right">
-        <div class="progress-box">
-          <span class="prog-val">{{ completedCount }}/{{ sections.length }}</span>
-          <span class="prog-lbl">sections complétées</span>
-          <div class="prog-bar"><div class="prog-fill" [style.width.%]="progressPercent"></div></div>
-        </div>
         <button mat-raised-button class="btn-print" matTooltip="Imprimer la fiche">
           <mat-icon>print</mat-icon>
         </button>
       </div>
     </div>
 
-    <!-- Grille des sections -->
+    <!-- Grille des sections (Menus de visualisation) -->
     <div class="sections-grid">
       @for (sec of sections; track sec.id; let i = $index) {
-        <div class="section-tile" [class.complete]="sec.isComplete(employee)" (click)="navigateTo(sec.route)">
+        <div class="section-tile" (click)="navigateTo(sec.route)">
           <div class="tile-left">
             <div class="tile-num">{{ i + 1 }}</div>
-            <div class="tile-icon" [class.done]="sec.isComplete(employee)">
+            <div class="tile-icon">
               <mat-icon>{{ sec.icon }}</mat-icon>
             </div>
           </div>
           <div class="tile-body">
             <span class="tile-title">{{ sec.title }}</span>
             <span class="tile-sub">{{ sec.subtitle }}</span>
-            <span class="tile-status" [class.done]="sec.isComplete(employee)">
-              <mat-icon>{{ sec.isComplete(employee) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-              {{ sec.isComplete(employee) ? 'Complété' : 'À compléter' }}
-            </span>
           </div>
-          <button mat-icon-button class="tile-btn" matTooltip="Ouvrir">
+          <button mat-icon-button class="tile-btn" matTooltip="Consulter les détails">
             <mat-icon>chevron_right</mat-icon>
           </button>
         </div>

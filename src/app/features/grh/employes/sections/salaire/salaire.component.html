@@ -7,7 +7,7 @@
       <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
       <span class="sep">›</span>
     }
-    <span class="current">Information sur le salaire</span>
+    <span class="current">Informations salariales</span>
   </div>
 
   @if (employee) {
@@ -23,7 +23,8 @@
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">account_balance_wallet</mat-icon>
-      <mat-card-title>Information sur le salaire</mat-card-title>
+      <mat-card-title>Informations salariales</mat-card-title>
+      <mat-card-subtitle>Décompte détaillé des avoirs, des indemnités et des retenues du mois</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
@@ -32,150 +33,95 @@
       }
 
       @if (employee) {
-        <form [formGroup]="form">
-
-          <!-- Grille à 2 colonnes : Informations salariales vs Retenues -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px;">
+        <!-- Grille principale à 2 colonnes : Avoirs (+) vs Retenues (-) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px;">
+          
+          <!-- Colonne 1 : Avoirs (+) -->
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <h3 style="color: #166534; font-weight: 700; margin-bottom: 16px; font-size: 16px; display: flex; align-items: center; gap: 6px;">
+              <mat-icon style="color: #166534; font-size: 20px;">add_circle_outline</mat-icon>
+              Avoirs (+)
+            </h3>
             
-            <!-- Colonne 1 : Informations salariales -->
-            <div>
-              <h3 style="color: #00897b; font-weight: 700; margin-bottom: 16px; font-size: 18px;">Informations salariales</h3>
-              
-              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Salaire de base</span>
-                  <span style="font-weight: 600;">{{ calc.salaireBase | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Totale indemnité</span>
-                  <span style="font-weight: 600;">{{ calc.totalIndemnite | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Rémunération Brut</span>
-                  <span style="font-weight: 600;">{{ calc.remunerationBrut | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Montant CNSS</span>
-                  <span style="font-weight: 600;">{{ calc.montantCnss | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Fonds de soutien pat.</span>
-                  <span style="font-weight: 600;">{{ calc.fondsSoutienPat | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Salaire Brut</span>
-                  <span style="font-weight: 600;">{{ calc.salaireBrutImposable | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Abattement forfaitaire</span>
-                  <span style="font-weight: 600;">{{ calc.abattementForfaitaire | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Totale exonération</span>
-                  <span style="font-weight: 600;">{{ calc.totalExoneration | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Base imposable</span>
-                  <span style="font-weight: 600;">{{ calc.baseImposable | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Totale retenue</span>
-                  <span style="font-weight: 600;">{{ calc.totalRetenue | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Rémunération totale</span>
-                  <span style="font-weight: 600;">{{ calc.remunerationTotale | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Mutuel</span>
-                  <span style="font-weight: 600;">{{ calc.mutuel | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; background: #e0f2fe; padding: 8px 12px; border-radius: 6px; margin-top: 4px;">
-                  <span style="font-weight: 800; color: #0060B3; font-size: 15px;">Net à payer</span>
-                  <span style="font-weight: 800; color: #0060B3; font-size: 15px;">{{ calc.netAPayer | number:'1.2-2' }} FCFA</span>
-                </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+              <!-- Salaire de base -->
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                <span style="font-weight: 700; color: #1e293b;">Salaire de base</span>
+                <span style="font-weight: 700; color: #0f172a;">{{ calc.salaireBase | number:'1.0-0' }} FCFA</span>
               </div>
+
+              <!-- Titre Liste des indemnités -->
+              <p style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 8px; margin-bottom: 2px;">INDEMNITÉS ATTRIBUÉES</p>
+
+              <!-- Loop through each indemnity -->
+              @for (ind of calc.indemnitesList; track ind.libelle) {
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; padding-left: 8px;">
+                  <span style="color: #334155;">{{ ind.libelle }}</span>
+                  <span style="font-weight: 600; color: #166534;">+ {{ ind.montant | number:'1.0-0' }} FCFA</span>
+                </div>
+              }
             </div>
-
-            <!-- Colonne 2 : Retenues -->
-            <div>
-              <h3 style="color: #00897b; font-weight: 700; margin-bottom: 16px; font-size: 18px;">Retenues</h3>
-
-              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Montant CNSS</span>
-                  <span style="font-weight: 600;">{{ calc.montantCnss | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Fonds de soutien pat.</span>
-                  <span style="font-weight: 600;">{{ calc.fondsSoutienPat | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Part Patronale CNSS</span>
-                  <span style="font-weight: 600;">{{ calc.partPatronaleCnss | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">IUTS 0 Charge</span>
-                  <span style="font-weight: 600;">{{ calc.iuts0Charge | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">Montant charge</span>
-                  <span style="font-weight: 600;">{{ calc.montantCharge | number:'1.2-2' }}</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
-                  <span style="font-weight: 700; color: #333;">IUTS avec Charge</span>
-                  <span style="font-weight: 600;">{{ calc.iutsAvecCharge | number:'1.2-2' }}</span>
-                </div>
-              </div>
-            </div>
-
           </div>
 
-          <mat-divider style="margin: 20px 0;"></mat-divider>
+          <!-- Colonne 2 : Retenues (-) -->
+          <div style="background: #fdf2f2; padding: 20px; border-radius: 8px; border: 1px solid #fecaca;">
+            <h3 style="color: #991b1b; font-weight: 700; margin-bottom: 16px; font-size: 16px; display: flex; align-items: center; gap: 6px;">
+              <mat-icon style="color: #991b1b; font-size: 20px;">remove_circle_outline</mat-icon>
+              Retenues (-)
+            </h3>
 
-          <!-- Section Mode de paiement -->
-          <h3 style="color: #00897b; font-weight: 700; margin-bottom: 16px; font-size: 16px;">Mode de paiement</h3>
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline">
-              <mat-label>Mode de paiement</mat-label>
-              <mat-select formControlName="modePaiement">
-                <mat-option value="Chèque">Chèque</mat-option>
-                <mat-option value="Virement bancaire">Virement bancaire</mat-option>
-                <mat-option value="Espèces">Espèces</mat-option>
-              </mat-select>
-            </mat-form-field>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fca5a5; padding-bottom: 6px;">
+                <span style="font-weight: 700; color: #7f1d1d;">CNSS (part agent)</span>
+                <span style="font-weight: 700; color: #991b1b;">- {{ calc.montantCnss | number:'1.0-0' }} FCFA</span>
+              </div>
 
-            @if (showBancaire) {
-              <mat-form-field appearance="outline">
-                <mat-label>Banque</mat-label>
-                <input matInput formControlName="banque" placeholder="Ex: BICIAB, BOA, BIB…">
-              </mat-form-field>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fca5a5; padding-bottom: 6px;">
+                <span style="font-weight: 700; color: #7f1d1d;">Le FSP (Fond de Soutien Patriotique)</span>
+                <span style="font-weight: 700; color: #991b1b;">- {{ calc.fondsSoutienPat | number:'1.0-0' }} FCFA</span>
+              </div>
 
-              <mat-form-field appearance="outline" class="span-2">
-                <mat-label>IBAN / Numéro de compte</mat-label>
-                <input matInput formControlName="iban" placeholder="BF…">
-              </mat-form-field>
-            }
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fca5a5; padding-bottom: 6px;">
+                <span style="font-weight: 700; color: #7f1d1d;">IUTS du mois</span>
+                <span style="font-weight: 700; color: #991b1b;">- {{ calc.iutsAvecCharge | number:'1.0-0' }} FCFA</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fca5a5; padding-bottom: 6px;">
+                <span style="font-weight: 700; color: #7f1d1d;">CRRAE (Retraite complémentaire)</span>
+                <span style="font-weight: 700; color: #991b1b;">- {{ calc.crrae | number:'1.0-0' }} FCFA</span>
+              </div>
+            </div>
           </div>
 
-        </form>
+        </div>
+
+        <!-- Bloc Tout en bas : Totaux & Rémunération globale -->
+        <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 16px;">
+          <h4 style="color: #334155; font-weight: 700; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">SYNTHÈSE ET RECAPITULATIF DES TOTAUX</h4>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 600;">TOTAL BRUT</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ calc.remunerationBrut | number:'1.0-0' }} FCFA</span>
+            </div>
+
+            <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 600;">BASE IMPOSABLE</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ calc.baseImposable | number:'1.0-0' }} FCFA</span>
+            </div>
+
+            <div style="background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 600;">TOTAL INDEMNITÉS</span>
+              <span style="font-size: 18px; font-weight: 800; color: #166534;">{{ calc.totalIndemnite | number:'1.0-0' }} FCFA</span>
+            </div>
+          </div>
+
+          <!-- Banner Net à Payer -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #0060B3, #004080); color: #ffffff; padding: 16px 24px; border-radius: 8px;">
+            <span style="font-weight: 800; font-size: 18px;">NET À PAYER AU SALARIÉ</span>
+            <span style="font-weight: 900; font-size: 22px; color: #FFC700;">{{ calc.netAPayer | number:'1.0-0' }} FCFA</span>
+          </div>
+        </div>
       }
     </mat-card-content>
 
@@ -185,23 +131,6 @@
           <mat-icon>arrow_back</mat-icon>
           Retour au menu
         </button>
-
-        <div class="sec-right">
-          @if (!isEditing) {
-            <button mat-raised-button color="primary" (click)="enableEdit()">
-              <mat-icon>edit</mat-icon>
-              Modifier
-            </button>
-          } @else {
-            <button mat-button (click)="cancelEdit()" [disabled]="saving">
-              Annuler
-            </button>
-            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
-              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
-              Enregistrer
-            </button>
-          }
-        </div>
       </div>
     </mat-card-actions>
   </mat-card>
