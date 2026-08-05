@@ -98,18 +98,27 @@
         <table class="paie-table">
           <thead>
             <tr>
-              <th>Employé / Matricule</th>
-              <th>Fonction / Groupe</th>
-              <th>Salaire Base</th>
-              <th>Indemnités</th>
-              <th style="background: #eff6ff;">Salaire Brut (Auto)</th>
-              <th>Retenues (CNSS/IUTS)</th>
-              <th>Net à Payer (FCFA)</th>
+              <th style="width: 28px; text-align: center;">N°</th>
+              <th>Matricule</th>
+              <th>Nom et Prénoms</th>
+              <th>Grade</th>
+              <th style="text-align: right;">Sal. base</th>
+              <th style="text-align: right;">Indemnités</th>
+              <th style="text-align: right; background: #f1f5f9; color: #0f172a;">Total brut</th>
+              <th style="text-align: right;" title="Cotisation Retraite CNSS Part Agent (5,5%)">CNSS (Agent)</th>
+              <th style="text-align: right;" title="Contribution CNSS Part Patronale (16%)">CNSS (Pat.)</th>
+              <th style="text-align: right; background: #f1f5f9;" title="Base Imposable IUTS / Salaire Net Imposable">Base imp.</th>
+              <th style="text-align: center;" title="Charges de famille (conjoint + enfants + ayants droit)">Chrg</th>
+              <th style="text-align: right;">IUTS</th>
+              <th style="text-align: right;" title="Salaire net avant autres retenues">Sal. net</th>
+              <th style="text-align: right;" title="Autres retenues complémentaires">Retenues</th>
+              <th style="text-align: right; background: #fef2f2; color: #991b1b;">Tot. ret.</th>
+              <th style="text-align: right; background: #dcfce7; color: #14532d;">Net à payer</th>
 
               <!-- Colonnes dynamiques du Mode Comparatif M-1 vs M -->
               @if (modeComparatifMminus1) {
-                <th style="background: #fef3c7; color: #78350f;">Net M-1</th>
-                <th style="background: #dcfce7; color: #14532d;">Écart (Δ)</th>
+                <th style="background: #fef3c7; color: #78350f; text-align: right;">Net M-1</th>
+                <th style="background: #dcfce7; color: #14532d; text-align: right;">Écart (Δ)</th>
               }
 
               <th style="text-align: center;">Statut</th>
@@ -117,42 +126,33 @@
             </tr>
           </thead>
           <tbody>
-            @for (b of bulletins; track b.employeeId) {
+            @for (b of bulletins; track b.employeeId; let idx = $index) {
               <tr>
-                <td>
-                  <strong style="color: #1e293b; font-size: 14px;">{{ b.employeeName }}</strong>
-                  <div style="color: #64748b; font-size: 11px;">{{ b.matricule }}</div>
-                </td>
-                <td>
-                  <div>{{ b.fonction }}</div>
-                  <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ b.grade }} - {{ b.categorie }}</span>
-                </td>
-                <td style="font-weight: 600; color: #475569;">
-                  {{ (b.salaireBase || 0) | number:'1.0-0' }} FCFA
-                </td>
-                <td class="sal-ind">
-                  +{{ (b.totalIndemnites || 0) | number:'1.0-0' }} FCFA
-                </td>
-                <td class="sal-brut" style="background: #f8fafc;">
-                  {{ (b.salaireBrut || 0) | number:'1.0-0' }} FCFA
-                </td>
-                <td class="sal-ret">
-                  -{{ (b.totalRetenues || 0) | number:'1.0-0' }} FCFA
-                </td>
-                <td>
-                  <span class="sal-net" style="background: #e8f5e9; padding: 4px 10px; border-radius: 6px; font-size: 14px;">
-                    {{ (b.salaireNet || 0) | number:'1.0-0' }} FCFA
-                  </span>
-                </td>
+                <td style="text-align: center; font-weight: 600; color: #64748b;">{{ idx + 1 }}</td>
+                <td style="font-family: monospace; font-weight: 700; color: #0f172a;">{{ b.matricule }}</td>
+                <td style="font-weight: 700; color: #0f172a;">{{ b.employeeName }}</td>
+                <td style="font-size: 11px; font-weight: 700; color: #1e3a8a;">{{ b.grade }}</td>
+                <td style="text-align: right; font-weight: 600;">{{ (b.salaireBase || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #15803d; font-weight: 600;">{{ (b.totalIndemnites || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; font-weight: 700; background: #f8fafc; color: #0f172a;">{{ (b.salaireBrut || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #b91c1c;">{{ (b.cotisationCNSS || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #475569;">{{ (b.partPatronaleCnss || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; font-weight: 600; background: #f8fafc; color: #0f172a;">{{ (b.baseImposable || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: center; font-weight: 800; color: #0284c7;">{{ b.nombreCharges || 0 }}</td>
+                <td style="text-align: right; color: #b91c1c;">{{ (b.impotIUTS || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; font-weight: 600; color: #15803d;">{{ (b.salaireNetBrut || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #b91c1c;">{{ (b.autresRetenues || 0) > 0 ? ((b.autresRetenues) | number:'1.0-0') : '' }}</td>
+                <td style="text-align: right; font-weight: 700; color: #991b1b; background: #fef2f2;">{{ (b.totalRetenues || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; font-weight: 800; font-size: 12.5px; background: #f0fdf4; color: #166534;">{{ (b.salaireNet || 0) | number:'1.0-0' }}</td>
 
                 <!-- Données Comparatives M-1 vs M -->
                 @if (modeComparatifMminus1) {
-                  <td style="font-weight: 600; color: #64748b; background: #fffbeb;">
-                    {{ b.salaireNetM1 | number:'1.0-0' }} FCFA
+                  <td style="font-weight: 600; color: #64748b; background: #fffbeb; text-align: right; white-space: nowrap;">
+                    {{ b.salaireNetM1 | number:'1.0-0' }}
                   </td>
-                  <td style="font-weight: 800; background: #f0fdf4;">
+                  <td style="font-weight: 800; background: #f0fdf4; text-align: right; white-space: nowrap;">
                     <span [style.color]="b.ecartNet >= 0 ? '#166534' : '#991b1b'">
-                      {{ b.ecartNet >= 0 ? '+' : '' }}{{ b.ecartNet | number:'1.0-0' }} FCFA
+                      {{ b.ecartNet >= 0 ? '+' : '' }}{{ b.ecartNet | number:'1.0-0' }}
                     </span>
                   </td>
                 }

@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { EmployeeService } from '../../../grh/employes/services/employee.service';
 import { Employee } from '../../../grh/employes/models/employee.model';
-import { calculateOfficialIUTS } from '../../../../core/utils/iuts-calculator.utils';
+import { calculateOfficialIUTS, computeEmployeeFamilyCharges } from '../../../../core/utils/iuts-calculator.utils';
+import { DbRefService } from '../../../donnees-base/services/db-ref.service';
 
 @Component({
   selector: 'app-generer-bulletins',
@@ -38,11 +39,24 @@ export class GenererBulletinsComponent implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
     this.lancerCalculPaie();
+
+    // S'abonner aux mises à jour automatiques des employés (ex: ajout enfant, conjoint, changement salaire)
+    this.employeeService.employees$.subscribe(list => {
+      if (list && list.length > 0) {
+        this.genererBulletinsDepuisEmployees(list);
+      }
+    });
+
+    // S'abonner aux mises à jour automatiques des données de référence (Grille, Indemnités, Prise en charge)
+    this.dbRefService.refChanges$.subscribe(() => {
+      this.genererBulletinsDepuisEmployees();
+    });
   }
 
   changerMois(delta: number): void {
@@ -64,23 +78,18 @@ export class GenererBulletinsComponent implements OnInit {
 
   lancerCalculPaie(): void {
     this.isCalculating = true;
-    this.http.get<any[]>(`${environment.apiUrl}/paie/calculer-tous`).subscribe({
-      next: (data) => {
-        if (data && data.length > 0) {
-          this.bulletins = this.adapterBulletinsSelonSession(data);
-          this.restaurerSessionState();
-          this.isCalculating = false;
-        } else {
-          this.genererBulletinsDepuisEmployees();
-        }
-      },
-      error: () => {
-        this.genererBulletinsDepuisEmployees();
-      }
-    });
+    this.genererBulletinsDepuisEmployees();
   }
 
-  private genererBulletinsDepuisEmployees(): void {
+  private genererBulletinsDepuisEmployees(employeeList?: Employee[]): void {
+    if (employeeList && employeeList.length > 0) {
+      const calculated = employeeList.map(emp => this.buildBulletinFromEmployee(emp));
+      this.bulletins = this.adapterBulletinsSelonSession(calculated);
+      this.restaurerSessionState();
+      this.isCalculating = false;
+      return;
+    }
+
     this.employeeService.getAll().subscribe(employees => {
       const list = (employees && employees.length > 0) ? employees : [];
       const calculated = list.map(emp => this.buildBulletinFromEmployee(emp));
@@ -88,6 +97,32 @@ export class GenererBulletinsComponent implements OnInit {
       this.restaurerSessionState();
       this.isCalculating = false;
     });
+  }
+
+  private computeGradeCode(emp: any): string {
+    if (emp.grade && emp.grade !== 'Grade I' && emp.grade !== 'GRADE I' && emp.grade.includes('E')) {
+      return emp.grade;
+    }
+    let cat = (emp.categoriePro || emp.categorie || 'C1').toUpperCase().trim();
+    if (cat.includes('CLASSE VIII') || cat.includes('CL8') || cat === '8') cat = 'CL8';
+    else if (cat.includes('CLASSE VII') || cat.includes('CL7') || cat === '7') cat = 'CL7';
+    else if (cat.includes('CLASSE VI') || cat.includes('CL6') || cat === '6') cat = 'CL6';
+    else if (cat.includes('CLASSE V') || cat.includes('CL5') || cat === '5') cat = 'C5';
+    else if (cat.includes('CLASSE IV') || cat.includes('CL4') || cat === '4') cat = 'C4';
+    else if (cat.includes('CLASSE III') || cat.includes('CL3') || cat === '3') cat = 'C3';
+    else if (cat.includes('CLASSE II') || cat.includes('CL2') || cat === '2') cat = 'CL2';
+    else if (cat.includes('CLASSE I') || cat.includes('CL1') || cat === '1') cat = 'CL1';
+    else cat = cat.replace('CLASSE ', 'C').replace(/\s+/g, '');
+
+    let ech = (emp.echelon || 'E01').toUpperCase().trim();
+    const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(num)) {
+      ech = num < 10 ? `E0${num}` : `E${num}`;
+    } else {
+      ech = 'E01';
+    }
+
+    return `${cat}${ech}`;
   }
 
   private buildBulletinFromEmployee(emp: Employee): any {
@@ -107,26 +142,38 @@ export class GenererBulletinsComponent implements OnInit {
       });
     }
 
-    const nCharges = (emp.enfants?.length || 0) + (emp.conjoint ? 1 : 0);
+    const pecParams = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : undefined;
+    const nCharges = computeEmployeeFamilyCharges(emp, pecParams);
+    const computedGrade = this.computeGradeCode(emp);
 
     const calc = calculateOfficialIUTS(sBase, indemnitesList, {
       vehiculeFourni: emp.vehiculeFourni,
       logementFourni: emp.logementFourni,
-      nombreChargesFamille: nCharges
+      nombreChargesFamille: nCharges,
+      inclureFSP: true,
+      inclureCRRAE: true
     });
+
+    const partPatronaleCnss = Math.round(calc.remunerationTotale * 0.16);
+    const autresRetenues = (calc.fondsSoutienPat || 0) + (calc.crrae || 0);
 
     return {
       employeeId: emp.id,
-      employeeName: `${emp.prenom} ${emp.nom}`.trim(),
+      employeeName: `${emp.nom || ''} ${emp.prenom || ''}`.trim().toUpperCase() || 'COLLABORATEUR',
       matricule: emp.matricule,
       fonction: emp.fonction || emp.poste || emp.service || 'Agent',
-      grade: emp.grade || 'GRADE I',
+      grade: computedGrade,
       categorie: emp.categoriePro || 'CLASSE I',
       salaireBase: calc.salaireBase,
       totalIndemnites: calc.totalIndemnites,
       salaireBrut: calc.remunerationTotale,
       cotisationCNSS: calc.cotisationCNSS,
+      partPatronaleCnss,
+      baseImposable: calc.baseImposable,
+      nombreCharges: nCharges,
       impotIUTS: calc.iutsNet,
+      salaireNetBrut: Math.max(0, calc.remunerationTotale - calc.cotisationCNSS - calc.iutsNet),
+      autresRetenues,
       totalRetenues: calc.totalRetenues,
       salaireNet: calc.salaireNet,
       indemnitesDetails: indemnitesList.map(i => ({ typeIndemnite: i.libelle, montant: i.montant }))
@@ -189,13 +236,21 @@ export class GenererBulletinsComponent implements OnInit {
 
       // Recalcul avec le barème officiel IUTS
       const indList = indemnites.map(i => ({ libelle: i.typeIndemnite, montant: i.montant }));
-      const calc = calculateOfficialIUTS(baseSal, indList, {});
+      const calc = calculateOfficialIUTS(baseSal, indList, {
+        nombreChargesFamille: copy.nombreCharges || 0,
+        inclureFSP: true,
+        inclureCRRAE: true
+      });
 
       copy.indemnitesDetails = indemnites;
       copy.totalIndemnites = calc.totalIndemnites;
       copy.salaireBrut = calc.remunerationTotale;
       copy.cotisationCNSS = calc.cotisationCNSS;
+      copy.partPatronaleCnss = Math.round(calc.remunerationTotale * 0.16);
+      copy.baseImposable = calc.baseImposable;
       copy.impotIUTS = calc.iutsNet;
+      copy.salaireNetBrut = Math.max(0, calc.remunerationTotale - calc.cotisationCNSS - calc.iutsNet);
+      copy.autresRetenues = (calc.fondsSoutienPat || 0) + (calc.crrae || 0);
       copy.totalRetenues = calc.totalRetenues;
       copy.salaireNet = calc.salaireNet;
 

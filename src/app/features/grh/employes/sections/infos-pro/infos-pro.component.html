@@ -178,20 +178,36 @@
           </mat-form-field>
         </div>
 
-        <p class="form-section-label">Avantages en nature</p>
-        <div style="display:flex; gap:16px; flex-wrap:wrap; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:16px;">
-          <mat-checkbox formControlName="vehiculeFourni" color="primary">
-            <div style="display:flex; flex-direction:column; gap:2px;">
-              <span style="font-weight:600; font-size:14px;">🚗 Véhicule de fonction fourni</span>
-              <span style="font-size:11px; color:#64748b;">L'indemnité de transport sera exclue du calcul IUTS</span>
-            </div>
-          </mat-checkbox>
-          <mat-checkbox formControlName="logementFourni" color="primary">
-            <div style="display:flex; flex-direction:column; gap:2px;">
-              <span style="font-weight:600; font-size:14px;">🏠 Logement de fonction fourni</span>
-              <span style="font-size:11px; color:#64748b;">L'indemnité de logement sera exclue du calcul IUTS</span>
-            </div>
-          </mat-checkbox>
+
+        <p class="form-section-label">Paramétrage retraite</p>
+        <div class="form-grid-2" style="margin-bottom:16px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Groupe de retraite</mat-label>
+            <mat-select formControlName="groupeRetraiteId">
+              <mat-option [value]="null">— Non défini —</mat-option>
+              @for (param of parametragesRetraite; track param.id) {
+                <mat-option [value]="param.id">
+                  <span style="font-weight:600;">{{ param.code || param.libelle }}</span>
+                  <span style="color:#64748b; font-size:12px; margin-left:8px;">
+                    — {{ param.ageRetraite || param.taux || param.montant }} ans
+                  </span>
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix style="color:#0060B3;">elderly</mat-icon>
+            <mat-hint>
+              @if (form.get('groupeRetraiteId')?.value) {
+                @for (param of parametragesRetraite; track param.id) {
+                  @if (String(param.id) === String(form.get('groupeRetraiteId')?.value)) {
+                    Âge de départ : <strong>{{ param.ageRetraite || param.taux || param.montant }} ans</strong>
+                    @if (param.description) { — {{ param.description }} }
+                  }
+                }
+              } @else {
+                Sélectionnez le groupe pour définir l'âge de retraite
+              }
+            </mat-hint>
+          </mat-form-field>
         </div>
 
         <p class="form-section-label">Mode de paiement & Coordonnées bancaires</p>

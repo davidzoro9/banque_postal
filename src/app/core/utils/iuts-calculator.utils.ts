@@ -4,11 +4,87 @@ export interface IndemniteDetailInput {
   type?: 'logement' | 'transport' | 'fonction' | 'autre';
 }
 
+/**
+ * Calculateur du nombre de charges de famille admises pour la réduction IUTS.
+ * - Conjoint : +1 charge si le conjoint est coché comme sans emploi (!conjoint.travail).
+ * - Enfants : +1 charge par enfant si âge < 18 ans (ou < 20 ans si scolarisé/études, ou invalide).
+ * - Personnes à charge : +1 charge par personne enregistrée.
+ * - Plafond max : 4 charges max (CGI Burkina Faso).
+ */
+export function computeEmployeeFamilyCharges(
+  emp: any,
+  optionsOrAgeMaxStd?: { ageMaxStd?: number; ageMaxEtud?: number; maxCap?: number; conjointActif?: boolean } | number,
+  ageMaxEtudParam = 20,
+  maxCapParam = 4
+): number {
+  if (!emp) return 0;
+
+  let ageMaxStd = 18;
+  let ageMaxEtud = ageMaxEtudParam;
+  let maxCap = maxCapParam;
+  let conjointActif = true;
+
+  if (typeof optionsOrAgeMaxStd === 'object' && optionsOrAgeMaxStd !== null) {
+    if (optionsOrAgeMaxStd.ageMaxStd != null) ageMaxStd = optionsOrAgeMaxStd.ageMaxStd;
+    if (optionsOrAgeMaxStd.ageMaxEtud != null) ageMaxEtud = optionsOrAgeMaxStd.ageMaxEtud;
+    if (optionsOrAgeMaxStd.maxCap != null) maxCap = optionsOrAgeMaxStd.maxCap;
+    if (optionsOrAgeMaxStd.conjointActif != null) conjointActif = optionsOrAgeMaxStd.conjointActif;
+  } else if (typeof optionsOrAgeMaxStd === 'number') {
+    ageMaxStd = optionsOrAgeMaxStd;
+  }
+
+  // 1. Conjoint non-salarié
+  let conjointCharge = 0;
+  if (conjointActif && emp.conjoint && (emp.conjoint.nom || emp.conjoint.prenom || emp.conjoint.telephone)) {
+    if (!emp.conjoint.travail) {
+      conjointCharge = 1;
+    }
+  }
+
+  // 2. Enfants
+  let enfantsCharges = 0;
+  const now = new Date();
+
+  (emp.enfants || []).forEach((enf: any) => {
+    let age = 0;
+    if (enf.dateNaissance) {
+      const birth = new Date(enf.dateNaissance);
+      if (!isNaN(birth.getTime())) {
+        age = now.getFullYear() - birth.getFullYear();
+        const m = now.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+          age--;
+        }
+      }
+    }
+
+    const st = (enf.status || '').toLowerCase();
+    let maxAge = ageMaxStd;
+    let isInvalide = st.includes('invalide');
+
+    if (st.includes('etude') || st.includes('scolaris') || st.includes('20') || st.includes('25')) {
+      maxAge = ageMaxEtud;
+    }
+
+    if (isInvalide || (age < maxAge)) {
+      enfantsCharges++;
+    }
+  });
+
+  // 3. Autres personnes à charge
+  const autres = (emp.personnesCharge?.length || 0);
+
+  const rawTotal = conjointCharge + enfantsCharges + autres;
+  return Math.min(maxCap, rawTotal);
+}
+
 export interface OfficialPayrollCalculation {
   salaireBase: number;
   totalIndemnites: number;
   remunerationTotale: number; // Brut à ordonnancer
   cotisationCNSS: number;      // 5.5% de la rémunération totale
+  fondsSoutienPat: number;     // 1% du brut (FSP Burkina Faso)
+  crrae: number;               // Retraite complémentaire bancaire (ex: 5% du salaire de base)
   salaireBrut: number;         // Remunération totale - CNSS
   
   // Abattements et Exonérations (Loi MINEFID Burkina Faso)
@@ -29,8 +105,8 @@ export interface OfficialPayrollCalculation {
   iutsNet: number;               // iutsBrut - reductionFamilleMontant
 
   // Totaux & Net
-  totalRetenues: number;         // CNSS + iutsNet
-  salaireNet: number;            // RemunérationTotale - CNSS - iutsNet
+  totalRetenues: number;         // CNSS + iutsNet + fondsSoutienPat + crrae
+  salaireNet: number;            // RemunérationTotale - totalRetenues
 }
 
 /**
@@ -45,6 +121,9 @@ export function calculateOfficialIUTS(
     logementFourni?: boolean;
     nombreChargesFamille?: number;
     tauxAbattementBase?: number; // Défaut 20% (Article 111 CGI Burkina)
+    inclureFSP?: boolean;        // Fond de Soutien Patriotique (1% du brut)
+    inclureCRRAE?: boolean;      // Retraite complémentaire (5% du salaire de base)
+    tauxCrrae?: number;
   } = {}
 ): OfficialPayrollCalculation {
   const sBase = Math.max(0, salaireBase || 0);
@@ -68,6 +147,10 @@ export function calculateOfficialIUTS(
 
   // 2. Cotisation sociale CNSS (5.5%)
   const cotisationCNSS = Math.round(remunerationTotale * 0.055);
+
+  // Retenues additionnelles (FSP & CRRAE)
+  const fondsSoutienPat = options.inclureFSP ? Math.round(remunerationTotale * 0.01) : 0;
+  const crrae = options.inclureCRRAE ? Math.round(sBase * (options.tauxCrrae || 0.05)) : 0;
 
   // 3. Salaire Brut (SB = Rémunération Totale - CNSS)
   const salaireBrut = Math.max(0, remunerationTotale - cotisationCNSS);
@@ -145,7 +228,7 @@ export function calculateOfficialIUTS(
   const iutsNet = Math.max(0, iutsBrut - reductionFamilleMontant);
 
   // 9. Totaux et Net à payer
-  const totalRetenues = cotisationCNSS + iutsNet;
+  const totalRetenues = cotisationCNSS + iutsNet + fondsSoutienPat + crrae;
   const salaireNet = Math.max(0, remunerationTotale - totalRetenues);
 
   return {
@@ -153,6 +236,8 @@ export function calculateOfficialIUTS(
     totalIndemnites,
     remunerationTotale,
     cotisationCNSS,
+    fondsSoutienPat,
+    crrae,
     salaireBrut,
     abattementForfaitaire,
     exoLogement,

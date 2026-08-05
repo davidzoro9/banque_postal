@@ -294,10 +294,14 @@
             </ng-container>
 
             <ng-container matColumnDef="taux">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'type-retenue-emploi' ? 'Taux / Pourcentage (%)' : (type === 'param-retraite' ? 'Âge de retraite (Ans)' : 'Taux (FCFA)') }}</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ type === 'param-prise-en-charge' ? 'Valeur / Limite' : (type === 'type-retenue-emploi' ? 'Taux / Pourcentage (%)' : (type === 'param-retraite' ? 'Âge de retraite (Ans)' : 'Taux (FCFA)')) }}</th>
               <td mat-cell *matCellDef="let row">
-                <span style="font-weight: 700; color: #2e7d32; font-size: 13px;">
-                  @if (type === 'type-retenue-emploi') {
+                <span style="font-weight: 700; color: #0060b3; font-size: 13px;">
+                  @if (type === 'param-prise-en-charge') {
+                    <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 12px;">
+                      {{ row.code === 'PEC-CONJOINT' ? (row.taux === 1 ? '1 charge (+1)' : 'Désactivé (0)') : (row.code === 'PEC-MAX-CHRG' ? row.taux + ' charges max' : row.taux + ' ans max') }}
+                    </span>
+                  } @else if (type === 'type-retenue-emploi') {
                     {{ row.taux && row.taux > 0 ? row.taux + ' %' : (row.description?.includes('Barème') ? 'Barème Progressif' : (row.description?.includes('Variable') ? 'Montant Variable' : 'Mensualité Fixe')) }}
                   } @else if (type === 'param-retraite') {
                     {{ row.taux || 60 }} ans
@@ -331,6 +335,18 @@
               <td mat-cell *matCellDef="let row">
                 <span style="font-weight: 700; color: #0060B3; background: #e3f2fd; padding: 4px 10px; border-radius: 12px;">
                   {{ row.tauxAbattement ?? 20 }} %
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="typeNomination">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+              <td mat-cell *matCellDef="let row">
+                <span [style.background]="row.typeNomination === 'NOMMEE' ? '#fff3e0' : '#e8f5e9'"
+                      [style.color]="row.typeNomination === 'NOMMEE' ? '#e65100' : '#2e7d32'"
+                      style="font-weight: 700; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                  <mat-icon style="font-size:14px;width:14px;height:14px;">{{ row.typeNomination === 'NOMMEE' ? 'workspace_premium' : 'person' }}</mat-icon>
+                  {{ row.typeNomination === 'NOMMEE' ? 'Nommée' : 'Pas nommée' }}
                 </span>
               </td>
             </ng-container>
@@ -548,7 +564,83 @@
           • <em>Agent avec Fonction</em> : l'indemnité liée à la <strong>Fonction</strong> prévaut et <strong>ne se cumule pas</strong> avec l'indemnité liée à l'emploi.
         </div>
       </div>
+    } @else if (type === 'fonction') {
+      <!-- ─── FORMULAIRE SPÉCIFIQUE POUR LES FONCTIONS ──────────────────────── -->
+      <!-- Sélecteur du Type de Nomination -->
+      <div style="margin-bottom: 4px;">
+        <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 10px;">
+          <mat-icon style="vertical-align: middle; font-size: 16px; color: #0060B3; margin-right: 4px;">badge</mat-icon>
+          Type de fonction
+        </label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" formGroupName="">
+          <!-- Option : Pas Nommée -->
+          <label [class.selected-type]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE'"
+                 (click)="formGroup.patchValue({ typeNomination: 'NON_NOMMEE' })"
+                 style="display: flex; align-items: center; gap: 10px; border: 2px solid; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;"
+                 [style.borderColor]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#2e7d32' : '#e2e8f0'"
+                 [style.background]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#e8f5e9' : '#f8fafc'">
+            <mat-icon [style.color]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#2e7d32' : '#94a3b8'"
+                      style="font-size: 28px; width: 28px; height: 28px;">person</mat-icon>
+            <div>
+              <div style="font-weight: 700; font-size: 13px;" [style.color]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#2e7d32' : '#374151'">Pas Nommée</div>
+              <div style="font-size: 11px; color: #6b7280;">Agent, Employé, Technicien, Cadre...</div>
+            </div>
+          </label>
+          <!-- Option : Nommée -->
+          <label [class.selected-type]="formGroup.get('typeNomination')?.value === 'NOMMEE'"
+                 (click)="formGroup.patchValue({ typeNomination: 'NOMMEE' })"
+                 style="display: flex; align-items: center; gap: 10px; border: 2px solid; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;"
+                 [style.borderColor]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#e65100' : '#e2e8f0'"
+                 [style.background]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#fff3e0' : '#f8fafc'">
+            <mat-icon [style.color]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#e65100' : '#94a3b8'"
+                      style="font-size: 28px; width: 28px; height: 28px;">workspace_premium</mat-icon>
+            <div>
+              <div style="font-weight: 700; font-size: 13px;" [style.color]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#e65100' : '#374151'">Nommée</div>
+              <div style="font-size: 11px; color: #6b7280;">Chef, Directeur, Responsable...</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Code (Référence)</mat-label>
+          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">tag</mat-icon>
+          <input matInput formControlName="code" placeholder="Ex: FCT-001">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Libellé / Désignation</mat-label>
+          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">work</mat-icon>
+          <input matInput formControlName="libelle" placeholder="Ex: Chef d'Agence, Directeur de Département...">
+          @if (formGroup.get('libelle')?.hasError('maxlength')) {
+            <mat-error>Le libellé ne doit pas dépasser 150 caractères</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Description / Remarques</mat-label>
+        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">notes</mat-icon>
+        <textarea matInput formControlName="description" rows="2" placeholder="Description de la fonction et du rôle..."></textarea>
+      </mat-form-field>
+
+      <!-- Bandeau d'information -->
+      <div [style.background]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#fff3e0' : '#e8f5e9'"
+           [style.borderColor]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#ffe082' : '#a5d6a7'"
+           style="border: 1px solid; border-radius: 8px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px; font-size: 12px;">
+        <mat-icon [style.color]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#f57c00' : '#388e3c'"
+                  style="font-size: 18px; width: 18px; height: 18px; margin-top: 2px;">info</mat-icon>
+        <div [style.color]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#795548' : '#2e7d32'">
+          @if (formGroup.get('typeNomination')?.value === 'NOMMEE') {
+            <strong>Fonction Nommée :</strong> Un acte de nomination est obligatoire. L'employé bénéficiera des indemnités de fonction liées à ce poste.
+          } @else {
+            <strong>Fonction Pas Nommée :</strong> Poste standard sans acte de nomination formel. Les indemnités sont calculées sur la base de la catégorie professionnelle.
+          }
+        </div>
+      </div>
     } @else if (type === 'grade') {
+
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Désignation du Groupe</mat-label>
         <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">military_tech</mat-icon>
@@ -585,6 +677,7 @@
       </mat-form-field>
     } @else if (type === 'param-retraite') {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Groupe d'emploi</mat-label>
           <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
@@ -674,7 +767,21 @@
             }
           </mat-select>
         </mat-form-field>
-      } @else {
+      }
+
+      @if (type === 'param-prise-en-charge') {
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Valeur / Limite (Âge max ou nombre de charges)</mat-label>
+          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">tune</mat-icon>
+          <input matInput type="number" formControlName="taux" placeholder="Ex: 18, 20 ou 4" min="0" max="100">
+          <mat-hint>Entrer l'âge maximum pour les enfants ou le nombre max de charges admises</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Description / Remarques</mat-label>
+          <textarea matInput formControlName="description" rows="2" placeholder="Description de la règle..."></textarea>
+        </mat-form-field>
+      } @else if (type !== 'departement' && type !== 'direction') {
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Description</mat-label>
           <textarea matInput formControlName="description" rows="3" placeholder="Description de l'élément..."></textarea>

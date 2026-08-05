@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
@@ -25,6 +25,7 @@ export interface RefItem {
   tauxExoneration?: number; // pour Paramétrage indemnité (% Exonéré)
   plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
   categories?: string[];    // pour Groupe (Liste des codes de catégories rattachées)
+  typeNomination?: string;  // pour Fonction : 'NOMMEE' ou 'NON_NOMMEE'
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
@@ -35,6 +36,34 @@ const BACKEND_MAP: Record<string, {
   toBack: (item: RefItem) => any;
   toBackUpdate: (item: RefItem) => any;
 }> = {
+  'grille-salariale': {
+    segment: 'grillesalariale',
+    getAllPath: '',
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.category || dto.code || 'C1',
+      libelle: `Cat. ${dto.category || ''} - ${dto.echellon || ''}`,
+      categorie: dto.category || dto.code,
+      echellon: dto.echellon,
+      echelle: dto.echelle,
+      montant: dto.basicSalary != null ? Number(dto.basicSalary) : 0,
+      description: `Base: ${dto.basicSalary || 0} FCFA`,
+      actif: true
+    }),
+    toBack: item => ({
+      category: item.categorie || item.code,
+      echellon: item.echellon,
+      echelle: item.echelle,
+      basicSalary: item.montant || 0
+    }),
+    toBackUpdate: item => ({
+      id: item.id ? Number(item.id) : null,
+      category: item.categorie || item.code,
+      echellon: item.echellon,
+      echelle: item.echelle,
+      basicSalary: item.montant || 0
+    })
+  },
   'emploi': {
     segment: 'emplois',
     getAllPath: '/all',
@@ -109,9 +138,34 @@ const BACKEND_MAP: Record<string, {
   'fonction': {
     segment: 'fonctions',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code || `FCT-${dto.id}`, libelle: dto.name || dto.libelle || dto.code || 'Fonction', description: dto.description || '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+    toFront: dto => {
+      const name = (dto.name || dto.libelle || '').toLowerCase();
+      const isNommee = dto.typeNomination === 'NOMMEE' ||
+        ['directeur', 'responsable', 'chef', 'caissier', 'cash point', 'chauffeur', 'assistante', 'liaison'].some(k => name.includes(k));
+      return {
+        id: String(dto.id),
+        code: dto.code || `FCT-${dto.id}`,
+        libelle: dto.name || dto.libelle || dto.code || 'Fonction',
+        description: dto.description || '',
+        actif: dto.actif ?? true,
+        typeNomination: dto.typeNomination || (isNommee ? 'NOMMEE' : 'NON_NOMMEE')
+      };
+    },
+    toBack:  item => ({
+      code: item.code,
+      name: item.libelle,
+      description: item.description || '',
+      typeNomination: item.typeNomination || 'NON_NOMMEE',
+      actif: item.actif ?? true
+    }),
+    toBackUpdate: item => ({
+      id: item.id,
+      code: item.code,
+      name: item.libelle,
+      description: item.description || '',
+      typeNomination: item.typeNomination || 'NON_NOMMEE',
+      actif: item.actif ?? true
+    }),
   },
   'type-contrat': {
     segment: 'typecontrat',
@@ -246,15 +300,15 @@ function buildOfficialGridItems(): RefItem[] {
 // ─── Données mock pour les types sans backend ────────────────────────────────
 const MOCK_DATA: Record<string, RefItem[]> = {
   'type-indemnite': [
-    { code: 'TI-LOG',  libelle: 'Indemnité de logement',       description: 'Indemnité destinée à couvrir les frais de logement',           tauxExoneration: 20,  plafondExoneration: 70000, actif: true },
-    { code: 'TI-TPT',  libelle: 'Indemnité de transport',       description: 'Indemnité destinée à couvrir les frais de déplacement',        tauxExoneration: 0,   plafondExoneration: 70000, actif: true },
-    { code: 'TI-SUJ',  libelle: 'Indemnité de Sujétion',       description: 'Indemnité pour contraintes spécifiques de poste',              tauxExoneration: 100, plafondExoneration: 0,     actif: true },
-    { code: 'TI-FCT',  libelle: 'Indemnité de fonction',        description: 'Indemnité liée à la fonction de nomination',                    tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
-    { code: 'TI-CMP',  libelle: 'Indemnité compensatrice',      description: 'Indemnité pour sujétions ou contraintes particulières',        tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
-    { code: 'TI-CSA',  libelle: 'Indemnité de caisse',          description: 'Indemnité pour gestion de fonds (Caissiers/Cash Point)',      tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
-    { code: 'TI-ASTR', libelle: "Indemnité d'astreinte",        description: 'Indemnité pour disponibilité hors horaires normaux',           tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
-    { code: 'TI-REPR', libelle: 'Indemnité de représentation',  description: 'Indemnité pour frais de représentation institutionnelle',      tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
-    { code: 'TI-NOM',  libelle: 'Indemnité de nomination',      description: 'Indemnité globale pour une nomination à un poste de responsabilité', tauxExoneration: 0, plafondExoneration: 0, actif: true }
+    { code: 'TI-LOG',  libelle: 'Indemnité de logement',       description: 'Indemnité destinée à couvrir les frais de logement (Taux 20%, Plafond 75 000 FCFA)', tauxExoneration: 20,  plafondExoneration: 75000, actif: true },
+    { code: 'TI-TPT',  libelle: 'Indemnité de transport',       description: 'Indemnité destinée à couvrir les frais de déplacement (Taux 5%, Plafond 30 000 FCFA)', tauxExoneration: 5,   plafondExoneration: 30000, actif: true },
+    { code: 'TI-FCT',  libelle: 'Indemnité de fonction',        description: 'Indemnité liée à la fonction de nomination (Taux 5%, Plafond 50 000 FCFA)',            tauxExoneration: 5,   plafondExoneration: 50000, actif: true },
+    { code: 'TI-SUJ',  libelle: 'Indemnité de Sujétion',       description: 'Indemnité pour contraintes spécifiques de poste',                                      tauxExoneration: 100, plafondExoneration: 0,     actif: true },
+    { code: 'TI-CMP',  libelle: 'Indemnité compensatrice',      description: 'Indemnité pour sujétions ou contraintes particulières',                                tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-CSA',  libelle: 'Indemnité de caisse',          description: 'Indemnité pour gestion de fonds (Caissiers/Cash Point)',                              tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-ASTR', libelle: "Indemnité d'astreinte",        description: 'Indemnité pour disponibilité hors horaires normaux',                                   tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-REPR', libelle: 'Indemnité de représentation',  description: 'Indemnité pour frais de représentation institutionnelle',                              tauxExoneration: 0,   plafondExoneration: 0,     actif: true },
+    { code: 'TI-NOM',  libelle: 'Indemnité de nomination',      description: 'Indemnité globale pour une nomination à un poste de responsabilité',                 tauxExoneration: 0,   plafondExoneration: 0,     actif: true }
   ],
   'type-retenue-employe': [
     { code: 'TR-PATRONALE', libelle: 'Part Employeur',                     description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
@@ -284,6 +338,12 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { code: 'RET-GRP-2', grade: 'GROUPE II',  libelle: 'GROUPE II',  taux: 60, description: 'GROUPE II : Agents de Maîtrise & Cadres Moyens (60 ans)', actif: true },
     { code: 'RET-GRP-3', grade: 'GROUPE III', libelle: 'GROUPE III', taux: 60, description: 'GROUPE III : Cadres & Cadres Supérieurs (60 ans)', actif: true },
     { code: 'RET-GRP-4', grade: 'GROUPE IV',  libelle: 'GROUPE IV',  taux: 63, description: 'GROUPE IV : Hors Catégorie & Médecins / Spécialistes (63 ans)', actif: true }
+  ],
+  'param-prise-en-charge': [
+    { code: 'PEC-AGE-STD',  libelle: 'Âge Max Enfant Standard',             taux: 18, description: 'Âge limite légal pour enfant mineur à charge (strictement inférieur à 18 ans)', actif: true },
+    { code: 'PEC-AGE-ETUD', libelle: 'Âge Max Enfant Étudiant / Scolarisé',  taux: 20, description: 'Âge limite pour enfant poursuivant des études (strictement inférieur à 20 ans)', actif: true },
+    { code: 'PEC-CONJOINT', libelle: 'Prise en Charge Conjoint Non-Salarié', taux: 1,  description: 'Accorder +1 charge de famille si le conjoint est sans emploi / ne travaille pas', actif: true },
+    { code: 'PEC-MAX-CHRG', libelle: 'Nombre de Charges Max Autorisées',    taux: 4,  description: 'Plafond maximum de charges fiscales admises pour la réduction IUTS (Burkina Faso)', actif: true }
   ],
   'type-contrat': [
     { code: 'CDI',   libelle: 'Contrat Durée Indéterminée (CDI)', description: 'Contrat de travail à durée indéterminée', actif: true },
@@ -329,23 +389,25 @@ const MOCK_DATA: Record<string, RefItem[]> = {
     { id: '9', code: 'EMP-009', libelle: 'Auditeur Interne & Contrôleur de Gestion', description: 'Évaluation des risques bancaires et contrôle de conformité', actif: true }
   ],
   'fonction': [
-    { id: '1',  code: 'FCT-001', libelle: 'Directeur Général (DG)',                   description: 'Nomination Direction Générale', actif: true },
-    { id: '2',  code: 'FCT-002', libelle: 'Directeur de Département',                 description: 'Nomination Direction / Management Département', actif: true },
-    { id: '3',  code: 'FCT-003', libelle: 'Responsable de Département',               description: 'Nomination Responsable Département', actif: true },
-    { id: '4',  code: 'FCT-004', libelle: 'Chef de Service',                          description: 'Nomination Chef de Service opérationnel', actif: true },
-    { id: '5',  code: 'FCT-005', libelle: "Chef d'Agence",                             description: 'Nomination Chef d\'Agence / Unité', actif: true },
-    { id: '6',  code: 'FCT-006', libelle: 'Caissier Principal',                       description: 'Nomination Caissier Principal (Coffre & Caisses)', actif: true },
-    { id: '7',  code: 'FCT-007', libelle: 'Gestionnaire Cash Point',                  description: 'Nomination Gestionnaire Points de Retrait & Monétique', actif: true },
-    { id: '8',  code: 'FCT-008', libelle: 'Caissier Auxiliaire',                      description: 'Nomination Caissier Auxiliaire', actif: true },
-    { id: '9',  code: 'FCT-009', libelle: 'Assistante de Direction',                  description: 'Nomination Secrétariat / Assistante DG/Direction', actif: true },
-    { id: '10', code: 'FCT-010', libelle: 'Agent de Liaison',                         description: 'Nomination Courrier et Liaison institutionnelle', actif: true },
-    { id: '11', code: 'FCT-011', libelle: 'Chauffeur',                                description: 'Nomination Conducteur de véhicule de service', actif: true },
-    { id: '12', code: 'FCT-012', libelle: 'Directeur des Ressources Humaines (DRH)',    description: 'Nomination Direction RH', actif: true },
-    { id: '13', code: 'FCT-013', libelle: 'Directeur des Opérations Bancaires (DOB)',   description: 'Nomination Exploitation Bancaire', actif: true },
-    { id: '14', code: 'FCT-014', libelle: 'Responsable Monétique & Cash Point',        description: 'Nomination Chef de Service Monétique', actif: true },
-    { id: '15', code: 'FCT-015', libelle: 'Responsable Paie & Administration',        description: 'Nomination Chef de Service Paie', actif: true },
-    { id: '16', code: 'FCT-016', libelle: 'Directeur Système d\'Information (DSI)',   description: 'Nomination Direction SI', actif: true },
-    { id: '17', code: 'FCT-017', libelle: 'Responsable Conformité & Risques',         description: 'Nomination Contrôle Interne & Risques', actif: true }
+    // ─── FONCTIONS NON NOMMÉES (postes généraux sans acte de nomination) ───────
+    { id: '1',  code: 'FCT-001', libelle: 'Agent',                          description: 'Agent d\'exécution — Poste de base non nommé',                typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '2',  code: 'FCT-002', libelle: 'Employé',                        description: 'Employé polyvalent — Poste standard non nommé',               typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '3',  code: 'FCT-003', libelle: 'Technicien Opérationnel',        description: 'Technicien d\'exploitation opérationnelle — Non nommé',       typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '4',  code: 'FCT-004', libelle: 'Agent de Maîtrise',              description: 'Agent de maîtrise technique — Non nommé',                     typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '5',  code: 'FCT-005', libelle: 'Cadre Moyen',                    description: 'Cadre de niveau intermédiaire — Non nommé',                   typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '6',  code: 'FCT-006', libelle: 'Cadre',                          description: 'Cadre professionnel — Non nommé',                             typeNomination: 'NON_NOMMEE', actif: true },
+    { id: '7',  code: 'FCT-007', libelle: 'Cadre Supérieur',                description: 'Cadre de haut niveau — Non nommé',                           typeNomination: 'NON_NOMMEE', actif: true },
+    // ─── FONCTIONS NOMMÉES (acte de nomination obligatoire) ──────────────────
+    { id: '8',  code: 'FCT-008', libelle: 'Directeur de Département',       description: 'Nomination Direction / Management Département',               typeNomination: 'NOMMEE', actif: true },
+    { id: '9',  code: 'FCT-009', libelle: 'Responsable de Département',     description: 'Nomination Responsable Département',                         typeNomination: 'NOMMEE', actif: true },
+    { id: '10', code: 'FCT-010', libelle: 'Chef de Service',                description: 'Nomination Chef de Service opérationnel',                    typeNomination: 'NOMMEE', actif: true },
+    { id: '11', code: 'FCT-011', libelle: "Chef d'Agence",                  description: 'Nomination Chef d\'Agence / Unité',                          typeNomination: 'NOMMEE', actif: true },
+    { id: '12', code: 'FCT-012', libelle: 'Caissier Principal',             description: 'Nomination Caissier Principal (Coffre & Caisses)',           typeNomination: 'NOMMEE', actif: true },
+    { id: '13', code: 'FCT-013', libelle: 'Gestionnaire Cash Point',        description: 'Nomination Gestionnaire Points de Retrait & Monétique',     typeNomination: 'NOMMEE', actif: true },
+    { id: '14', code: 'FCT-014', libelle: 'Caissier Auxiliaire',            description: 'Nomination Caissier Auxiliaire de guichet',                  typeNomination: 'NOMMEE', actif: true },
+    { id: '15', code: 'FCT-015', libelle: 'Chauffeur',                      description: 'Nomination Conducteur de véhicule de service',               typeNomination: 'NOMMEE', actif: true },
+    { id: '16', code: 'FCT-016', libelle: 'Assistante de Direction',        description: 'Nomination Secrétariat / Assistante DG / Direction',        typeNomination: 'NOMMEE', actif: true },
+    { id: '17', code: 'FCT-017', libelle: 'Agent de Liaison',               description: 'Nomination Courrier et Liaison institutionnelle',            typeNomination: 'NOMMEE', actif: true }
   ],
   'param-indemnite': [
     // ─── GROUPE I : AGENTS, EMPLOYES & TECHNICIENS OPERATIONNELS ───────────────
@@ -485,6 +547,7 @@ const MOCK_DATA: Record<string, RefItem[]> = {
 })
 export class DbRefService {
   private cache: Record<string, BehaviorSubject<RefItem[]>> = {};
+  public refChanges$ = new Subject<{ type: string; action: string; item?: RefItem }>();
 
   constructor(private http: HttpClient) {
     try {
@@ -505,6 +568,17 @@ export class DbRefService {
       this.cache[type] = new BehaviorSubject<RefItem[]>([]);
     }
     return this.cache[type];
+  }
+
+  getItems$(type: string): Observable<RefItem[]> {
+    this.getItems(type).subscribe();
+    return this.getSubject(type).asObservable();
+  }
+
+  notifyChange(type: string, action: string, item?: RefItem): void {
+    const list = this.getCurrentItems(type);
+    this.getSubject(type).next(list);
+    this.refChanges$.next({ type, action, item });
   }
 
   // ─── Vérifie si ce type a un backend réel ─────────────────────────────────
@@ -551,19 +625,20 @@ export class DbRefService {
     }
 
     if (type === 'fonction') {
-      const v2Key = 'ref_fonction_v2';
-      const stored = localStorage.getItem(v2Key);
+      const v3Key = 'ref_fonction_v3';
+      const stored = localStorage.getItem(v3Key);
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length >= 15) {
+          if (Array.isArray(parsed) && parsed.length >= 17 && parsed.some((x: any) => x.typeNomination)) {
             return parsed;
           }
         } catch (e) {}
       }
       localStorage.removeItem('ref_fonction');
+      localStorage.removeItem('ref_fonction_v2');
       const initial = MOCK_DATA['fonction'];
-      localStorage.setItem(v2Key, JSON.stringify(initial));
+      localStorage.setItem(v3Key, JSON.stringify(initial));
       return initial;
     }
 
@@ -645,8 +720,11 @@ export class DbRefService {
   private saveMockItems(type: string, items: RefItem[]): void {
     let key = `ref_${type}`;
     if (type === 'categorie') key = 'ref_categorie_v5';
+    if (type === 'fonction') key = 'ref_fonction_v3';
     if (type === 'type-retenue-employe' || type === 'type-retenue-emploi') key = `ref_${type}_v3`;
     localStorage.setItem(key, JSON.stringify(items));
+    this.getSubject(type).next(items);
+    this.refChanges$.next({ type, action: 'update', item: items && items.length > 0 ? items[0] : undefined });
   }
 
   private getCurrentItems(type: string): RefItem[] {
@@ -827,5 +905,20 @@ export class DbRefService {
 
     const updatedItem: RefItem = { ...item, actif: !item.actif };
     return this.updateItem(type, code, updatedItem);
+  }
+
+  getParamPriseEnCharge(): { ageMaxStd: number; ageMaxEtud: number; maxCap: number; conjointActif: boolean } {
+    const list: RefItem[] = this.getCurrentItems('param-prise-en-charge') || [];
+    const stdItem = list.find((i: RefItem) => i.code === 'PEC-AGE-STD' && i.actif !== false);
+    const etudItem = list.find((i: RefItem) => i.code === 'PEC-AGE-ETUD' && i.actif !== false);
+    const conjItem = list.find((i: RefItem) => i.code === 'PEC-CONJOINT' && i.actif !== false);
+    const capItem = list.find((i: RefItem) => i.code === 'PEC-MAX-CHRG' && i.actif !== false);
+
+    return {
+      ageMaxStd: stdItem && stdItem.taux != null ? Number(stdItem.taux) : 18,
+      ageMaxEtud: etudItem && etudItem.taux != null ? Number(etudItem.taux) : 20,
+      maxCap: capItem && capItem.taux != null ? Number(capItem.taux) : 4,
+      conjointActif: conjItem ? (conjItem.taux !== 0 && conjItem.actif !== false) : true
+    };
   }
 }

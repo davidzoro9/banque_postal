@@ -23,6 +23,7 @@ const routes: Routes = [
   { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
   { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes (Burkina Faso)', icon: 'location_city', type: 'ville' } },
   { path: 'admin/param-retraite',        component: DbRefListComponent, data: { title: 'Paramétrage retraite', icon: 'event_repeat', type: 'param-retraite' } },
+  { path: 'admin/param-prise-en-charge', component: DbRefListComponent, data: { title: 'Prise en charge famille', icon: 'family_restroom', type: 'param-prise-en-charge' } },
 
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },

@@ -314,7 +314,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       taux:            [0, [Validators.min(0)]],
       tauxExoneration: [0, [Validators.min(0), Validators.max(100)]],
       plafondExoneration: [0, [Validators.min(0)]],
-      tauxAbattement:  [25, [Validators.min(0), Validators.max(100)]]
+      tauxAbattement:  [25, [Validators.min(0), Validators.max(100)]],
+      typeNomination:  ['NON_NOMMEE']
     });
   }
 
@@ -330,6 +331,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-retraite') {
         this.displayedColumns = ['grade', 'taux', 'description', 'actif', 'actions'];
+      } else if (this.type === 'param-prise-en-charge') {
+        this.displayedColumns = ['code', 'libelle', 'taux', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {
         this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'description', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {
@@ -340,6 +343,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.displayedColumns = ['grade', 'categories', 'description', 'actif', 'actions'];
       } else if (this.type === 'categorie') {
         this.displayedColumns = ['code', 'libelle', 'tauxAbattement', 'actif', 'actions'];
+      } else if (this.type === 'fonction') {
+        this.displayedColumns = ['code', 'libelle', 'typeNomination', 'description', 'actif', 'actions'];
       } else {
         this.displayedColumns = ['code', 'libelle', 'description', 'actif', 'actions'];
       }
@@ -373,33 +378,22 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   }
 
   loadData(): void {
-    if (this.type === 'grille-salariale') {
-      const stored = localStorage.getItem('ref_grille-salariale');
-      if (stored) {
-        try {
-          this.dataSource.data = JSON.parse(stored);
-          return;
-        } catch(e) {}
-      }
-      this.dbRefService.getItems(this.type).subscribe(items => {
-        this.dataSource.data = items;
-      });
-    } else {
-      this.dbRefService.getItems(this.type).subscribe(items => {
-        if (this.type === 'param-indemnite') {
-          (items || []).forEach(item => {
-            if (!item.categories || item.categories.length === 0 || !item.categories.some(c => c.startsWith('C') || c.startsWith('CL'))) {
-              const cats = this.getCategoriesForGroupe(item.grade || '');
-              if (cats.length > 0) {
-                item.categories = [...cats];
-                item.categorie = cats.join(', ');
-              }
+    this.dbRefService.getItems$(this.type).subscribe(items => {
+      if (this.type === 'param-indemnite') {
+        (items || []).forEach(item => {
+          if (!item.categories || item.categories.length === 0 || !item.categories.some(c => c.startsWith('C') || c.startsWith('CL'))) {
+            const cats = this.getCategoriesForGroupe(item.grade || '');
+            if (cats.length > 0) {
+              item.categories = [...cats];
+              item.categorie = cats.join(', ');
             }
-          });
-        }
-        this.dataSource.data = items;
-      });
-    }
+          }
+        });
+      }
+      this.dataSource.data = items || [];
+      if (this.paginator) this.dataSource.paginator = this.paginator;
+      if (this.sort) this.dataSource.sort = this.sort;
+    });
   }
 
   loadHierarchyData(): void {
@@ -684,7 +678,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         taux:          0,
         tauxExoneration: item.tauxExoneration ?? 0,
         plafondExoneration: item.plafondExoneration ?? 0,
-        tauxAbattement:  defaultAbattement
+        tauxAbattement:  defaultAbattement,
+        typeNomination:  item.typeNomination || 'NON_NOMMEE'
       });
     }
 
@@ -791,7 +786,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         directionId:   v.directionId   || undefined,
         tauxAbattement: v.tauxAbattement !== undefined && v.tauxAbattement !== null ? Number(v.tauxAbattement) : undefined,
         tauxExoneration: v.tauxExoneration !== undefined && v.tauxExoneration !== null ? Number(v.tauxExoneration) : undefined,
-        plafondExoneration: v.plafondExoneration !== undefined && v.plafondExoneration !== null ? Number(v.plafondExoneration) : undefined
+        plafondExoneration: v.plafondExoneration !== undefined && v.plafondExoneration !== null ? Number(v.plafondExoneration) : undefined,
+        typeNomination: this.type === 'fonction' ? (v.typeNomination || 'NON_NOMMEE') : undefined
       };
     }
 

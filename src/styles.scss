@@ -236,61 +236,95 @@ h1, h2, h3, h4, h5, h6 {
   &:first-child { margin-top: 0; }
 }
 
-// ─── Réduction globale de la taille des champs de saisie (MatFormField Compact) ─────
+// ─── Réduction globale de la taille et de la longueur des champs de saisie (MatFormField Compact & Densifié) ─────
 .mat-mdc-form-field {
   margin-bottom: 2px;
+  max-width: 450px;
+  width: 100%;
+}
+
+.search-field {
+  max-width: 280px !important;
+  width: 280px !important;
+}
+
+.filter-field {
+  max-width: 180px !important;
+  width: 180px !important;
+}
+
+.full-width,
+mat-form-field.full-width {
+  max-width: 520px !important;
+  width: 100% !important;
 }
 
 .mat-mdc-text-field-wrapper.mdc-text-field--outlined {
-  padding-left: 10px !important;
-  padding-right: 10px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
 .mat-mdc-form-field-flex {
-  height: 42px !important;
+  height: 36px !important;
   align-items: center !important;
 }
 
 .mat-mdc-form-field-infix {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  min-height: 42px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  min-height: 36px !important;
   display: flex !important;
   align-items: center !important;
 }
 
 .mat-mdc-input-element,
 .mat-mdc-select-value,
-.mat-mdc-select-trigger {
-  font-size: 13px !important;
+.mat-mdc-select-trigger,
+input.modal-input,
+select.modal-input,
+textarea.modal-input {
+  font-size: 12.5px !important;
+  height: 34px !important;
 }
 
 .mat-mdc-floating-label {
-  top: 21px !important;
-  font-size: 12.5px !important;
+  top: 18px !important;
+  font-size: 12px !important;
 }
 
 .mat-mdc-form-field-subscript-wrapper {
-  font-size: 10.5px !important;
+  font-size: 10px !important;
   margin-top: 1px !important;
+}
+
+/* Modal and standard HTML forms field constraints */
+.modal-field,
+.form-group input,
+.form-group select,
+.modal-input {
+  max-width: 450px !important;
+  width: 100% !important;
+  height: 36px !important;
+  padding: 4px 10px !important;
+  font-size: 12.5px !important;
 }
 
 .form-grid-2 {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px;
-  mat-form-field { width: 100%; }
+  mat-form-field { width: 100%; max-width: 100% !important; }
   .span-2 { grid-column: 1 / -1; }
   @media (max-width: 600px) { grid-template-columns: 1fr; .span-2 { grid-column: 1; } }
 }
 
 .form-grid-3 {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px;
-  mat-form-field { width: 100%; }
+  mat-form-field { width: 100%; max-width: 100% !important; }
   @media (max-width: 768px) { grid-template-columns: 1fr; }
 }
 
 .form-grid-4 {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px;
-  mat-form-field { width: 100%; }
+  mat-form-field { width: 100%; max-width: 100% !important; }
   @media (max-width: 768px) { grid-template-columns: 1fr 1fr; }
   @media (max-width: 480px) { grid-template-columns: 1fr; }
 }

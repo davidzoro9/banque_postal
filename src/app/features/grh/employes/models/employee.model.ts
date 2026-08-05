@@ -82,6 +82,7 @@ export interface Employee {
   // Retraite
   ageRetraite?: number;
   dateRetraite?: string;
+  groupeRetraiteId?: number | string | null;
 
   // Coordonnées
   adresse: string;

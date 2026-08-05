@@ -6,6 +6,8 @@ import { map } from 'rxjs/operators';
 import { EmployeeService } from '../../services/employee.service';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 import { Employee, StatutEmploye } from '../../models/employee.model';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../../environments/environment';
 
 const SALARY_MATRIX: Record<string, { groupe: string; values: number[] }> = {
   'C1':   { groupe: 'GROUPE I',   values: [95945, 105540, 116093, 127703, 140473, 154520, 169972, 186970, 205667, 226233, 248857, 273742, 301117, 331228, 364351] },
@@ -43,6 +45,8 @@ export class InfosProComponent implements OnInit {
   agences$!: Observable<RefItem[]>;
   fonctions$!: Observable<RefItem[]>;
   directionsAndDepartements$!: Observable<RefItem[]>;
+  parametragesRetraite: any[] = [];
+  readonly String = String; // pour usage dans le template
 
   readonly statuts: StatutEmploye[] = ['Actif', 'Inactif', 'Suspendu', "Période d'essai", 'Congé maladie', 'Détaché'];
 
@@ -75,7 +79,8 @@ export class InfosProComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private employeeService: EmployeeService,
-    private dbRefService: DbRefService
+    private dbRefService: DbRefService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -93,6 +98,18 @@ export class InfosProComponent implements OnInit {
     ]).pipe(
       map(([dirs, deps]) => [...dirs, ...deps])
     );
+
+    // Charger les paramétrages retraite depuis le backend ou le localStorage
+    this.http.get<any[]>(`${environment.apiUrl}/parametrage-retraite`).subscribe({
+      next: (data) => { this.parametragesRetraite = data.filter(p => p.actif !== false); },
+      error: () => {
+        // Fallback localStorage
+        try {
+          const stored = localStorage.getItem('ref_param-retraite');
+          if (stored) this.parametragesRetraite = JSON.parse(stored);
+        } catch {}
+      }
+    });
 
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
@@ -161,24 +178,33 @@ export class InfosProComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      poste:          [''],
-      fonction:       ['Agent simple'],
-      customFonction: [''],
-      service:        [''],
-      direction:      [''],
-      departement:    [''],
-      agence:         [''],
-      categoriePro:   ['CL5'],
-      echelon:        ['E01'],
-      grade:          ['CL5E01'],
-      statut:         ['Actif'],
-      dateEmbauche:   [''],
-      modePaiement:   ['Virement bancaire'],
-      intituleCompte: [''],
-      banque:         [''],
-      iban:           [''],
-      vehiculeFourni: [false],
-      logementFourni: [false]
+      poste:                [''],
+      fonction:             ['Agent simple'],
+      customFonction:       [''],
+      service:              [''],
+      direction:            [''],
+      departement:          [''],
+      agence:               [''],
+      categoriePro:         ['CL5'],
+      echelon:              ['E01'],
+      grade:                ['CL5E01'],
+      statut:               ['Actif'],
+      dateEmbauche:         [''],
+      modePaiement:         ['Virement bancaire'],
+      intituleCompte:       [''],
+      banque:               [''],
+      iban:                 [''],
+      groupeRetraiteId:     [null]
+    });
+
+    // Quand le groupe retraite change → mettre à jour ageRetraite automatiquement
+    this.form.get('groupeRetraiteId')?.valueChanges.subscribe(id => {
+      if (!id) return;
+      const groupe = this.parametragesRetraite.find(p => String(p.id) === String(id));
+      if (groupe) {
+        const age = groupe.ageRetraite || groupe.taux || groupe.montant || 60;
+        this.employeeService.update(this.empId, { ageRetraite: Number(age), groupeRetraiteId: id }).subscribe();
+      }
     });
   }
 
@@ -212,24 +238,23 @@ export class InfosProComponent implements OnInit {
     }
 
     this.form.patchValue({
-      poste:          e.poste || '',
-      fonction:       fctValue,
-      customFonction: customFct,
-      service:        e.service || '',
-      direction:      e.direction || e.departement || '',
-      departement:    e.departement || e.direction || '',
-      agence:         e.agence || '',
-      categoriePro:   cat,
-      echelon:        ech,
-      grade:          computedGrade,
-      statut:         e.statut || 'Actif',
-      dateEmbauche:   e.dateEmbauche || '',
-      modePaiement:   e.modePaiement || 'Virement bancaire',
-      intituleCompte: e.intituleCompte || (e.nom && e.prenom ? `${e.prenom} ${e.nom}` : ''),
-      banque:         e.banque || '',
-      iban:           e.iban || '',
-      vehiculeFourni: e.vehiculeFourni || false,
-      logementFourni: e.logementFourni || false
+      poste:            e.poste || '',
+      fonction:         fctValue,
+      customFonction:   customFct,
+      service:          e.service || '',
+      direction:        e.direction || e.departement || '',
+      departement:      e.departement || e.direction || '',
+      agence:           e.agence || '',
+      categoriePro:     cat,
+      echelon:          ech,
+      grade:            computedGrade,
+      statut:           e.statut || 'Actif',
+      dateEmbauche:     e.dateEmbauche || '',
+      modePaiement:     e.modePaiement || 'Virement bancaire',
+      intituleCompte:   e.intituleCompte || (e.nom && e.prenom ? `${e.prenom} ${e.nom}` : ''),
+      banque:           e.banque || '',
+      iban:             e.iban || '',
+      groupeRetraiteId: e.groupeRetraiteId || null
     });
   }
 
@@ -254,24 +279,31 @@ export class InfosProComponent implements OnInit {
       resolvedFonction = v.customFonction?.trim() || 'Nouvelle Nomination';
     }
 
+    // Résoudre l'âge de retraite depuis le groupe sélectionné
+    let ageRetraiteResolu: number | undefined;
+    if (v.groupeRetraiteId) {
+      const grp = this.parametragesRetraite.find(p => String(p.id) === String(v.groupeRetraiteId));
+      if (grp) ageRetraiteResolu = Number(grp.ageRetraite || grp.taux || grp.montant || 60);
+    }
+
     const updatePayload: Partial<Employee> = {
-      poste:          v.poste,
-      fonction:       resolvedFonction,
-      service:        v.service,
-      direction:      v.direction || v.departement,
-      departement:    v.departement || v.direction,
-      agence:         v.agence,
-      categoriePro:   catCode,
-      echelon:        echCode,
-      grade:          computedGrade,
-      statut:         v.statut,
-      dateEmbauche:   v.dateEmbauche,
-      modePaiement:   v.modePaiement,
-      intituleCompte: v.intituleCompte,
-      banque:         v.banque,
-      iban:           v.iban,
-      vehiculeFourni: v.vehiculeFourni,
-      logementFourni: v.logementFourni
+      poste:            v.poste,
+      fonction:         resolvedFonction,
+      service:          v.service,
+      direction:        v.direction || v.departement,
+      departement:      v.departement || v.direction,
+      agence:           v.agence,
+      categoriePro:     catCode,
+      echelon:          echCode,
+      grade:            computedGrade,
+      statut:           v.statut,
+      dateEmbauche:     v.dateEmbauche,
+      modePaiement:     v.modePaiement,
+      intituleCompte:   v.intituleCompte,
+      banque:           v.banque,
+      iban:             v.iban,
+      groupeRetraiteId: v.groupeRetraiteId,
+      ...(ageRetraiteResolu !== undefined && { ageRetraite: ageRetraiteResolu })
     };
 
     if (SALARY_MATRIX[catCode]) {

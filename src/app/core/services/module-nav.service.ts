@@ -30,6 +30,7 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
       { id: 'param-indemnite',  label: 'Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
+      { id: 'param-prise-en-charge', label: 'Prise en charge famille', icon: 'family_restroom', route: '/donnees-base/admin/param-prise-en-charge' },
       { id: 'types-retenues',   label: 'Liste des retenues',       icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
       { id: 'param-paie-taux',  label: 'Retenues par emploi',      icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
 
@@ -103,11 +104,11 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Gestion de la Paie',
       icon: 'payments',
       children: [
-        { id: 'bulletins', label: 'Bulletins de paie', icon: 'receipt', route: '/paie/bulletins' },
-        { id: 'generer',   label: 'Générer la paie',   icon: 'autorenew', route: '/paie/generer' },
-        { id: 'valider',   label: 'Valider la paie',   icon: 'verified', route: '/paie/valider' },
-        { id: 'cloture',   label: 'Clôture de paie',   icon: 'lock',     route: '/paie/cloture' },
-        { id: 'historique',label: 'Historique',        icon: 'history',  route: '/paie/historique' }
+        { id: 'bulletins', label: 'Bulletins de paie', icon: 'receipt', route: '/paie/bulletins/generer' },
+        { id: 'generer',   label: 'Générer la paie',   icon: 'autorenew', route: '/paie/bulletins/generer' },
+        { id: 'valider',   label: 'Valider la paie',   icon: 'verified', route: '/paie/bulletins/generer' },
+        { id: 'cloture',   label: 'Clôture de paie',   icon: 'lock',     route: '/paie/bulletins/generer' },
+        { id: 'historique',label: 'Historique',        icon: 'history',  route: '/paie/bulletins/historique' }
       ]
     }
   ],

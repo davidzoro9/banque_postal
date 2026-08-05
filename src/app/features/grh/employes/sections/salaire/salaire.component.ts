@@ -98,12 +98,12 @@ export class SalaireComponent implements OnInit {
     const official = calculateOfficialIUTS(base, list, {
       vehiculeFourni: e.vehiculeFourni,
       logementFourni: e.logementFourni,
-      nombreChargesFamille: nCharges
+      nombreChargesFamille: nCharges,
+      inclureFSP: true,
+      inclureCRRAE: true
     });
 
     const partPatronaleCnss = Math.round(official.remunerationTotale * 0.16);
-    const fondsSoutienPat = Math.round(official.remunerationTotale * 0.01);
-    const crrae = 0;
     const mutuel = 0;
 
     return {
@@ -112,9 +112,9 @@ export class SalaireComponent implements OnInit {
       totalIndemnite: official.totalIndemnites,
       remunerationBrut: official.remunerationTotale,
       montantCnss: official.cotisationCNSS,
-      fondsSoutienPat,
+      fondsSoutienPat: official.fondsSoutienPat,
       partPatronaleCnss,
-      crrae,
+      crrae: official.crrae,
       salaireBrutImposable: official.salaireBrut,
       abattementForfaitaire: official.abattementForfaitaire,
       totalExoneration: official.totalExonerations,

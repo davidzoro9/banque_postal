@@ -34,7 +34,9 @@ const createDefaultEmployee = (partial: Partial<Employee>): Employee => {
     typeContrat: partial.typeContrat || 'CDI',
     categoriePro: partial.categoriePro || 'CL1',
     echelon: partial.echelon || 'E01',
-    grade: partial.grade || 'CL1E01',
+    grade: (partial.grade && !partial.grade.toUpperCase().includes('GROUPE') && !partial.grade.toUpperCase().includes('GRADE'))
+      ? partial.grade
+      : `${partial.categoriePro || 'CL1'}${partial.echelon || 'E01'}`,
     niveau: partial.niveau || 'Niveau 1',
     primeLogement: partial.primeLogement || 0,
     primeTransport: partial.primeTransport || 0,
@@ -277,9 +279,9 @@ const BPBF_INITIAL_EMPLOYEES: Employee[] = [
     dateEmbauche: '2023-01-10',
     statut: 'Actif',
     typeContrat: 'CDI',
-    categoriePro: '6ÈME CATEGORIE',
-    echelon: 'Échelon 3',
-    grade: 'GRADE I',
+    categoriePro: 'C6',
+    echelon: 'E01',
+    grade: 'C6E01',
     salaireBase: 157940,
     salaireBrut: 252940,
     primeLogement: 35000,
@@ -326,8 +328,19 @@ export class EmployeeService {
 
   private toBackend(emp: Partial<Employee>): any {
     const result: any = { ...emp };
-    
-    // Map JSON fields
+
+    // Map JSON fields & extraData for PostgreSQL
+    const extraDataObj = {
+      categorie: emp.categoriePro || 'CL1',
+      echelon: emp.echelon || 'E01',
+      grade: emp.grade || `${emp.categoriePro || 'CL1'}${emp.echelon || 'E01'}`,
+      salaireBase: emp.salaireBase || 150000,
+      primeLogement: emp.primeLogement || 0,
+      enfants: emp.enfants || [],
+      conjoint: emp.conjoint || null
+    };
+    result.extraData = JSON.stringify(extraDataObj);
+
     if (emp.contactsUrgence) result.contactsUrgenceJson = JSON.stringify(emp.contactsUrgence);
     if (emp.conjoint) result.conjointJson = JSON.stringify(emp.conjoint);
     if (emp.enfants) result.enfantsJson = JSON.stringify(emp.enfants);
@@ -370,9 +383,70 @@ export class EmployeeService {
     try { result.avantagesParticuliers = db.avantagesParticuliersJson ? JSON.parse(db.avantagesParticuliersJson) : []; } catch (e) { result.avantagesParticuliers = []; }
     try { result.documents = db.documentsJson ? JSON.parse(db.documentsJson) : []; } catch (e) { result.documents = []; }
     try { result.evaluations = db.evaluationsJson ? JSON.parse(db.evaluationsJson) : []; } catch (e) { result.evaluations = []; }
-    try { result.historiqueActions = db.historiqueActionsJson ? JSON.parse(db.historiqueActionsJson) : []; } catch (e) { result.historiqueActions = []; }
+    // Parse extraData JSON from backend if present
+    if (db.extraData) {
+      try {
+        const extra = typeof db.extraData === 'string' ? JSON.parse(db.extraData) : db.extraData;
+        if (extra.categorie) result.categoriePro = extra.categorie;
+        if (extra.echelon) result.echelon = extra.echelon;
+        if (extra.grade) result.grade = extra.grade;
+        if (extra.salaireBase) result.salaireBase = Number(extra.salaireBase);
+        if (extra.primeLogement) result.primeLogement = Number(extra.primeLogement);
+        if (extra.enfants && Array.isArray(extra.enfants)) result.enfants = extra.enfants;
+        if (extra.conjoint) result.conjoint = extra.conjoint;
+      } catch (e) {}
+    }
     
     return createDefaultEmployee(result);
+  }
+
+  private mergeEmployee(local: Employee | undefined, remote: Employee): Employee {
+    if (!local) return remote;
+    const mergedEnfants = (local.enfants && local.enfants.length > 0) ? local.enfants : (remote.enfants || []);
+    const mergedConjoint = local.conjoint || remote.conjoint;
+    const mergedPersonnesCharge = (local.personnesCharge && local.personnesCharge.length > 0) ? local.personnesCharge : (remote.personnesCharge || []);
+    const mergedAutresIndemnites = (local.autresIndemnites && local.autresIndemnites.length > 0) ? local.autresIndemnites : (remote.autresIndemnites || []);
+
+    return createDefaultEmployee({
+      ...remote,
+      ...local,
+      id: local.id || remote.id,
+      matricule: local.matricule || remote.matricule,
+      enfants: mergedEnfants,
+      conjoint: mergedConjoint,
+      personnesCharge: mergedPersonnesCharge,
+      autresIndemnites: mergedAutresIndemnites
+    });
+  }
+
+  getEmployeesDirect(): Employee[] {
+    return this.employees;
+  }
+
+  private mergeListWithLocal(remoteList: Employee[], emitSubject = true): void {
+    if (!remoteList || remoteList.length === 0) return;
+
+    remoteList.forEach(remote => {
+      const local = this.employees.find(e =>
+        (e.matricule && remote.matricule && e.matricule.trim().toUpperCase() === remote.matricule.trim().toUpperCase()) ||
+        (e.id && remote.id && String(e.id) === String(remote.id))
+      );
+
+      const merged = this.mergeEmployee(local, remote);
+
+      if (local) {
+        this.employees = this.employees.map(e =>
+          (e === local || e.matricule === local.matricule || String(e.id) === String(local.id)) ? merged : e
+        );
+      } else {
+        this.employees.push(merged);
+      }
+    });
+
+    this.saveToLocal();
+    if (emitSubject) {
+      this.employeesSubject.next(this.employees);
+    }
   }
 
   refresh(): void {
@@ -382,13 +456,8 @@ export class EmployeeService {
     ).subscribe({
       next: (list) => {
         if (list && list.length > 0) {
-          const map = new Map<string, Employee>();
-          this.employees.forEach(e => map.set(String(e.id), e));
-          list.forEach(e => map.set(String(e.id), e));
-          this.employees = Array.from(map.values());
+          this.mergeListWithLocal(list, true);
         }
-        this.saveToLocal();
-        this.employeesSubject.next(this.employees);
       }
     });
   }
@@ -398,37 +467,30 @@ export class EmployeeService {
       map(list => list.map(item => this.toFrontend(item))),
       tap(list => {
         if (list && list.length > 0) {
-          const map = new Map<string, Employee>();
-          this.employees.forEach(e => map.set(String(e.id), e));
-          list.forEach(e => map.set(String(e.id), e));
-          this.employees = Array.from(map.values());
-          this.saveToLocal();
+          this.mergeListWithLocal(list, false);
         }
-        this.employeesSubject.next(this.employees);
       }),
       catchError(() => {
-        this.employeesSubject.next(this.employees);
         return of(this.employees);
-      })
+      }),
+      map(() => this.employees)
     );
   }
 
   getById(id: string): Observable<Employee> {
     const local = this.employees.find(e => String(e.id) === String(id) || e.matricule === id);
+    if (local) {
+      return of(local);
+    }
     return this.http.get<any>(`${environment.apiUrl}/employes/${id}`).pipe(
       map(item => this.toFrontend(item)),
-      tap(emp => {
-        const exists = this.employees.some(e => String(e.id) === String(emp.id));
-        if (exists) {
-          this.employees = this.employees.map(e => String(e.id) === String(emp.id) ? emp : e);
-        } else {
-          this.employees = [...this.employees, emp];
-        }
+      tap(remote => {
+        const merged = this.mergeEmployee(local, remote);
+        this.employees.push(merged);
         this.saveToLocal();
         this.employeesSubject.next(this.employees);
       }),
       catchError(() => {
-        if (local) return of(local);
         return of(this.employees[0]);
       })
     );
@@ -455,10 +517,10 @@ export class EmployeeService {
   }
 
   update(id: string, data: Partial<Employee>): Observable<Employee> {
-    const existing = this.employees.find(e => String(e.id) === String(id));
+    const existing = this.employees.find(e => String(e.id) === String(id) || e.matricule === id);
     const mergedData = createDefaultEmployee(existing ? { ...existing, ...data } : { ...data, id });
 
-    this.employees = this.employees.map(e => String(e.id) === String(id) ? mergedData : e);
+    this.employees = this.employees.map(e => (String(e.id) === String(id) || e.matricule === id) ? mergedData : e);
     this.saveToLocal();
     this.employeesSubject.next(this.employees);
 

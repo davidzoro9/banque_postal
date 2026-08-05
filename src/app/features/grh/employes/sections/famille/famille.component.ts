@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, FormArray } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
+import { DbRefService } from '../../../../donnees-base/services/db-ref.service';
 
 @Component({
   selector: 'app-famille',
@@ -18,10 +19,10 @@ export class FamilleComponent implements OnInit {
   empId = '';
 
   readonly statusOptions = [
-    'Etude (Age limite: 20 ans)',
-    'Enfant à charge',
-    'Invalide',
-    'Actif'
+    'Standard (Age max: 18 ans)',
+    'Etude / Scolarisé (Age max: 20 ans)',
+    'Invalide (Sans limite d\'âge)',
+    'Autre personne à charge'
   ];
 
   readonly sexeOptions = [
@@ -33,7 +34,8 @@ export class FamilleComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
@@ -101,7 +103,7 @@ export class FamilleComponent implements OnInit {
       nom:           [data?.nom || ''],
       numActe:       [data?.numActe || ''],
       sexe:          [data?.sexe || 'Féminin'],
-      status:        [data?.status || 'Etude (Age limite: 20 ans)'],
+      status:        [data?.status || 'Etude / Scolarisé (Age max: 20 ans)'],
       dateNaissance: [data?.dateNaissance || '']
     }));
   }
@@ -110,10 +112,12 @@ export class FamilleComponent implements OnInit {
     this.enfants.removeAt(i);
   }
 
-  computeAge(dateStr: any): { text: string; isOverLimit: boolean } {
-    if (!dateStr) return { text: '—', isOverLimit: false };
+  computeAge(dateStr: any, statusStr?: string): { text: string; ageYears: number; isOverLimit: boolean; isEnCharge: boolean; maxAge: number } {
+    if (!dateStr) return { text: '—', ageYears: 0, isOverLimit: false, isEnCharge: false, maxAge: 18 };
     const birth = new Date(dateStr);
-    if (isNaN(birth.getTime())) return { text: '—', isOverLimit: false };
+    if (isNaN(birth.getTime())) return { text: '—', ageYears: 0, isOverLimit: false, isEnCharge: false, maxAge: 18 };
+
+    const params = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : { ageMaxStd: 18, ageMaxEtud: 20 };
 
     const now = new Date();
     let years = now.getFullYear() - birth.getFullYear();
@@ -130,10 +134,45 @@ export class FamilleComponent implements OnInit {
       months += 12;
     }
 
-    const text = `${years} année(s), ${months} mois, ${days} jour(s)`;
-    const isOverLimit = years >= 20;
+    const text = `${years} an(s), ${months} m`;
+    const st = (statusStr || '').toLowerCase();
 
-    return { text, isOverLimit };
+    let maxAge = params.ageMaxStd;
+    let isInvalide = st.includes('invalide');
+
+    if (st.includes('etude') || st.includes('scolaris') || st.includes('20') || st.includes('25')) {
+      maxAge = params.ageMaxEtud;
+    }
+
+    const isEnCharge = isInvalide || (years < maxAge);
+    const isOverLimit = !isInvalide && (years >= maxAge);
+
+    return { text, ageYears: years, isOverLimit, isEnCharge, maxAge };
+  }
+
+  get calculatedChargesSummary(): { total: number; details: string; conjointCharge: boolean; validEnfants: number } {
+    const raw = this.form ? this.form.getRawValue() : {};
+    const params = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : { ageMaxStd: 18, ageMaxEtud: 20, maxCap: 4, conjointActif: true };
+
+    const hasConjoint = !!(raw.conjointNom || raw.conjointTelephone || raw.conjointMail);
+    const conjointCharge = params.conjointActif && hasConjoint && !raw.conjointTravail;
+
+    let validEnfants = 0;
+    (raw.enfants || []).forEach((enf: any) => {
+      const res = this.computeAge(enf.dateNaissance, enf.status);
+      if (res.isEnCharge) validEnfants++;
+    });
+
+    const totalRaw = (conjointCharge ? 1 : 0) + validEnfants;
+    const total = Math.min(params.maxCap, totalRaw);
+
+    let details = `${validEnfants} enfant(s) à charge (< ${params.ageMaxStd}/${params.ageMaxEtud} ans)`;
+    if (conjointCharge) details += ` + 1 conjoint non-salarié`;
+    else if (hasConjoint) details += ` (conjoint salarié = 0 charge)`;
+
+    if (totalRaw > params.maxCap) details += ` [Plafonné à ${params.maxCap} charges max]`;
+
+    return { total, details, conjointCharge, validEnfants };
   }
 
   get initials(): string {

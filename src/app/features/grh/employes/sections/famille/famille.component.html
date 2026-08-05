@@ -23,7 +23,7 @@
   <mat-card class="section-card">
     <mat-card-header>
       <mat-icon mat-card-avatar style="color:#0060B3">family_restroom</mat-icon>
-      <mat-card-title>Famille</mat-card-title>
+      <mat-card-title>Situation Familiale & Prise en Charge Fiscal / Sociale</mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
@@ -32,6 +32,21 @@
       }
 
       @if (employee) {
+        <!-- Bannière Récapitulatif Prises en charge -->
+        <div style="background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <mat-icon style="color: #0284c7; font-size: 28px; width: 28px; height: 28px;">family_restroom</mat-icon>
+            <div>
+              <div style="font-weight: 800; font-size: 15px; color: #0369a1;">
+                Nombre total de charges de famille admises : <span style="background: #0284c7; color: white; padding: 2px 10px; border-radius: 12px; font-size: 15px;">{{ calculatedChargesSummary.total }} charge(s)</span>
+              </div>
+              <div style="font-size: 12.5px; color: #0369a1; margin-top: 2px;">
+                {{ calculatedChargesSummary.details }} — (Plafond IUTS du Burkina Faso : 4 charges max)
+              </div>
+            </div>
+          </div>
+        </div>
+
         <form [formGroup]="form">
 
           <!-- Section Conjoint(e) -->
@@ -60,14 +75,29 @@
               <input matInput formControlName="conjointMail" type="email">
             </mat-form-field>
 
-            <div style="display: flex; align-items: center; gap: 8px; grid-column: span 2; padding-top: 4px;">
+            <div style="display: flex; align-items: center; gap: 12px; grid-column: span 2; padding-top: 4px; flex-wrap: wrap;">
               <mat-checkbox formControlName="conjointTravail" color="primary">
-                <span style="font-weight: 600; color: #333;">Travail</span>
+                <span style="font-weight: 600; color: #333;">Le/la conjoint(e) travaille (Est salarié/e ou exerce une activité rémunérée)</span>
               </mat-checkbox>
+
+              @if (form.get('conjointNom')?.value || form.get('conjointTelephone')?.value) {
+                @if (form.get('conjointTravail')?.value) {
+                  <span style="font-size: 11px; background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 12px; font-weight: 700;">
+                    Conjoint en activité (0 charge admise)
+                  </span>
+                } @else {
+                  <span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 12px; font-weight: 700;">
+                    Conjoint sans emploi (+1 charge admise)
+                  </span>
+                }
+              }
             </div>
           </div>
 
           <mat-divider style="margin: 20px 0;"></mat-divider>
+
+          <!-- Section Enfants -->
+          <h3 style="color: #00897b; font-weight: 700; margin-top: 16px; margin-bottom: 16px; font-size: 18px;">Enfants & Personnes à Charge</h3>
 
           <!-- Tableau d'enfants & personnes à charge -->
           <div formArrayName="enfants" class="table-container" style="overflow-x: auto; margin-top: 16px;">
@@ -77,9 +107,9 @@
                   <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px;">Nom et Prénoms</th>
                   <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 110px;">N° acte</th>
                   <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 130px;">Sexe</th>
-                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 220px;">Status</th>
-                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 160px;">Date naissance</th>
-                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 200px;">Age</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 240px;">Status</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 150px;">Date naissance</th>
+                  <th style="padding: 10px 8px; font-weight: 700; color: #424242; font-size: 13px; width: 220px;">Âge / Prise en charge</th>
                   @if (isEditing) {
                     <th style="padding: 10px 8px; width: 48px;"></th>
                   }
@@ -111,10 +141,19 @@
                     <td style="padding: 6px 8px;">
                       <input matInput type="date" formControlName="dateNaissance" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
                     </td>
-                    <td style="padding: 6px 8px; font-weight: 600; font-size: 13px;">
-                      <span [style.color]="computeAge(enf.get('dateNaissance')?.value).isOverLimit ? '#d32f2f' : '#2e7d32'">
-                        {{ computeAge(enf.get('dateNaissance')?.value).text }}
-                      </span>
+                    <td style="padding: 6px 8px; font-weight: 600; font-size: 12px;">
+                      @let ageRes = computeAge(enf.get('dateNaissance')?.value, enf.get('status')?.value);
+                      @if (ageRes.isEnCharge) {
+                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px; display: inline-block;">
+                          ✓ {{ ageRes.text }} (+1 charge)
+                        </span>
+                      } @else if (ageRes.isOverLimit) {
+                        <span style="background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px; display: inline-block;">
+                          ✕ {{ ageRes.text }} (Âge max {{ ageRes.maxAge }} ans dépassé)
+                        </span>
+                      } @else {
+                        <span>{{ ageRes.text }}</span>
+                      }
                     </td>
                     @if (isEditing) {
                       <td style="padding: 6px 8px; text-align: center;">
