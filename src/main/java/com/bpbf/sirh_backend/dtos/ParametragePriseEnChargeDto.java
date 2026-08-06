@@ -9,17 +9,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ParametrageIndemniteDto {
+public class ParametragePriseEnChargeDto {
     private Long id;
     private String code;
-    private String typeIndemnite;
-    private String fonction;
-    private String grade;
-    private String categorie;
+    private String libelle;
     private Double taux;
-    private Double tauxExoneration;
-    private Double plafondExoneration;
-    private String regleType;
-    private String typeNomination;
+    private String description;
     private Boolean actif;
 }

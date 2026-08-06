@@ -4,35 +4,29 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import jakarta.persistence.Column;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ParametrageIndemnite {
+@Table(name = "exoneration_fiscale")
+public class ExonerationFiscale {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(unique = true, nullable = false)
+
     private String code;
-    private String typeIndemnite;
-    private String fonction;
-    private String grade;
-    private String categorie;
-    private Double taux;
+    private String libelle;
+    private String typeExoneration; // IUTS, CNSS, CHARGE_FAMILLE, ABATTEMENT_FORFAITAIRE
     private Double tauxExoneration;
-    private Double plafondExoneration;
-    /** "ORDINAIRE", "NOMINATION", ou "SPECIFIQUE" */
-    private String regleType = "ORDINAIRE";
-    /** "NOMMEE", "NON_NOMMEE", ou "TOUTES" */
-    private String typeNomination = "TOUTES";
+    private Double montantPlafond;
+    private String baseCalcul;
+    private Integer nbChargesFamille;
     private Boolean actif = true;
 }

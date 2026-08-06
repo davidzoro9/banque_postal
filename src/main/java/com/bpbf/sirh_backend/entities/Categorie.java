@@ -1,33 +1,26 @@
 package com.bpbf.sirh_backend.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "generic_ref_data")
-public class GenericRefData {
+@Table(name = "categorie")
+public class Categorie {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String type;
+    @Column(unique = true, nullable = false)
     private String code;
     private String libelle;
+    private Double tauxAbattement;
     
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    private String grade;
-    private String categorie;
-    private Double taux;
-    private String typeRetenue;
-    
-    private boolean actif;
+    private Boolean actif = true;
 }

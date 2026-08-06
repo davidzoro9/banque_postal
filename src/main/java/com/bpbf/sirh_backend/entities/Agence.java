@@ -1,8 +1,8 @@
 package com.bpbf.sirh_backend.entities;
 
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -10,20 +10,22 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import jakarta.persistence.Column;
-
+@Entity
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name="emploi")
-public class Emploi {
+@Table(name = "agence")
+public class Agence {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(unique = true, nullable = false)
-    private String code;
-    private String name;
+
+    private String codeAgence;
+    private String nomAgence;
+    private String ville;
+    private String adresse;
+    private String telephone;
+    private String email;
+    private Boolean actif = true;
 }

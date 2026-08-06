@@ -25,7 +25,15 @@ public class SirhBackendApplication {
 			EmploiRepository emploiRepo,
 			FonctionRepository fonctionRepo,
 			EmployeeRepository employeeRepo,
-			TypeIndemniteRepository typeIndemniteRepo) {
+			TypeIndemniteRepository typeIndemniteRepo,
+			ParametrageGroupeRepository paramGroupeRepo,
+			ParametrageRetraiteRepository paramRetraiteRepo,
+			ParametragePriseEnChargeRepository paramPecRepo,
+			TypeRetenueEmployeRepository typeRetenueEmployeRepo,
+			TypeRetenueEmploiRepository typeRetenueEmploiRepo,
+			EchelonRepository echelonRepo,
+			CategorieRepository categorieRepo,
+			GradeRepository gradeRepo) {
 		return args -> {
 			try {
 				if (repository.findAll().stream().noneMatch(u -> "davidzorom9@gmail.com".equalsIgnoreCase(u.getEmail()))) {
@@ -39,19 +47,14 @@ public class SirhBackendApplication {
 					admin1.setActif(true);
 					repository.save(admin1);
 				}
-			} catch (Exception e) {
-				System.out.println("User davidzorom already exists or skipped: " + e.getMessage());
-			}
-
-			try {
-				if (repository.findAll().stream().noneMatch(u -> "marie.dupont@entreprise.com".equalsIgnoreCase(u.getEmail()))) {
+				if (repository.findAll().stream().noneMatch(u -> "marie.dupont@societe.com".equalsIgnoreCase(u.getEmail()))) {
 					Utilisateur admin2 = new Utilisateur();
 					admin2.setUsername("marie.dupont");
-					admin2.setNom("Dupont");
+					admin2.setNom("DUPONT");
 					admin2.setPrenom("Marie");
-					admin2.setEmail("marie.dupont@entreprise.com");
+					admin2.setEmail("marie.dupont@societe.com");
 					admin2.setPassword("password123");
-					admin2.setRole("ADMIN");
+					admin2.setRole("USER");
 					admin2.setActif(true);
 					repository.save(admin2);
 				}
@@ -88,6 +91,14 @@ public class SirhBackendApplication {
 						item.setActif(true);
 						refDataRepo.save(item);
 					}
+					if (categorieRepo.findAll().stream().noneMatch(ct -> c[0].equalsIgnoreCase(ct.getCode()))) {
+						com.bpbf.sirh_backend.entities.Categorie catEntity = new com.bpbf.sirh_backend.entities.Categorie();
+						catEntity.setCode(c[0]);
+						catEntity.setLibelle(c[1]);
+						catEntity.setDescription(c[2]);
+						catEntity.setActif(true);
+						categorieRepo.save(catEntity);
+					}
 				}
 			} catch (Exception e) {
 				System.out.println("Catégories seeding error: " + e.getMessage());
@@ -110,9 +121,218 @@ public class SirhBackendApplication {
 						item.setActif(true);
 						refDataRepo.save(item);
 					}
+					if (gradeRepo.findAll().stream().noneMatch(gr -> g[0].equalsIgnoreCase(gr.getCode()))) {
+						com.bpbf.sirh_backend.entities.Grade grEntity = new com.bpbf.sirh_backend.entities.Grade();
+						grEntity.setCode(g[0]);
+						grEntity.setLibelle(g[1]);
+						grEntity.setDescription(g[2]);
+						grEntity.setActif(true);
+						gradeRepo.save(grEntity);
+					}
 				}
 			} catch (Exception e) {
 				System.out.println("Groupes seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Échelons (1 à 15) ──────────────────────────────────────
+			try {
+				for (int i = 1; i <= 15; i++) {
+					String code = String.valueOf(i);
+					if (refDataRepo.findByTypeAndCode("echelon", code).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("echelon");
+						item.setCode(code);
+						item.setLibelle("Échelon " + i);
+						item.setDescription("Niveau d'ancienneté " + i + " (Progression d'échelon)");
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (echelonRepo.findAll().stream().noneMatch(ech -> code.equalsIgnoreCase(ech.getCode()))) {
+						com.bpbf.sirh_backend.entities.Echelon echEntity = new com.bpbf.sirh_backend.entities.Echelon();
+						echEntity.setCode(code);
+						echEntity.setLibelle("Échelon " + i);
+						echEntity.setDescription("Niveau d'ancienneté " + i + " (Progression d'échelon)");
+						echEntity.setActif(true);
+						echelonRepo.save(echEntity);
+					}
+				}
+				System.out.println("Échelons (15 échelons) initialisés dans PostgreSQL. Total: " + echelonRepo.count());
+			} catch (Exception e) {
+				System.out.println("Échelons seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Parametrage Groupe (param-groupe) ─────────────────────
+			try {
+				String[][] paramGroupes = {
+					{"PG-GROUPE-I", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", "Catégories C1 à C7 rattachées au Groupe I"},
+					{"PG-GROUPE-II", "GROUPE II", "CL1, CL2, CL3, CL4", "Classes CL1 à CL4 rattachées au Groupe II"},
+					{"PG-GROUPE-III", "GROUPE III", "CL5, CL6, CL7, CL8", "Classes CL5 à CL8 rattachées au Groupe III"},
+					{"PG-GROUPE-IV", "GROUPE IV", "CL9, CL10", "Classes CL9 à CL10 rattachées au Groupe IV"}
+				};
+				for (String[] pg : paramGroupes) {
+					if (refDataRepo.findByTypeAndCode("param-groupe", pg[0]).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("param-groupe");
+						item.setCode(pg[0]);
+						item.setGrade(pg[1]);
+						item.setCategorie(pg[2]);
+						item.setLibelle(pg[1]);
+						item.setDescription(pg[3]);
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (paramGroupeRepo.findAll().stream().noneMatch(p -> pg[0].equalsIgnoreCase(p.getCode()))) {
+						com.bpbf.sirh_backend.entities.ParametrageGroupe pgEntity = new com.bpbf.sirh_backend.entities.ParametrageGroupe();
+						pgEntity.setCode(pg[0]);
+						pgEntity.setGrade(pg[1]);
+						pgEntity.setLibelle(pg[1]);
+						pgEntity.setCategorie(pg[2]);
+						pgEntity.setDescription(pg[3]);
+						pgEntity.setActif(true);
+						paramGroupeRepo.save(pgEntity);
+					}
+				}
+				System.out.println("Paramétrage Groupe initialisé dans PostgreSQL. Total: " + paramGroupeRepo.count());
+			} catch (Exception e) {
+				System.out.println("Parametrage Groupe seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Paramétrage Retraite (param-retraite) ─────────────────
+			try {
+				Object[][] paramRetraites = {
+					{"PG-RET-G1", "GROUPE I", "Âge légal de départ à la retraite pour les agents non-cadres (56 ans)", 56.0},
+					{"PG-RET-G2", "GROUPE II", "GROUPE II : 58 ans", 58.0},
+					{"PG-RET-G3", "GROUPE III", "GROUPE III : 60 ans", 60.0},
+					{"PG-RET-G4", "GROUPE IV", "GROUPE IV : 63 ans", 63.0}
+				};
+				for (Object[] pr : paramRetraites) {
+					String code = (String) pr[0];
+					if (refDataRepo.findByTypeAndCode("param-retraite", code).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("param-retraite");
+						item.setCode(code);
+						item.setGrade((String) pr[1]);
+						item.setLibelle((String) pr[1]);
+						item.setDescription((String) pr[2]);
+						item.setTaux((Double) pr[3]);
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (paramRetraiteRepo.findAll().stream().noneMatch(p -> code.equalsIgnoreCase(p.getCode()))) {
+						com.bpbf.sirh_backend.entities.ParametrageRetraite prEntity = new com.bpbf.sirh_backend.entities.ParametrageRetraite();
+						prEntity.setCode(code);
+						prEntity.setGrade((String) pr[1]);
+						prEntity.setLibelle((String) pr[1]);
+						prEntity.setDescription((String) pr[2]);
+						prEntity.setTaux((Double) pr[3]);
+						prEntity.setActif(true);
+						paramRetraiteRepo.save(prEntity);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("Parametrage Retraite seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Prise en Charge Famille (param-prise-en-charge) ────────
+			try {
+				Object[][] pecs = {
+					{"PEC-AGE-STD", "Âge Max Enfant Standard", "Âge limite légal pour enfant mineur à charge (strictement inférieur à 18 ans)", 18.0},
+					{"PEC-AGE-ETUD", "Âge Max Enfant Étudiant / Scolarisé", "Âge limite pour enfant poursuivant des études (strictement inférieur à 20 ans)", 20.0},
+					{"PEC-CONJOINT", "Prise en Charge Conjoint Non-Salarié", "Accorder +1 charge de famille si le conjoint est sans emploi / ne travaille pas", 1.0},
+					{"PEC-MAX-CHRG", "Nombre de Charges Max Autorisées", "Plafond maximum de charges fiscales admises pour la réduction IUTS (Burkina Faso)", 4.0}
+				};
+				for (Object[] pec : pecs) {
+					String code = (String) pec[0];
+					if (refDataRepo.findByTypeAndCode("param-prise-en-charge", code).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("param-prise-en-charge");
+						item.setCode(code);
+						item.setLibelle((String) pec[1]);
+						item.setDescription((String) pec[2]);
+						item.setTaux((Double) pec[3]);
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (paramPecRepo.findAll().stream().noneMatch(p -> code.equalsIgnoreCase(p.getCode()))) {
+						com.bpbf.sirh_backend.entities.ParametragePriseEnCharge pecEntity = new com.bpbf.sirh_backend.entities.ParametragePriseEnCharge();
+						pecEntity.setCode(code);
+						pecEntity.setLibelle((String) pec[1]);
+						pecEntity.setDescription((String) pec[2]);
+						pecEntity.setTaux((Double) pec[3]);
+						pecEntity.setActif(true);
+						paramPecRepo.save(pecEntity);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("Prise en charge famille seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Type Retenue Employé (type-retenue-employe) ─────────────
+			try {
+				String[][] tres = {
+					{"TR-PATRONALE", "Part Employeur", "Part de cotisation patronale prise en charge directement par l'employeur"},
+					{"TR-SALARIALE", "Part Agent", "Part de cotisation salariale prélevée à la source sur la paie de l'agent"}
+				};
+				for (String[] tre : tres) {
+					if (refDataRepo.findByTypeAndCode("type-retenue-employe", tre[0]).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("type-retenue-employe");
+						item.setCode(tre[0]);
+						item.setLibelle(tre[1]);
+						item.setDescription(tre[2]);
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (typeRetenueEmployeRepo.findAll().stream().noneMatch(t -> tre[0].equalsIgnoreCase(t.getCode()))) {
+						com.bpbf.sirh_backend.entities.TypeRetenueEmploye treEntity = new com.bpbf.sirh_backend.entities.TypeRetenueEmploye();
+						treEntity.setCode(tre[0]);
+						treEntity.setLibelle(tre[1]);
+						treEntity.setDescription(tre[2]);
+						treEntity.setActif(true);
+						typeRetenueEmployeRepo.save(treEntity);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("Type retenue employé seeding error: " + e.getMessage());
+			}
+
+			// ── Seed Retenues par Emploi (type-retenue-emploi) ──────────────
+			try {
+				Object[][] tresEmploi = {
+					{"RET-CNSS-SAL", "Cotisation Sociale CNSS (Part Agent)", "Part Agent", 5.5, "Cotisation sociale obligatoire à la charge de l'employé (5,5% du brut plafonné)"},
+					{"RET-CNSS-PAT", "Cotisation Sociale CNSS (Part Employeur)", "Part Employeur", 16.0, "Cotisation patronale obligatoire sécurité sociale (16,0% sur masse salariale)"},
+					{"RET-IUTS", "Impôt IUTS (Impôt sur Salaire)", "Retenue Fiscale (IUTS/TPA)", 0.0, "Impôt Unique sur Traitements et Salaires prélevé à la source (Barème progressif)"},
+					{"RET-CRRAE-SAL", "Retraite Complémentaire CRRAE (Part Agent)", "Retraite Complémentaire (CRRAE)", 3.0, "Cotisation salariale fonds de pension complémentaire bancaire UMOA"},
+					{"RET-CRRAE-PAT", "Retraite Complémentaire CRRAE (Part Pat.)", "Part Employeur", 5.0, "Contribution patronale retraite complémentaire bancaire UMOA"},
+					{"RET-AM-SAL", "Assurance Maladie Groupe (Part Agent)", "Assurance Groupe & Santé", 2.5, "Part salariale couverture médicale maladie et hospitalisation (25%)"},
+					{"RET-AM-PAT", "Assurance Maladie Groupe (Part Employeur)", "Part Employeur", 7.5, "Prise en charge patronale assurance maladie groupe (75%)"}
+				};
+				for (Object[] tre : tresEmploi) {
+					String code = (String) tre[0];
+					if (refDataRepo.findByTypeAndCode("type-retenue-emploi", code).isEmpty()) {
+						com.bpbf.sirh_backend.entities.GenericRefData item = new com.bpbf.sirh_backend.entities.GenericRefData();
+						item.setType("type-retenue-emploi");
+						item.setCode(code);
+						item.setLibelle((String) tre[1]);
+						item.setTypeRetenue((String) tre[2]);
+						item.setTaux((Double) tre[3]);
+						item.setDescription((String) tre[4]);
+						item.setActif(true);
+						refDataRepo.save(item);
+					}
+					if (typeRetenueEmploiRepo.findAll().stream().noneMatch(t -> code.equalsIgnoreCase(t.getCode()))) {
+						com.bpbf.sirh_backend.entities.TypeRetenueEmploi treEmploiEntity = new com.bpbf.sirh_backend.entities.TypeRetenueEmploi();
+						treEmploiEntity.setCode(code);
+						treEmploiEntity.setLibelle((String) tre[1]);
+						treEmploiEntity.setTypeRetenue((String) tre[2]);
+						treEmploiEntity.setTaux((Double) tre[3]);
+						treEmploiEntity.setDescription((String) tre[4]);
+						treEmploiEntity.setActif(true);
+						typeRetenueEmploiRepo.save(treEmploiEntity);
+					}
+				}
+			} catch (Exception e) {
+				System.out.println("Retenues par emploi seeding error: " + e.getMessage());
 			}
 
 			// ── Seed Grille Salariale (données officielles BPBF) ──────────────
@@ -370,34 +590,94 @@ public class SirhBackendApplication {
 
 			// ── Seed ParametrageIndemnite (table parametrage_indemnite) ────
 			try {
-				if (indemniteRepo.count() < 5) {
-					Object[][] params = {
-						{"PAR-LOG", "Indemnité de Logement", "TOUTES", "TOUS", "TOUTES", 20.0, 0.0, 0.0, true},
-						{"PAR-TRP", "Indemnité de Transport", "TOUTES", "TOUS", "TOUTES", 10.0, 100.0, 30000.0, true},
-						{"PAR-RSP", "Indemnité de Responsabilité", "TOUTES", "TOUS", "TOUTES", 15.0, 0.0, 0.0, true},
-						{"PAR-SUT", "Indemnité de Sujétion & Caisse", "Caissier Principal", "TOUS", "TOUTES", 10.0, 100.0, 50000.0, true},
-						{"PAR-RIS", "Indemnité de Risque Bancaire", "Analyste Financier / Comptable", "TOUS", "TOUTES", 5.0, 0.0, 0.0, true}
-					};
+				Object[][] params = {
+					// ─── 1. BARÈME GÉNÉRAL / ORDINAIRE (Groupes & Catégories) ─────────────
+					{"PI-G1-LOG", "Indemnité de logement", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 35000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G1-TRP", "Indemnité de transport", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 30000.0, 100.0, 30000.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					for (Object[] p : params) {
-						String code = (String) p[0];
-						boolean exists = indemniteRepo.findAll().stream().anyMatch(pi -> code.equalsIgnoreCase(pi.getCode()));
-						if (!exists) {
-							com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
-							pi.setCode((String) p[0]);
-							pi.setTypeIndemnite((String) p[1]);
-							pi.setFonction((String) p[2]);
-							pi.setGrade((String) p[3]);
-							pi.setCategorie((String) p[4]);
-							pi.setTaux((Double) p[5]);
-							pi.setTauxExoneration((Double) p[6]);
-							pi.setPlafondExoneration((Double) p[7]);
-							pi.setActif((Boolean) p[8]);
-							indemniteRepo.save(pi);
-						}
+					{"PI-G2-CL1-LOG", "Indemnité de logement", "", "GROUPE II", "CL1", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL1-TRP", "Indemnité de transport", "", "GROUPE II", "CL1", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL1-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL1", 20000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G2-CL2-LOG", "Indemnité de logement", "", "GROUPE II", "CL2", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL2-TRP", "Indemnité de transport", "", "GROUPE II", "CL2", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL2-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL2", 30000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G2-CL3-LOG", "Indemnité de logement", "", "GROUPE II", "CL3", 50000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL3-TRP", "Indemnité de transport", "", "GROUPE II", "CL3", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL3-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL3", 40000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G2-CL4-LOG", "Indemnité de logement", "", "GROUPE II", "CL4", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL4-TRP", "Indemnité de transport", "", "GROUPE II", "CL4", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL4-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL4", 50000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G3-CL5-LOG", "Indemnité de logement", "", "GROUPE III", "CL5", 90000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL5-TRP", "Indemnité de transport", "", "GROUPE III", "CL5", 60000.0, 100.0, 60000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL5-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL5", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G3-CL6-LOG", "Indemnité de logement", "", "GROUPE III", "CL6", 100000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL6-TRP", "Indemnité de transport", "", "GROUPE III", "CL6", 75000.0, 100.0, 75000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL6-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL6", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G3-CL7-LOG", "Indemnité de logement", "", "GROUPE III", "CL7", 110000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL7-TRP", "Indemnité de transport", "", "GROUPE III", "CL7", 80000.0, 100.0, 80000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL7-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL7", 70000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					{"PI-G3-CL8-LOG", "Indemnité de logement", "", "GROUPE III", "CL8", 150000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL8-TRP", "Indemnité de transport", "", "GROUPE III", "CL8", 100000.0, 100.0, 100000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL8-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL8", 80000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+
+					// ─── 2. INDEMNITÉS DE NOMINATION ──────────────────────────────────────────
+					{"PI-NOM-DIR-FCT", "Indemnité de fonction", "DIRECTEUR DE DÉPARTEMENT", "", "", 150000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-DIR-TRP", "Indemnité de transport", "DIRECTEUR DE DÉPARTEMENT", "", "", 100000.0, 100.0, 100000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-DIR-LOG", "Indemnité de logement", "DIRECTEUR DE DÉPARTEMENT", "", "", 200000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-DIR-CMP", "Indemnité compensatrice", "DIRECTEUR DE DÉPARTEMENT", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+
+					{"PI-NOM-RESP-FCT", "Indemnité de fonction", "RESPONSABLE DE DÉPARTEMENT", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-RESP-TRP", "Indemnité de transport", "RESPONSABLE DE DÉPARTEMENT", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-RESP-LOG", "Indemnité de logement", "RESPONSABLE DE DÉPARTEMENT", "", "", 150000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-RESP-CMP", "Indemnité compensatrice", "RESPONSABLE DE DÉPARTEMENT", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+
+					{"PI-NOM-CS-FCT", "Indemnité de fonction", "CHEF DE SERVICE", "", "", 80000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CS-TRP", "Indemnité de transport", "CHEF DE SERVICE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CS-LOG", "Indemnité de logement", "CHEF DE SERVICE", "", "", 120000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CS-CMP", "Indemnité compensatrice", "CHEF DE SERVICE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+
+					{"PI-NOM-CA-FCT", "Indemnité de fonction", "CHEF D'AGENCE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CA-TRP", "Indemnité de transport", "CHEF D'AGENCE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CA-LOG", "Indemnité de logement", "CHEF D'AGENCE", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CA-CMP", "Indemnité compensatrice", "CHEF D'AGENCE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+
+					// ─── 3. INDEMNITÉS SPÉCIFIQUES & CAISSE ───────────────────────────────────
+					{"PI-SPEC-CP-CS", "INDEMNITE DE CAISSE", "CAISSIER PRINCIPAL", "", "", 40000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-GCP-CP", "INDEMNITE CASH POINT", "GESTIONNAIRE CASH POINT", "", "", 50000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-GCP-CS", "INDEMNITE DE CAISSE", "GESTIONNAIRE CASH POINT", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-CA-CS", "INDEMNITE DE CAISSE", "CAISSIER AUXILIAIRE", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-CHF-AST", "PRIME D'ASTREINTE", "CHAUFFEUR", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-AD-AST", "PRIME D'ASTREINTE", "ASSISTANTE DE DIRECTION", "", "", 30000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-AL-AST", "PRIME D'ASTREINTE", "AGENT DE LIAISON", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true}
+				};
+
+				for (Object[] p : params) {
+					String code = (String) p[0];
+					boolean exists = indemniteRepo.findAll().stream().anyMatch(pi -> code.equalsIgnoreCase(pi.getCode()));
+					if (!exists) {
+						com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
+						pi.setCode((String) p[0]);
+						pi.setTypeIndemnite((String) p[1]);
+						pi.setFonction((String) p[2]);
+						pi.setGrade((String) p[3]);
+						pi.setCategorie((String) p[4]);
+						pi.setTaux((Double) p[5]);
+						pi.setTauxExoneration((Double) p[6]);
+						pi.setPlafondExoneration((Double) p[7]);
+						pi.setRegleType((String) p[8]);
+						pi.setTypeNomination((String) p[9]);
+						pi.setActif((Boolean) p[10]);
+						indemniteRepo.save(pi);
 					}
-					System.out.println("Paramétrages d'indemnité initialisés dans PostgreSQL. Total: " + indemniteRepo.count());
 				}
+				System.out.println("Paramétrages d'indemnité BPBF3 (49 indemnités) initialisés dans PostgreSQL. Total: " + indemniteRepo.count());
 			} catch (Exception e) {
 				System.out.println("ParametrageIndemnite seeding error: " + e.getMessage());
 			}

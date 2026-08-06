@@ -42,6 +42,8 @@ public class ParametrageIndemniteService {
         entity.setTaux(dto.getTaux());
         entity.setTauxExoneration(dto.getTauxExoneration());
         entity.setPlafondExoneration(dto.getPlafondExoneration());
+        entity.setRegleType(dto.getRegleType() != null ? dto.getRegleType() : "ORDINAIRE");
+        entity.setTypeNomination(dto.getTypeNomination() != null ? dto.getTypeNomination() : "TOUTES");
         if (dto.getActif() != null) {
             entity.setActif(dto.getActif());
         }

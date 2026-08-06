@@ -5,6 +5,8 @@ import com.bpbf.sirh_backend.entities.Employee;
 import com.bpbf.sirh_backend.entities.GrilleSalariale;
 import com.bpbf.sirh_backend.entities.ParametrageIndemnite;
 import com.bpbf.sirh_backend.entities.TypeIndemnite;
+import com.bpbf.sirh_backend.entities.Fonction;
+import com.bpbf.sirh_backend.repositories.FonctionRepository;
 import com.bpbf.sirh_backend.repositories.EmployeeRepository;
 import com.bpbf.sirh_backend.repositories.GrilleSalarialeRepository;
 import com.bpbf.sirh_backend.repositories.ParametrageIndemniteRepository;
@@ -24,6 +26,7 @@ public class PaieCalculationService {
     private final ParametrageIndemniteRepository parametrageIndemniteRepository;
     private final GrilleSalarialeRepository grilleSalarialeRepository;
     private final TypeIndemniteRepository typeIndemniteRepository;
+    private final FonctionRepository fonctionRepository;
 
     public PaieBulletinDto calculatePayslipForEmployee(Long employeeId) {
         Employee emp = employeeRepository.findById(employeeId).orElse(null);
@@ -85,13 +88,27 @@ public class PaieCalculationService {
             totalIndemnites = 300000.0;
             totalExonere = 30000.0; // 20% sur logement
         } else {
+            String typeNominationEmp = "NON_NOMMEE";
+            if (fonction != null && !fonction.isEmpty()) {
+                List<Fonction> fonctions = fonctionRepository.findAll();
+                for (Fonction f : fonctions) {
+                    if ((f.getName() != null && f.getName().equalsIgnoreCase(fonction)) || (f.getCode() != null && f.getCode().equalsIgnoreCase(fonction))) {
+                        if (f.getTypeNomination() != null) {
+                            typeNominationEmp = f.getTypeNomination();
+                        }
+                        break;
+                    }
+                }
+            }
+
             for (ParametrageIndemnite param : allParams) {
                 if (Boolean.TRUE.equals(param.getActif())) {
                     boolean matchFonction = param.getFonction() == null || param.getFonction().isEmpty() || param.getFonction().equalsIgnoreCase(fonction);
                     boolean matchGrade = param.getGrade() == null || param.getGrade().isEmpty() || param.getGrade().equalsIgnoreCase(grade);
                     boolean matchCat = param.getCategorie() == null || param.getCategorie().isEmpty() || param.getCategorie().equalsIgnoreCase(categorie);
+                    boolean matchNomination = param.getTypeNomination() == null || param.getTypeNomination().isEmpty() || param.getTypeNomination().equalsIgnoreCase("TOUTES") || param.getTypeNomination().equalsIgnoreCase(typeNominationEmp);
 
-                    if (matchFonction && matchGrade && matchCat) {
+                    if (matchFonction && matchGrade && matchCat && matchNomination) {
                         Double m = param.getTaux() != null ? param.getTaux() : 0.0;
                         String typeIndStr = param.getTypeIndemnite() != null ? param.getTypeIndemnite() : "Indemnité";
                         indemnites.add(new PaieBulletinDto.IndemniteItemDto(param.getCode(), typeIndStr, m));

@@ -1,6 +1,10 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,23 +15,16 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "generic_ref_data")
-public class GenericRefData {
+@Table(name = "mode_paiement")
+public class ModePaiement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String type;
     private String code;
     private String libelle;
-    
-    @Column(columnDefinition = "TEXT")
+    private String banqueNom;
+    private Boolean exigeRIB = false;
     private String description;
-    
-    private String grade;
-    private String categorie;
-    private Double taux;
-    private String typeRetenue;
-    
-    private boolean actif;
+    private Boolean actif = true;
 }
