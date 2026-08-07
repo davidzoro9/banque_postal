@@ -505,6 +505,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.typesIndemnite = [];
       this.fonctions = [];
     }
+    if (this.type === 'type-retenue-emploi') {
+      this.dbRefService.getItems('type-retenue-employe').subscribe(items => {
+        if (items && items.length > 0) {
+          this.typesRetenueList = items.map(i => i.libelle || i.code);
+        }
+      });
+    }
   }
 
   applyFilter(): void {
