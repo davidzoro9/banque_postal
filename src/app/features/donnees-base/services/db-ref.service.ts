@@ -588,13 +588,20 @@ export class DbRefService {
 
     if (mapping) {
       const body = mapping.toBack(item);
-      return this.http.post<any>(`${environment.apiUrl}/${mapping.segment}/create`, body).pipe(
+      const baseUrl = `${environment.apiUrl}/${mapping.segment}`;
+      return this.http.post<any>(baseUrl, body).pipe(
         map(dto => mapping.toFront(dto)),
         map(newItem => addLocalState(newItem)),
         catchError(err => {
-          console.warn(`[DbRefService] Backend post error for ${type}, updating local state:`, err);
-          const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
-          return of(addLocalState(newItem));
+          return this.http.post<any>(`${baseUrl}/create`, body).pipe(
+            map(dto => mapping.toFront(dto)),
+            map(newItem => addLocalState(newItem)),
+            catchError(err2 => {
+              console.warn(`[DbRefService] Backend post error for ${type}:`, err2);
+              const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
+              return of(addLocalState(newItem));
+            })
+          );
         })
       );
     }
