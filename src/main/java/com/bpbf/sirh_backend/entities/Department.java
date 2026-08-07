@@ -1,15 +1,11 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import jakarta.persistence.Column;
 
 @Entity
 @Getter
@@ -25,5 +21,19 @@ public class Department {
     @Column(unique = true, nullable = false)
     private String code;
     private String name;
-    private String directeur;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "directeur_id")
+    private Employee directeurObj;
+
+    @Transient private String directeurStr;
+
+    @JsonProperty("directeur")
+    public String getDirecteur() {
+        if (directeurObj != null) return directeurObj.getName() != null ? directeurObj.getName() : (directeurObj.getPrenom() + " " + directeurObj.getNom());
+        return directeurStr;
+    }
+
+    @JsonProperty("directeur")
+    public void setDirecteur(String val) { this.directeurStr = val; }
 }
