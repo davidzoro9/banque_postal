@@ -1,10 +1,7 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,11 +20,43 @@ public class RetenueSalariale {
 
     private String code;
     private String libelle;
-    private String typeRetenue; // PRET, ACOMPTE, SAISIE_ARRET, COTISATION, DIVERSE
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "type_retenue_employe_id")
+    private TypeRetenueEmploye typeRetenueEmploye;
+
+    @Transient private String typeRetenueStr;
+
+    @JsonProperty("typeRetenue")
+    public String getTypeRetenue() {
+        if (typeRetenueEmploye != null) return typeRetenueEmploye.getLibelle();
+        return typeRetenueStr;
+    }
+
+    @JsonProperty("typeRetenue")
+    public void setTypeRetenue(String val) { this.typeRetenueStr = val; }
+
     private Double montantTotal;
     private Double mensualite;
     private Double resteAPayer;
     private Double taux;
     private Boolean actif = true;
-    private Long employeeId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
+
+    @JsonProperty("employeeId")
+    public Long getEmployeeId() {
+        return employee != null ? employee.getId() : null;
+    }
+
+    @JsonProperty("employeeId")
+    public void setEmployeeId(Long empId) {
+        if (empId != null) {
+            Employee e = new Employee();
+            e.setId(empId);
+            this.employee = e;
+        }
+    }
 }

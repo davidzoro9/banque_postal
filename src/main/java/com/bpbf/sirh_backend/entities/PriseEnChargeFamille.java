@@ -1,10 +1,7 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +20,24 @@ public class PriseEnChargeFamille {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long employeeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
+
+    @JsonProperty("employeeId")
+    public Long getEmployeeId() {
+        return employee != null ? employee.getId() : null;
+    }
+
+    @JsonProperty("employeeId")
+    public void setEmployeeId(Long empId) {
+        if (empId != null) {
+            Employee e = new Employee();
+            e.setId(empId);
+            this.employee = e;
+        }
+    }
+
     private String nomMembre;
     private String prenomMembre;
     private String lienParente; // CONJOINT, ENFANT, AYANT_DROIT

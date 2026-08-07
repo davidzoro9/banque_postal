@@ -1,5 +1,6 @@
 package com.bpbf.sirh_backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +18,27 @@ public class TypeRetenueEmploi {
     @Column(unique = true, nullable = false)
     private String code;
     private String libelle;
-    private String typeRetenue;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "type_retenue_employe_id")
+    private TypeRetenueEmploye typeRetenueEmploye;
+
+    @Transient
+    private String typeRetenueStr;
+
+    @JsonProperty("typeRetenue")
+    public String getTypeRetenue() {
+        if (typeRetenueEmploye != null) {
+            return typeRetenueEmploye.getLibelle() != null ? typeRetenueEmploye.getLibelle() : typeRetenueEmploye.getCode();
+        }
+        return typeRetenueStr;
+    }
+
+    @JsonProperty("typeRetenue")
+    public void setTypeRetenue(String tr) {
+        this.typeRetenueStr = tr;
+    }
+
     private Double taux;
     
     @Column(columnDefinition = "TEXT")

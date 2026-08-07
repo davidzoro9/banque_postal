@@ -1,5 +1,6 @@
 package com.bpbf.sirh_backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +17,22 @@ public class ParametrageRetraite {
 
     @Column(unique = true, nullable = false)
     private String code;
-    private String grade;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "grade_id")
+    private Grade gradeObj;
+
+    @Transient private String gradeStr;
+
+    @JsonProperty("grade")
+    public String getGrade() {
+        if (gradeObj != null) return gradeObj.getLibelle() != null ? gradeObj.getLibelle() : gradeObj.getCode();
+        return gradeStr;
+    }
+
+    @JsonProperty("grade")
+    public void setGrade(String val) { this.gradeStr = val; }
+
     private String libelle;
     private Double taux;
     

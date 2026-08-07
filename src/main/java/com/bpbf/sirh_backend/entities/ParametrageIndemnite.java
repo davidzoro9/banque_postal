@@ -1,15 +1,11 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import jakarta.persistence.Column;
 
 @Entity
 @Getter
@@ -23,10 +19,64 @@ public class ParametrageIndemnite {
     
     @Column(unique = true, nullable = false)
     private String code;
-    private String typeIndemnite;
-    private String fonction;
-    private String grade;
-    private String categorie;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "type_indemnite_id")
+    private TypeIndemnite typeIndemniteObj;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "fonction_id")
+    private Fonction fonctionObj;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "grade_id")
+    private Grade gradeObj;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorieObj;
+
+    @Transient private String typeIndemniteStr;
+    @Transient private String fonctionStr;
+    @Transient private String gradeStr;
+    @Transient private String categorieStr;
+
+    @JsonProperty("typeIndemnite")
+    public String getTypeIndemnite() {
+        if (typeIndemniteObj != null) return typeIndemniteObj.getName();
+        return typeIndemniteStr;
+    }
+
+    @JsonProperty("typeIndemnite")
+    public void setTypeIndemnite(String val) { this.typeIndemniteStr = val; }
+
+    @JsonProperty("fonction")
+    public String getFonction() {
+        if (fonctionObj != null) return fonctionObj.getName();
+        return fonctionStr;
+    }
+
+    @JsonProperty("fonction")
+    public void setFonction(String val) { this.fonctionStr = val; }
+
+    @JsonProperty("grade")
+    public String getGrade() {
+        if (gradeObj != null) return gradeObj.getLibelle();
+        return gradeStr;
+    }
+
+    @JsonProperty("grade")
+    public void setGrade(String val) { this.gradeStr = val; }
+
+    @JsonProperty("categorie")
+    public String getCategorie() {
+        if (categorieObj != null) return categorieObj.getLibelle();
+        return categorieStr;
+    }
+
+    @JsonProperty("categorie")
+    public void setCategorie(String val) { this.categorieStr = val; }
+
     private Double taux;
     private Double tauxExoneration;
     private Double plafondExoneration;
