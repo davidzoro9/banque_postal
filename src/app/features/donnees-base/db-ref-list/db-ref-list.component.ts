@@ -48,14 +48,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   typesRetenueList: string[] = [
     'Part Agent',
-    'Part Employeur',
-    'Cotisation Sociale (CNSS/CARFO)',
-    'Retraite Complémentaire (CRRAE)',
-    'Retenue Fiscale (IUTS/TPA)',
-    'Assurance Groupe & Santé',
-    'Mutuelle Interne (MUPER)',
-    'Remboursement Prêt & Avance',
-    'Cotisation Syndicale'
+    'Part Employeur'
   ];
 
   categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
