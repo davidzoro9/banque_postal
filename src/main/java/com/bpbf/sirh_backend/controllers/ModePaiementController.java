@@ -15,12 +15,12 @@ public class ModePaiementController {
 
     private final ModePaiementRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ModePaiement> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public ModePaiement create(@RequestBody ModePaiement entity) {
         return repository.save(entity);
     }

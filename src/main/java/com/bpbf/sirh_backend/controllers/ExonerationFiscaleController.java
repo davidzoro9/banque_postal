@@ -15,12 +15,12 @@ public class ExonerationFiscaleController {
 
     private final ExonerationFiscaleRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ExonerationFiscale> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public ExonerationFiscale create(@RequestBody ExonerationFiscale entity) {
         return repository.save(entity);
     }

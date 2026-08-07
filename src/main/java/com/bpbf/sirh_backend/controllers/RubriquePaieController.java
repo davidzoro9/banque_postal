@@ -15,12 +15,12 @@ public class RubriquePaieController {
 
     private final RubriquePaieRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<RubriquePaie> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public RubriquePaie create(@RequestBody RubriquePaie entity) {
         return repository.save(entity);
     }

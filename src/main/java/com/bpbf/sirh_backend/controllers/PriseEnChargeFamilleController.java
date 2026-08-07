@@ -15,7 +15,7 @@ public class PriseEnChargeFamilleController {
 
     private final PriseEnChargeFamilleRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<PriseEnChargeFamille> getAll() {
         return repository.findAll();
     }
@@ -25,7 +25,7 @@ public class PriseEnChargeFamilleController {
         return repository.findByEmployeeId(employeeId);
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public PriseEnChargeFamille create(@RequestBody PriseEnChargeFamille entity) {
         return repository.save(entity);
     }

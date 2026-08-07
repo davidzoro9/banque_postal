@@ -9,17 +9,18 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("api/typeabsenceconge")
+@RequestMapping("/api/typeabsenceconge")
+@CrossOrigin(origins = "*")
 public class TypeAbsenceCongeController {
 
     private final TypeAbsenceCongeService typeAbsenceCongeService;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<TypeAbsenceCongeDto> getAll() {
         return typeAbsenceCongeService.getAllTypeAbsenceConge();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public TypeAbsenceCongeDto create(@RequestBody TypeAbsenceCongeDto typeAbsenceCongeDto){
         return typeAbsenceCongeService.createTypeAbsenceConge(typeAbsenceCongeDto);
     }

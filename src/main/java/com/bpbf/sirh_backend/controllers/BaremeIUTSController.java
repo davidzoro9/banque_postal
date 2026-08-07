@@ -15,12 +15,12 @@ public class BaremeIUTSController {
 
     private final BaremeIUTSRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<BaremeIUTS> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public BaremeIUTS create(@RequestBody BaremeIUTS entity) {
         return repository.save(entity);
     }

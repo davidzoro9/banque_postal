@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/paramindemnite")
+@RequestMapping("/api/paramindemnite")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ParametrageIndemniteController {
 
     private final ParametrageIndemniteService service;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ParametrageIndemniteDto> getAll() {
         return service.getAll();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public ParametrageIndemniteDto create(@RequestBody ParametrageIndemniteDto dto) {
         return service.create(dto);
     }

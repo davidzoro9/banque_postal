@@ -15,12 +15,12 @@ public class GradeController {
 
     private final GradeRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<Grade> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public Grade create(@RequestBody Grade entity) {
         return repository.save(entity);
     }

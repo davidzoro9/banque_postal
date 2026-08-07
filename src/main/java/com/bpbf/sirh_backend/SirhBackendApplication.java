@@ -2,6 +2,7 @@ package com.bpbf.sirh_backend;
 
 import com.bpbf.sirh_backend.entities.Utilisateur;
 import com.bpbf.sirh_backend.repositories.*;
+import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -337,7 +338,21 @@ public class SirhBackendApplication {
 
 			// ── Seed Grille Salariale (données officielles BPBF) ──────────────
 			try {
-				if (grilleRepo.count() < 10) {
+				// Nettoyage des anciennes données obsolètes ou corrompues (null, 0 FCFA ou fausses catégories)
+				List<com.bpbf.sirh_backend.entities.GrilleSalariale> toDelete = grilleRepo.findAll().stream()
+					.filter(g -> g.getBasicSalary() == null 
+							  || g.getBasicSalary().doubleValue() <= 0 
+							  || g.getCategory() == null 
+							  || !g.getCategory().matches("^(C[1-7]|CL[1-8])$")
+							  || g.getEchellon() == null 
+							  || !g.getEchellon().matches("^E\\d{2}$"))
+					.collect(java.util.stream.Collectors.toList());
+				if (!toDelete.isEmpty()) {
+					grilleRepo.deleteAll(toDelete);
+					System.out.println("Nettoyage grille salariale: " + toDelete.size() + " entrée(s) obsolète(s) supprimée(s).");
+				}
+
+				if (grilleRepo.count() < 225) {
 					// Grille officielle BPBF:
 					// GROUPE I  : Catégories C1-C7 (Agents, Employés, Techniciens Opérationnels)
 					// GROUPE II : Classes CL1-CL4 (Agents de Maîtrise et Cadres Moyens)

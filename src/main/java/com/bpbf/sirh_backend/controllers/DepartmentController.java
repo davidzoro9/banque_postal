@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/departments")
+@RequestMapping("/api/departments")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class DepartmentController {
     
     private final DepartmentService departmentService;
     
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<DepartmentDto> getAll(){
         return departmentService.getAllDepartment();
     }
     
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public DepartmentDto create(@RequestBody DepartmentDto departmentDto){
         return departmentService.createDepartment(departmentDto);
     }

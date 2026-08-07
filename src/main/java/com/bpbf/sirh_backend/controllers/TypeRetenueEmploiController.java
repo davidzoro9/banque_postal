@@ -20,7 +20,7 @@ public class TypeRetenueEmploiController {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public TypeRetenueEmploi create(@RequestBody TypeRetenueEmploi entity) {
         return repository.save(entity);
     }

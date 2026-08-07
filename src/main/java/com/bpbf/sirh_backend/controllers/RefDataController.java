@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/ref-data/{type}")
+@RequestMapping("/api/ref-data/{type}")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class RefDataController {
 
     private final GenericRefDataRepository repository;
 
-    @GetMapping("/all")
+    @GetMapping({"", "/all"})
     public List<GenericRefData> getAll(@PathVariable String type) {
         return repository.findByType(type);
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public GenericRefData create(@PathVariable String type, @RequestBody GenericRefData data) {
         data.setType(type);
         return repository.save(data);

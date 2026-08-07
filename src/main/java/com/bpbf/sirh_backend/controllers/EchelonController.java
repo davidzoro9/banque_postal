@@ -15,12 +15,12 @@ public class EchelonController {
 
     private final EchelonRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<Echelon> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public Echelon create(@RequestBody Echelon entity) {
         return repository.save(entity);
     }

@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/directions")
+@RequestMapping("/api/directions")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class DirectionController {
 
     private final DirectionService directionService;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<DirectionDto> getAll(){
         return directionService.getAllDirection();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public DirectionDto create(@RequestBody DirectionDto directionDto){
         return directionService.createDirection(directionDto);
     }

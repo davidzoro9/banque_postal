@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/fonctions")
+@RequestMapping("/api/fonctions")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class FonctionController {
 
     private final FonctionService fonctionService;
 
-    @GetMapping("/all")
+    @GetMapping({"", "/all"})
     public List<FonctionDto> getAll() {
         return fonctionService.getAllFonction();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public FonctionDto create(@RequestBody FonctionDto fonctionDto){
         return fonctionService.createFonction(fonctionDto);
     }

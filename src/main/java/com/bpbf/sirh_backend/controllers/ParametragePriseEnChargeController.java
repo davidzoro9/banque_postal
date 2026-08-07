@@ -15,12 +15,12 @@ public class ParametragePriseEnChargeController {
 
     private final ParametragePriseEnChargeRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ParametragePriseEnCharge> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public ParametragePriseEnCharge create(@RequestBody ParametragePriseEnCharge entity) {
         return repository.save(entity);
     }

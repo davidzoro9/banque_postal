@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/emplois")
+@RequestMapping("/api/emplois")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class EmploiController {
 
     private final EmploiService emploiService;
 
-    @GetMapping("/all")
+    @GetMapping({"", "/all"})
     public List<EmploiDto> getAll() {
         return emploiService.getAllEmploi();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public EmploiDto create(@RequestBody EmploiDto emploiDto){
         return emploiService.createEmploi(emploiDto);
     }

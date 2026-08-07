@@ -15,12 +15,12 @@ public class ParametrageRetraiteController {
 
     private final ParametrageRetraiteRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ParametrageRetraite> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public ParametrageRetraite create(@RequestBody ParametrageRetraite entity) {
         return repository.save(entity);
     }

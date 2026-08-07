@@ -15,12 +15,12 @@ public class AgenceController {
 
     private final AgenceRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<Agence> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public Agence create(@RequestBody Agence entity) {
         return repository.save(entity);
     }

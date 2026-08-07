@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/typecontrat")
+@RequestMapping("/api/typecontrat")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class TypeContratController {
 
     private final TypeContratService typeContratService;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<TypeContratDto> getAll() {
         return typeContratService.getAllTypeContrat();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public TypeContratDto create(@RequestBody TypeContratDto typeContratDto){
         return typeContratService.createTypeContrat(typeContratDto);
     }

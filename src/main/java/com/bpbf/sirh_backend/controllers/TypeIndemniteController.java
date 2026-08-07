@@ -8,18 +8,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/typeindemnite")
+@RequestMapping("/api/typeindemnite")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class TypeIndemniteController {
 
     private final TypeIndemniteService typeIndemniteService;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<TypeIndemniteDto> getAll() {
         return typeIndemniteService.getAllTypeIndemnite();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public TypeIndemniteDto create(@RequestBody TypeIndemniteDto typeIndemniteDto){
         return typeIndemniteService.createTypeIndemnite(typeIndemniteDto);
     }

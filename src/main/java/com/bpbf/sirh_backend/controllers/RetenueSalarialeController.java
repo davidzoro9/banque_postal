@@ -15,7 +15,7 @@ public class RetenueSalarialeController {
 
     private final RetenueSalarialeRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<RetenueSalariale> getAll() {
         return repository.findAll();
     }
@@ -25,7 +25,7 @@ public class RetenueSalarialeController {
         return repository.findByEmployeeId(employeeId);
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public RetenueSalariale create(@RequestBody RetenueSalariale entity) {
         return repository.save(entity);
     }

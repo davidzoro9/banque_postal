@@ -20,7 +20,7 @@ public class CategorieController {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public Categorie create(@RequestBody Categorie entity) {
         return repository.save(entity);
     }

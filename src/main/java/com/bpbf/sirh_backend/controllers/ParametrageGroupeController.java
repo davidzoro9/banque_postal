@@ -15,12 +15,12 @@ public class ParametrageGroupeController {
 
     private final ParametrageGroupeRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<ParametrageGroupe> getAll() {
         return repository.findAll();
     }
 
-    @PostMapping
+    @PostMapping({"", "/create"})
     public ParametrageGroupe create(@RequestBody ParametrageGroupe entity) {
         return repository.save(entity);
     }

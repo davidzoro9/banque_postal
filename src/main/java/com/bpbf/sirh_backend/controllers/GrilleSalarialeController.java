@@ -9,17 +9,18 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("api/grillesalariale")
+@RequestMapping("/api/grillesalariale")
+@CrossOrigin(origins = "*")
 public class GrilleSalarialeController {
 
     private final GrilleSalarialeService grilleSalarialeService;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<GrilleSalarialeDto> getAll(){
         return grilleSalarialeService.getAllGrilleSalariale();
     }
 
-    @PostMapping("/create")
+    @PostMapping({"", "/create"})
     public GrilleSalarialeDto create(@RequestBody GrilleSalarialeDto grilleSalarialeDto){
         return grilleSalarialeService.createGrilleSalariale(grilleSalarialeDto);
     }
