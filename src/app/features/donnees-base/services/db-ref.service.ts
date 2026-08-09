@@ -158,14 +158,16 @@ const BACKEND_MAP: Record<string, {
       libelle: dto.name || dto.libelle || dto.code || 'Fonction',
       description: dto.description || '',
       actif: dto.actif ?? true,
-      typeNomination: dto.typeNomination ? dto.typeNomination : 'NON_NOMMEE'
+      typeNomination: dto.typeNomination ? dto.typeNomination : 'NON_NOMMEE',
+      indemnites: dto.indemnites || []
     }),
     toBack:  item => ({
       code: item.code,
       name: item.libelle,
       description: item.description || '',
       typeNomination: item.typeNomination || 'NON_NOMMEE',
-      actif: item.actif ?? true
+      actif: item.actif ?? true,
+      indemnites: item.indemnites || []
     }),
     toBackUpdate: item => ({
       id: item.id,
@@ -173,7 +175,8 @@ const BACKEND_MAP: Record<string, {
       name: item.libelle,
       description: item.description || '',
       typeNomination: item.typeNomination || 'NON_NOMMEE',
-      actif: item.actif ?? true
+      actif: item.actif ?? true,
+      indemnites: item.indemnites || []
     }),
   },
   'type-contrat': {

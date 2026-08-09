@@ -637,6 +637,54 @@
         }
       </mat-form-field>
 
+      <!-- Section Indemnités Rattachées (Uniquement si Fonction Nommée) -->
+      @if (formGroup.get('typeNomination')?.value === 'NOMMEE') {
+        <div style="margin-top: 10px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <label style="font-weight: 700; font-size: 13px; color: #b78103; display: flex; align-items: center; gap: 6px;">
+              <mat-icon style="color: #e65100; font-size: 20px; width: 20px; height: 20px;">payments</mat-icon>
+              Indemnités de Nomination Rattachées
+            </label>
+            <button type="button" mat-stroked-button (click)="addFonctionIndemniteRow()"
+                    style="font-size: 12px; height: 32px; border-color: #e65100; color: #e65100; font-weight: 600;">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">add</mat-icon>
+              Ajouter une indemnité
+            </button>
+          </div>
+
+          @if (fonctionIndemnitesList.length === 0) {
+            <div style="background: #ffffff; border: 1px dashed #ffd54f; border-radius: 8px; padding: 12px; text-align: center; color: #795548; font-size: 12px;">
+              Aucune indemnité rattachée pour le moment.<br>
+              Cliquez sur <strong>"+ Ajouter une indemnité"</strong> ci-dessus pour ajouter des montants (ex: Logement, Transport, Fonction...).
+            </div>
+          } @else {
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              @for (ind of fonctionIndemnitesList; track $index) {
+                <div style="display: grid; grid-template-columns: 2fr 1.5fr 40px; gap: 8px; align-items: center; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #ffe082;">
+                  <mat-form-field appearance="outline" style="width: 100%; margin-bottom: -1.25em;">
+                    <mat-label>Type d'indemnité</mat-label>
+                    <mat-select [(ngModel)]="ind.typeIndemnite" [ngModelOptions]="{standalone: true}" placeholder="Sélectionner l'indemnité">
+                      @for (t of typesIndemniteList; track t) {
+                        <mat-option [value]="t">{{ t }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" style="width: 100%; margin-bottom: -1.25em;">
+                    <mat-label>Montant (FCFA)</mat-label>
+                    <input matInput type="number" [(ngModel)]="ind.montant" [ngModelOptions]="{standalone: true}" placeholder="0" min="0">
+                  </mat-form-field>
+
+                  <button type="button" mat-icon-button color="warn" (click)="removeFonctionIndemniteRow($index)" title="Supprimer cette indemnité">
+                    <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
       <!-- Bandeau d'information -->
       <div [style.background]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#fff3e0' : '#e8f5e9'"
            [style.borderColor]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#ffe082' : '#a5d6a7'"
@@ -645,7 +693,7 @@
                   style="font-size: 18px; width: 18px; height: 18px; margin-top: 2px;">info</mat-icon>
         <div [style.color]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#795548' : '#2e7d32'">
           @if (formGroup.get('typeNomination')?.value === 'NOMMEE') {
-            <strong>Fonction Nommée :</strong> Un acte de nomination est obligatoire. L'employé bénéficiera des indemnités de fonction liées à ce poste.
+            <strong>Fonction Nommée :</strong> Renseignez ci-dessus les indemnités et primes rattachées à cette nomination (Logement, Transport, Fonction, Caisse, Astreinte...).
           } @else {
             <strong>Fonction Pas Nommée :</strong> Poste standard sans acte de nomination formel. Les indemnités sont calculées sur la base de la catégorie professionnelle.
           }

@@ -46,10 +46,33 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   directeursList: { libelle: string; description?: string }[] = []; // pour Directeur de Département / Direction
   categoriesList: string[]  = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
+  typesIndemniteList: string[] = [
+    'Indemnité de fonction',
+    'Indemnité de logement',
+    'Indemnité de transport',
+    'Indemnité compensatrice',
+    'Indemnité de caisse',
+    'Indemnité cash point',
+    "Prime d'astreinte"
+  ];
+
   typesRetenueList: string[] = [
     'Part Agent',
     'Part Employeur'
   ];
+
+  fonctionIndemnitesList: { typeIndemnite: string; montant: number }[] = [];
+
+  addFonctionIndemniteRow(): void {
+    const defaultType = this.typesIndemniteList.length > 0 ? this.typesIndemniteList[0] : 'Indemnité de fonction';
+    this.fonctionIndemnitesList.push({ typeIndemnite: defaultType, montant: 0 });
+  }
+
+  removeFonctionIndemniteRow(index: number): void {
+    if (index >= 0 && index < this.fonctionIndemnitesList.length) {
+      this.fonctionIndemnitesList.splice(index, 1);
+    }
+  }
 
   categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -491,8 +514,14 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.grades = [];
       this.paramGroupesList = [];
     }
-    if (this.type === 'param-indemnite') {
-      this.dbRefService.getItems('type-indemnite').subscribe(items => this.typesIndemnite = items);
+    if (this.type === 'param-indemnite' || this.type === 'fonction') {
+      this.dbRefService.getItems('type-indemnite').subscribe(items => {
+        this.typesIndemnite = items;
+        if (items && items.length > 0) {
+          const names = items.map(i => i.libelle || i.code);
+          this.typesIndemniteList = Array.from(new Set([...names, ...this.typesIndemniteList]));
+        }
+      });
       this.dbRefService.getItems('fonction').subscribe(items => this.fonctions = items);
     } else {
       this.typesIndemnite = [];
@@ -543,6 +572,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   openAddDialog(): void {
     this.isEditing = false;
     this.editingItem = null;
+    this.fonctionIndemnitesList = [];
     this.formGroup.reset({
       code: '', libelle: '', description: '', actif: true,
       montant: 0, departementId: null, directionId: null, echelle: '', echellon: this.type === 'grille-salariale' ? '1' : '',
@@ -748,6 +778,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       });
     }
 
+    if (this.type === 'fonction') {
+      this.fonctionIndemnitesList = item.indemnites ? item.indemnites.map(i => ({ typeIndemnite: i.typeIndemnite, montant: i.montant })) : [];
+    } else {
+      this.fonctionIndemnitesList = [];
+    }
+
     this.setupValidators();
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '560px' });
@@ -898,7 +934,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         tauxAbattement: v.tauxAbattement !== undefined && v.tauxAbattement !== null ? Number(v.tauxAbattement) : undefined,
         tauxExoneration: v.tauxExoneration !== undefined && v.tauxExoneration !== null ? Number(v.tauxExoneration) : undefined,
         plafondExoneration: v.plafondExoneration !== undefined && v.plafondExoneration !== null ? Number(v.plafondExoneration) : undefined,
-        typeNomination: this.type === 'fonction' ? (v.typeNomination || 'NON_NOMMEE') : undefined
+        typeNomination: this.type === 'fonction' ? (v.typeNomination || 'NON_NOMMEE') : undefined,
+        indemnites: this.type === 'fonction' && v.typeNomination === 'NOMMEE' ? this.fonctionIndemnitesList : []
       };
     }
 
