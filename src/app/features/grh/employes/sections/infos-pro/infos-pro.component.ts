@@ -324,20 +324,7 @@ export class InfosProComponent implements OnInit {
       const matrixInfo = SALARY_MATRIX[catCode];
       const echIdx = Math.max(0, Math.min(14, echNum - 1));
       const baseSal = matrixInfo.values[echIdx] || matrixInfo.values[0];
-
-      let logement = 100000;
-      let transport = 50000;
-      if (matrixInfo.groupe.includes('GROUPE III') || catCode.startsWith('CL') || catCode === 'C6' || catCode === 'C7') {
-        logement = 200000;
-        transport = 100000;
-      } else if (matrixInfo.groupe.includes('GROUPE II') || catCode === 'C4' || catCode === 'C5') {
-        logement = 150000;
-        transport = 75000;
-      }
-      const brut = baseSal + logement + transport;
-
       updatePayload.salaireBase = baseSal;
-      updatePayload.salaireBrut = brut;
     }
 
     this.employeeService.update(this.empId, updatePayload).subscribe(() => {
