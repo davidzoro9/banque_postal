@@ -26,6 +26,7 @@ const createDefaultEmployee = (partial: Partial<Employee>): Employee => {
     enfants: partial.enfants || [],
     personnesCharge: partial.personnesCharge || [],
     poste: partial.poste || 'Agent Bancaire',
+    fonction: partial.fonction || 'Agent simple',
     service: partial.service || 'Service Opérations',
     direction: partial.direction || 'Direction Générale (DG)',
     departement: partial.departement || 'Direction Générale',
@@ -93,6 +94,7 @@ export class EmployeeService {
     }
     if (emp.echelon) extraDataObj.echelon = emp.echelon;
     if (emp.grade) extraDataObj.grade = emp.grade;
+    if (emp.fonction) extraDataObj.fonction = emp.fonction;
     if (emp.salaireBase !== undefined) extraDataObj.salaireBase = emp.salaireBase;
     if (emp.primeLogement !== undefined) extraDataObj.primeLogement = emp.primeLogement;
     if (emp.enfants) extraDataObj.enfants = emp.enfants;
@@ -149,6 +151,7 @@ export class EmployeeService {
         if (extra.categoriePro || extra.categorie) result.categoriePro = extra.categoriePro || extra.categorie;
         if (extra.echelon) result.echelon = extra.echelon;
         if (extra.grade) result.grade = extra.grade;
+        if (extra.fonction) result.fonction = extra.fonction;
         if (extra.salaireBase) result.salaireBase = Number(extra.salaireBase);
         if (extra.primeLogement) result.primeLogement = Number(extra.primeLogement);
         if (extra.enfants && Array.isArray(extra.enfants)) result.enfants = extra.enfants;
