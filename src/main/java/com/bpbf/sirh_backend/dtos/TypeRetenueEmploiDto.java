@@ -14,6 +14,7 @@ public class TypeRetenueEmploiDto {
     private String code;
     private String libelle;
     private String typeRetenue;
+    private Long typeRetenueEmployeId;
     private Double taux;
     private String description;
     private Boolean actif;

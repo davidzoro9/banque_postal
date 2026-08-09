@@ -5,6 +5,7 @@ import com.bpbf.sirh_backend.entities.Department;
 import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.DepartmentMapper;
 import com.bpbf.sirh_backend.repositories.DepartmentRepository;
+import com.bpbf.sirh_backend.repositories.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ public class DepartmentService {
 
     private final DepartmentMapper departmentMapper;
     private final DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
 
     public List<DepartmentDto> getAllDepartment(){
         List<Department> departments = departmentRepository.findAll();
@@ -24,6 +26,7 @@ public class DepartmentService {
 
     public DepartmentDto createDepartment(DepartmentDto departmentDto){
         Department department = departmentMapper.toEntity(departmentDto);
+        resolveRelationships(department, departmentDto);
         Department saved = departmentRepository.save(department);
         return departmentMapper.toDto(saved);
     }
@@ -35,14 +38,26 @@ public class DepartmentService {
         existingDepartment.setCode(departmentDto.getCode());
         existingDepartment.setName(departmentDto.getName());
         existingDepartment.setDirecteur(departmentDto.getDirecteur());
+        resolveRelationships(existingDepartment, departmentDto);
 
         Department saved = departmentRepository.save(existingDepartment);
         return departmentMapper.toDto(saved);
     }
 
+    private void resolveRelationships(Department entity, DepartmentDto dto) {
+        if (dto.getDirecteurId() != null) {
+            employeeRepository.findById(dto.getDirecteurId()).ifPresent(entity::setDirecteurObj);
+        } else if (dto.getDirecteur() != null && !dto.getDirecteur().trim().isEmpty()) {
+            String dirStr = dto.getDirecteur().trim();
+            employeeRepository.findAll().stream()
+                    .filter(e -> dirStr.equalsIgnoreCase(e.getName()) 
+                              || dirStr.equalsIgnoreCase(e.getNom()) 
+                              || (e.getPrenom() + " " + e.getNom()).equalsIgnoreCase(dirStr))
+                    .findFirst().ifPresent(entity::setDirecteurObj);
+        }
+    }
+
     public void delete(Long id){
         departmentRepository.deleteById(id);
     }
-
-
 }

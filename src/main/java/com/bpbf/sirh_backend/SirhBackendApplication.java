@@ -712,22 +712,52 @@ public class SirhBackendApplication {
 
 				for (Object[] p : params) {
 					String code = (String) p[0];
-					boolean exists = indemniteRepo.findAll().stream().anyMatch(pi -> code.equalsIgnoreCase(pi.getCode()));
-					if (!exists) {
-						com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
-						pi.setCode((String) p[0]);
-						pi.setTypeIndemnite((String) p[1]);
-						pi.setFonction((String) p[2]);
-						pi.setGrade((String) p[3]);
-						pi.setCategorie((String) p[4]);
-						pi.setTaux((Double) p[5]);
-						pi.setTauxExoneration((Double) p[6]);
-						pi.setPlafondExoneration((Double) p[7]);
-						pi.setRegleType((String) p[8]);
-						pi.setTypeNomination((String) p[9]);
-						pi.setActif((Boolean) p[10]);
-						indemniteRepo.save(pi);
+					String typeIndName = (String) p[1];
+					String fctName     = (String) p[2];
+					String gradeName   = (String) p[3];
+					String catName     = (String) p[4];
+
+					com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = indemniteRepo.findAll().stream()
+						.filter(item -> code.equalsIgnoreCase(item.getCode()))
+						.findFirst().orElseGet(() -> {
+							com.bpbf.sirh_backend.entities.ParametrageIndemnite newPi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
+							newPi.setCode(code);
+							return newPi;
+						});
+
+					pi.setTypeIndemnite(typeIndName);
+					pi.setFonction(fctName);
+					pi.setGrade(gradeName);
+					pi.setCategorie(catName);
+					pi.setTaux((Double) p[5]);
+					pi.setTauxExoneration((Double) p[6]);
+					pi.setPlafondExoneration((Double) p[7]);
+					pi.setRegleType((String) p[8]);
+					pi.setTypeNomination((String) p[9]);
+					pi.setActif((Boolean) p[10]);
+
+					if (typeIndName != null && !typeIndName.trim().isEmpty()) {
+						typeIndemniteRepo.findAll().stream()
+							.filter(ti -> typeIndName.equalsIgnoreCase(ti.getName()) || typeIndName.equalsIgnoreCase(ti.getCode()))
+							.findFirst().ifPresent(pi::setTypeIndemniteObj);
 					}
+					if (fctName != null && !fctName.trim().isEmpty()) {
+						fonctionRepo.findAll().stream()
+							.filter(f -> fctName.equalsIgnoreCase(f.getName()) || fctName.equalsIgnoreCase(f.getCode()))
+							.findFirst().ifPresent(pi::setFonctionObj);
+					}
+					if (gradeName != null && !gradeName.trim().isEmpty()) {
+						gradeRepo.findAll().stream()
+							.filter(g -> gradeName.equalsIgnoreCase(g.getCode()) || gradeName.equalsIgnoreCase(g.getLibelle()))
+							.findFirst().ifPresent(pi::setGradeObj);
+					}
+					if (catName != null && !catName.trim().isEmpty()) {
+						categorieRepo.findAll().stream()
+							.filter(c -> catName.contains(c.getCode()) || catName.contains(c.getLibelle()))
+							.findFirst().ifPresent(pi::setCategorieObj);
+					}
+
+					indemniteRepo.save(pi);
 				}
 				System.out.println("Paramétrages d'indemnité BPBF3 (49 indemnités) initialisés dans PostgreSQL. Total: " + indemniteRepo.count());
 			} catch (Exception e) {
