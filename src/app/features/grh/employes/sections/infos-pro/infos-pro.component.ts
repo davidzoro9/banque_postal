@@ -247,6 +247,15 @@ export class InfosProComponent implements OnInit {
 
     if (!fctValue || fctValue === 'Agent' || upperFct.includes('AGENT SIMPLE')) {
       fctValue = 'Agent simple';
+    } else if (this.fonctionsList && this.fonctionsList.length > 0) {
+      const targetNorm = fctValue.toLowerCase().replace(/[éèêë]/g, 'e').replace(/[^a-z0-9]/g, '');
+      const match = this.fonctionsList.find(f => {
+        const nameNorm = (f.libelle || f.name || f.code || '').toLowerCase().replace(/[éèêë]/g, 'e').replace(/[^a-z0-9]/g, '');
+        return nameNorm === targetNorm || targetNorm.includes(nameNorm) || nameNorm.includes(targetNorm);
+      });
+      if (match) {
+        fctValue = match.libelle || match.name || match.code || fctValue;
+      }
     }
 
     this.form.patchValue({
