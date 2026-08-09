@@ -246,6 +246,18 @@ export class InfosProComponent implements OnInit {
       fctValue = 'CHEF DE SERVICE';
     } else if (upperFct.includes("CHEF D'AGENCE") || upperFct.includes('CHEF DAGENCE')) {
       fctValue = "CHEF D'AGENCE";
+    } else if (upperFct.includes('CAISSIER PRINCIPAL')) {
+      fctValue = 'CAISSIER PRINCIPAL';
+    } else if (upperFct.includes('GESTIONNAIRE CASH POINT')) {
+      fctValue = 'GESTIONNAIRE CASH POINT';
+    } else if (upperFct.includes('CAISSIER AUXILIAIRE') || upperFct.includes('CAISSIER AUXILLIAIRE')) {
+      fctValue = 'CAISSIER AUXILIAIRE';
+    } else if (upperFct.includes('CHAUFFEUR')) {
+      fctValue = 'CHAUFFEUR';
+    } else if (upperFct.includes('ASSISTANTE DE DIRECTION')) {
+      fctValue = 'ASSISTANTE DE DIRECTION';
+    } else if (upperFct.includes('AGENT DE LIAISON')) {
+      fctValue = 'AGENT DE LIAISON';
     } else {
       customFct = fctValue;
       fctValue = 'CUSTOM_NEW';
