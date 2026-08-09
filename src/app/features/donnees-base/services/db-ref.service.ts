@@ -8,6 +8,7 @@ export interface RefItem {
   id?: string;
   code: string;
   libelle: string;
+  name?: string;
   description: string;
   actif: boolean;
   montant?: number;
