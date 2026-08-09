@@ -319,6 +319,28 @@ public class EmployeeService {
                 existingMap.put("salaireBase", entity.getGrilleSalariale().getSalaireBase());
             }
 
+            // Recalcul automatique des indemnités de barème selon le nouveau grade et fonction
+            String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : (String) existingMap.get("fonction");
+            try {
+                List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService.getByGradeAndFonction(rawGrade, finalFonction);
+                double log = 0;
+                double trp = 0;
+                double sujResp = 0;
+                for (com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto ind : indemnites) {
+                    String typeInd = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().toLowerCase() : "";
+                    String code = ind.getCode() != null ? ind.getCode().toLowerCase() : "";
+                    double t = ind.getTaux() != null ? ind.getTaux() : 0;
+                    if (typeInd.contains("logement") || code.contains("log")) log = t;
+                    if (typeInd.contains("transport") || code.contains("trp")) trp = t;
+                    if (typeInd.contains("sujétion") || typeInd.contains("fonction") || typeInd.contains("responsabilit") || code.contains("suj") || code.contains("fct")) {
+                        sujResp += t;
+                    }
+                }
+                if (log > 0) existingMap.put("primeLogement", log);
+                if (trp > 0) existingMap.put("primeTransport", trp);
+                if (sujResp > 0) existingMap.put("primeResponsabilite", sujResp);
+            } catch (Exception ignored) {}
+
             entity.setExtraData(objectMapper.writeValueAsString(existingMap));
         } catch (Exception e) {
             // Keep existing or default to empty
