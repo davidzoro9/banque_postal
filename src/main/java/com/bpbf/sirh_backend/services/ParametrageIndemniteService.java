@@ -105,22 +105,39 @@ public class ParametrageIndemniteService {
         final String targetCat = cat;
         final String targetFct = fonctionStr != null ? fonctionStr.trim().toUpperCase() : "";
 
-        List<ParametrageIndemnite> list = repository.findAll().stream()
+        List<ParametrageIndemnite> allActive = repository.findAll().stream()
                 .filter(p -> p.getActif() == null || p.getActif())
+                .collect(java.util.stream.Collectors.toList());
+
+        // 1. Si une fonction est spécifiée, chercher d'abord les indemnités de nomination rattachées à cette fonction
+        if (!targetFct.isEmpty()) {
+            List<ParametrageIndemnite> fctIndemnites = allActive.stream()
+                    .filter(p -> {
+                        String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
+                        String pRegle = (p.getRegleType() != null ? p.getRegleType() : "").toUpperCase();
+                        return !pFonction.isEmpty() && (targetFct.contains(pFonction) || pFonction.contains(targetFct) || "NOMINATION".equalsIgnoreCase(pRegle));
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+
+            // Règle Métier BPBF : Si l'agent a une fonction nommée avec des indemnités spécifiques de fonction,
+            // on prend UNIQUEMENT les indemnités de la fonction et NON celles de la catégorie/classe.
+            if (!fctIndemnites.isEmpty()) {
+                return mapper.toDtos(fctIndemnites);
+            }
+        }
+
+        // 2. Sinon (Fonction Pas Nommée / Agent Simple), barème général par catégorie / classe
+        List<ParametrageIndemnite> catIndemnites = allActive.stream()
                 .filter(p -> {
                     String pCode = (p.getCode() != null ? p.getCode() : "").toUpperCase();
-                    String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
                     String pCategorie = (p.getCategorie() != null ? p.getCategorie() : "").toUpperCase();
                     String pGrade = (p.getGrade() != null ? p.getGrade() : "").toUpperCase();
+                    String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
 
-                    // Si recherche par fonction de nomination
-                    if (!targetFct.isEmpty() && !pFonction.isEmpty()) {
-                        return targetFct.contains(pFonction) || pFonction.contains(targetFct);
-                    }
+                    // Ignorer les indemnités purement nominatives de fonction
+                    if (!pFonction.isEmpty()) return false;
 
-                    // Barème général par catégorie / groupe
                     if (!targetCat.isEmpty()) {
-                        // Matching direct dans le code (ex: PI-G2-CL1-LOG vs CL1, ou PI-G1-LOG vs C1)
                         if (pCode.contains("-" + targetCat + "-")) return true;
 
                         if (!pCategorie.isEmpty()) {
@@ -130,7 +147,6 @@ public class ParametrageIndemniteService {
                             }
                         }
 
-                        // Si barème par Groupe général
                         if (pCategorie.isEmpty()) {
                             if (targetCat.startsWith("C") && !targetCat.startsWith("CL")) {
                                 return "GROUPE I".equalsIgnoreCase(pGrade);
@@ -152,7 +168,7 @@ public class ParametrageIndemniteService {
                 })
                 .collect(java.util.stream.Collectors.toList());
 
-        return mapper.toDtos(list);
+        return mapper.toDtos(catIndemnites);
     }
 
     public void delete(Long id) {
