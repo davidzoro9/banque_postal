@@ -246,6 +246,11 @@ public class EmployeeService {
 
         if (dto.getFonction_id() != null) {
             fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
+        } else if (dto.getFonction() != null && !dto.getFonction().trim().isEmpty()) {
+            String fName = dto.getFonction().trim();
+            fonctionRepository.findAll().stream()
+                    .filter(f -> fName.equalsIgnoreCase(f.getName()) || fName.equalsIgnoreCase(f.getCode()))
+                    .findFirst().ifPresent(entity::setFonction);
         }
         if (dto.getEmploi_id() != null) {
             emploiRepository.findById(dto.getEmploi_id()).ifPresent(entity::setEmploi);
