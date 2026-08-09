@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -68,6 +71,8 @@ public class EmployeeDto {
     private String typeContrat;
 
     // Category / Grade
+    @JsonAlias({"categorie", "categoriePro"})
+    @JsonProperty("categoriePro")
     private String categoriePro;
     private String echelon;
     private String grade;

@@ -606,6 +606,36 @@ public class SirhBackendApplication {
 						}
 					}
 				}
+
+				// Synchroniser les objets ManyToOne (Categorie, Echelon, Grade, GrilleSalariale) pour tous les employés
+				for (com.bpbf.sirh_backend.entities.Employee emp : employeeRepo.findAll()) {
+					if (emp.getExtraData() != null && !emp.getExtraData().isEmpty()) {
+						try {
+							com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+							java.util.Map<String, Object> map = mapper.readValue(emp.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+							String cat = (String) map.get("categorie");
+							if (cat == null) cat = (String) map.get("categoriePro");
+							String ech = (String) map.get("echelon");
+							String grade = (String) map.get("grade");
+
+							if (cat != null) {
+								String finalCat = cat.trim();
+								categorieRepo.findAll().stream().filter(c -> finalCat.equalsIgnoreCase(c.getCode()) || finalCat.equalsIgnoreCase(c.getLibelle())).findFirst().ifPresent(emp::setCategorieObj);
+							}
+							if (ech != null) {
+								String finalEch = ech.trim();
+								echelonRepo.findAll().stream().filter(e -> finalEch.equalsIgnoreCase(e.getCode()) || finalEch.equalsIgnoreCase(e.getLibelle())).findFirst().ifPresent(emp::setEchelonObj);
+							}
+							if (grade != null) {
+								String finalGrade = grade.trim();
+								gradeRepo.findAll().stream().filter(g -> finalGrade.equalsIgnoreCase(g.getCode()) || finalGrade.equalsIgnoreCase(g.getLibelle())).findFirst().ifPresent(emp::setGradeObj);
+								grilleRepo.findAll().stream().filter(gs -> finalGrade.equalsIgnoreCase(gs.getCode()) || finalGrade.equalsIgnoreCase(gs.getGrade())).findFirst().ifPresent(emp::setGrilleSalariale);
+							}
+							employeeRepo.save(emp);
+						} catch (Exception ex) {}
+					}
+				}
+				System.out.println("Employés (14 agents) initialisés et reliés à la grille salariale. Total: " + employeeRepo.count());
 			} catch (Exception e) {
 				System.out.println("Employees seeding error: " + e.getMessage());
 			}

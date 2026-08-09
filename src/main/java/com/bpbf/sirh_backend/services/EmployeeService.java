@@ -139,17 +139,41 @@ public class EmployeeService {
         dto.setName(fullName.trim());
         dto.setPhone(dto.getTelephone());
         
-        // Relational IDs
-        dto.setGrilleSalarialeId(entity.getGrilleSalariale() != null ? entity.getGrilleSalariale().getId() : null);
-        dto.setCategorieId(entity.getCategorieObj() != null ? entity.getCategorieObj().getId() : null);
-        dto.setEchelonId(entity.getEchelonObj() != null ? entity.getEchelonObj().getId() : null);
-        dto.setGradeId(entity.getGradeObj() != null ? entity.getGradeObj().getId() : null);
+        // Relational IDs and populated fields
+        if (entity.getCategorieObj() != null) {
+            dto.setCategorieId(entity.getCategorieObj().getId());
+            dto.setCategoriePro(entity.getCategorieObj().getCode());
+        }
+        if (entity.getEchelonObj() != null) {
+            dto.setEchelonId(entity.getEchelonObj().getId());
+            dto.setEchelon(entity.getEchelonObj().getCode());
+        }
+        if (entity.getGradeObj() != null) {
+            dto.setGradeId(entity.getGradeObj().getId());
+            dto.setGrade(entity.getGradeObj().getCode());
+        }
+        if (entity.getGrilleSalariale() != null) {
+            dto.setGrilleSalarialeId(entity.getGrilleSalariale().getId());
+            if (entity.getGrilleSalariale().getSalaireBase() != null) {
+                dto.setSalaireBase(entity.getGrilleSalariale().getSalaireBase());
+            }
+        }
+        
         dto.setFonction_id(entity.getFonction() != null ? entity.getFonction().getId() : null);
         dto.setEmploi_id(entity.getEmploi() != null ? entity.getEmploi().getId() : null);
         dto.setDepartment_id(entity.getDepartment() != null ? entity.getDepartment().getId() : null);
         dto.setDirection_id(entity.getDirection() != null ? entity.getDirection().getId() : null);
         dto.setService_id(entity.getService() != null ? entity.getService().getId() : null);
         dto.setSuperviseur_id(entity.getSuperviseur() != null ? entity.getSuperviseur().getId() : null);
+
+        // Fallback grade extraction if needed
+        if ((dto.getCategoriePro() == null || dto.getCategoriePro().isEmpty()) && dto.getGrade() != null) {
+            String g = dto.getGrade().trim();
+            int eIdx = g.indexOf('E');
+            if (eIdx > 0) {
+                dto.setCategoriePro(g.substring(0, eIdx));
+            }
+        }
 
         return dto;
     }
@@ -179,19 +203,46 @@ public class EmployeeService {
             entity.setState(com.bpbf.sirh_backend.entities.EmployeeStatus.ACTIF);
         }
 
-        // ManyToOne relationship resolution
+        // ManyToOne relationship resolution by ID or Code
         if (dto.getGrilleSalarialeId() != null) {
             grilleSalarialeRepository.findById(dto.getGrilleSalarialeId()).ifPresent(entity::setGrilleSalariale);
         }
         if (dto.getCategorieId() != null) {
             categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+        } else if (dto.getCategoriePro() != null && !dto.getCategoriePro().trim().isEmpty()) {
+            String catCode = dto.getCategoriePro().trim();
+            categorieRepository.findAll().stream()
+                    .filter(c -> catCode.equalsIgnoreCase(c.getCode()) || catCode.equalsIgnoreCase(c.getLibelle()))
+                    .findFirst().ifPresent(entity::setCategorieObj);
         }
+
         if (dto.getEchelonId() != null) {
             echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
+        } else if (dto.getEchelon() != null && !dto.getEchelon().trim().isEmpty()) {
+            String echCode = dto.getEchelon().trim();
+            echelonRepository.findAll().stream()
+                    .filter(e -> echCode.equalsIgnoreCase(e.getCode()) || echCode.equalsIgnoreCase(e.getLibelle()))
+                    .findFirst().ifPresent(entity::setEchelonObj);
         }
+
         if (dto.getGradeId() != null) {
             gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+        } else if (dto.getGrade() != null && !dto.getGrade().trim().isEmpty()) {
+            String gCode = dto.getGrade().trim();
+            gradeRepository.findAll().stream()
+                    .filter(g -> gCode.equalsIgnoreCase(g.getCode()) || gCode.equalsIgnoreCase(g.getLibelle()))
+                    .findFirst().ifPresent(entity::setGradeObj);
         }
+
+        if (entity.getGradeObj() != null || dto.getGrade() != null) {
+            String targetGrade = entity.getGradeObj() != null ? entity.getGradeObj().getCode() : dto.getGrade();
+            if (targetGrade != null) {
+                grilleSalarialeRepository.findAll().stream()
+                        .filter(gs -> targetGrade.equalsIgnoreCase(gs.getCode()) || targetGrade.equalsIgnoreCase(gs.getGrade()))
+                        .findFirst().ifPresent(entity::setGrilleSalariale);
+            }
+        }
+
         if (dto.getFonction_id() != null) {
             fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
         }
@@ -243,15 +294,28 @@ public class EmployeeService {
                 }
             }
 
-            String cat = dto.getCategoriePro() != null ? dto.getCategoriePro() : (String) existingMap.getOrDefault("categorie", "CL1");
-            String ech = dto.getEchelon() != null ? dto.getEchelon() : (String) existingMap.getOrDefault("echelon", "E01");
-            existingMap.put("categorie", cat);
-            existingMap.put("echelon", ech);
+            String cat = dto.getCategoriePro() != null ? dto.getCategoriePro() : (String) existingMap.get("categorie");
+            if (cat == null) cat = (String) existingMap.get("categoriePro");
+            if (cat == null && entity.getCategorieObj() != null) cat = entity.getCategorieObj().getCode();
+            if (cat == null) cat = "CL1";
+
+            String ech = dto.getEchelon() != null ? dto.getEchelon() : (String) existingMap.get("echelon");
+            if (ech == null && entity.getEchelonObj() != null) ech = entity.getEchelonObj().getCode();
+            if (ech == null) ech = "E01";
+
             String rawGrade = dto.getGrade() != null ? dto.getGrade() : (String) existingMap.get("grade");
+            if (rawGrade == null && entity.getGradeObj() != null) rawGrade = entity.getGradeObj().getCode();
             if (rawGrade == null || rawGrade.toUpperCase().contains("GRADE") || rawGrade.toUpperCase().contains("GROUPE")) {
-                existingMap.put("grade", cat + ech);
-            } else {
-                existingMap.put("grade", rawGrade);
+                rawGrade = cat + ech;
+            }
+
+            existingMap.put("categorie", cat);
+            existingMap.put("categoriePro", cat);
+            existingMap.put("echelon", ech);
+            existingMap.put("grade", rawGrade);
+
+            if (entity.getGrilleSalariale() != null && entity.getGrilleSalariale().getSalaireBase() != null) {
+                existingMap.put("salaireBase", entity.getGrilleSalariale().getSalaireBase());
             }
 
             entity.setExtraData(objectMapper.writeValueAsString(existingMap));

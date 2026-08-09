@@ -143,5 +143,19 @@ public class GrilleSalariale {
 
     @Column(precision = 10, scale = 2, name = "salaire_base")
     private BigDecimal basicSalary;
+
+    @JsonProperty("salaireBase")
+    public Double getSalaireBase() {
+        return basicSalary != null ? basicSalary.doubleValue() : null;
+    }
+
+    @JsonProperty("salaireBase")
+    public void setSalaireBase(Double val) {
+        this.basicSalary = val != null ? BigDecimal.valueOf(val) : null;
+    }
+
+    public String getCode() {
+        return getGrade();
+    }
 }
 
