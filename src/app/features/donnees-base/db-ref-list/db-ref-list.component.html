@@ -681,6 +681,14 @@
                 </div>
               }
             </div>
+            <!-- Affichage du Total des Indemnités de Nomination -->
+            <div style="margin-top: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; font-size: 13px; color: var(--on-surface-2); display: flex; align-items: center; gap: 6px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: var(--on-surface-2);">calculate</mat-icon>
+                Total des indemnités rattachées :
+              </span>
+              <span style="font-weight: 800; font-size: 15px; color: var(--on-surface);">{{ getTotalFonctionIndemnites() | number:'1.0-0' }} FCFA</span>
+            </div>
           }
         </div>
       }

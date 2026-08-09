@@ -79,7 +79,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     if (type === 'NOMMEE' && this.fonctionIndemnitesList.length === 0) {
       const fctName = this.formGroup.get('libelle')?.value || this.editingItem?.libelle || '';
       this.fonctionIndemnitesList = this.getDefaultIndemnitesForFonction(fctName);
+    } else if (type === 'NON_NOMMEE') {
+      this.fonctionIndemnitesList = [];
     }
+  }
+
+  getTotalFonctionIndemnites(): number {
+    return (this.fonctionIndemnitesList || []).reduce((sum, i) => sum + (Number(i.montant) || 0), 0);
   }
 
   getDefaultIndemnitesForFonction(libelle: string): { typeIndemnite: string; montant: number }[] {
@@ -646,7 +652,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       code: '', libelle: '', description: '', actif: true,
       montant: 0, departementId: null, directionId: null, echelle: '', echellon: this.type === 'grille-salariale' ? '1' : '',
       typeIndemnite: '', typeRetenue: 'Part Agent', fonction: '', grade: this.type === 'grille-salariale' ? 'GROUPE I' : '', categorie: this.type === 'grille-salariale' ? 'C1' : '', taux: 0,
-      tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25
+      tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25, typeNomination: 'NON_NOMMEE'
     });
     if (this.type === 'grille-salariale') {
       const initialGroupe = this.grades.length > 0 ? (this.grades[0].libelle || this.grades[0].code) : 'GROUPE I';
@@ -1011,8 +1017,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         tauxAbattement: v.tauxAbattement !== undefined && v.tauxAbattement !== null ? Number(v.tauxAbattement) : undefined,
         tauxExoneration: v.tauxExoneration !== undefined && v.tauxExoneration !== null ? Number(v.tauxExoneration) : undefined,
         plafondExoneration: v.plafondExoneration !== undefined && v.plafondExoneration !== null ? Number(v.plafondExoneration) : undefined,
-        typeNomination: this.type === 'fonction' ? (v.typeNomination || 'NON_NOMMEE') : undefined,
-        indemnites: this.type === 'fonction' && v.typeNomination === 'NOMMEE' ? this.fonctionIndemnitesList : []
+        typeNomination: this.type === 'fonction' ? (v.typeNomination || this.formGroup.get('typeNomination')?.value || 'NON_NOMMEE') : undefined,
+        indemnites: this.type === 'fonction' && ((v.typeNomination || this.formGroup.get('typeNomination')?.value) === 'NOMMEE') ? this.fonctionIndemnitesList : []
       };
     }
 
