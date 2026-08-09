@@ -161,6 +161,11 @@ public class EmployeeService {
         }
         
         dto.setFonction_id(entity.getFonction() != null ? entity.getFonction().getId() : null);
+        if (entity.getFonction() != null && entity.getFonction().getName() != null) {
+            dto.setFonction(entity.getFonction().getName());
+        } else if (dto.getFonction() == null || dto.getFonction().isEmpty()) {
+            dto.setFonction("Agent simple");
+        }
         dto.setEmploi_id(entity.getEmploi() != null ? entity.getEmploi().getId() : null);
         dto.setDepartment_id(entity.getDepartment() != null ? entity.getDepartment().getId() : null);
         dto.setDirection_id(entity.getDirection() != null ? entity.getDirection().getId() : null);
@@ -243,14 +248,32 @@ public class EmployeeService {
                         .findFirst().ifPresent(entity::setGrilleSalariale);
             }
         }
-
         if (dto.getFonction_id() != null) {
             fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
         } else if (dto.getFonction() != null && !dto.getFonction().trim().isEmpty()) {
             String fName = dto.getFonction().trim();
-            fonctionRepository.findAll().stream()
-                    .filter(f -> fName.equalsIgnoreCase(f.getName()) || fName.equalsIgnoreCase(f.getCode()))
-                    .findFirst().ifPresent(entity::setFonction);
+            if ("Agent simple".equalsIgnoreCase(fName) || fName.toLowerCase().contains("agent simple") || "Sans nomination".equalsIgnoreCase(fName)) {
+                entity.setFonction(null);
+            } else {
+                String cleanName = fName.contains("(") ? fName.substring(0, fName.indexOf("(")).trim() : fName;
+                Fonction matchedFct = fonctionRepository.findAll().stream()
+                        .filter(f -> f.getName() != null && (
+                                cleanName.equalsIgnoreCase(f.getName().trim()) 
+                             || cleanName.equalsIgnoreCase(f.getCode() != null ? f.getCode().trim() : "")
+                             || fName.equalsIgnoreCase(f.getName().trim())
+                             || f.getName().trim().equalsIgnoreCase(cleanName)
+                             || f.getName().toLowerCase().replace("é","e").replace("è","e").equalsIgnoreCase(cleanName.toLowerCase().replace("é","e").replace("è","e"))
+                        ))
+                        .findFirst().orElse(null);
+                
+                if (matchedFct != null) {
+                    entity.setFonction(matchedFct);
+                } else {
+                    fonctionRepository.findAll().stream()
+                            .filter(f -> f.getName() != null && cleanName.toLowerCase().contains(f.getName().toLowerCase().substring(0, Math.min(5, f.getName().length()))))
+                            .findFirst().ifPresent(entity::setFonction);
+                }
+            }
         }
         if (dto.getEmploi_id() != null) {
             emploiRepository.findById(dto.getEmploi_id()).ifPresent(entity::setEmploi);
@@ -268,17 +291,28 @@ public class EmployeeService {
             employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
         }
         
+        updateExtraDataFromEntity(entity);
+    }
+
+    private void updateExtraDataFromEntity(Employee entity) {
         try {
-            java.util.Map<String, Object> existingMap;
-            if (entity.getExtraData() != null && !entity.getExtraData().isEmpty()) {
-                existingMap = objectMapper.readValue(entity.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-            } else {
-                existingMap = new java.util.HashMap<>();
+            java.util.Map<String, Object> existingMap = new java.util.HashMap<>();
+            if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
+                try {
+                    existingMap = objectMapper.readValue(entity.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                } catch (Exception ignored) {}
             }
+
+            if (entity.getCategorieObj() != null) {
+                existingMap.put("categoriePro", entity.getCategorieObj().getCode());
+            }
+            if (entity.getEchelonObj() != null) {
+                existingMap.put("echelon", entity.getEchelonObj().getCode());
+            }
+            String cat = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : (String) existingMap.get("categoriePro");
+            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (String) existingMap.get("echelon");
+            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
             
-            java.util.Map<String, Object> newMap = objectMapper.convertValue(dto, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-            for (java.util.Map.Entry<String, Object> entry : newMap.entrySet()) {
-                if (entry.getValue() != null) {
                     existingMap.put(entry.getKey(), entry.getValue());
                 }
             }
@@ -326,6 +360,10 @@ public class EmployeeService {
 
             // Recalcul automatique des indemnités de barème selon le nouveau grade et fonction
             String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : (String) existingMap.get("fonction");
+            if (finalFonction == null || finalFonction.trim().isEmpty()) {
+                finalFonction = "Agent simple";
+            }
+            existingMap.put("fonction", finalFonction);
             try {
                 List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService.getByGradeAndFonction(rawGrade, finalFonction);
                 double log = 0;
