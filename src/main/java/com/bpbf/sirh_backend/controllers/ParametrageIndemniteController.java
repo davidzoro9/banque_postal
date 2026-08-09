@@ -20,6 +20,13 @@ public class ParametrageIndemniteController {
         return service.getAll();
     }
 
+    @GetMapping("/lookup")
+    public List<ParametrageIndemniteDto> getByGradeAndFonction(
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) String fonction) {
+        return service.getByGradeAndFonction(grade, fonction);
+    }
+
     @PostMapping({"", "/create"})
     public ParametrageIndemniteDto create(@RequestBody ParametrageIndemniteDto dto) {
         return service.create(dto);

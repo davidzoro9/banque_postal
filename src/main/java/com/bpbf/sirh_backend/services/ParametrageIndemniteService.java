@@ -93,6 +93,68 @@ public class ParametrageIndemniteService {
         }
     }
 
+    public List<ParametrageIndemniteDto> getByGradeAndFonction(String gradeStr, String fonctionStr) {
+        String cat = "";
+        if (gradeStr != null && !gradeStr.trim().isEmpty()) {
+            String g = gradeStr.trim().toUpperCase();
+            int eIdx = g.indexOf('E');
+            if (eIdx > 0) cat = g.substring(0, eIdx);
+            else cat = g;
+        }
+
+        final String targetCat = cat;
+        final String targetFct = fonctionStr != null ? fonctionStr.trim().toUpperCase() : "";
+
+        List<ParametrageIndemnite> list = repository.findAll().stream()
+                .filter(p -> p.getActif() == null || p.getActif())
+                .filter(p -> {
+                    String pCode = (p.getCode() != null ? p.getCode() : "").toUpperCase();
+                    String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
+                    String pCategorie = (p.getCategorie() != null ? p.getCategorie() : "").toUpperCase();
+                    String pGrade = (p.getGrade() != null ? p.getGrade() : "").toUpperCase();
+
+                    // Si recherche par fonction de nomination
+                    if (!targetFct.isEmpty() && !pFonction.isEmpty()) {
+                        return targetFct.contains(pFonction) || pFonction.contains(targetFct);
+                    }
+
+                    // Barème général par catégorie / groupe
+                    if (!targetCat.isEmpty()) {
+                        // Matching direct dans le code (ex: PI-G2-CL1-LOG vs CL1, ou PI-G1-LOG vs C1)
+                        if (pCode.contains("-" + targetCat + "-")) return true;
+
+                        if (!pCategorie.isEmpty()) {
+                            String[] cats = pCategorie.split(",");
+                            for (String c : cats) {
+                                if (c.trim().equalsIgnoreCase(targetCat)) return true;
+                            }
+                        }
+
+                        // Si barème par Groupe général
+                        if (pCategorie.isEmpty()) {
+                            if (targetCat.startsWith("C") && !targetCat.startsWith("CL")) {
+                                return "GROUPE I".equalsIgnoreCase(pGrade);
+                            }
+                            if (targetCat.startsWith("CL")) {
+                                try {
+                                    int num = Integer.parseInt(targetCat.replace("CL", ""));
+                                    if (num <= 4 && "GROUPE II".equalsIgnoreCase(pGrade)) {
+                                        return pCode.contains("CL" + num);
+                                    }
+                                    if (num >= 5 && "GROUPE III".equalsIgnoreCase(pGrade)) {
+                                        return pCode.contains("CL" + num);
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    }
+                    return false;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        return mapper.toDtos(list);
+    }
+
     public void delete(Long id) {
         repository.deleteById(id);
     }
