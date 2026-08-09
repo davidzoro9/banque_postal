@@ -16,7 +16,7 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
     icon: 'storage',
     children: [
       { id: 'emploi',           label: 'Poste / Emploi',           icon: 'work',                route: '/donnees-base/admin/emploi'           },
-      { id: 'fonction',         label: 'Fonction (Nomination)',    icon: 'badge',               route: '/donnees-base/admin/fonction'         },
+      { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
       { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
       { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
