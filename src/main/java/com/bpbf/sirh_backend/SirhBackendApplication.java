@@ -642,69 +642,75 @@ public class SirhBackendApplication {
 
 			// ── Seed ParametrageIndemnite (table parametrage_indemnite) ────
 			try {
+				// Effacer les anciens paramétrages corrompus pour repartir sur une base 100% propre
+				indemniteRepo.deleteAll();
+				refDataRepo.findAll().stream()
+					.filter(r -> "param-indemnite".equalsIgnoreCase(r.getType()))
+					.forEach(refDataRepo::delete);
+
 				Object[][] params = {
 					// ─── 1. BARÈME GÉNÉRAL / ORDINAIRE (Groupes & Catégories) ─────────────
-					{"PI-G1-LOG", "Indemnité de logement", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 35000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G1-TRP", "Indemnité de transport", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 30000.0, 100.0, 30000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G1-LOG", "Indemnité de Logement", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 35000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G1-TRP", "Indemnité de Transport", "", "GROUPE I", "C1, C2, C3, C4, C5, C6, C7", 30000.0, 100.0, 30000.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G2-CL1-LOG", "Indemnité de logement", "", "GROUPE II", "CL1", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G2-CL1-TRP", "Indemnité de transport", "", "GROUPE II", "CL1", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL1-LOG", "Indemnité de Logement", "", "GROUPE II", "CL1", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL1-TRP", "Indemnité de Transport", "", "GROUPE II", "CL1", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G2-CL1-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL1", 20000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G2-CL2-LOG", "Indemnité de logement", "", "GROUPE II", "CL2", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G2-CL2-TRP", "Indemnité de transport", "", "GROUPE II", "CL2", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL2-LOG", "Indemnité de Logement", "", "GROUPE II", "CL2", 45000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL2-TRP", "Indemnité de Transport", "", "GROUPE II", "CL2", 45000.0, 100.0, 45000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G2-CL2-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL2", 30000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G2-CL3-LOG", "Indemnité de logement", "", "GROUPE II", "CL3", 50000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G2-CL3-TRP", "Indemnité de transport", "", "GROUPE II", "CL3", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL3-LOG", "Indemnité de Logement", "", "GROUPE II", "CL3", 50000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL3-TRP", "Indemnité de Transport", "", "GROUPE II", "CL3", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G2-CL3-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL3", 40000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G2-CL4-LOG", "Indemnité de logement", "", "GROUPE II", "CL4", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G2-CL4-TRP", "Indemnité de transport", "", "GROUPE II", "CL4", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL4-LOG", "Indemnité de Logement", "", "GROUPE II", "CL4", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G2-CL4-TRP", "Indemnité de Transport", "", "GROUPE II", "CL4", 50000.0, 100.0, 50000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G2-CL4-SUJ", "Indemnité de Sujétion", "", "GROUPE II", "CL4", 50000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G3-CL5-LOG", "Indemnité de logement", "", "GROUPE III", "CL5", 90000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G3-CL5-TRP", "Indemnité de transport", "", "GROUPE III", "CL5", 60000.0, 100.0, 60000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL5-LOG", "Indemnité de Logement", "", "GROUPE III", "CL5", 90000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL5-TRP", "Indemnité de Transport", "", "GROUPE III", "CL5", 60000.0, 100.0, 60000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G3-CL5-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL5", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G3-CL6-LOG", "Indemnité de logement", "", "GROUPE III", "CL6", 100000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G3-CL6-TRP", "Indemnité de transport", "", "GROUPE III", "CL6", 75000.0, 100.0, 75000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL6-LOG", "Indemnité de Logement", "", "GROUPE III", "CL6", 100000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL6-TRP", "Indemnité de Transport", "", "GROUPE III", "CL6", 75000.0, 100.0, 75000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G3-CL6-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL6", 60000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G3-CL7-LOG", "Indemnité de logement", "", "GROUPE III", "CL7", 110000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G3-CL7-TRP", "Indemnité de transport", "", "GROUPE III", "CL7", 80000.0, 100.0, 80000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL7-LOG", "Indemnité de Logement", "", "GROUPE III", "CL7", 110000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL7-TRP", "Indemnité de Transport", "", "GROUPE III", "CL7", 80000.0, 100.0, 80000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G3-CL7-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL7", 70000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
-					{"PI-G3-CL8-LOG", "Indemnité de logement", "", "GROUPE III", "CL8", 150000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
-					{"PI-G3-CL8-TRP", "Indemnité de transport", "", "GROUPE III", "CL8", 100000.0, 100.0, 100000.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL8-LOG", "Indemnité de Logement", "", "GROUPE III", "CL8", 150000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
+					{"PI-G3-CL8-TRP", "Indemnité de Transport", "", "GROUPE III", "CL8", 100000.0, 100.0, 100000.0, "ORDINAIRE", "NON_NOMMEE", true},
 					{"PI-G3-CL8-SUJ", "Indemnité de Sujétion", "", "GROUPE III", "CL8", 80000.0, 0.0, 0.0, "ORDINAIRE", "NON_NOMMEE", true},
 
 					// ─── 2. INDEMNITÉS DE NOMINATION ──────────────────────────────────────────
 					{"PI-NOM-DIR-FCT", "Indemnité de fonction", "DIRECTEUR DE DÉPARTEMENT", "", "", 150000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-DIR-TRP", "Indemnité de transport", "DIRECTEUR DE DÉPARTEMENT", "", "", 100000.0, 100.0, 100000.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-DIR-LOG", "Indemnité de logement", "DIRECTEUR DE DÉPARTEMENT", "", "", 200000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-DIR-TRP", "Indemnité de Transport", "DIRECTEUR DE DÉPARTEMENT", "", "", 100000.0, 100.0, 100000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-DIR-LOG", "Indemnité de Logement", "DIRECTEUR DE DÉPARTEMENT", "", "", 200000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 					{"PI-NOM-DIR-CMP", "Indemnité compensatrice", "DIRECTEUR DE DÉPARTEMENT", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 
 					{"PI-NOM-RESP-FCT", "Indemnité de fonction", "RESPONSABLE DE DÉPARTEMENT", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-RESP-TRP", "Indemnité de transport", "RESPONSABLE DE DÉPARTEMENT", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-RESP-LOG", "Indemnité de logement", "RESPONSABLE DE DÉPARTEMENT", "", "", 150000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-RESP-TRP", "Indemnité de Transport", "RESPONSABLE DE DÉPARTEMENT", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-RESP-LOG", "Indemnité de Logement", "RESPONSABLE DE DÉPARTEMENT", "", "", 150000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 					{"PI-NOM-RESP-CMP", "Indemnité compensatrice", "RESPONSABLE DE DÉPARTEMENT", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 
 					{"PI-NOM-CS-FCT", "Indemnité de fonction", "CHEF DE SERVICE", "", "", 80000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-CS-TRP", "Indemnité de transport", "CHEF DE SERVICE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-CS-LOG", "Indemnité de logement", "CHEF DE SERVICE", "", "", 120000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CS-TRP", "Indemnité de Transport", "CHEF DE SERVICE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CS-LOG", "Indemnité de Logement", "CHEF DE SERVICE", "", "", 120000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 					{"PI-NOM-CS-CMP", "Indemnité compensatrice", "CHEF DE SERVICE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 
 					{"PI-NOM-CA-FCT", "Indemnité de fonction", "CHEF D'AGENCE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-CA-TRP", "Indemnité de transport", "CHEF D'AGENCE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
-					{"PI-NOM-CA-LOG", "Indemnité de logement", "CHEF D'AGENCE", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CA-TRP", "Indemnité de Transport", "CHEF D'AGENCE", "", "", 75000.0, 100.0, 75000.0, "NOMINATION", "NOMMEE", true},
+					{"PI-NOM-CA-LOG", "Indemnité de Logement", "CHEF D'AGENCE", "", "", 100000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 					{"PI-NOM-CA-CMP", "Indemnité compensatrice", "CHEF D'AGENCE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 
 					// ─── 3. INDEMNITÉS SPÉCIFIQUES & CAISSE ───────────────────────────────────
 					{"PI-SPEC-CP-CS", "INDEMNITE DE CAISSE", "CAISSIER PRINCIPAL", "", "", 40000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
 					{"PI-SPEC-GCP-CP", "INDEMNITE CASH POINT", "GESTIONNAIRE CASH POINT", "", "", 50000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-GCP-CS", "INDEMNITE DE CAISSE", "GESTIONNAIRE CASH POINT", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-CA-CS", "INDEMNITE DE CAISSE", "CAISSIER AUXILIAIRE", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-GCP-CS", "PRIME D'ASTREINTE", "GESTIONNAIRE CASH POINT", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-CA-CS", "INDEMNITE CASH POINT", "CAISSIER AUXILIAIRE", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
 					{"PI-SPEC-CHF-AST", "PRIME D'ASTREINTE", "CHAUFFEUR", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
 					{"PI-SPEC-AD-AST", "PRIME D'ASTREINTE", "ASSISTANTE DE DIRECTION", "", "", 30000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
 					{"PI-SPEC-AL-AST", "PRIME D'ASTREINTE", "AGENT DE LIAISON", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true}
@@ -717,14 +723,8 @@ public class SirhBackendApplication {
 					String gradeName   = (String) p[3];
 					String catName     = (String) p[4];
 
-					com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = indemniteRepo.findAll().stream()
-						.filter(item -> code.equalsIgnoreCase(item.getCode()))
-						.findFirst().orElseGet(() -> {
-							com.bpbf.sirh_backend.entities.ParametrageIndemnite newPi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
-							newPi.setCode(code);
-							return newPi;
-						});
-
+					com.bpbf.sirh_backend.entities.ParametrageIndemnite pi = new com.bpbf.sirh_backend.entities.ParametrageIndemnite();
+					pi.setCode(code);
 					pi.setTypeIndemnite(typeIndName);
 					pi.setFonction(fctName);
 					pi.setGrade(gradeName);
@@ -737,13 +737,33 @@ public class SirhBackendApplication {
 					pi.setActif((Boolean) p[10]);
 
 					if (typeIndName != null && !typeIndName.trim().isEmpty()) {
+						String tUpper = typeIndName.toUpperCase();
 						typeIndemniteRepo.findAll().stream()
-							.filter(ti -> typeIndName.equalsIgnoreCase(ti.getName()) || typeIndName.equalsIgnoreCase(ti.getCode()))
+							.filter(ti -> {
+								String name = (ti.getName() != null ? ti.getName() : "").toUpperCase();
+								String tiCode = (ti.getCode() != null ? ti.getCode() : "").toUpperCase();
+								return tUpper.equals(name) || tUpper.equals(tiCode) ||
+									(tUpper.contains("LOGEMENT") && name.contains("LOGEMENT")) ||
+									(tUpper.contains("TRANSPORT") && name.contains("TRANSPORT")) ||
+									((tUpper.contains("FONCTION") || tUpper.contains("COMPENSATRICE") || tUpper.contains("RESPONSABILITE")) && name.contains("RESPONSABILITE")) ||
+									((tUpper.contains("SUJÉTION") || tUpper.contains("SUJETION") || tUpper.contains("CAISSE") || tUpper.contains("CASH POINT") || tUpper.contains("ASTREINTE")) && (name.contains("SUJÉTION") || name.contains("SUJETION") || name.contains("RISQUE")));
+							})
 							.findFirst().ifPresent(pi::setTypeIndemniteObj);
 					}
 					if (fctName != null && !fctName.trim().isEmpty()) {
+						String fUpper = fctName.toUpperCase();
 						fonctionRepo.findAll().stream()
-							.filter(f -> fctName.equalsIgnoreCase(f.getName()) || fctName.equalsIgnoreCase(f.getCode()))
+							.filter(f -> {
+								String name = (f.getName() != null ? f.getName() : "").toUpperCase();
+								String fCode = (f.getCode() != null ? f.getCode() : "").toUpperCase();
+								return fUpper.equals(name) || fUpper.equals(fCode) ||
+									(fUpper.contains("DIRECTEUR") && name.contains("DIRECTEUR")) ||
+									(fUpper.contains("RESPONSABLE DE DÉPARTEMENT") && name.contains("RESPONSABLE")) ||
+									(fUpper.contains("CHEF DE SERVICE") && name.contains("CHEF DE SERVICE")) ||
+									(fUpper.contains("AGENCE") && name.contains("AGENCE")) ||
+									(fUpper.contains("CAISSIER") && name.contains("CAISSIER")) ||
+									(fUpper.contains("CASH POINT") && name.contains("CASH POINT"));
+							})
 							.findFirst().ifPresent(pi::setFonctionObj);
 					}
 					if (gradeName != null && !gradeName.trim().isEmpty()) {
@@ -751,9 +771,9 @@ public class SirhBackendApplication {
 							.filter(g -> gradeName.equalsIgnoreCase(g.getCode()) || gradeName.equalsIgnoreCase(g.getLibelle()))
 							.findFirst().ifPresent(pi::setGradeObj);
 					}
-					if (catName != null && !catName.trim().isEmpty()) {
+					if (catName != null && !catName.trim().isEmpty() && !catName.contains(",")) {
 						categorieRepo.findAll().stream()
-							.filter(c -> catName.contains(c.getCode()) || catName.contains(c.getLibelle()))
+							.filter(c -> catName.equalsIgnoreCase(c.getCode()) || catName.equalsIgnoreCase(c.getLibelle()))
 							.findFirst().ifPresent(pi::setCategorieObj);
 					}
 
