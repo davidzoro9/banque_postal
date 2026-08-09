@@ -305,49 +305,16 @@ public class EmployeeService {
 
             if (entity.getCategorieObj() != null) {
                 existingMap.put("categoriePro", entity.getCategorieObj().getCode());
+                existingMap.put("categorie", entity.getCategorieObj().getCode());
             }
             if (entity.getEchelonObj() != null) {
                 existingMap.put("echelon", entity.getEchelonObj().getCode());
             }
             String cat = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : (String) existingMap.get("categoriePro");
-            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (String) existingMap.get("echelon");
-            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
-            
-                    existingMap.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-            if (dto.getEnfantsJson() != null && !dto.getEnfantsJson().trim().isEmpty()) {
-                try {
-                    Object parsedEnfants = objectMapper.readValue(dto.getEnfantsJson(), Object.class);
-                    existingMap.put("enfants", parsedEnfants);
-                } catch (Exception e) {
-                    existingMap.put("enfants", dto.getEnfantsJson());
-                }
-            }
-            if (dto.getConjointJson() != null && !dto.getConjointJson().trim().isEmpty()) {
-                try {
-                    Object parsedConjoint = objectMapper.readValue(dto.getConjointJson(), Object.class);
-                    existingMap.put("conjoint", parsedConjoint);
-                } catch (Exception e) {
-                    existingMap.put("conjoint", dto.getConjointJson());
-                }
-            }
-
-            String cat = dto.getCategoriePro() != null ? dto.getCategoriePro() : (String) existingMap.get("categorie");
-            if (cat == null) cat = (String) existingMap.get("categoriePro");
-            if (cat == null && entity.getCategorieObj() != null) cat = entity.getCategorieObj().getCode();
             if (cat == null) cat = "CL1";
-
-            String ech = dto.getEchelon() != null ? dto.getEchelon() : (String) existingMap.get("echelon");
-            if (ech == null && entity.getEchelonObj() != null) ech = entity.getEchelonObj().getCode();
+            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (String) existingMap.get("echelon");
             if (ech == null) ech = "E01";
-
-            String rawGrade = dto.getGrade() != null ? dto.getGrade() : (String) existingMap.get("grade");
-            if (rawGrade == null && entity.getGradeObj() != null) rawGrade = entity.getGradeObj().getCode();
-            if (rawGrade == null || rawGrade.toUpperCase().contains("GRADE") || rawGrade.toUpperCase().contains("GROUPE")) {
-                rawGrade = cat + ech;
-            }
+            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
 
             existingMap.put("categorie", cat);
             existingMap.put("categoriePro", cat);
@@ -359,10 +326,7 @@ public class EmployeeService {
             }
 
             // Recalcul automatique des indemnités de barème selon le nouveau grade et fonction
-            String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : (String) existingMap.get("fonction");
-            if (finalFonction == null || finalFonction.trim().isEmpty()) {
-                finalFonction = "Agent simple";
-            }
+            String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : "Agent simple";
             existingMap.put("fonction", finalFonction);
             try {
                 List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService.getByGradeAndFonction(rawGrade, finalFonction);
