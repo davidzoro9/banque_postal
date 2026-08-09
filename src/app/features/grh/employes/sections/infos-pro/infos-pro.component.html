@@ -69,18 +69,6 @@
               @for (fct of (fonctions$ | async); track fct.id || fct.code) {
                 <mat-option [value]="fct.name || fct.libelle || fct.code">{{ fct.name || fct.libelle || fct.code }}</mat-option>
               }
-
-              <mat-option value="DIRECTEUR DE DEPARTEMENT">DIRECTEUR DE DEPARTEMENT</mat-option>
-              <mat-option value="RESPONSABLE DE DEPARTEMENT">RESPONSABLE DE DEPARTEMENT</mat-option>
-              <mat-option value="CHEF DE SERVICE">CHEF DE SERVICE</mat-option>
-              <mat-option value="CHEF D'AGENCE">CHEF D'AGENCE</mat-option>
-              <mat-option value="CAISSIER PRINCIPAL">CAISSIER PRINCIPAL</mat-option>
-              <mat-option value="GESTIONNAIRE CASH POINT">GESTIONNAIRE CASH POINT</mat-option>
-              <mat-option value="CAISSIER AUXILIAIRE">CAISSIER AUXILIAIRE</mat-option>
-              <mat-option value="CHAUFFEUR">CHAUFFEUR</mat-option>
-              <mat-option value="ASSISTANTE DE DIRECTION">ASSISTANTE DE DIRECTION</mat-option>
-              <mat-option value="AGENT DE LIAISON">AGENT DE LIAISON</mat-option>
-              <mat-option value="CUSTOM_NEW">+ Ajouter une nouvelle nomination...</mat-option>
             </mat-select>
           </mat-form-field>
 
@@ -88,14 +76,6 @@
             <mat-label>Emploi / Emploi occupé</mat-label>
             <input matInput formControlName="poste" placeholder="Ex: Informaticien, Comptable, Analyste...">
           </mat-form-field>
-
-          <!-- Si saisie d'une nomination personnalisée -->
-          @if (form.get('fonction')?.value === 'CUSTOM_NEW') {
-            <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Intitulé de la nouvelle nomination</mat-label>
-              <input matInput formControlName="customFonction" placeholder="Ex: DIRECTEUR DE L'AUDIT INTERNE">
-            </mat-form-field>
-          }
 
           <!-- Si DIRECTEUR DE DEPARTEMENT ou RESPONSABLE DE DEPARTEMENT -> Sélection dynamique du Département -->
           @if (form.get('fonction')?.value === 'DIRECTEUR DE DEPARTEMENT' || form.get('fonction')?.value === 'RESPONSABLE DE DEPARTEMENT') {

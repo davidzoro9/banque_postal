@@ -245,35 +245,11 @@ export class InfosProComponent implements OnInit {
 
     if (!fctValue || fctValue === 'Agent' || upperFct.includes('AGENT SIMPLE')) {
       fctValue = 'Agent simple';
-    } else if (upperFct.includes('DIRECTEUR DE DEPARTEMENT') || upperFct.includes('DIRECTEUR DE DÉPARTEMENT')) {
-      fctValue = 'DIRECTEUR DE DEPARTEMENT';
-    } else if (upperFct.includes('RESPONSABLE DE DEPARTEMENT') || upperFct.includes('RESPONSABLE DE DÉPARTEMENT')) {
-      fctValue = 'RESPONSABLE DE DEPARTEMENT';
-    } else if (upperFct.includes('CHEF DE SERVICE')) {
-      fctValue = 'CHEF DE SERVICE';
-    } else if (upperFct.includes("CHEF D'AGENCE") || upperFct.includes('CHEF DAGENCE')) {
-      fctValue = "CHEF D'AGENCE";
-    } else if (upperFct.includes('CAISSIER PRINCIPAL')) {
-      fctValue = 'CAISSIER PRINCIPAL';
-    } else if (upperFct.includes('GESTIONNAIRE CASH POINT')) {
-      fctValue = 'GESTIONNAIRE CASH POINT';
-    } else if (upperFct.includes('CAISSIER AUXILIAIRE') || upperFct.includes('CAISSIER AUXILLIAIRE')) {
-      fctValue = 'CAISSIER AUXILIAIRE';
-    } else if (upperFct.includes('CHAUFFEUR')) {
-      fctValue = 'CHAUFFEUR';
-    } else if (upperFct.includes('ASSISTANTE DE DIRECTION')) {
-      fctValue = 'ASSISTANTE DE DIRECTION';
-    } else if (upperFct.includes('AGENT DE LIAISON')) {
-      fctValue = 'AGENT DE LIAISON';
-    } else {
-      customFct = fctValue;
-      fctValue = 'CUSTOM_NEW';
     }
 
     this.form.patchValue({
       poste:            e.poste || '',
       fonction:         fctValue,
-      customFonction:   customFct,
       service:          e.service || '',
       direction:        e.direction || e.departement || '',
       departement:      e.departement || e.direction || '',
@@ -308,9 +284,6 @@ export class InfosProComponent implements OnInit {
     const computedGrade = `${catCode}${echCode}`;
 
     let resolvedFonction = v.fonction;
-    if (v.fonction === 'CUSTOM_NEW') {
-      resolvedFonction = v.customFonction?.trim() || 'Nouvelle Nomination';
-    }
 
     // Résoudre l'âge de retraite depuis le groupe sélectionné
     let ageRetraiteResolu: number | undefined;
