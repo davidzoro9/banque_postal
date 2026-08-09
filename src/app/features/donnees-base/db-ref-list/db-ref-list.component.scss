@@ -3,19 +3,19 @@
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 24px; color: #ffffff;
-  background: linear-gradient(135deg, #004080 0%, #0060B3 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   border-radius: 12px; margin: 16px 24px;
-  box-shadow: 0 4px 12px rgba(0, 64, 128, 0.25);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
   .ph-content { display: flex; align-items: center; gap: 14px; }
   .ph-icon {
-    width: 44px; height: 44px; background: rgba(255, 255, 255, 0.2);
+    width: 44px; height: 44px; background: rgba(255, 255, 255, 0.12);
     border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     mat-icon { font-size: 24px; width: 24px; height: 24px; color: #ffffff; }
   }
   h1 { margin: 0; font-size: 19px; font-weight: 700; color: #ffffff; }
-  p  { margin: 2px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.9); }
-  .btn-new { background: #ffffff !important; color: #0060B3 !important; border: none; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
+  p  { margin: 2px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.8); }
+  .btn-new { background: #ffffff !important; color: #0f172a !important; border: none; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
 }
 
 .kpi-row {
