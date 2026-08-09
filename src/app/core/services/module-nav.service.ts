@@ -165,10 +165,10 @@ export class ModuleNavService {
   sidebarOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
 
   quickLinks = [
-    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard', color: '#0060B3' },
-    { label: 'Employés', route: '/grh/employes', icon: 'badge', color: '#0060B3' },
-    { label: 'Bulletins', route: '/paie/bulletins', icon: 'receipt', color: '#0060B3' },
-    { label: 'Profils', route: '/profils/utilisateurs', icon: 'manage_accounts', color: '#0060B3' }
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard', color: '#1e293b' },
+    { label: 'Employés', route: '/grh/employes', icon: 'badge', color: '#1e293b' },
+    { label: 'Bulletins', route: '/paie/bulletins', icon: 'receipt', color: '#1e293b' },
+    { label: 'Profils', route: '/profils/utilisateurs', icon: 'manage_accounts', color: '#1e293b' }
   ];
 
   get activeModule(): AppModule | null {
