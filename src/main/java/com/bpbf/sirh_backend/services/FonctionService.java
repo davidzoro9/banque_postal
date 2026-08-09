@@ -34,6 +34,9 @@ public class FonctionService {
                 for (ParametrageIndemnite pi : allParams) {
                     if ("NOMINATION".equalsIgnoreCase(pi.getRegleType())) {
                         String piFct = pi.getFonction();
+                        if (piFct == null && pi.getFonctionObj() != null) {
+                            piFct = pi.getFonctionObj().getName();
+                        }
                         if (piFct != null && (piFct.equalsIgnoreCase(dto.getName()) || piFct.equalsIgnoreCase(dto.getCode()))) {
                             indList.add(new FonctionDto.FonctionIndemniteDto(pi.getTypeIndemnite(), pi.getTaux()));
                         }
@@ -95,6 +98,7 @@ public class FonctionService {
                         ParametrageIndemnite pi = new ParametrageIndemnite();
                         pi.setCode("IND-FCT-" + fonction.getId() + "-" + idx++);
                         pi.setFonctionObj(fonction);
+                        pi.setFonction(fonction.getName());
                         pi.setTypeIndemnite(indDto.getTypeIndemnite().trim());
                         
                         // Try to link TypeIndemnite entity
