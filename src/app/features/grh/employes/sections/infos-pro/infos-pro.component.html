@@ -67,7 +67,7 @@
               <mat-option value="Agent simple">Agent simple (Sans nomination)</mat-option>
               
               @for (fct of (fonctions$ | async); track fct.id || fct.code) {
-                <mat-option [value]="fct.libelle || fct.name || fct.code">{{ fct.libelle || fct.name || fct.code }}</mat-option>
+                <mat-option [value]="fct.libelle || fct.code">{{ fct.libelle || fct.code }}</mat-option>
               }
 
               <mat-option value="DIRECTEUR DE DEPARTEMENT">DIRECTEUR DE DEPARTEMENT</mat-option>
