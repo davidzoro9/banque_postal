@@ -238,10 +238,12 @@ export class InfosProComponent implements OnInit {
     }
     const computedGrade = `${cat}${ech}`;
 
-    let fctValue = e.fonction || 'Agent simple';
-    let customFct = '';
-
-    const upperFct = fctValue.toUpperCase().trim();
+    let rawFct: any = e.fonction;
+    if (typeof rawFct === 'object' && rawFct !== null) {
+      rawFct = rawFct.name || rawFct.libelle || rawFct.code || 'Agent simple';
+    }
+    let fctValue = String(rawFct || 'Agent simple').trim();
+    const upperFct = fctValue.toUpperCase();
 
     if (!fctValue || fctValue === 'Agent' || upperFct.includes('AGENT SIMPLE')) {
       fctValue = 'Agent simple';
