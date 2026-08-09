@@ -64,6 +64,24 @@
             </div>
           </div>
 
+          <!-- Détail des Indemnités de la Situation Salariale -->
+          @if (summary.indemnitesBareme && summary.indemnitesBareme.length > 0) {
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 10px;">
+              <span style="display: block; font-size: 13px; color: #0f172a; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #64748b;">payments</mat-icon>
+                Détail des indemnités rattachées ({{ summary.fonction }})
+              </span>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                @for (ind of summary.indemnitesBareme; track ind.id || ind.code) {
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;">
+                    <span style="font-weight: 600; color: #1e293b;">{{ ind.typeIndemnite || ind.libelle }}</span>
+                    <span style="font-weight: 800; color: #0f172a;">+ {{ ind.taux | number:'1.0-0' }} FCFA</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
         </div>
       }
     </mat-card-content>

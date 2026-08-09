@@ -6,6 +6,9 @@ import { EmployeeService } from '../../services/employee.service';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
 import { Employee } from '../../models/employee.model';
 
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../../environments/environment';
+
 function parseCategoryCode(cat: string): string {
   if (!cat) return '';
   const upper = cat.toUpperCase().trim();
@@ -37,12 +40,14 @@ export class CategorieComponent implements OnInit {
   employee?: Employee;
   empId = '';
   grilleItems: RefItem[] = [];
+  situationSalarialeData: any = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private employeeService: EmployeeService,
-    private dbRefService: DbRefService
+    private dbRefService: DbRefService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -50,6 +55,12 @@ export class CategorieComponent implements OnInit {
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
       this.employee = e;
+
+      const targetMat = e.matricule || this.empId;
+      this.http.get<any>(`${environment.apiUrl}/employes/${targetMat}/situation-salariale`).subscribe({
+        next: (data) => { this.situationSalarialeData = data; },
+        error: () => {}
+      });
     });
 
     this.dbRefService.getItems('grille-salariale').subscribe(items => {
@@ -100,14 +111,24 @@ export class CategorieComponent implements OnInit {
       }
     }
 
-    const totalIndemnites = (e.primeLogement || 0) + (e.primeTransport || 0) + (e.primeResponsabilite || 0);
+    let totalIndemnites = 0;
+    let indemnitesBareme: any[] = [];
+
+    if (this.situationSalarialeData) {
+      totalIndemnites = this.situationSalarialeData.totalIndemnites || 0;
+      indemnitesBareme = this.situationSalarialeData.indemnitesBareme || [];
+    } else {
+      totalIndemnites = (e.primeLogement || 0) + (e.primeTransport || 0) + (e.primeResponsabilite || 0);
+    }
 
     return {
       grade: grade,
       categorie: cat,
       echelon: ech,
+      fonction: e.fonction || 'Agent simple',
       salaireBase: base,
-      totalIndemnites: totalIndemnites
+      totalIndemnites: totalIndemnites,
+      indemnitesBareme: indemnitesBareme
     };
   }
 
