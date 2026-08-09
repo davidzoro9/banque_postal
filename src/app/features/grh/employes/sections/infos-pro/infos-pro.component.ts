@@ -44,6 +44,7 @@ export class InfosProComponent implements OnInit {
   services$!: Observable<RefItem[]>;
   agences$!: Observable<RefItem[]>;
   fonctions$!: Observable<RefItem[]>;
+  fonctionsList: RefItem[] = [];
   directionsAndDepartements$!: Observable<RefItem[]>;
   parametragesRetraite: any[] = [];
   readonly String = String; // pour usage dans le template
@@ -91,6 +92,12 @@ export class InfosProComponent implements OnInit {
     this.services$ = this.dbRefService.getItems('service');
     this.agences$ = this.dbRefService.getItems('agence');
     this.fonctions$ = this.dbRefService.getItems('fonction');
+
+    this.fonctions$.subscribe(list => {
+      if (list && list.length > 0) {
+        this.fonctionsList = list;
+      }
+    });
 
     this.directionsAndDepartements$ = combineLatest([
       this.dbRefService.getItems('direction'),

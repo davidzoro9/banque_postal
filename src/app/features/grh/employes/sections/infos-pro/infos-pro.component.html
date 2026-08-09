@@ -65,6 +65,11 @@
             <mat-label>Fonction / Nomination</mat-label>
             <mat-select formControlName="fonction">
               <mat-option value="Agent simple">Agent simple (Sans nomination)</mat-option>
+              
+              @for (fct of (fonctions$ | async); track fct.id || fct.code) {
+                <mat-option [value]="fct.name || fct.libelle || fct.code">{{ fct.name || fct.libelle || fct.code }}</mat-option>
+              }
+
               <mat-option value="DIRECTEUR DE DEPARTEMENT">DIRECTEUR DE DEPARTEMENT</mat-option>
               <mat-option value="RESPONSABLE DE DEPARTEMENT">RESPONSABLE DE DEPARTEMENT</mat-option>
               <mat-option value="CHEF DE SERVICE">CHEF DE SERVICE</mat-option>
