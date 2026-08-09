@@ -17,6 +17,7 @@ public class FonctionDto {
     /** "NOMMEE" ou "NON_NOMMEE" */
     private String typeNomination;
     private Boolean actif = true;
+    private java.util.List<FonctionIndemniteDto> indemnites = new java.util.ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -30,4 +31,21 @@ public class FonctionDto {
     public void setTypeNomination(String typeNomination) { this.typeNomination = typeNomination; }
     public Boolean getActif() { return actif; }
     public void setActif(Boolean actif) { this.actif = actif; }
+
+    public java.util.List<FonctionIndemniteDto> getIndemnites() { return indemnites; }
+    public void setIndemnites(java.util.List<FonctionIndemniteDto> indemnites) { this.indemnites = indemnites; }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FonctionIndemniteDto {
+        private String typeIndemnite;
+        private Double montant;
+
+        public String getTypeIndemnite() { return typeIndemnite; }
+        public void setTypeIndemnite(String typeIndemnite) { this.typeIndemnite = typeIndemnite; }
+        public Double getMontant() { return montant; }
+        public void setMontant(Double montant) { this.montant = montant; }
+    }
 }
