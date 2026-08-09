@@ -20,6 +20,22 @@ public class GrilleSalarialeController {
         return grilleSalarialeService.getAllGrilleSalariale();
     }
 
+    @GetMapping("/grade/{gradeId}")
+    public List<GrilleSalarialeDto> getByGrade(@PathVariable Long gradeId) {
+        return grilleSalarialeService.getGrillesByGrade(gradeId);
+    }
+
+    @GetMapping("/lookup")
+    public GrilleSalarialeDto lookup(
+            @RequestParam(required = false) Long gradeId,
+            @RequestParam(required = false) Long categorieId,
+            @RequestParam(required = false) Long echelonId,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String echellon) {
+        return grilleSalarialeService.findGrille(gradeId, categorieId, echelonId, grade, category, echellon);
+    }
+
     @PostMapping({"", "/create"})
     public GrilleSalarialeDto create(@RequestBody GrilleSalarialeDto grilleSalarialeDto){
         return grilleSalarialeService.createGrilleSalariale(grilleSalarialeDto);

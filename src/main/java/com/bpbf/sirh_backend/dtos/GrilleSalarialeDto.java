@@ -19,6 +19,12 @@ public class GrilleSalarialeDto {
     private String echelle;
     private String echellon;
 
+    private String grade;
+    private Long categorieId;
+    private Long echelonId;
+    private Long gradeId;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private BigDecimal basicSalary;
 }
+

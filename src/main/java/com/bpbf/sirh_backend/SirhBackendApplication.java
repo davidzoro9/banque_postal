@@ -353,59 +353,96 @@ public class SirhBackendApplication {
 				}
 
 				if (grilleRepo.count() < 225) {
-					// Grille officielle BPBF:
-					// GROUPE I  : Catégories C1-C7 (Agents, Employés, Techniciens Opérationnels)
-					// GROUPE II : Classes CL1-CL4 (Agents de Maîtrise et Cadres Moyens)
-					// GROUPE III: Classes CL5-CL8 (Cadres et Cadres Supérieurs)
-					// Progression: +2.94% par échelon (15 échelons par catégorie)
-					Object[][] grilleBPBF = {
-						// {category, classe, echelle_groupe, salaire_base_E01}
-						// GROUPE I - Agents/Employés/Techniciens
-						{"C1", "GROUPE I", "Catégorie 1", 95945.0},
-						{"C2", "GROUPE I", "Catégorie 2", 104474.0},
-						{"C3", "GROUPE I", "Catégorie 3", 107135.0},
-						{"C4", "GROUPE I", "Catégorie 4", 115558.0},
-						{"C5", "GROUPE I", "Catégorie 5", 128831.0},
-						{"C6", "GROUPE I", "Catégorie 6", 157940.0},
-						{"C7", "GROUPE I", "Catégorie 7", 176441.0},
-						// GROUPE II - Agents de Maîtrise
-						{"CL1", "GROUPE II", "Classe I",   173090.0},
-						{"CL2", "GROUPE II", "Classe II",  203834.0},
-						{"CL3", "GROUPE II", "Classe III", 278697.0},
-						{"CL4", "GROUPE II", "Classe IV",  405758.0},
-						// GROUPE III - Cadres
-						{"CL5", "GROUPE III", "Classe V",   581390.0},
-						{"CL6", "GROUPE III", "Classe VI",  599438.0},
-						{"CL7", "GROUPE III", "Classe VII", 631454.0},
-						{"CL8", "GROUPE III", "Classe VIII",710386.0},
-					};
+				// Grille officielle BPBF:
+				// GROUPE I  : Catégories C1-C7 (Agents, Employés, Techniciens Opérationnels)
+				// GROUPE II : Classes CL1-CL4 (Agents de Maîtrise et Cadres Moyens)
+				// GROUPE III: Classes CL5-CL8 (Cadres et Cadres Supérieurs)
+				// Progression: +2.94% par échelon (15 échelons par catégorie)
+				Object[][] grilleBPBF = {
+					// {category, classe, echelle_groupe, salaire_base_E01}
+					// GROUPE I - Agents/Employés/Techniciens
+					{"C1", "GROUPE I", "Catégorie 1", 95945.0},
+					{"C2", "GROUPE I", "Catégorie 2", 104474.0},
+					{"C3", "GROUPE I", "Catégorie 3", 107135.0},
+					{"C4", "GROUPE I", "Catégorie 4", 115558.0},
+					{"C5", "GROUPE I", "Catégorie 5", 128831.0},
+					{"C6", "GROUPE I", "Catégorie 6", 157940.0},
+					{"C7", "GROUPE I", "Catégorie 7", 176441.0},
+					// GROUPE II - Agents de Maîtrise
+					{"CL1", "GROUPE II", "Classe I",   173090.0},
+					{"CL2", "GROUPE II", "Classe II",  203834.0},
+					{"CL3", "GROUPE II", "Classe III", 278697.0},
+					{"CL4", "GROUPE II", "Classe IV",  405758.0},
+					// GROUPE III - Cadres
+					{"CL5", "GROUPE III", "Classe V",   581390.0},
+					{"CL6", "GROUPE III", "Classe VI",  599438.0},
+					{"CL7", "GROUPE III", "Classe VII", 631454.0},
+					{"CL8", "GROUPE III", "Classe VIII",710386.0},
+				};
 
-					for (Object[] cat : grilleBPBF) {
-						String catName   = (String) cat[0];
-						String classe    = (String) cat[1];
-						String echelle   = (String) cat[2];
-						double base      = (Double) cat[3];
+				List<com.bpbf.sirh_backend.entities.Categorie> allCategories = categorieRepo.findAll();
+				List<com.bpbf.sirh_backend.entities.Echelon> allEchelons = echelonRepo.findAll();
+				List<com.bpbf.sirh_backend.entities.Grade> allGrades = gradeRepo.findAll();
+				List<com.bpbf.sirh_backend.entities.GrilleSalariale> currentGrilles = grilleRepo.findAll();
 
-						for (int ech = 1; ech <= 15; ech++) {
-							String echName = String.format("E%02d", ech);
-							boolean exists = grilleRepo.findAll().stream()
-								.anyMatch(g -> catName.equalsIgnoreCase(g.getCategory())
-											&& echName.equalsIgnoreCase(g.getEchellon()));
-							if (!exists) {
-								com.bpbf.sirh_backend.entities.GrilleSalariale g =
-									new com.bpbf.sirh_backend.entities.GrilleSalariale();
-								g.setCategory(catName);
-								g.setClasse(classe);
-								g.setEchelle(echelle);
-								g.setEchellon(echName);
-								// Progression de 3% par échelon
-								double salaire = Math.round(base * Math.pow(1.03, ech - 1));
-								g.setBasicSalary(java.math.BigDecimal.valueOf(salaire));
-								grilleRepo.save(g);
+				for (Object[] cat : grilleBPBF) {
+					String catName   = (String) cat[0];
+					String classe    = (String) cat[1];
+					String echelle   = (String) cat[2];
+					double base      = (Double) cat[3];
+
+					com.bpbf.sirh_backend.entities.Categorie catObj = allCategories.stream()
+						.filter(c -> {
+							String cCode = c.getCode();
+							if (catName.equalsIgnoreCase(cCode) || catName.equalsIgnoreCase(c.getLibelle())) return true;
+							if (catName.startsWith("C") && !catName.startsWith("CL") && catName.substring(1).equalsIgnoreCase(cCode)) return true;
+							if (catName.startsWith("CL")) {
+								try {
+									int num = Integer.parseInt(catName.substring(2));
+									String[] roman = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"};
+									if (num >= 1 && num < roman.length && roman[num].equalsIgnoreCase(cCode)) return true;
+								} catch (Exception ignored) {}
 							}
+							return false;
+						})
+						.findFirst().orElse(null);
+					com.bpbf.sirh_backend.entities.Grade gradeObj = allGrades.stream()
+						.filter(g -> classe.equalsIgnoreCase(g.getCode()) || classe.equalsIgnoreCase(g.getLibelle()))
+						.findFirst().orElse(null);
+
+					for (int ech = 1; ech <= 15; ech++) {
+						String echName = String.format("E%02d", ech);
+						String echNumStr = String.valueOf(ech);
+						com.bpbf.sirh_backend.entities.Echelon echObj = allEchelons.stream()
+							.filter(e -> echName.equalsIgnoreCase(e.getCode()) || echNumStr.equalsIgnoreCase(e.getCode()))
+							.findFirst().orElse(null);
+
+						com.bpbf.sirh_backend.entities.GrilleSalariale g = currentGrilles.stream()
+							.filter(existing -> catName.equalsIgnoreCase(existing.getCategory())
+										&& echName.equalsIgnoreCase(existing.getEchellon()))
+							.findFirst().orElse(null);
+
+						boolean newRecord = false;
+						if (g == null) {
+							g = new com.bpbf.sirh_backend.entities.GrilleSalariale();
+							g.setCategory(catName);
+							g.setClasse(classe);
+							g.setEchelle(echelle);
+							g.setEchellon(echName);
+							double salaire = Math.round(base * Math.pow(1.03, ech - 1));
+							g.setBasicSalary(java.math.BigDecimal.valueOf(salaire));
+							newRecord = true;
+						}
+
+						if (g.getCategorieObj() == null || g.getEchelonObj() == null || g.getGradeObj() == null || newRecord) {
+							if (g.getCategorieObj() == null) g.setCategorieObj(catObj);
+							if (g.getEchelonObj() == null) g.setEchelonObj(echObj);
+							if (g.getGradeObj() == null) g.setGradeObj(gradeObj);
+							grilleRepo.save(g);
 						}
 					}
-					System.out.println("Grille salariale BPBF (225 éléments) initialisée. Total: " + grilleRepo.count());
+				}
+				System.out.println("Grille salariale BPBF (225 éléments avec relations ManyToOne) initialisée/mise à jour. Total: " + grilleRepo.count());
 				}
 			} catch (Exception e) {
 				System.out.println("Grille salariale seeding error: " + e.getMessage());

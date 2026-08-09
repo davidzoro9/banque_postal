@@ -1,9 +1,15 @@
 package com.bpbf.sirh_backend.services;
 
 import com.bpbf.sirh_backend.dtos.GrilleSalarialeDto;
+import com.bpbf.sirh_backend.entities.Categorie;
+import com.bpbf.sirh_backend.entities.Echelon;
+import com.bpbf.sirh_backend.entities.Grade;
 import com.bpbf.sirh_backend.entities.GrilleSalariale;
 import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.GrilleSalarialeMapper;
+import com.bpbf.sirh_backend.repositories.CategorieRepository;
+import com.bpbf.sirh_backend.repositories.EchelonRepository;
+import com.bpbf.sirh_backend.repositories.GradeRepository;
 import com.bpbf.sirh_backend.repositories.GrilleSalarialeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,17 +21,58 @@ import java.util.List;
 public class GrilleSalarialeService {
     private final GrilleSalarialeMapper grilleSalarialeMapper;
     private final GrilleSalarialeRepository grilleSalarialeRepository;
+    private final CategorieRepository categorieRepository;
+    private final EchelonRepository echelonRepository;
+    private final GradeRepository gradeRepository;
 
     public List<GrilleSalarialeDto> getAllGrilleSalariale(){
         List<GrilleSalariale> grilleSalariales = grilleSalarialeRepository.findAll();
         return grilleSalarialeMapper.toDtos(grilleSalariales);
     }
 
+    public List<GrilleSalarialeDto> getGrillesByGrade(Long gradeId){
+        List<GrilleSalariale> grilles = grilleSalarialeRepository.findByGradeObjId(gradeId);
+        return grilleSalarialeMapper.toDtos(grilles);
+    }
+
+    public GrilleSalarialeDto findGrille(Long gradeId, Long categorieId, Long echelonId, String grade, String category, String echellon) {
+        List<GrilleSalariale> all = grilleSalarialeRepository.findAll();
+
+        String catFromGrade = category;
+        String echFromGrade = echellon;
+        if (grade != null && grade.trim().toUpperCase().matches("^(C[1-7]|CL[1-8])E\\d{2}$")) {
+            String cleanGrade = grade.trim().toUpperCase();
+            int eIdx = cleanGrade.indexOf('E');
+            catFromGrade = cleanGrade.substring(0, eIdx);
+            echFromGrade = cleanGrade.substring(eIdx);
+        }
+
+        final String targetCat = catFromGrade;
+        final String targetEch = echFromGrade;
+
+        return all.stream()
+                .filter(g -> (gradeId == null || (g.getGradeObj() != null && gradeId.equals(g.getGradeObj().getId())))
+                          && (grade == null || grade.trim().isEmpty() 
+                              || grade.equalsIgnoreCase(g.getClasse()) 
+                              || grade.equalsIgnoreCase(g.getGrade())
+                              || (g.getGradeObj() != null && grade.equalsIgnoreCase(g.getGradeObj().getCode())))
+                          && (categorieId == null || (g.getCategorieObj() != null && categorieId.equals(g.getCategorieObj().getId())))
+                          && (targetCat == null || targetCat.trim().isEmpty() || matchCat(targetCat, g.getCategory(), g.getCategory()))
+                          && (echelonId == null || (g.getEchelonObj() != null && echelonId.equals(g.getEchelonObj().getId())))
+                          && (targetEch == null || targetEch.trim().isEmpty() 
+                              || targetEch.equalsIgnoreCase(g.getEchellon())
+                              || ("E" + String.format("%02d", parseEchelonNum(targetEch))).equalsIgnoreCase(g.getEchellon())
+                              || targetEch.equalsIgnoreCase("E" + String.format("%02d", parseEchelonNum(g.getEchellon())))))
+                .findFirst()
+                .map(grilleSalarialeMapper::toDto)
+                .orElse(null);
+    }
+
     public GrilleSalarialeDto createGrilleSalariale(GrilleSalarialeDto grilleSalarialeDto){
         GrilleSalariale grilleSalariale = grilleSalarialeMapper.toEntity(grilleSalarialeDto);
+        resolveRelationships(grilleSalariale, grilleSalarialeDto);
         GrilleSalariale saved = grilleSalarialeRepository.save(grilleSalariale);
         return grilleSalarialeMapper.toDto(saved);
-
     }
 
     public GrilleSalarialeDto updateGrilleSalariale(Long id, GrilleSalarialeDto grilleSalarialeDto){
@@ -38,6 +85,8 @@ public class GrilleSalarialeService {
         grilleSalariale.setEchellon(grilleSalarialeDto.getEchellon());
         grilleSalariale.setBasicSalary(grilleSalarialeDto.getBasicSalary());
 
+        resolveRelationships(grilleSalariale, grilleSalarialeDto);
+
         GrilleSalariale saved = grilleSalarialeRepository.save(grilleSalariale);
         return grilleSalarialeMapper.toDto(saved);
     }
@@ -45,4 +94,70 @@ public class GrilleSalarialeService {
     public void delete(Long id){
         grilleSalarialeRepository.deleteById(id);
     }
+
+    private void resolveRelationships(GrilleSalariale entity, GrilleSalarialeDto dto) {
+        // Resolve Categorie
+        if (dto.getCategorieId() != null) {
+            categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+        } else if (dto.getCategory() != null && !dto.getCategory().trim().isEmpty()) {
+            String catCode = dto.getCategory().trim();
+            categorieRepository.findAll().stream()
+                    .filter(c -> matchCat(catCode, c.getCode(), c.getLibelle()))
+                    .findFirst()
+                    .ifPresent(entity::setCategorieObj);
+        }
+
+        // Resolve Echelon
+        if (dto.getEchelonId() != null) {
+            echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
+        } else if (dto.getEchellon() != null && !dto.getEchellon().trim().isEmpty()) {
+            String echCode = dto.getEchellon().trim();
+            echelonRepository.findAll().stream()
+                    .filter(e -> echCode.equalsIgnoreCase(e.getCode()) 
+                              || echCode.equalsIgnoreCase(e.getLibelle())
+                              || ("E" + String.format("%02d", parseEchelonNum(echCode))).equalsIgnoreCase(e.getCode()))
+                    .findFirst()
+                    .ifPresent(entity::setEchelonObj);
+        }
+
+        // Resolve Grade / Group
+        if (dto.getGradeId() != null) {
+            gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+        } else if (dto.getClasse() != null && !dto.getClasse().trim().isEmpty()) {
+            String gradeCode = dto.getClasse().trim();
+            gradeRepository.findAll().stream()
+                    .filter(g -> gradeCode.equalsIgnoreCase(g.getCode()) || gradeCode.equalsIgnoreCase(g.getLibelle()))
+                    .findFirst()
+                    .ifPresent(entity::setGradeObj);
+        }
+    }
+
+    private int parseEchelonNum(String s) {
+        try {
+            return Integer.parseInt(s.replaceAll("\\D+", ""));
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private boolean matchCat(String catCode, String cCode, String cLibelle) {
+        if (catCode == null || cCode == null) return false;
+        if (catCode.equalsIgnoreCase(cCode) || catCode.equalsIgnoreCase(cLibelle)) return true;
+        if (catCode.toUpperCase().startsWith("C") && !catCode.toUpperCase().startsWith("CL")) {
+            String num = catCode.replaceAll("\\D+", "");
+            if (!num.isEmpty() && num.equalsIgnoreCase(cCode)) return true;
+        }
+        if (catCode.toUpperCase().startsWith("CL")) {
+            String numStr = catCode.replaceAll("\\D+", "");
+            if (!numStr.isEmpty()) {
+                try {
+                    int num = Integer.parseInt(numStr);
+                    String[] roman = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"};
+                    if (num >= 1 && num < roman.length && roman[num].equalsIgnoreCase(cCode)) return true;
+                } catch (Exception ignored) {}
+            }
+        }
+        return false;
+    }
 }
+

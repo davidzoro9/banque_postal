@@ -1,5 +1,6 @@
 package com.bpbf.sirh_backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,13 +17,131 @@ import java.math.BigDecimal;
 @Table(name = "grille_salariale")
 public class GrilleSalariale {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorieObj;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "echelon_id")
+    private Echelon echelonObj;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "grade_id")
+    private Grade gradeObj;
+
     private String classe;
     private String category;
     private String echelle;
     private String echellon;
 
+    @Transient private String categoryStr;
+    @Transient private String echellonStr;
+    @Transient private String classeStr;
+
+    @JsonProperty("category")
+    public String getCategory() {
+        String raw = null;
+        if (categorieObj != null) {
+            raw = categorieObj.getCode() != null ? categorieObj.getCode() : categorieObj.getLibelle();
+        } else {
+            raw = category != null ? category : categoryStr;
+        }
+        return formatCategoryCode(raw);
+    }
+
+    @JsonProperty("category")
+    public void setCategory(String val) {
+        this.categoryStr = val;
+        this.category = val;
+    }
+
+    @JsonProperty("echellon")
+    public String getEchellon() {
+        String raw = null;
+        if (echelonObj != null) {
+            raw = echelonObj.getCode() != null ? echelonObj.getCode() : echelonObj.getLibelle();
+        } else {
+            raw = echellon != null ? echellon : echellonStr;
+        }
+        return formatEchelonCode(raw);
+    }
+
+    @JsonProperty("echellon")
+    public void setEchellon(String val) {
+        this.echellonStr = val;
+        this.echellon = val;
+    }
+
+    @JsonProperty("classe")
+    public String getClasse() {
+        if (gradeObj != null) {
+            return gradeObj.getLibelle() != null ? gradeObj.getLibelle() : gradeObj.getCode();
+        }
+        return classe != null ? classe : classeStr;
+    }
+
+    @JsonProperty("classe")
+    public void setClasse(String val) {
+        this.classeStr = val;
+        this.classe = val;
+    }
+
+    @JsonProperty("grade")
+    public String getGrade() {
+        String cat = getCategory();
+        String ech = getEchellon();
+        if (cat != null && !cat.isEmpty() && ech != null && !ech.isEmpty()) {
+            return cat + ech;
+        }
+        if (gradeObj != null) {
+            return gradeObj.getCode() != null ? gradeObj.getCode() : gradeObj.getLibelle();
+        }
+        return classe != null ? classe : classeStr;
+    }
+
+    public static String formatCategoryCode(String rawCat) {
+        if (rawCat == null || rawCat.trim().isEmpty()) return "";
+        String s = rawCat.trim().toUpperCase();
+        if (s.startsWith("C") || s.startsWith("CL")) return s;
+        if (s.matches("^[1-7]$")) {
+            return "C" + s;
+        }
+        switch (s) {
+            case "I": return "CL1";
+            case "II": return "CL2";
+            case "III": return "CL3";
+            case "IV": return "CL4";
+            case "V": return "CL5";
+            case "VI": return "CL6";
+            case "VII": return "CL7";
+            case "VIII": return "CL8";
+            default: return s;
+        }
+    }
+
+    public static String formatEchelonCode(String rawEch) {
+        if (rawEch == null || rawEch.trim().isEmpty()) return "";
+        String s = rawEch.trim().toUpperCase();
+        if (s.startsWith("E")) {
+            try {
+                int n = Integer.parseInt(s.substring(1));
+                return String.format("E%02d", n);
+            } catch (Exception ignored) {
+                return s;
+            }
+        }
+        try {
+            int n = Integer.parseInt(s.replaceAll("\\D+", ""));
+            return String.format("E%02d", n);
+        } catch (Exception ignored) {
+            return s;
+        }
+    }
+
     @Column(precision = 10, scale = 2, name = "salaire_base")
     private BigDecimal basicSalary;
 }
+
