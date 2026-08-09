@@ -114,8 +114,7 @@ public class ParametrageIndemniteService {
             List<ParametrageIndemnite> fctIndemnites = allActive.stream()
                     .filter(p -> {
                         String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
-                        String pRegle = (p.getRegleType() != null ? p.getRegleType() : "").toUpperCase();
-                        return !pFonction.isEmpty() && (targetFct.contains(pFonction) || pFonction.contains(targetFct) || "NOMINATION".equalsIgnoreCase(pRegle));
+                        return !pFonction.isEmpty() && (targetFct.contains(pFonction) || pFonction.contains(targetFct));
                     })
                     .collect(java.util.stream.Collectors.toList());
 
