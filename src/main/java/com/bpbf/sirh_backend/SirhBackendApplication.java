@@ -182,7 +182,8 @@ public class SirhBackendApplication {
 						item.setActif(true);
 						refDataRepo.save(item);
 					}
-					if (paramGroupeRepo.findAll().stream().noneMatch(p -> pg[0].equalsIgnoreCase(p.getCode()))) {
+					java.util.Optional<com.bpbf.sirh_backend.entities.ParametrageGroupe> optPg = paramGroupeRepo.findAll().stream().filter(p -> pg[0].equalsIgnoreCase(p.getCode())).findFirst();
+					if (optPg.isEmpty()) {
 						com.bpbf.sirh_backend.entities.ParametrageGroupe pgEntity = new com.bpbf.sirh_backend.entities.ParametrageGroupe();
 						pgEntity.setCode(pg[0]);
 						pgEntity.setGrade(pg[1]);
@@ -191,6 +192,13 @@ public class SirhBackendApplication {
 						pgEntity.setDescription(pg[3]);
 						pgEntity.setActif(true);
 						paramGroupeRepo.save(pgEntity);
+					} else {
+						com.bpbf.sirh_backend.entities.ParametrageGroupe pgEntity = optPg.get();
+						if (pgEntity.getGrade() == null || pgEntity.getCategorie() == null) {
+							pgEntity.setGrade(pg[1]);
+							pgEntity.setCategorie(pg[2]);
+							paramGroupeRepo.save(pgEntity);
+						}
 					}
 				}
 				System.out.println("Paramétrage Groupe initialisé dans PostgreSQL. Total: " + paramGroupeRepo.count());
