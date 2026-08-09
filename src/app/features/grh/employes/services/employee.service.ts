@@ -85,16 +85,19 @@ export class EmployeeService {
   private toBackend(emp: Partial<Employee>): any {
     const result: any = { ...emp };
 
-    // Map JSON fields & extraData for PostgreSQL
-    const extraDataObj = {
-      categorie: emp.categoriePro || 'CL1',
-      echelon: emp.echelon || 'E01',
-      grade: emp.grade || `${emp.categoriePro || 'CL1'}${emp.echelon || 'E01'}`,
-      salaireBase: emp.salaireBase || 150000,
-      primeLogement: emp.primeLogement || 0,
-      enfants: emp.enfants || [],
-      conjoint: emp.conjoint || null
-    };
+    // Map JSON fields & extraData for PostgreSQL safely without forced defaults
+    const extraDataObj: any = {};
+    if (emp.categoriePro) {
+      extraDataObj.categorie = emp.categoriePro;
+      extraDataObj.categoriePro = emp.categoriePro;
+    }
+    if (emp.echelon) extraDataObj.echelon = emp.echelon;
+    if (emp.grade) extraDataObj.grade = emp.grade;
+    if (emp.salaireBase !== undefined) extraDataObj.salaireBase = emp.salaireBase;
+    if (emp.primeLogement !== undefined) extraDataObj.primeLogement = emp.primeLogement;
+    if (emp.enfants) extraDataObj.enfants = emp.enfants;
+    if (emp.conjoint) extraDataObj.conjoint = emp.conjoint;
+
     result.extraData = JSON.stringify(extraDataObj);
 
     if (emp.contactsUrgence) result.contactsUrgenceJson = JSON.stringify(emp.contactsUrgence);
@@ -143,7 +146,7 @@ export class EmployeeService {
     if (db.extraData) {
       try {
         const extra = typeof db.extraData === 'string' ? JSON.parse(db.extraData) : db.extraData;
-        if (extra.categorie) result.categoriePro = extra.categorie;
+        if (extra.categoriePro || extra.categorie) result.categoriePro = extra.categoriePro || extra.categorie;
         if (extra.echelon) result.echelon = extra.echelon;
         if (extra.grade) result.grade = extra.grade;
         if (extra.salaireBase) result.salaireBase = Number(extra.salaireBase);
@@ -151,6 +154,15 @@ export class EmployeeService {
         if (extra.enfants && Array.isArray(extra.enfants)) result.enfants = extra.enfants;
         if (extra.conjoint) result.conjoint = extra.conjoint;
       } catch (e) {}
+    }
+
+    if (result.grade && (!result.categoriePro || result.categoriePro === 'CL1')) {
+      const g = String(result.grade).trim();
+      const eIdx = g.indexOf('E');
+      if (eIdx > 0) {
+        result.categoriePro = g.substring(0, eIdx);
+        result.echelon = g.substring(eIdx);
+      }
     }
     
     return createDefaultEmployee(result);

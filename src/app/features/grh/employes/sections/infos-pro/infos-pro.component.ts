@@ -209,11 +209,25 @@ export class InfosProComponent implements OnInit {
   }
 
   private patch(e: Employee): void {
-    const cat = this.parseCat(e.categoriePro) || 'CL5';
-    let ech = e.echelon || 'E01';
+    let cat = this.parseCat(e.categoriePro);
+    if (!cat && e.grade) {
+      const g = e.grade.trim();
+      const eIdx = g.indexOf('E');
+      if (eIdx > 0) cat = this.parseCat(g.substring(0, eIdx));
+    }
+    if (!cat) cat = 'CL5';
+
+    let ech = e.echelon || '';
+    if (!ech && e.grade) {
+      const g = e.grade.trim();
+      const eIdx = g.indexOf('E');
+      if (eIdx > 0) ech = g.substring(eIdx);
+    }
     if (ech) {
       const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
       if (!isNaN(num)) ech = num < 10 ? `E0${num}` : `E${num}`;
+    } else {
+      ech = 'E01';
     }
     const computedGrade = `${cat}${ech}`;
 
