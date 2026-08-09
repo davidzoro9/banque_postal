@@ -540,35 +540,41 @@ public class SirhBackendApplication {
 
 			// ── Seed Fonctions (table fonction) ─────────────────────────────
 			try {
-				if (fonctionRepo.count() < 15) {
-					String[][] fcts = {
-						{"FCT-001", "Directeur Général (DG)"},
-						{"FCT-002", "Directeur de Département"},
-						{"FCT-003", "Responsable de Département"},
-						{"FCT-004", "Chef de Service"},
-						{"FCT-005", "Responsable d'Unité"},
-						{"FCT-006", "Chef d'Agence Bancaire"},
-						{"FCT-007", "Auditeur Interne Senior"},
-						{"FCT-008", "Comptable Principal"},
-						{"FCT-009", "Ingénieur Réseau & SI"},
-						{"FCT-010", "Analyste Financier Senior"},
-						{"FCT-011", "Gestionnaire de Portefeuille Clientèle"},
-						{"FCT-012", "Superviseur Cash Point & Guichet"},
-						{"FCT-013", "Chargé de Clientèle Particuliers"},
-						{"FCT-014", "Caissier Principal"},
-						{"FCT-015", "Agent d'Accueil & Secrétariat"}
-					};
-					for (String[] f : fcts) {
-						boolean exists = fonctionRepo.findAll().stream().anyMatch(fct -> f[0].equalsIgnoreCase(fct.getCode()) || f[1].equalsIgnoreCase(fct.getName()));
-						if (!exists) {
-							com.bpbf.sirh_backend.entities.Fonction fct = new com.bpbf.sirh_backend.entities.Fonction();
-							fct.setCode(f[0]);
-							fct.setName(f[1]);
-							fonctionRepo.save(fct);
-						}
+				String[][] fcts = {
+					{"FCT-001", "Directeur Général (DG)", "NOMMEE"},
+					{"FCT-002", "Directeur de Département", "NOMMEE"},
+					{"FCT-003", "Responsable de Département", "NOMMEE"},
+					{"FCT-004", "Chef de Service", "NOMMEE"},
+					{"FCT-005", "Responsable d'Unité", "NON_NOMMEE"},
+					{"FCT-006", "Chef d'Agence Bancaire", "NOMMEE"},
+					{"FCT-007", "Auditeur Interne Senior", "NON_NOMMEE"},
+					{"FCT-008", "Comptable Principal", "NON_NOMMEE"},
+					{"FCT-009", "Ingénieur Réseau & SI", "NON_NOMMEE"},
+					{"FCT-010", "Analyste Financier Senior", "NON_NOMMEE"},
+					{"FCT-011", "Gestionnaire de Portefeuille Clientèle", "NON_NOMMEE"},
+					{"FCT-012", "Superviseur Cash Point & Guichet", "NON_NOMMEE"},
+					{"FCT-013", "Chargé de Clientèle Particuliers", "NON_NOMMEE"},
+					{"FCT-014", "Caissier Principal", "NOMMEE"},
+					{"FCT-015", "Agent d'Accueil & Secrétariat", "NON_NOMMEE"}
+				};
+				for (String[] f : fcts) {
+					java.util.Optional<com.bpbf.sirh_backend.entities.Fonction> optFct = fonctionRepo.findAll().stream()
+						.filter(fct -> f[0].equalsIgnoreCase(fct.getCode()) || f[1].equalsIgnoreCase(fct.getName()))
+						.findFirst();
+					if (optFct.isEmpty()) {
+						com.bpbf.sirh_backend.entities.Fonction fct = new com.bpbf.sirh_backend.entities.Fonction();
+						fct.setCode(f[0]);
+						fct.setName(f[1]);
+						fct.setTypeNomination(f[2]);
+						fct.setActif(true);
+						fonctionRepo.save(fct);
+					} else {
+						com.bpbf.sirh_backend.entities.Fonction fct = optFct.get();
+						fct.setTypeNomination(f[2]);
+						fonctionRepo.save(fct);
 					}
-					System.out.println("Fonctions initialisées. Total: " + fonctionRepo.count());
 				}
+				System.out.println("Fonctions (15 fonctions avec types de nomination) initialisées/mises à jour. Total: " + fonctionRepo.count());
 			} catch (Exception e) {
 				System.out.println("Fonctions seeding error: " + e.getMessage());
 			}
