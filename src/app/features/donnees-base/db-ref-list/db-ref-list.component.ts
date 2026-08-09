@@ -74,6 +74,75 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     }
   }
 
+  setFonctionType(type: string): void {
+    this.formGroup.patchValue({ typeNomination: type });
+    if (type === 'NOMMEE' && this.fonctionIndemnitesList.length === 0) {
+      const fctName = this.formGroup.get('libelle')?.value || this.editingItem?.libelle || '';
+      this.fonctionIndemnitesList = this.getDefaultIndemnitesForFonction(fctName);
+    }
+  }
+
+  getDefaultIndemnitesForFonction(libelle: string): { typeIndemnite: string; montant: number }[] {
+    const name = (libelle || '').toUpperCase().trim();
+    if (name.includes('DIRECTEUR GENERAL') || name.includes('DIRECTEUR DE DEPARTEMENT') || name.includes('DIRECTEUR D')) {
+      return [
+        { typeIndemnite: 'Indemnité de fonction', montant: 150000 },
+        { typeIndemnite: 'Indemnité de logement', montant: 200000 },
+        { typeIndemnite: 'Indemnité de transport', montant: 100000 },
+        { typeIndemnite: 'Indemnité compensatrice', montant: 100000 }
+      ];
+    }
+    if (name.includes('RESPONSABLE DE DEPARTEMENT') || name.includes('RESPONSABLE D')) {
+      return [
+        { typeIndemnite: 'Indemnité de fonction', montant: 100000 },
+        { typeIndemnite: 'Indemnité de logement', montant: 150000 },
+        { typeIndemnite: 'Indemnité de transport', montant: 75000 },
+        { typeIndemnite: 'Indemnité compensatrice', montant: 75000 }
+      ];
+    }
+    if (name.includes('CHEF DE SERVICE') || name.includes('SERVICE')) {
+      return [
+        { typeIndemnite: 'Indemnité de fonction', montant: 80000 },
+        { typeIndemnite: 'Indemnité de logement', montant: 120000 },
+        { typeIndemnite: 'Indemnité de transport', montant: 75000 },
+        { typeIndemnite: 'Indemnité compensatrice', montant: 75000 }
+      ];
+    }
+    if (name.includes('CHEF D\'AGENCE') || name.includes('AGENCE')) {
+      return [
+        { typeIndemnite: 'Indemnité de fonction', montant: 75000 },
+        { typeIndemnite: 'Indemnité de logement', montant: 100000 },
+        { typeIndemnite: 'Indemnité de transport', montant: 75000 },
+        { typeIndemnite: 'Indemnité compensatrice', montant: 75000 }
+      ];
+    }
+    if (name.includes('CAISSIER PRINCIPAL')) {
+      return [{ typeIndemnite: 'Indemnité de caisse', montant: 40000 }];
+    }
+    if (name.includes('GESTIONNAIRE CASH POINT')) {
+      return [
+        { typeIndemnite: 'Indemnité cash point', montant: 50000 },
+        { typeIndemnite: 'Indemnité de caisse', montant: 25000 }
+      ];
+    }
+    if (name.includes('CAISSIER AUXILIAIRE')) {
+      return [{ typeIndemnite: 'Indemnité de caisse', montant: 25000 }];
+    }
+    if (name.includes('CHAUFFEUR')) {
+      return [{ typeIndemnite: 'Prime d\'astreinte', montant: 15000 }];
+    }
+    if (name.includes('ASSISTANTE DE DIRECTION')) {
+      return [{ typeIndemnite: 'Prime d\'astreinte', montant: 30000 }];
+    }
+    if (name.includes('AGENT DE LIAISON')) {
+      return [{ typeIndemnite: 'Prime d\'astreinte', montant: 15000 }];
+    }
+    return [
+      { typeIndemnite: 'Indemnité de fonction', montant: 50000 },
+      { typeIndemnite: 'Indemnité de logement', montant: 50000 }
+    ];
+  }
+
   categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -779,7 +848,14 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     }
 
     if (this.type === 'fonction') {
-      this.fonctionIndemnitesList = item.indemnites ? item.indemnites.map(i => ({ typeIndemnite: i.typeIndemnite, montant: i.montant })) : [];
+      const nomType = item.typeNomination || 'NON_NOMMEE';
+      if (item.indemnites && item.indemnites.length > 0) {
+        this.fonctionIndemnitesList = item.indemnites.map(i => ({ typeIndemnite: i.typeIndemnite, montant: i.montant }));
+      } else if (nomType === 'NOMMEE') {
+        this.fonctionIndemnitesList = this.getDefaultIndemnitesForFonction(item.libelle || item.code || '');
+      } else {
+        this.fonctionIndemnitesList = [];
+      }
     } else {
       this.fonctionIndemnitesList = [];
     }

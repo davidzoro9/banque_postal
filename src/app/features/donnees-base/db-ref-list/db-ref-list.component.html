@@ -601,7 +601,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" formGroupName="">
           <!-- Option : Pas Nommée -->
           <label [class.selected-type]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE'"
-                 (click)="formGroup.patchValue({ typeNomination: 'NON_NOMMEE' })"
+                 (click)="setFonctionType('NON_NOMMEE')"
                  style="display: flex; align-items: center; gap: 10px; border: 2px solid; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;"
                  [style.borderColor]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#2e7d32' : '#e2e8f0'"
                  [style.background]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE' ? '#e8f5e9' : '#f8fafc'">
@@ -614,7 +614,7 @@
           </label>
           <!-- Option : Nommée -->
           <label [class.selected-type]="formGroup.get('typeNomination')?.value === 'NOMMEE'"
-                 (click)="formGroup.patchValue({ typeNomination: 'NOMMEE' })"
+                 (click)="setFonctionType('NOMMEE')"
                  style="display: flex; align-items: center; gap: 10px; border: 2px solid; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s;"
                  [style.borderColor]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#e65100' : '#e2e8f0'"
                  [style.background]="formGroup.get('typeNomination')?.value === 'NOMMEE' ? '#fff3e0' : '#f8fafc'">
