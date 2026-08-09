@@ -26,6 +26,7 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final DirectionRepository directionRepository;
     private final ServiceRepository serviceRepository;
+    private final ParametrageIndemniteService parametrageIndemniteService;
     private final ObjectMapper objectMapper;
 
     public List<EmployeeDto> getAllEmployees() {
@@ -322,5 +323,39 @@ public class EmployeeService {
         } catch (Exception e) {
             // Keep existing or default to empty
         }
+    }
+
+    public java.util.Map<String, Object> getSituationSalarialeByMatricule(String idOrMatricule) {
+        EmployeeDto emp = null;
+        try {
+            Long numericId = Long.parseLong(idOrMatricule);
+            emp = getEmployeeById(numericId);
+        } catch (NumberFormatException e) {
+            emp = getEmployeeByMatricule(idOrMatricule);
+        }
+
+        java.util.Map<String, Object> res = new java.util.LinkedHashMap<>();
+        res.put("matricule", emp.getMatricule());
+        res.put("nomComplet", emp.getName() != null ? emp.getName() : (emp.getPrenom() + " " + emp.getNom()));
+        res.put("categoriePro", emp.getCategoriePro());
+        res.put("echelon", emp.getEchelon());
+        res.put("grade", emp.getGrade());
+        res.put("salaireBase", emp.getSalaireBase());
+        
+        String fonctionStr = emp.getFonction() != null ? emp.getFonction() : "";
+        List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnitesBareme = parametrageIndemniteService.getByGradeAndFonction(emp.getGrade(), fonctionStr);
+        res.put("indemnitesBareme", indemnitesBareme);
+
+        double totalIndemnites = indemnitesBareme.stream().mapToDouble(i -> i.getTaux() != null ? i.getTaux() : 0.0).sum();
+        if (totalIndemnites == 0) {
+            double log = emp.getPrimeLogement() != null ? emp.getPrimeLogement() : 0;
+            double trp = emp.getPrimeTransport() != null ? emp.getPrimeTransport() : 0;
+            double resp = emp.getPrimeResponsabilite() != null ? emp.getPrimeResponsabilite() : 0;
+            totalIndemnites = log + trp + resp;
+        }
+        res.put("totalIndemnites", totalIndemnites);
+        res.put("salaireBrutTotal", (emp.getSalaireBase() != null ? emp.getSalaireBase() : 0.0) + totalIndemnites);
+
+        return res;
     }
 }

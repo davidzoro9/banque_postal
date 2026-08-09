@@ -29,6 +29,11 @@ public class EmployeeController {
         }
     }
 
+    @GetMapping("/{id}/situation-salariale")
+    public java.util.Map<String, Object> getSituationSalariale(@PathVariable String id) {
+        return employeeService.getSituationSalarialeByMatricule(id);
+    }
+
     @PostMapping("/create")
     public EmployeeDto create(@RequestBody EmployeeDto employeeDto) {
         return employeeService.createEmployee(employeeDto);
