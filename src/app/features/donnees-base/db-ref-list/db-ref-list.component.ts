@@ -849,8 +849,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
     if (this.type === 'fonction') {
       const nomType = item.typeNomination || 'NON_NOMMEE';
-      if (item.indemnites && item.indemnites.length > 0) {
-        this.fonctionIndemnitesList = item.indemnites.map(i => ({ typeIndemnite: i.typeIndemnite, montant: i.montant }));
+      const itemInds = (item as any).indemnites;
+      if (Array.isArray(itemInds) && itemInds.length > 0) {
+        this.fonctionIndemnitesList = itemInds.map((i: any) => ({ typeIndemnite: i.typeIndemnite, montant: i.montant }));
       } else if (nomType === 'NOMMEE') {
         this.fonctionIndemnitesList = this.getDefaultIndemnitesForFonction(item.libelle || item.code || '');
       } else {

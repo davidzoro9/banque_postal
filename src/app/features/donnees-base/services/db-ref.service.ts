@@ -27,6 +27,7 @@ export interface RefItem {
   categories?: string[];    // pour Groupe (Liste des codes de catégories rattachées)
   typeNomination?: string;  // pour Fonction : 'NOMMEE' ou 'NON_NOMMEE'
   regleType?: string;       // pour Paramétrage indemnité : 'ORDINAIRE', 'NOMINATION', 'SPECIFIQUE'
+  indemnites?: { typeIndemnite: string; montant: number }[]; // pour Fonction Nommée
 }
 
 // ─── Mapping frontend type → backend segment ───────────────────────────────
