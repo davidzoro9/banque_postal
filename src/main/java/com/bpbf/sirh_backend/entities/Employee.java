@@ -50,6 +50,22 @@ public class Employee {
     @JoinColumn(name = "superviseur_id", nullable = true)
     private Employee superviseur;
 
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "grille_salariale_id", nullable = true)
+    private GrilleSalariale grilleSalariale;
+
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "categorie_id", nullable = true)
+    private Categorie categorieObj;
+
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "echelon_id", nullable = true)
+    private Echelon echelonObj;
+
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "grade_id", nullable = true)
+    private Grade gradeObj;
+
     @Enumerated(EnumType.STRING)
     private EmployeeStatus state;
 

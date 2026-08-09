@@ -1,11 +1,9 @@
 package com.bpbf.sirh_backend.services;
 
 import com.bpbf.sirh_backend.dtos.EmployeeDto;
-import com.bpbf.sirh_backend.entities.Employee;
-import com.bpbf.sirh_backend.entities.Utilisateur;
+import com.bpbf.sirh_backend.entities.*;
 import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
-import com.bpbf.sirh_backend.repositories.EmployeeRepository;
-import com.bpbf.sirh_backend.repositories.UtilisateurRepository;
+import com.bpbf.sirh_backend.repositories.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +17,15 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final UtilisateurRepository utilisateurRepository;
+    private final GrilleSalarialeRepository grilleSalarialeRepository;
+    private final CategorieRepository categorieRepository;
+    private final EchelonRepository echelonRepository;
+    private final GradeRepository gradeRepository;
+    private final FonctionRepository fonctionRepository;
+    private final EmploiRepository emploiRepository;
+    private final DepartmentRepository departmentRepository;
+    private final DirectionRepository directionRepository;
+    private final ServiceRepository serviceRepository;
     private final ObjectMapper objectMapper;
 
     public List<EmployeeDto> getAllEmployees() {
@@ -51,12 +58,6 @@ public class EmployeeService {
         }
     }
 
-    /**
-     * Crée automatiquement un compte utilisateur de type EMPLOYE
-     * quand un nouvel employé est enregistré.
-     * Format email : prenom.nom@gmail.com (tout en minuscules)
-     * Mot de passe par défaut : 1234
-     */
     private void autoCreateUserAccount(Employee emp) {
         try {
             String prenom = (emp.getPrenom() != null ? emp.getPrenom() : "employe").toLowerCase()
@@ -67,7 +68,6 @@ public class EmployeeService {
                     ? emp.getEmail().trim().toLowerCase()
                     : (prenom + "." + nom + "@gmail.com");
 
-            // Ne pas créer si le compte existe déjà
             if (utilisateurRepository.findByEmail(email).isPresent()) return;
 
             Utilisateur user = new Utilisateur();
@@ -80,7 +80,6 @@ public class EmployeeService {
             user.setActif(true);
             utilisateurRepository.save(user);
         } catch (Exception e) {
-            // Ne pas bloquer la création de l'employé si le compte user échoue
             System.err.println("[WARN] Impossible de créer le compte utilisateur auto: " + e.getMessage());
         }
     }
@@ -136,11 +135,22 @@ public class EmployeeService {
         dto.setEmail(entity.getEmail());
         dto.setTelephone(entity.getTelephone() != null ? entity.getTelephone() : entity.getPhone());
         
-        // Map compatibility fields for old backend/frontend logic
         String fullName = (dto.getNom() != null ? dto.getNom() : "") + (dto.getPrenom() != null ? " " + dto.getPrenom() : "");
         dto.setName(fullName.trim());
         dto.setPhone(dto.getTelephone());
         
+        // Relational IDs
+        dto.setGrilleSalarialeId(entity.getGrilleSalariale() != null ? entity.getGrilleSalariale().getId() : null);
+        dto.setCategorieId(entity.getCategorieObj() != null ? entity.getCategorieObj().getId() : null);
+        dto.setEchelonId(entity.getEchelonObj() != null ? entity.getEchelonObj().getId() : null);
+        dto.setGradeId(entity.getGradeObj() != null ? entity.getGradeObj().getId() : null);
+        dto.setFonction_id(entity.getFonction() != null ? entity.getFonction().getId() : null);
+        dto.setEmploi_id(entity.getEmploi() != null ? entity.getEmploi().getId() : null);
+        dto.setDepartment_id(entity.getDepartment() != null ? entity.getDepartment().getId() : null);
+        dto.setDirection_id(entity.getDirection() != null ? entity.getDirection().getId() : null);
+        dto.setService_id(entity.getService() != null ? entity.getService().getId() : null);
+        dto.setSuperviseur_id(entity.getSuperviseur() != null ? entity.getSuperviseur().getId() : null);
+
         return dto;
     }
 
@@ -168,6 +178,38 @@ public class EmployeeService {
         } else if (entity.getState() == null) {
             entity.setState(com.bpbf.sirh_backend.entities.EmployeeStatus.ACTIF);
         }
+
+        // ManyToOne relationship resolution
+        if (dto.getGrilleSalarialeId() != null) {
+            grilleSalarialeRepository.findById(dto.getGrilleSalarialeId()).ifPresent(entity::setGrilleSalariale);
+        }
+        if (dto.getCategorieId() != null) {
+            categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+        }
+        if (dto.getEchelonId() != null) {
+            echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
+        }
+        if (dto.getGradeId() != null) {
+            gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+        }
+        if (dto.getFonction_id() != null) {
+            fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
+        }
+        if (dto.getEmploi_id() != null) {
+            emploiRepository.findById(dto.getEmploi_id()).ifPresent(entity::setEmploi);
+        }
+        if (dto.getDepartment_id() != null) {
+            departmentRepository.findById(dto.getDepartment_id()).ifPresent(entity::setDepartment);
+        }
+        if (dto.getDirection_id() != null) {
+            directionRepository.findById(dto.getDirection_id()).ifPresent(entity::setDirection);
+        }
+        if (dto.getService_id() != null) {
+            serviceRepository.findById(dto.getService_id()).ifPresent(entity::setService);
+        }
+        if (dto.getSuperviseur_id() != null) {
+            employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
+        }
         
         try {
             java.util.Map<String, Object> existingMap;
@@ -184,7 +226,6 @@ public class EmployeeService {
                 }
             }
 
-            // Sync kids and spouse arrays/objects directly into JSON keys "enfants" and "conjoint" for SQL queries
             if (dto.getEnfantsJson() != null && !dto.getEnfantsJson().trim().isEmpty()) {
                 try {
                     Object parsedEnfants = objectMapper.readValue(dto.getEnfantsJson(), Object.class);
@@ -202,7 +243,6 @@ public class EmployeeService {
                 }
             }
 
-            // Sync category, echelon and grade into JSON keys "categorie", "echelon", "grade" for SQL queries
             String cat = dto.getCategoriePro() != null ? dto.getCategoriePro() : (String) existingMap.getOrDefault("categorie", "CL1");
             String ech = dto.getEchelon() != null ? dto.getEchelon() : (String) existingMap.getOrDefault("echelon", "E01");
             existingMap.put("categorie", cat);

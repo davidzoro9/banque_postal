@@ -98,6 +98,12 @@ public class EmployeeDto {
     private String evaluationsJson;
     private String historiqueActionsJson;
 
+    // Relational IDs
+    private Long grilleSalarialeId;
+    private Long categorieId;
+    private Long echelonId;
+    private Long gradeId;
+
     // Compatibility properties for old code if any
     private String name;
     private String phone;
