@@ -4,8 +4,8 @@ FROM eclipse-temurin:21-jre-alpine
 # Définir le dossier de travail
 WORKDIR /app
 
-# Copier le fichier JAR (compatible si à la racine ou dans target/)
-COPY *.jar app.jar
+# Copier le fichier JAR sigrh_app.jar (ou tout fichier .jar)
+COPY *sigrh_app*.jar app.jar
 
 # Exposer le port du backend
 EXPOSE 8081
