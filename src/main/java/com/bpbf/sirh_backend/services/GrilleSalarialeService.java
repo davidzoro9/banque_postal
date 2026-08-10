@@ -79,10 +79,6 @@ public class GrilleSalarialeService {
         GrilleSalariale grilleSalariale = grilleSalarialeRepository.findById(id)
                 .orElseThrow(()-> new ResourceNotFoundException("Cette grille n'existe pas"));
 
-        grilleSalariale.setClasse(grilleSalarialeDto.getClasse());
-        grilleSalariale.setCategory(grilleSalarialeDto.getCategory());
-        grilleSalariale.setEchelle(grilleSalarialeDto.getEchelle());
-        grilleSalariale.setEchellon(grilleSalarialeDto.getEchellon());
         grilleSalariale.setBasicSalary(grilleSalarialeDto.getBasicSalary());
 
         resolveRelationships(grilleSalariale, grilleSalarialeDto);

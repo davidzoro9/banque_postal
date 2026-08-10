@@ -32,47 +32,22 @@ public class GrilleSalariale {
     @JoinColumn(name = "grade_id")
     private Grade gradeObj;
 
-    private String classe;
-    private String category;
-    private String echelle;
-    private String echellon;
-
-    @Transient private String categoryStr;
-    @Transient private String echellonStr;
-    @Transient private String classeStr;
-
     @JsonProperty("category")
     public String getCategory() {
-        String raw = null;
         if (categorieObj != null) {
-            raw = categorieObj.getCode() != null ? categorieObj.getCode() : categorieObj.getLibelle();
-        } else {
-            raw = category != null ? category : categoryStr;
+            String raw = categorieObj.getCode() != null ? categorieObj.getCode() : categorieObj.getLibelle();
+            return formatCategoryCode(raw);
         }
-        return formatCategoryCode(raw);
-    }
-
-    @JsonProperty("category")
-    public void setCategory(String val) {
-        this.categoryStr = val;
-        this.category = val;
+        return "";
     }
 
     @JsonProperty("echellon")
     public String getEchellon() {
-        String raw = null;
         if (echelonObj != null) {
-            raw = echelonObj.getCode() != null ? echelonObj.getCode() : echelonObj.getLibelle();
-        } else {
-            raw = echellon != null ? echellon : echellonStr;
+            String raw = echelonObj.getCode() != null ? echelonObj.getCode() : echelonObj.getLibelle();
+            return formatEchelonCode(raw);
         }
-        return formatEchelonCode(raw);
-    }
-
-    @JsonProperty("echellon")
-    public void setEchellon(String val) {
-        this.echellonStr = val;
-        this.echellon = val;
+        return "";
     }
 
     @JsonProperty("classe")
@@ -80,13 +55,7 @@ public class GrilleSalariale {
         if (gradeObj != null) {
             return gradeObj.getLibelle() != null ? gradeObj.getLibelle() : gradeObj.getCode();
         }
-        return classe != null ? classe : classeStr;
-    }
-
-    @JsonProperty("classe")
-    public void setClasse(String val) {
-        this.classeStr = val;
-        this.classe = val;
+        return "";
     }
 
     @JsonProperty("grade")
@@ -99,7 +68,7 @@ public class GrilleSalariale {
         if (gradeObj != null) {
             return gradeObj.getCode() != null ? gradeObj.getCode() : gradeObj.getLibelle();
         }
-        return classe != null ? classe : classeStr;
+        return "";
     }
 
     public static String formatCategoryCode(String rawCat) {
@@ -158,4 +127,3 @@ public class GrilleSalariale {
         return getGrade();
     }
 }
-
