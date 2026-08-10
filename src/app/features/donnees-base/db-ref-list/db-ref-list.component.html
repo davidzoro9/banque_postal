@@ -516,19 +516,8 @@
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Type d'indemnité *</mat-label>
         <mat-select formControlName="typeIndemnite" placeholder="Sélectionner le type d'indemnité">
-          @if (regleType === 'ORDINAIRE') {
-            <mat-option value="Indemnité de logement">Indemnité de logement</mat-option>
-            <mat-option value="Indemnité de transport">Indemnité de transport</mat-option>
-            <mat-option value="Indemnité de Sujétion">Indemnité de Sujétion</mat-option>
-          } @else if (regleType === 'NOMINATION') {
-            <mat-option value="Indemnité de fonction">Indemnité de fonction</mat-option>
-            <mat-option value="Indemnité de transport">Indemnité de transport</mat-option>
-            <mat-option value="Indemnité de logement">Indemnité de logement</mat-option>
-            <mat-option value="Indemnité compensatrice">Indemnité compensatrice</mat-option>
-          } @else if (regleType === 'SPECIFIQUE') {
-            <mat-option value="INDEMNITE CASH POINT">INDEMNITE CASH POINT</mat-option>
-            <mat-option value="PRIME D'ASTREINTE">PRIME D'ASTREINTE</mat-option>
-            <mat-option value="INDEMNITE DE CAISSE">INDEMNITE DE CAISSE</mat-option>
+          @for (t of typesIndemniteList; track t) {
+            <mat-option [value]="t">{{ t }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
@@ -561,24 +550,20 @@
         <!-- CAS NOMINATION : Fonction de Nomination -->
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Fonction de Nomination *</mat-label>
-          <mat-select formControlName="fonction" placeholder="Sélectionner la fonction de nomination">
-            <mat-option value="DIRECTEUR DE DÉPARTEMENT">DIRECTEUR DE DÉPARTEMENT</mat-option>
-            <mat-option value="RESPONSABLE DE DÉPARTEMENT">RESPONSABLE DE DÉPARTEMENT</mat-option>
-            <mat-option value="CHEF DE SERVICE">CHEF DE SERVICE</mat-option>
-            <mat-option value="CHEF D'AGENCE">CHEF D'AGENCE</mat-option>
+          <mat-select formControlName="fonctionId" placeholder="Sélectionner la fonction de nomination">
+            @for (f of fonctions; track f.id || f.code) {
+              <mat-option [value]="f.id || f.code">{{ f.libelle || f.name || f.code }}</mat-option>
+            }
           </mat-select>
         </mat-form-field>
       } @else if (regleType === 'SPECIFIQUE') {
         <!-- CAS SPÉCIFIQUE : Poste / Métier Spécifique -->
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Poste / Métier Spécifique *</mat-label>
-          <mat-select formControlName="fonction" placeholder="Sélectionner le poste spécifique">
-            <mat-option value="CAISSIER PRINCIPAL">CAISSIER PRINCIPAL</mat-option>
-            <mat-option value="GESTIONNAIRE CASH POINT">GESTIONNAIRE CASH POINT</mat-option>
-            <mat-option value="CAISSIER AUXILIAIRE">CAISSIER AUXILIAIRE</mat-option>
-            <mat-option value="CHAUFFEUR">CHAUFFEUR</mat-option>
-            <mat-option value="ASSISTANTE DE DIRECTION">ASSISTANTE DE DIRECTION</mat-option>
-            <mat-option value="AGENT DE LIAISON">AGENT DE LIAISON</mat-option>
+          <mat-select formControlName="fonctionId" placeholder="Sélectionner le poste spécifique">
+            @for (f of fonctions; track f.id || f.code) {
+              <mat-option [value]="f.id || f.code">{{ f.libelle || f.name || f.code }}</mat-option>
+            }
           </mat-select>
         </mat-form-field>
       }
@@ -825,35 +810,41 @@
         </mat-form-field>
       }
     } @else {
-      <!-- CHAMPS DÉDIÉS POUR LA GRILLE SALARIALE -->
+      <!-- CHAMPS DÉDIÉS POUR LA GRILLE SALARIALE (ALIGNÉS SUR L'ENTITÉ BACKEND) -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Catégorie / Classe</mat-label>
-          <mat-select formControlName="categorie" placeholder="Sélectionner une catégorie">
-            @for (cat of allClassifications; track cat) {
-              <mat-option [value]="cat">{{ cat }}</mat-option>
+          <mat-label>Catégorie / Classe *</mat-label>
+          <mat-select formControlName="categorieId" placeholder="Sélectionner une catégorie">
+            @for (cat of categories; track cat.id || cat.code) {
+              <mat-option [value]="cat.id">{{ cat.libelle || cat.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Échelon</mat-label>
-          <mat-select formControlName="echellon" placeholder="Sélectionner un échelon">
-            @for (ech of echelonsList; track ech) {
-              <mat-option [value]="'' + ech">Échelon {{ ech }}</mat-option>
+          <mat-label>Échelon *</mat-label>
+          <mat-select formControlName="echelonId" placeholder="Sélectionner un échelon">
+            @for (ech of echelons; track ech.id || ech.code) {
+              <mat-option [value]="ech.id">{{ ech.libelle || ech.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Groupe</mat-label>
-          <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
-            <mat-option value="GROUPE I">GROUPE I (Agents et Employés)</mat-option>
-            <mat-option value="GROUPE II">GROUPE II (Agents de Maîtrise et Cadres moyens)</mat-option>
-            <mat-option value="GROUPE III">GROUPE III (Cadres et Cadres Supérieurs)</mat-option>
+          <mat-label>Groupe d'emploi (Grade)</mat-label>
+          <mat-select formControlName="gradeId" placeholder="Sélectionner un groupe">
+            @for (g of grades; track g.id || g.code) {
+              <mat-option [value]="g.id">{{ g.libelle || g.code }}</mat-option>
+            }
           </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Salaire de base (FCFA) *</mat-label>
+          <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
+          <input matInput type="number" formControlName="montant" placeholder="Ex: 250000" min="0">
         </mat-form-field>
       </div>
     }
@@ -865,16 +856,20 @@
         <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
         <mat-select formControlName="directionId" placeholder="Sélectionner une Direction ou un Département">
           <mat-option value="">Aucun</mat-option>
-          <mat-optgroup label="Directions (Niveau 2)">
-            @for (dir of directions; track dir.id || dir.code) {
-              <mat-option [value]="dir.id || dir.code">[Direction] {{ dir.libelle }}</mat-option>
-            }
-          </mat-optgroup>
-          <mat-optgroup label="Départements (Niveau 2)">
-            @for (dep of departements; track dep.id || dep.code) {
-              <mat-option [value]="dep.id || dep.code">[Département] {{ dep.libelle }}</mat-option>
-            }
-          </mat-optgroup>
+          @if (directions.length > 0) {
+            <mat-optgroup label="Directions (Niveau 2)">
+              @for (dir of directions; track dir.id || dir.code) {
+                <mat-option [value]="dir.id || dir.code">[Direction] {{ dir.libelle }}</mat-option>
+              }
+            </mat-optgroup>
+          }
+          @if (departements.length > 0) {
+            <mat-optgroup label="Départements (Niveau 2)">
+              @for (dep of departements; track dep.id || dep.code) {
+                <mat-option [value]="dep.id || dep.code">[Département] {{ dep.libelle }}</mat-option>
+              }
+            </mat-optgroup>
+          }
         </mat-select>
         <mat-hint>Liste combinée des Directions et Départements de rattachement</mat-hint>
       </mat-form-field>

@@ -14,6 +14,9 @@ export interface RefItem {
   montant?: number;
   departementId?: string;   // utilisé par Direction et Service
   directionId?:   string;   // utilisé par Service
+  categorieId?:   string;   // utilisé par Grille salariale
+  echelonId?:     string;   // utilisé par Grille salariale
+  gradeId?:       string;   // utilisé par Grille salariale
   echelle?:       string;   // utilisé par Grille salariale
   echellon?:      string;   // utilisé par Grille salariale
   typeIndemnite?: string;   // pour Paramétrage indemnité
@@ -44,26 +47,29 @@ const BACKEND_MAP: Record<string, {
     getAllPath: '',
     toFront: dto => ({
       id: String(dto.id),
-      code: dto.category || dto.code || 'C1',
+      code: dto.code || dto.grade || (dto.category && dto.echellon ? `${dto.category}${dto.echellon}` : `GS-${dto.id}`),
       libelle: `Cat. ${dto.category || ''} - ${dto.echellon || ''}`,
-      categorie: dto.category || dto.code,
-      echellon: dto.echellon,
-      echelle: dto.echelle,
-      montant: dto.basicSalary != null ? Number(dto.basicSalary) : 0,
-      description: `Base: ${dto.basicSalary || 0} FCFA`,
+      categorie: dto.category || '',
+      echellon: dto.echellon || '',
+      grade: dto.classe || dto.grade || '',
+      categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
+      echelonId: dto.echelonId ? String(dto.echelonId) : undefined,
+      gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+      montant: dto.basicSalary != null ? Number(dto.basicSalary) : (dto.salaireBase != null ? Number(dto.salaireBase) : 0),
+      description: `Base: ${dto.basicSalary || dto.salaireBase || 0} FCFA`,
       actif: true
     }),
     toBack: item => ({
-      category: item.categorie || item.code,
-      echellon: item.echellon,
-      echelle: item.echelle,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      echelonId: item.echelonId ? Number(item.echelonId) : null,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
       basicSalary: item.montant || 0
     }),
     toBackUpdate: item => ({
       id: item.id ? Number(item.id) : null,
-      category: item.categorie || item.code,
-      echellon: item.echellon,
-      echelle: item.echelle,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      echelonId: item.echelonId ? Number(item.echelonId) : null,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
       basicSalary: item.montant || 0
     })
   },
