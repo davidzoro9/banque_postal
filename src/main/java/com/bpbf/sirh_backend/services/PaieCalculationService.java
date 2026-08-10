@@ -103,39 +103,25 @@ public class PaieCalculationService {
 
             for (ParametrageIndemnite param : allParams) {
                 if (Boolean.TRUE.equals(param.getActif())) {
-                    boolean matchFonction = param.getFonction() == null || param.getFonction().isEmpty() || param.getFonction().equalsIgnoreCase(fonction);
-                    boolean matchGrade = param.getGrade() == null || param.getGrade().isEmpty() || param.getGrade().equalsIgnoreCase(grade);
-                    boolean matchCat = param.getCategorie() == null || param.getCategorie().isEmpty() || param.getCategorie().equalsIgnoreCase(categorie);
-                    boolean matchNomination = param.getTypeNomination() == null || param.getTypeNomination().isEmpty() || param.getTypeNomination().equalsIgnoreCase("TOUTES") || param.getTypeNomination().equalsIgnoreCase(typeNominationEmp);
+                    Double m = param.getTaux() != null ? param.getTaux() : 0.0;
+                    String typeIndStr = param.getTypeIndemniteObj() != null ? (param.getTypeIndemniteObj().getName() != null ? param.getTypeIndemniteObj().getName() : param.getTypeIndemniteObj().getCode()) : "Indemnité";
+                    indemnites.add(new PaieBulletinDto.IndemniteItemDto(param.getCode(), typeIndStr, m));
+                    totalIndemnites += m;
 
-                    if (matchFonction && matchGrade && matchCat && matchNomination) {
-                        Double m = param.getTaux() != null ? param.getTaux() : 0.0;
-                        String typeIndStr = param.getTypeIndemnite() != null ? param.getTypeIndemnite() : "Indemnité";
-                        indemnites.add(new PaieBulletinDto.IndemniteItemDto(param.getCode(), typeIndStr, m));
-                        totalIndemnites += m;
+                    Double tauxExo = null;
+                    Double plafondExo = null;
 
-                        Double tauxExo = param.getTauxExoneration();
-                        Double plafondExo = param.getPlafondExoneration();
+                    if (param.getTypeIndemniteObj() != null) {
+                        tauxExo = param.getTypeIndemniteObj().getTauxExoneration();
+                        plafondExo = param.getTypeIndemniteObj().getPlafondExoneration();
+                    }
 
-                        if (tauxExo == null || (tauxExo == 0.0 && plafondExo == null)) {
-                            TypeIndemnite matchedType = typeIndemnites.stream()
-                                    .filter(t -> (t.getName() != null && t.getName().equalsIgnoreCase(typeIndStr))
-                                            || (t.getCode() != null && t.getCode().equalsIgnoreCase(typeIndStr))
-                                            || (t.getName() != null && typeIndStr.toLowerCase().contains(t.getName().toLowerCase())))
-                                    .findFirst().orElse(null);
-                            if (matchedType != null) {
-                                tauxExo = matchedType.getTauxExoneration();
-                                plafondExo = matchedType.getPlafondExoneration();
-                            }
+                    if (tauxExo != null && tauxExo > 0) {
+                        double exoCalc = m * (tauxExo / 100.0);
+                        if (plafondExo != null && plafondExo > 0 && exoCalc > plafondExo) {
+                            exoCalc = plafondExo;
                         }
-
-                        if (tauxExo != null && tauxExo > 0) {
-                            double exoCalc = m * (tauxExo / 100.0);
-                            if (plafondExo != null && plafondExo > 0 && exoCalc > plafondExo) {
-                                exoCalc = plafondExo;
-                            }
-                            totalExonere += exoCalc;
-                        }
+                        totalExonere += exoCalc;
                     }
                 }
             }

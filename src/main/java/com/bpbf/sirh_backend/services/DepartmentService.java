@@ -37,7 +37,6 @@ public class DepartmentService {
 
         existingDepartment.setCode(departmentDto.getCode());
         existingDepartment.setName(departmentDto.getName());
-        existingDepartment.setDirecteur(departmentDto.getDirecteur());
         resolveRelationships(existingDepartment, departmentDto);
 
         Department saved = departmentRepository.save(existingDepartment);
@@ -47,13 +46,6 @@ public class DepartmentService {
     private void resolveRelationships(Department entity, DepartmentDto dto) {
         if (dto.getDirecteurId() != null) {
             employeeRepository.findById(dto.getDirecteurId()).ifPresent(entity::setDirecteurObj);
-        } else if (dto.getDirecteur() != null && !dto.getDirecteur().trim().isEmpty()) {
-            String dirStr = dto.getDirecteur().trim();
-            employeeRepository.findAll().stream()
-                    .filter(e -> dirStr.equalsIgnoreCase(e.getName()) 
-                              || dirStr.equalsIgnoreCase(e.getNom()) 
-                              || (e.getPrenom() + " " + e.getNom()).equalsIgnoreCase(dirStr))
-                    .findFirst().ifPresent(entity::setDirecteurObj);
         }
     }
 

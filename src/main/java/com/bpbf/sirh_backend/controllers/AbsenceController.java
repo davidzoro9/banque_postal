@@ -34,8 +34,8 @@ public class AbsenceController {
     public Absence update(@PathVariable Long id, @RequestBody Absence absence) {
         Absence existing = absenceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Absence introuvable"));
-        existing.setEmploye(absence.getEmploye());
-        existing.setType(absence.getType());
+        existing.setEmployee(absence.getEmployee());
+        existing.setTypeAbsenceConge(absence.getTypeAbsenceConge());
         existing.setDate(absence.getDate());
         existing.setDuree(absence.getDuree());
         existing.setMotif(absence.getMotif());

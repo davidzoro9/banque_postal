@@ -2,7 +2,6 @@ package com.bpbf.sirh_backend.services;
 
 import com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto;
 import com.bpbf.sirh_backend.entities.ParametrageIndemnite;
-import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.ParametrageIndemniteMapper;
 import com.bpbf.sirh_backend.repositories.*;
 import lombok.RequiredArgsConstructor;
@@ -27,65 +26,17 @@ public class ParametrageIndemniteService {
     }
 
     public ParametrageIndemniteDto create(ParametrageIndemniteDto dto) {
-        String targetFct = dto.getFonction() != null ? dto.getFonction().trim() : "";
-        String targetType = dto.getTypeIndemnite() != null ? dto.getTypeIndemnite().trim() : "";
-        String targetCode = dto.getCode() != null ? dto.getCode().trim() : "";
-
-        ParametrageIndemnite entity = null;
-        if (!targetFct.isEmpty()) {
-            List<ParametrageIndemnite> existing = repository.findAll();
-            for (ParametrageIndemnite p : existing) {
-                String pFct = p.getFonction() != null ? p.getFonction().trim() : "";
-                String pType = p.getTypeIndemnite() != null ? p.getTypeIndemnite().trim() : "";
-                String pCode = p.getCode() != null ? p.getCode().trim() : "";
-
-                boolean sameFct = targetFct.equalsIgnoreCase(pFct);
-                boolean sameTypeOrCode = (!targetType.isEmpty() && targetType.equalsIgnoreCase(pType)) ||
-                                         (!targetCode.isEmpty() && targetCode.equalsIgnoreCase(pCode));
-                if (sameFct && sameTypeOrCode) {
-                    entity = p;
-                    break;
-                }
-            }
-        }
-
-        if (entity == null) {
-            entity = mapper.toEntity(dto);
-        } else {
-            entity.setCode(dto.getCode());
-            entity.setTypeIndemnite(dto.getTypeIndemnite());
-            entity.setFonction(dto.getFonction());
-            entity.setGrade(dto.getGrade());
-            entity.setCategorie(dto.getCategorie());
-            entity.setTaux(dto.getTaux());
-            entity.setTauxExoneration(dto.getTauxExoneration());
-            entity.setPlafondExoneration(dto.getPlafondExoneration());
-            if (dto.getRegleType() != null) entity.setRegleType(dto.getRegleType());
-            if (dto.getTypeNomination() != null) entity.setTypeNomination(dto.getTypeNomination());
-            if (dto.getActif() != null) entity.setActif(dto.getActif());
-        }
-
+        ParametrageIndemnite entity = mapper.toEntity(dto);
         resolveRelationships(entity, dto);
         ParametrageIndemnite saved = repository.save(entity);
         return mapper.toDto(saved);
     }
 
     public ParametrageIndemniteDto update(Long id, ParametrageIndemniteDto dto) {
-        ParametrageIndemnite entity = repository.findById(id).orElseGet(() -> {
-            ParametrageIndemnite newEntity = new ParametrageIndemnite();
-            return newEntity;
-        });
+        ParametrageIndemnite entity = repository.findById(id).orElseGet(ParametrageIndemnite::new);
 
         entity.setCode(dto.getCode());
-        entity.setTypeIndemnite(dto.getTypeIndemnite());
-        entity.setFonction(dto.getFonction());
-        entity.setGrade(dto.getGrade());
-        entity.setCategorie(dto.getCategorie());
         entity.setTaux(dto.getTaux());
-        entity.setTauxExoneration(dto.getTauxExoneration());
-        entity.setPlafondExoneration(dto.getPlafondExoneration());
-        entity.setRegleType(dto.getRegleType() != null ? dto.getRegleType() : "ORDINAIRE");
-        entity.setTypeNomination(dto.getTypeNomination() != null ? dto.getTypeNomination() : "TOUTES");
         if (dto.getActif() != null) {
             entity.setActif(dto.getActif());
         }
@@ -99,173 +50,27 @@ public class ParametrageIndemniteService {
     private void resolveRelationships(ParametrageIndemnite entity, ParametrageIndemniteDto dto) {
         if (dto.getTypeIndemniteId() != null) {
             typeIndemniteRepository.findById(dto.getTypeIndemniteId()).ifPresent(entity::setTypeIndemniteObj);
-        } else if (dto.getTypeIndemnite() != null && !dto.getTypeIndemnite().trim().isEmpty()) {
-            typeIndemniteRepository.findAll().stream()
-                    .filter(t -> dto.getTypeIndemnite().equalsIgnoreCase(t.getCode()) || dto.getTypeIndemnite().equalsIgnoreCase(t.getName()))
-                    .findFirst().ifPresent(entity::setTypeIndemniteObj);
         }
 
         if (dto.getFonctionId() != null) {
             fonctionRepository.findById(dto.getFonctionId()).ifPresent(entity::setFonctionObj);
-        } else if (dto.getFonction() != null && !dto.getFonction().trim().isEmpty()) {
-            fonctionRepository.findAll().stream()
-                    .filter(f -> dto.getFonction().equalsIgnoreCase(f.getCode()) || dto.getFonction().equalsIgnoreCase(f.getName()))
-                    .findFirst().ifPresent(entity::setFonctionObj);
         }
 
         if (dto.getGradeId() != null) {
             gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
-        } else if (dto.getGrade() != null && !dto.getGrade().trim().isEmpty()) {
-            gradeRepository.findAll().stream()
-                    .filter(g -> dto.getGrade().equalsIgnoreCase(g.getCode()) || dto.getGrade().equalsIgnoreCase(g.getLibelle()))
-                    .findFirst().ifPresent(entity::setGradeObj);
         }
 
         if (dto.getCategorieId() != null) {
             categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
-        } else if (dto.getCategorie() != null && !dto.getCategorie().trim().isEmpty()) {
-            categorieRepository.findAll().stream()
-                    .filter(c -> dto.getCategorie().equalsIgnoreCase(c.getCode()) || dto.getCategorie().equalsIgnoreCase(c.getLibelle()))
-                    .findFirst().ifPresent(entity::setCategorieObj);
         }
     }
 
     public List<ParametrageIndemniteDto> getByGradeAndFonction(String gradeStr, String fonctionStr) {
-        String cat = "";
-        if (gradeStr != null && !gradeStr.trim().isEmpty()) {
-            String g = gradeStr.trim().toUpperCase();
-            int eIdx = g.indexOf('E');
-            if (eIdx > 0) cat = g.substring(0, eIdx);
-            else cat = g;
-        }
-
-        final String targetCat = cat;
-        final String targetFctNorm = fonctionStr != null ? fonctionStr.trim().toUpperCase().replace("É","E").replace("È","E").replace("Ê","E") : "";
-
         List<ParametrageIndemnite> allActive = repository.findAll().stream()
                 .filter(p -> p.getActif() == null || p.getActif())
-                .collect(java.util.stream.Collectors.toList());
+                .toList();
 
-        // 1. Si une fonction est spécifiée, chercher d'abord les indemnités de nomination rattachées à cette fonction
-        if (!targetFctNorm.isEmpty() && !"AGENT SIMPLE".equalsIgnoreCase(targetFctNorm) && !"SANS NOMINATION".equalsIgnoreCase(targetFctNorm)) {
-            List<ParametrageIndemnite> fctIndemnites = allActive.stream()
-                    .filter(p -> {
-                        String pCode = (p.getCode() != null ? p.getCode() : "").toUpperCase();
-                        String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase().replace("É","E").replace("È","E").replace("Ê","E");
-
-                        if (targetFctNorm.contains("DIRECTEUR GENERAL") && (pCode.startsWith("PI-NOM-DG-") || pFonction.contains("DIRECTEUR GENERAL"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("DIRECTEUR DE DEPARTEMENT") && (pCode.startsWith("PI-NOM-DIR-") || pFonction.contains("DIRECTEUR DE DEPARTEMENT"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("RESPONSABLE DE DEPARTEMENT") && (pCode.startsWith("PI-NOM-RESP-") || pFonction.contains("RESPONSABLE DE DEPARTEMENT"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("CHEF DE SERVICE") && (pCode.startsWith("PI-NOM-CS-") || pFonction.contains("CHEF DE SERVICE"))) {
-                            return true;
-                        }
-                        if ((targetFctNorm.contains("CHEF D'AGENCE") || targetFctNorm.contains("CHEF DAGENCE")) && (pCode.startsWith("PI-NOM-CA-") || pFonction.contains("CHEF D'AGENCE"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("CAISSIER PRINCIPAL") && (pCode.equals("PI-SPEC-CP-CS") || "CAISSIER PRINCIPAL".equals(pFonction))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("GESTIONNAIRE CASH POINT") && (pCode.startsWith("PI-SPEC-GCP-") || pFonction.contains("GESTIONNAIRE CASH POINT"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("CAISSIER AUXILIAIRE") && (pCode.equals("PI-SPEC-CA-CS") || pFonction.contains("CAISSIER AUXILIAIRE"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("CHAUFFEUR") && (pCode.equals("PI-SPEC-CHF-AST") || pFonction.contains("CHAUFFEUR"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("ASSISTANTE DE DIRECTION") && (pCode.equals("PI-SPEC-AD-AST") || pFonction.contains("ASSISTANTE DE DIRECTION"))) {
-                            return true;
-                        }
-                        if (targetFctNorm.contains("AGENT DE LIAISON") && (pCode.equals("PI-SPEC-AL-AST") || pFonction.contains("AGENT DE LIAISON"))) {
-                            return true;
-                        }
-
-                        if (!pFonction.isEmpty() && targetFctNorm.equals(pFonction)) {
-                            return true;
-                        }
-
-                        return false;
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-
-            // Règle Métier BPBF : Si l'agent a une fonction nommée avec des indemnités spécifiques de fonction,
-            // on prend UNIQUEMENT les indemnités de la fonction et NON celles de la catégorie/classe.
-            if (!fctIndemnites.isEmpty()) {
-                return deduplicateAndReturn(fctIndemnites);
-            }
-        }
-
-        // 2. Sinon (Fonction Pas Nommée / Agent Simple), barème général par catégorie / classe
-        List<ParametrageIndemnite> catIndemnites = allActive.stream()
-                .filter(p -> {
-                    String pCode = (p.getCode() != null ? p.getCode() : "").toUpperCase();
-                    String pCategorie = (p.getCategorie() != null ? p.getCategorie() : "").toUpperCase();
-                    String pGrade = (p.getGrade() != null ? p.getGrade() : "").toUpperCase();
-                    String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
-
-                    // Ignorer les indemnités purement nominatives de fonction
-                    if (!pFonction.isEmpty()) return false;
-
-                    if (!targetCat.isEmpty()) {
-                        if (pCode.contains("-" + targetCat + "-")) return true;
-
-                        if (!pCategorie.isEmpty()) {
-                            String[] cats = pCategorie.split(",");
-                            for (String c : cats) {
-                                if (c.trim().equalsIgnoreCase(targetCat)) return true;
-                            }
-                        }
-
-                        if (pCategorie.isEmpty()) {
-                            if (targetCat.startsWith("C") && !targetCat.startsWith("CL")) {
-                                return "GROUPE I".equalsIgnoreCase(pGrade);
-                            }
-                            if (targetCat.startsWith("CL")) {
-                                try {
-                                    int num = Integer.parseInt(targetCat.replace("CL", ""));
-                                    if (num <= 4 && "GROUPE II".equalsIgnoreCase(pGrade)) {
-                                        return pCode.contains("CL" + num);
-                                    }
-                                    if (num >= 5 && "GROUPE III".equalsIgnoreCase(pGrade)) {
-                                        return pCode.contains("CL" + num);
-                                    }
-                                } catch (Exception ignored) {}
-                            }
-                        }
-                    }
-                    return false;
-                })
-                .collect(java.util.stream.Collectors.toList());
-
-        return deduplicateAndReturn(catIndemnites);
-    }
-
-    private List<ParametrageIndemniteDto> deduplicateAndReturn(List<ParametrageIndemnite> list) {
-        java.util.Map<String, ParametrageIndemnite> deduped = new java.util.LinkedHashMap<>();
-        for (ParametrageIndemnite p : list) {
-            String key = p.getTypeIndemnite() != null && !p.getTypeIndemnite().trim().isEmpty()
-                    ? p.getTypeIndemnite().trim().toUpperCase()
-                    : (p.getCode() != null ? p.getCode().trim().toUpperCase() : "ID_" + p.getId());
-
-            if (!deduped.containsKey(key)) {
-                deduped.put(key, p);
-            } else {
-                ParametrageIndemnite existing = deduped.get(key);
-                Long existingId = existing.getId() != null ? existing.getId() : 0L;
-                Long currentId = p.getId() != null ? p.getId() : 0L;
-                if (currentId >= existingId) {
-                    deduped.put(key, p);
-                }
-            }
-        }
-        return mapper.toDtos(new java.util.ArrayList<>(deduped.values()));
+        return mapper.toDtos(allActive);
     }
 
     public void delete(Long id) {

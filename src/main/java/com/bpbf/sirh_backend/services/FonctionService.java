@@ -3,7 +3,6 @@ package com.bpbf.sirh_backend.services;
 import com.bpbf.sirh_backend.dtos.FonctionDto;
 import com.bpbf.sirh_backend.entities.Fonction;
 import com.bpbf.sirh_backend.entities.ParametrageIndemnite;
-import com.bpbf.sirh_backend.entities.TypeIndemnite;
 import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.FonctionMapper;
 import com.bpbf.sirh_backend.repositories.FonctionRepository;
@@ -32,14 +31,9 @@ public class FonctionService {
             if ("NOMMEE".equalsIgnoreCase(dto.getTypeNomination())) {
                 List<FonctionDto.FonctionIndemniteDto> indList = new ArrayList<>();
                 for (ParametrageIndemnite pi : allParams) {
-                    if ("NOMINATION".equalsIgnoreCase(pi.getRegleType())) {
-                        String piFct = pi.getFonction();
-                        if (piFct == null && pi.getFonctionObj() != null) {
-                            piFct = pi.getFonctionObj().getName();
-                        }
-                        if (piFct != null && (piFct.equalsIgnoreCase(dto.getName()) || piFct.equalsIgnoreCase(dto.getCode()))) {
-                            indList.add(new FonctionDto.FonctionIndemniteDto(pi.getTypeIndemnite(), pi.getTaux()));
-                        }
+                    if (pi.getFonctionObj() != null && dto.getId() != null && dto.getId().equals(pi.getFonctionObj().getId())) {
+                        String tName = pi.getTypeIndemniteObj() != null ? pi.getTypeIndemniteObj().getName() : pi.getCode();
+                        indList.add(new FonctionDto.FonctionIndemniteDto(tName, pi.getTaux()));
                     }
                 }
                 dto.setIndemnites(indList);
@@ -80,14 +74,10 @@ public class FonctionService {
 
     private void saveAssociatedIndemnites(Fonction fonction, FonctionDto fonctionDto) {
         if ("NOMMEE".equalsIgnoreCase(fonction.getTypeNomination())) {
-            // Clear previous nomination indemnities for this function
             List<ParametrageIndemnite> existingList = parametrageIndemniteRepository.findAll();
             for (ParametrageIndemnite pi : existingList) {
-                if ("NOMINATION".equalsIgnoreCase(pi.getRegleType())) {
-                    String piFct = pi.getFonction();
-                    if (piFct != null && (piFct.equalsIgnoreCase(fonction.getName()) || piFct.equalsIgnoreCase(fonction.getCode()))) {
-                        parametrageIndemniteRepository.delete(pi);
-                    }
+                if (pi.getFonctionObj() != null && pi.getFonctionObj().getId().equals(fonction.getId())) {
+                    parametrageIndemniteRepository.delete(pi);
                 }
             }
 
@@ -98,17 +88,12 @@ public class FonctionService {
                         ParametrageIndemnite pi = new ParametrageIndemnite();
                         pi.setCode("IND-FCT-" + fonction.getId() + "-" + idx++);
                         pi.setFonctionObj(fonction);
-                        pi.setFonction(fonction.getName());
-                        pi.setTypeIndemnite(indDto.getTypeIndemnite().trim());
                         
-                        // Try to link TypeIndemnite entity
                         typeIndemniteRepository.findAll().stream()
                                 .filter(t -> indDto.getTypeIndemnite().trim().equalsIgnoreCase(t.getName()) || indDto.getTypeIndemnite().trim().equalsIgnoreCase(t.getCode()))
                                 .findFirst().ifPresent(pi::setTypeIndemniteObj);
 
                         pi.setTaux(indDto.getMontant() != null ? indDto.getMontant() : 0.0);
-                        pi.setRegleType("NOMINATION");
-                        pi.setTypeNomination("NOMMEE");
                         pi.setActif(true);
 
                         parametrageIndemniteRepository.save(pi);

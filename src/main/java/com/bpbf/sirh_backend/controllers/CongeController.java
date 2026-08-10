@@ -34,8 +34,8 @@ public class CongeController {
     public Conge update(@PathVariable Long id, @RequestBody Conge conge) {
         Conge existing = congeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Congé introuvable"));
-        existing.setEmploye(conge.getEmploye());
-        existing.setType(conge.getType());
+        existing.setEmployee(conge.getEmployee());
+        existing.setTypeAbsenceConge(conge.getTypeAbsenceConge());
         existing.setDateDebut(conge.getDateDebut());
         existing.setDateFin(conge.getDateFin());
         existing.setNbJours(conge.getNbJours());

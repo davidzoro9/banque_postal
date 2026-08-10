@@ -34,11 +34,11 @@ public class ContratController {
     public Contrat update(@PathVariable Long id, @RequestBody Contrat contrat) {
         Contrat existing = contratRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contrat introuvable"));
-        existing.setEmploye(contrat.getEmploye());
-        existing.setType(contrat.getType());
+        existing.setEmployee(contrat.getEmployee());
+        existing.setTypeContratObj(contrat.getTypeContratObj());
+        existing.setServiceObj(contrat.getServiceObj());
         existing.setDateDebut(contrat.getDateDebut());
         existing.setDateFin(contrat.getDateFin());
-        existing.setService(contrat.getService());
         existing.setStatut(contrat.getStatut());
         return contratRepository.save(existing);
     }

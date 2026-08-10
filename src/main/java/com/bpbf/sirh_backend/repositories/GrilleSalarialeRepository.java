@@ -10,8 +10,6 @@ import java.util.Optional;
 @Repository
 public interface GrilleSalarialeRepository extends JpaRepository<GrilleSalariale, Long> {
     List<GrilleSalariale> findByGradeObjId(Long gradeId);
-    List<GrilleSalariale> findByClasseIgnoreCase(String classe);
-
     Optional<GrilleSalariale> findByCategorieObjIdAndEchelonObjId(Long categorieId, Long echelonId);
     Optional<GrilleSalariale> findByGradeObjIdAndCategorieObjIdAndEchelonObjId(Long gradeId, Long categorieId, Long echelonId);
 }
