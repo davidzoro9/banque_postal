@@ -3,6 +3,7 @@ package com.bpbf.sirh_backend;
 import com.bpbf.sirh_backend.entities.Utilisateur;
 import com.bpbf.sirh_backend.repositories.*;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,6 +11,9 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 public class SirhBackendApplication {
+
+	@Value("${app.seed.enabled:true}")
+	private boolean seedEnabled;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SirhBackendApplication.class, args);
@@ -36,6 +40,9 @@ public class SirhBackendApplication {
 			CategorieRepository categorieRepo,
 			GradeRepository gradeRepo) {
 		return args -> {
+			if (!seedEnabled) {
+				return;
+			}
 			try {
 				if (repository.findAll().stream().noneMatch(u -> "davidzorom9@gmail.com".equalsIgnoreCase(u.getEmail()))) {
 					Utilisateur admin1 = new Utilisateur();
