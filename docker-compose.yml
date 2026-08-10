@@ -8,29 +8,30 @@ services:
     restart: always
     environment:
       POSTGRES_DB: sigrh_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1234
+      POSTGRES_USER: sigrh_user
+      POSTGRES_PASSWORD: sigrh_password_123
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./24_07_plain.sql:/docker-entrypoint-initdb.d/01_init.sql
 
-  # Service Backend Spring Boot
-  backend:
+  # Application SIGRH (Backend API + Frontend)
+  sigrh_app:
     build: .
-    container_name: sigrh_backend
+    container_name: sigrh_app
     restart: always
     ports:
       - "8081:8081"
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: sigrh_db
-      DB_USER: postgres
-      DB_PASSWORD: 1234
-      PORT: 8081
     depends_on:
       - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=sigrh_db
+      - DB_USER=sigrh_user
+      - DB_PASSWORD=sigrh_password_123
+      - APP_SEED_ENABLED=false
 
 volumes:
   postgres_data:
