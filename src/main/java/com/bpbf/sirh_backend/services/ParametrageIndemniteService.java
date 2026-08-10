@@ -27,7 +27,44 @@ public class ParametrageIndemniteService {
     }
 
     public ParametrageIndemniteDto create(ParametrageIndemniteDto dto) {
-        ParametrageIndemnite entity = mapper.toEntity(dto);
+        String targetFct = dto.getFonction() != null ? dto.getFonction().trim() : "";
+        String targetType = dto.getTypeIndemnite() != null ? dto.getTypeIndemnite().trim() : "";
+        String targetCode = dto.getCode() != null ? dto.getCode().trim() : "";
+
+        ParametrageIndemnite entity = null;
+        if (!targetFct.isEmpty()) {
+            List<ParametrageIndemnite> existing = repository.findAll();
+            for (ParametrageIndemnite p : existing) {
+                String pFct = p.getFonction() != null ? p.getFonction().trim() : "";
+                String pType = p.getTypeIndemnite() != null ? p.getTypeIndemnite().trim() : "";
+                String pCode = p.getCode() != null ? p.getCode().trim() : "";
+
+                boolean sameFct = targetFct.equalsIgnoreCase(pFct);
+                boolean sameTypeOrCode = (!targetType.isEmpty() && targetType.equalsIgnoreCase(pType)) ||
+                                         (!targetCode.isEmpty() && targetCode.equalsIgnoreCase(pCode));
+                if (sameFct && sameTypeOrCode) {
+                    entity = p;
+                    break;
+                }
+            }
+        }
+
+        if (entity == null) {
+            entity = mapper.toEntity(dto);
+        } else {
+            entity.setCode(dto.getCode());
+            entity.setTypeIndemnite(dto.getTypeIndemnite());
+            entity.setFonction(dto.getFonction());
+            entity.setGrade(dto.getGrade());
+            entity.setCategorie(dto.getCategorie());
+            entity.setTaux(dto.getTaux());
+            entity.setTauxExoneration(dto.getTauxExoneration());
+            entity.setPlafondExoneration(dto.getPlafondExoneration());
+            if (dto.getRegleType() != null) entity.setRegleType(dto.getRegleType());
+            if (dto.getTypeNomination() != null) entity.setTypeNomination(dto.getTypeNomination());
+            if (dto.getActif() != null) entity.setActif(dto.getActif());
+        }
+
         resolveRelationships(entity, dto);
         ParametrageIndemnite saved = repository.save(entity);
         return mapper.toDto(saved);
@@ -161,7 +198,7 @@ public class ParametrageIndemniteService {
             // Règle Métier BPBF : Si l'agent a une fonction nommée avec des indemnités spécifiques de fonction,
             // on prend UNIQUEMENT les indemnités de la fonction et NON celles de la catégorie/classe.
             if (!fctIndemnites.isEmpty()) {
-                return mapper.toDtos(fctIndemnites);
+                return deduplicateAndReturn(fctIndemnites);
             }
         }
 
@@ -207,7 +244,28 @@ public class ParametrageIndemniteService {
                 })
                 .collect(java.util.stream.Collectors.toList());
 
-        return mapper.toDtos(catIndemnites);
+        return deduplicateAndReturn(catIndemnites);
+    }
+
+    private List<ParametrageIndemniteDto> deduplicateAndReturn(List<ParametrageIndemnite> list) {
+        java.util.Map<String, ParametrageIndemnite> deduped = new java.util.LinkedHashMap<>();
+        for (ParametrageIndemnite p : list) {
+            String key = p.getTypeIndemnite() != null && !p.getTypeIndemnite().trim().isEmpty()
+                    ? p.getTypeIndemnite().trim().toUpperCase()
+                    : (p.getCode() != null ? p.getCode().trim().toUpperCase() : "ID_" + p.getId());
+
+            if (!deduped.containsKey(key)) {
+                deduped.put(key, p);
+            } else {
+                ParametrageIndemnite existing = deduped.get(key);
+                Long existingId = existing.getId() != null ? existing.getId() : 0L;
+                Long currentId = p.getId() != null ? p.getId() : 0L;
+                if (currentId >= existingId) {
+                    deduped.put(key, p);
+                }
+            }
+        }
+        return mapper.toDtos(new java.util.ArrayList<>(deduped.values()));
     }
 
     public void delete(Long id) {
