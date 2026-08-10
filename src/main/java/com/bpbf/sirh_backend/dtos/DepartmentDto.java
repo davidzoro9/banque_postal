@@ -13,6 +13,5 @@ public class DepartmentDto {
     private Long id;
     private String code;
     private String name;
-    private String directeur;
     private Long directeurId;
 }

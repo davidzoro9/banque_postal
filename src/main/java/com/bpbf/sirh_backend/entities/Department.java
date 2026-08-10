@@ -26,14 +26,9 @@ public class Department {
     @JoinColumn(name = "directeur_id")
     private Employee directeurObj;
 
-    @Transient private String directeurStr;
-
     @JsonProperty("directeur")
     public String getDirecteur() {
         if (directeurObj != null) return directeurObj.getName() != null ? directeurObj.getName() : (directeurObj.getPrenom() + " " + directeurObj.getNom());
-        return directeurStr;
+        return null;
     }
-
-    @JsonProperty("directeur")
-    public void setDirecteur(String val) { this.directeurStr = val; }
 }

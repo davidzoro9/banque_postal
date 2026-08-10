@@ -25,17 +25,6 @@ public class RetenueSalariale {
     @JoinColumn(name = "type_retenue_employe_id")
     private TypeRetenueEmploye typeRetenueEmploye;
 
-    @Transient private String typeRetenueStr;
-
-    @JsonProperty("typeRetenue")
-    public String getTypeRetenue() {
-        if (typeRetenueEmploye != null) return typeRetenueEmploye.getLibelle();
-        return typeRetenueStr;
-    }
-
-    @JsonProperty("typeRetenue")
-    public void setTypeRetenue(String val) { this.typeRetenueStr = val; }
-
     private Double montantTotal;
     private Double mensualite;
     private Double resteAPayer;

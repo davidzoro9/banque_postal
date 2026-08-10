@@ -13,7 +13,8 @@ public class RetenueSalarialeDto {
     private Long id;
     private String code;
     private String name;
-    private String typeRetenue;
+    private Long typeRetenueEmployeId;
+    private Long employeeId;
     private Double tauxPercent;
     private Double montantFixe;
     private String description;

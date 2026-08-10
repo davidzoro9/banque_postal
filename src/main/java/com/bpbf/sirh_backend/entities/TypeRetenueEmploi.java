@@ -23,20 +23,12 @@ public class TypeRetenueEmploi {
     @JoinColumn(name = "type_retenue_employe_id")
     private TypeRetenueEmploye typeRetenueEmploye;
 
-    @Transient
-    private String typeRetenueStr;
-
     @JsonProperty("typeRetenue")
     public String getTypeRetenue() {
         if (typeRetenueEmploye != null) {
             return typeRetenueEmploye.getLibelle() != null ? typeRetenueEmploye.getLibelle() : typeRetenueEmploye.getCode();
         }
-        return typeRetenueStr;
-    }
-
-    @JsonProperty("typeRetenue")
-    public void setTypeRetenue(String tr) {
-        this.typeRetenueStr = tr;
+        return null;
     }
 
     private Double taux;

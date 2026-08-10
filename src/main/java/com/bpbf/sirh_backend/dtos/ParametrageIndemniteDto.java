@@ -12,10 +12,6 @@ import lombok.Setter;
 public class ParametrageIndemniteDto {
     private Long id;
     private String code;
-    private String typeIndemnite;
-    private String fonction;
-    private String grade;
-    private String categorie;
     private Long typeIndemniteId;
     private Long fonctionId;
     private Long gradeId;

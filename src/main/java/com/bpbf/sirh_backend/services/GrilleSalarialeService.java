@@ -95,36 +95,16 @@ public class GrilleSalarialeService {
         // Resolve Categorie
         if (dto.getCategorieId() != null) {
             categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
-        } else if (dto.getCategory() != null && !dto.getCategory().trim().isEmpty()) {
-            String catCode = dto.getCategory().trim();
-            categorieRepository.findAll().stream()
-                    .filter(c -> matchCat(catCode, c.getCode(), c.getLibelle()))
-                    .findFirst()
-                    .ifPresent(entity::setCategorieObj);
         }
 
         // Resolve Echelon
         if (dto.getEchelonId() != null) {
             echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
-        } else if (dto.getEchellon() != null && !dto.getEchellon().trim().isEmpty()) {
-            String echCode = dto.getEchellon().trim();
-            echelonRepository.findAll().stream()
-                    .filter(e -> echCode.equalsIgnoreCase(e.getCode()) 
-                              || echCode.equalsIgnoreCase(e.getLibelle())
-                              || ("E" + String.format("%02d", parseEchelonNum(echCode))).equalsIgnoreCase(e.getCode()))
-                    .findFirst()
-                    .ifPresent(entity::setEchelonObj);
         }
 
         // Resolve Grade / Group
         if (dto.getGradeId() != null) {
             gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
-        } else if (dto.getClasse() != null && !dto.getClasse().trim().isEmpty()) {
-            String gradeCode = dto.getClasse().trim();
-            gradeRepository.findAll().stream()
-                    .filter(g -> gradeCode.equalsIgnoreCase(g.getCode()) || gradeCode.equalsIgnoreCase(g.getLibelle()))
-                    .findFirst()
-                    .ifPresent(entity::setGradeObj);
         }
     }
 

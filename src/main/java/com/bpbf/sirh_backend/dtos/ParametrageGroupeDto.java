@@ -12,9 +12,9 @@ import lombok.Setter;
 public class ParametrageGroupeDto {
     private Long id;
     private String code;
-    private String grade;
+    private Long gradeId;
+    private Long categorieId;
     private String libelle;
-    private String categorie;
     private String description;
     private Boolean actif;
 }

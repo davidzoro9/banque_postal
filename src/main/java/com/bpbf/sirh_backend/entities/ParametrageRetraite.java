@@ -22,16 +22,11 @@ public class ParametrageRetraite {
     @JoinColumn(name = "grade_id")
     private Grade gradeObj;
 
-    @Transient private String gradeStr;
-
     @JsonProperty("grade")
     public String getGrade() {
         if (gradeObj != null) return gradeObj.getLibelle() != null ? gradeObj.getLibelle() : gradeObj.getCode();
-        return gradeStr;
+        return null;
     }
-
-    @JsonProperty("grade")
-    public void setGrade(String val) { this.gradeStr = val; }
 
     private String libelle;
     private Double taux;

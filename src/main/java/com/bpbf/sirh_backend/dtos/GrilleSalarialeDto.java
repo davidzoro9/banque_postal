@@ -14,12 +14,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class GrilleSalarialeDto {
     private Long id;
-    private String classe;
-    private String category;
-    private String echelle;
-    private String echellon;
-
-    private String grade;
     private Long categorieId;
     private Long echelonId;
     private Long gradeId;
@@ -27,4 +21,3 @@ public class GrilleSalarialeDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private BigDecimal basicSalary;
 }
-

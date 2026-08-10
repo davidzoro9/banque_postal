@@ -26,29 +26,17 @@ public class ParametrageGroupe {
     @JoinColumn(name = "categorie_id")
     private Categorie categorieObj;
 
-    @Column(name = "grade_text")
-    private String gradeText;
-
-    @Column(name = "categorie_text")
-    private String categorieText;
-
     @JsonProperty("grade")
     public String getGrade() {
         if (gradeObj != null) return gradeObj.getLibelle() != null ? gradeObj.getLibelle() : gradeObj.getCode();
-        return gradeText;
+        return null;
     }
-
-    @JsonProperty("grade")
-    public void setGrade(String val) { this.gradeText = val; }
 
     @JsonProperty("categorie")
     public String getCategorie() {
         if (categorieObj != null) return categorieObj.getLibelle() != null ? categorieObj.getLibelle() : categorieObj.getCode();
-        return categorieText;
+        return null;
     }
-
-    @JsonProperty("categorie")
-    public void setCategorie(String val) { this.categorieText = val; }
 
     private String libelle;
     

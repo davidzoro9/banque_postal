@@ -36,23 +36,8 @@ public class ParametrageIndemnite {
     @JoinColumn(name = "categorie_id")
     private Categorie categorieObj;
 
-    @Column(name = "type_indemnite")
-    private String typeIndemniteStr;
-
-    @Column(name = "fonction_str")
-    private String fonctionStr;
-
-    @Column(name = "grade_str")
-    private String gradeStr;
-
-    @Column(name = "categorie_str")
-    private String categorieStr;
-
     @JsonProperty("typeIndemnite")
     public String getTypeIndemnite() {
-        if (typeIndemniteStr != null && !typeIndemniteStr.trim().isEmpty()) {
-            return typeIndemniteStr;
-        }
         if (typeIndemniteObj != null && typeIndemniteObj.getName() != null && !typeIndemniteObj.getName().trim().isEmpty()) {
             return typeIndemniteObj.getName();
         }
@@ -72,42 +57,21 @@ public class ParametrageIndemnite {
         return "Indemnité";
     }
 
-    @JsonProperty("typeIndemnite")
-    public void setTypeIndemnite(String val) { this.typeIndemniteStr = val; }
-
     @JsonProperty("fonction")
     public String getFonction() {
         if (fonctionObj != null) return fonctionObj.getName();
-        return fonctionStr;
+        return null;
     }
-
-    @JsonProperty("fonction")
-    public void setFonction(String val) { this.fonctionStr = val; }
 
     @JsonProperty("grade")
     public String getGrade() {
         if (gradeObj != null) return gradeObj.getLibelle();
-        return gradeStr;
+        return null;
     }
-
-    @JsonProperty("grade")
-    public void setGrade(String val) { this.gradeStr = val; }
 
     @JsonProperty("categorie")
     public String getCategorie() {
         if (categorieObj != null) return categorieObj.getLibelle();
-        return categorieStr;
+        return null;
     }
-
-    @JsonProperty("categorie")
-    public void setCategorie(String val) { this.categorieStr = val; }
-
-    private Double taux;
-    private Double tauxExoneration;
-    private Double plafondExoneration;
-    /** "ORDINAIRE", "NOMINATION", ou "SPECIFIQUE" */
-    private String regleType = "ORDINAIRE";
-    /** "NOMMEE", "NON_NOMMEE", ou "TOUTES" */
-    private String typeNomination = "TOUTES";
-    private Boolean actif = true;
 }

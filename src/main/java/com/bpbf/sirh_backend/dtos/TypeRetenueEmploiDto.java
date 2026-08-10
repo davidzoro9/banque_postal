@@ -13,7 +13,6 @@ public class TypeRetenueEmploiDto {
     private Long id;
     private String code;
     private String libelle;
-    private String typeRetenue;
     private Long typeRetenueEmployeId;
     private Double taux;
     private String description;

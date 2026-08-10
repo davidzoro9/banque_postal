@@ -5,9 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -50,9 +47,6 @@ public class EmployeeDto {
     private Integer ageRetraite;
     private String dateRetraite;
 
-    // Fonction / Nomination
-    private String fonction;
-
     // Photo
     private String photo;
 
@@ -61,21 +55,9 @@ public class EmployeeDto {
     private String enfantsJson;
     private String personnesChargeJson;
 
-    // Job / Position
-    private String poste;
-    private String service;
-    private String direction;
-    private String departement;
+    // Job / Position dates & status
     private String dateEmbauche;
     private String statut;
-    private String typeContrat;
-
-    // Category / Grade
-    @JsonAlias({"categorie", "categoriePro"})
-    @JsonProperty("categoriePro")
-    private String categoriePro;
-    private String echelon;
-    private String grade;
     private String niveau;
 
     // Allowances / Indemnités
@@ -104,19 +86,18 @@ public class EmployeeDto {
     private String historiqueActionsJson;
 
     // Relational IDs
-    private Long grilleSalarialeId;
-    private Long categorieId;
-    private Long echelonId;
-    private Long gradeId;
-
-    // Compatibility properties for old code if any
-    private String name;
-    private String phone;
     private Long fonction_id;
     private Long emploi_id;
     private Long department_id;
     private Long direction_id;
     private Long service_id;
     private Long superviseur_id;
+    private Long grilleSalarialeId;
+    private Long categorieId;
+    private Long echelonId;
+    private Long gradeId;
+
+    private String name;
+    private String phone;
     private String state;
 }

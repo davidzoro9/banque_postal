@@ -17,8 +17,10 @@ public class MobiliteDemande {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long employeeId;
-    private String employeeName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
+
     private String typeMobility;
     private String posteCible;
     private String serviceCible;

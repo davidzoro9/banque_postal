@@ -12,7 +12,7 @@ import lombok.Setter;
 public class ParametrageRetraiteDto {
     private Long id;
     private String code;
-    private String grade;
+    private Long gradeId;
     private String libelle;
     private Double taux;
     private String description;
