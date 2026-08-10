@@ -102,19 +102,18 @@ public class ParametrageIndemniteService {
             else cat = g;
         }
 
-        final String targetCat = cat;
-        final String targetFct = fonctionStr != null ? fonctionStr.trim().toUpperCase() : "";
+        final String targetFctNorm = fonctionStr != null ? fonctionStr.trim().toUpperCase().replace("É","E").replace("È","E").replace("Ê","E") : "";
 
         List<ParametrageIndemnite> allActive = repository.findAll().stream()
                 .filter(p -> p.getActif() == null || p.getActif())
                 .collect(java.util.stream.Collectors.toList());
 
         // 1. Si une fonction est spécifiée, chercher d'abord les indemnités de nomination rattachées à cette fonction
-        if (!targetFct.isEmpty()) {
+        if (!targetFctNorm.isEmpty() && !"AGENT SIMPLE".equalsIgnoreCase(targetFctNorm)) {
             List<ParametrageIndemnite> fctIndemnites = allActive.stream()
                     .filter(p -> {
-                        String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase();
-                        return !pFonction.isEmpty() && (targetFct.contains(pFonction) || pFonction.contains(targetFct));
+                        String pFonction = (p.getFonction() != null ? p.getFonction() : (p.getFonctionObj() != null ? p.getFonctionObj().getName() : "")).toUpperCase().replace("É","E").replace("È","E").replace("Ê","E");
+                        return !pFonction.isEmpty() && (targetFctNorm.contains(pFonction) || pFonction.contains(targetFctNorm));
                     })
                     .collect(java.util.stream.Collectors.toList());
 
