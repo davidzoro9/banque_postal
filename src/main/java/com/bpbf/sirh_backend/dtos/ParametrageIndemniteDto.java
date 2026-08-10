@@ -18,9 +18,5 @@ public class ParametrageIndemniteDto {
     private Long categorieId;
 
     private Double taux;
-    private Double tauxExoneration;
-    private Double plafondExoneration;
-    private String regleType;
-    private String typeNomination;
     private Boolean actif;
 }

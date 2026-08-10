@@ -37,9 +37,5 @@ public class ParametrageIndemnite {
     private Categorie categorieObj;
 
     private Double taux;
-    private Double tauxExoneration;
-    private Double plafondExoneration;
-    private String regleType;
-    private String typeNomination;
     private Boolean actif = true;
 }
