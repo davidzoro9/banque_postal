@@ -330,8 +330,12 @@ export class InfosProComponent implements OnInit {
       updatePayload.salaireBase = baseSal;
     }
 
-    this.employeeService.update(this.empId, updatePayload).subscribe(() => {
+    this.employeeService.update(this.empId, updatePayload).subscribe(updated => {
       this.saving = false;
+      if (updated) {
+        this.employee = updated;
+        this.patch(updated);
+      }
       if (this.isCreationMode && next) {
         this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
       } else {
