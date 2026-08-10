@@ -81,8 +81,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     return [];
   }
 
-  categories = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-  echelons = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  categories: any[] = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+  echelons: any[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
   // Grille salariale - listes par groupe (utilisant les codes officiels C1..C7, CL1..CL8)
   groupe1Classifications: string[] = [];
@@ -588,8 +588,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     });
     if (this.type === 'grille-salariale') {
       this.formGroup.patchValue({
-        categorieId: this.categories.length > 0 ? this.categories[0].id : null,
-        echelonId: this.echelons.length > 0 ? this.echelons[0].id : null,
+        categorieId: this.categories.length > 0 ? (this.categories[0] as any)?.id ?? this.categories[0] : null,
+        echelonId: this.echelons.length > 0 ? (this.echelons[0] as any)?.id ?? this.echelons[0] : null,
         gradeId: this.grades.length > 0 ? this.grades[0].id : null,
         montant: 0
       });
@@ -616,8 +616,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         montant:       item.montant ?? 0,
         departementId: item.departementId ?? null,
         directionId:   item.directionId   ?? null,
-        categorieId:   item.categorieId ? Number(item.categorieId) : (this.categories.length > 0 ? this.categories[0].id : null),
-        echelonId:     item.echelonId ? Number(item.echelonId) : (this.echelons.length > 0 ? this.echelons[0].id : null),
+        categorieId:   item.categorieId ? Number(item.categorieId) : (this.categories.length > 0 ? ((this.categories[0] as any)?.id ?? this.categories[0]) : null),
+        echelonId:     item.echelonId ? Number(item.echelonId) : (this.echelons.length > 0 ? ((this.echelons[0] as any)?.id ?? this.echelons[0]) : null),
         gradeId:       item.gradeId ? Number(item.gradeId) : (this.grades.length > 0 ? this.grades[0].id : null),
         echelle:       '',
         echellon:      String(item.echellon || ''),
