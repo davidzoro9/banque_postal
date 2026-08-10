@@ -22,8 +22,8 @@ public class RetenueSalariale {
     private String libelle;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "type_retenue_employe_id")
-    private TypeRetenueEmploye typeRetenueEmploye;
+    @JoinColumn(name = "type_retenue_id")
+    private TypeRetenue typeRetenue;
 
     private Double montantTotal;
     private Double mensualite;

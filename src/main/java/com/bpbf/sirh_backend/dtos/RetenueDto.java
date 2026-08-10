@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TypeRetenueEmploiDto {
+public class RetenueDto {
     private Long id;
     private String code;
     private String libelle;

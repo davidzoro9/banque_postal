@@ -9,12 +9,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TypeRetenueEmploiDto {
+public class TypeRetenueDto {
     private Long id;
     private String code;
     private String libelle;
-    private Long typeRetenueId;
-    private Double taux;
     private String description;
     private Boolean actif;
 }
