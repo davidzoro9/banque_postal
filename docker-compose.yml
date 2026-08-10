@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Service Base de Données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: sigrh_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sigrh_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Service Backend Spring Boot
+  backend:
+    build: .
+    container_name: sigrh_backend
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sigrh_db
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      PORT: 8081
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
