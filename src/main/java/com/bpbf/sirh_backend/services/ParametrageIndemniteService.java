@@ -102,6 +102,7 @@ public class ParametrageIndemniteService {
             else cat = g;
         }
 
+        final String targetCat = cat;
         final String targetFctNorm = fonctionStr != null ? fonctionStr.trim().toUpperCase().replace("É","E").replace("È","E").replace("Ê","E") : "";
 
         List<ParametrageIndemnite> allActive = repository.findAll().stream()
@@ -109,11 +110,51 @@ public class ParametrageIndemniteService {
                 .collect(java.util.stream.Collectors.toList());
 
         // 1. Si une fonction est spécifiée, chercher d'abord les indemnités de nomination rattachées à cette fonction
-        if (!targetFctNorm.isEmpty() && !"AGENT SIMPLE".equalsIgnoreCase(targetFctNorm)) {
+        if (!targetFctNorm.isEmpty() && !"AGENT SIMPLE".equalsIgnoreCase(targetFctNorm) && !"SANS NOMINATION".equalsIgnoreCase(targetFctNorm)) {
             List<ParametrageIndemnite> fctIndemnites = allActive.stream()
                     .filter(p -> {
-                        String pFonction = (p.getFonction() != null ? p.getFonction() : (p.getFonctionObj() != null ? p.getFonctionObj().getName() : "")).toUpperCase().replace("É","E").replace("È","E").replace("Ê","E");
-                        return !pFonction.isEmpty() && (targetFctNorm.contains(pFonction) || pFonction.contains(targetFctNorm));
+                        String pCode = (p.getCode() != null ? p.getCode() : "").toUpperCase();
+                        String pFonction = (p.getFonction() != null ? p.getFonction() : "").toUpperCase().replace("É","E").replace("È","E").replace("Ê","E");
+
+                        if (targetFctNorm.contains("DIRECTEUR GENERAL") && (pCode.startsWith("PI-NOM-DG-") || pFonction.contains("DIRECTEUR GENERAL"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("DIRECTEUR DE DEPARTEMENT") && (pCode.startsWith("PI-NOM-DIR-") || pFonction.contains("DIRECTEUR DE DEPARTEMENT"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("RESPONSABLE DE DEPARTEMENT") && (pCode.startsWith("PI-NOM-RESP-") || pFonction.contains("RESPONSABLE DE DEPARTEMENT"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("CHEF DE SERVICE") && (pCode.startsWith("PI-NOM-CS-") || pFonction.contains("CHEF DE SERVICE"))) {
+                            return true;
+                        }
+                        if ((targetFctNorm.contains("CHEF D'AGENCE") || targetFctNorm.contains("CHEF DAGENCE")) && (pCode.startsWith("PI-NOM-CA-") || pFonction.contains("CHEF D'AGENCE"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("CAISSIER PRINCIPAL") && (pCode.equals("PI-SPEC-CP-CS") || "CAISSIER PRINCIPAL".equals(pFonction))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("GESTIONNAIRE CASH POINT") && (pCode.startsWith("PI-SPEC-GCP-") || pFonction.contains("GESTIONNAIRE CASH POINT"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("CAISSIER AUXILIAIRE") && (pCode.equals("PI-SPEC-CA-CS") || pFonction.contains("CAISSIER AUXILIAIRE"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("CHAUFFEUR") && (pCode.equals("PI-SPEC-CHF-AST") || pFonction.contains("CHAUFFEUR"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("ASSISTANTE DE DIRECTION") && (pCode.equals("PI-SPEC-AD-AST") || pFonction.contains("ASSISTANTE DE DIRECTION"))) {
+                            return true;
+                        }
+                        if (targetFctNorm.contains("AGENT DE LIAISON") && (pCode.equals("PI-SPEC-AL-AST") || pFonction.contains("AGENT DE LIAISON"))) {
+                            return true;
+                        }
+
+                        if (!pFonction.isEmpty() && targetFctNorm.equals(pFonction)) {
+                            return true;
+                        }
+
+                        return false;
                     })
                     .collect(java.util.stream.Collectors.toList());
 

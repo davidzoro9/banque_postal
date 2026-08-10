@@ -555,7 +555,12 @@ public class SirhBackendApplication {
 					{"FCT-012", "Superviseur Cash Point & Guichet", "NON_NOMMEE"},
 					{"FCT-013", "Chargé de Clientèle Particuliers", "NON_NOMMEE"},
 					{"FCT-014", "Caissier Principal", "NOMMEE"},
-					{"FCT-015", "Agent d'Accueil & Secrétariat", "NON_NOMMEE"}
+					{"FCT-015", "Gestionnaire Cash Point", "NOMMEE"},
+					{"FCT-016", "Caissier Auxiliaire", "NOMMEE"},
+					{"FCT-017", "Chauffeur", "NOMMEE"},
+					{"FCT-018", "Assistante de Direction", "NOMMEE"},
+					{"FCT-019", "Agent de Liaison", "NOMMEE"},
+					{"FCT-020", "Agent d'Accueil & Secrétariat", "NON_NOMMEE"}
 				};
 				for (String[] f : fcts) {
 					java.util.Optional<com.bpbf.sirh_backend.entities.Fonction> optFct = fonctionRepo.findAll().stream()
@@ -751,13 +756,13 @@ public class SirhBackendApplication {
 					{"PI-NOM-CA-CMP", "Indemnité compensatrice", "CHEF D'AGENCE", "", "", 75000.0, 0.0, 0.0, "NOMINATION", "NOMMEE", true},
 
 					// ─── 3. INDEMNITÉS SPÉCIFIQUES & CAISSE ───────────────────────────────────
-					{"PI-SPEC-CP-CS", "INDEMNITE DE CAISSE", "CAISSIER PRINCIPAL", "", "", 40000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-GCP-CP", "INDEMNITE CASH POINT", "GESTIONNAIRE CASH POINT", "", "", 50000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-GCP-CS", "PRIME D'ASTREINTE", "GESTIONNAIRE CASH POINT", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-CA-CS", "INDEMNITE CASH POINT", "CAISSIER AUXILIAIRE", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-CHF-AST", "PRIME D'ASTREINTE", "CHAUFFEUR", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-AD-AST", "PRIME D'ASTREINTE", "ASSISTANTE DE DIRECTION", "", "", 30000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
-					{"PI-SPEC-AL-AST", "PRIME D'ASTREINTE", "AGENT DE LIAISON", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true}
+					{"PI-SPEC-CP-CS", "Indemnité de caisse", "CAISSIER PRINCIPAL", "", "", 40000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-GCP-CP", "Indemnité Cash Point", "GESTIONNAIRE CASH POINT", "", "", 50000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-GCP-CS", "Indemnité de caisse", "GESTIONNAIRE CASH POINT", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-CA-CS", "Indemnité de caisse", "CAISSIER AUXILIAIRE", "", "", 25000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-CHF-AST", "Prime d'astreinte", "CHAUFFEUR", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-AD-AST", "Prime d'astreinte", "ASSISTANTE DE DIRECTION", "", "", 30000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true},
+					{"PI-SPEC-AL-AST", "Prime d'astreinte", "AGENT DE LIAISON", "", "", 15000.0, 0.0, 0.0, "SPECIFIQUE", "NOMMEE", true}
 				};
 
 				for (Object[] p : params) {
@@ -795,18 +800,21 @@ public class SirhBackendApplication {
 							.findFirst().ifPresent(pi::setTypeIndemniteObj);
 					}
 					if (fctName != null && !fctName.trim().isEmpty()) {
-						String fUpper = fctName.toUpperCase();
+						String fNorm = fctName.toUpperCase().replace("É","E").replace("È","E").replace("Ê","E").trim();
 						fonctionRepo.findAll().stream()
 							.filter(f -> {
-								String name = (f.getName() != null ? f.getName() : "").toUpperCase();
-								String fCode = (f.getCode() != null ? f.getCode() : "").toUpperCase();
-								return fUpper.equals(name) || fUpper.equals(fCode) ||
-									(fUpper.contains("DIRECTEUR") && name.contains("DIRECTEUR")) ||
-									(fUpper.contains("RESPONSABLE DE DÉPARTEMENT") && name.contains("RESPONSABLE")) ||
-									(fUpper.contains("CHEF DE SERVICE") && name.contains("CHEF DE SERVICE")) ||
-									(fUpper.contains("AGENCE") && name.contains("AGENCE")) ||
-									(fUpper.contains("CAISSIER") && name.contains("CAISSIER")) ||
-									(fUpper.contains("CASH POINT") && name.contains("CASH POINT"));
+								String name = (f.getName() != null ? f.getName() : "").toUpperCase().replace("É","E").replace("È","E").replace("Ê","E").trim();
+								String fCode = (f.getCode() != null ? f.getCode() : "").toUpperCase().trim();
+								if (fNorm.equals(name) || fNorm.equals(fCode)) return true;
+								if (fNorm.contains("DIRECTEUR DE DEPARTEMENT") && name.contains("DIRECTEUR DE DEPARTEMENT")) return true;
+								if (fNorm.contains("DIRECTEUR GENERAL") && name.contains("DIRECTEUR GENERAL")) return true;
+								if (fNorm.contains("RESPONSABLE DE DEPARTEMENT") && name.contains("RESPONSABLE")) return true;
+								if (fNorm.contains("CHEF DE SERVICE") && name.contains("CHEF DE SERVICE")) return true;
+								if (fNorm.contains("CHEF D'AGENCE") && name.contains("AGENCE")) return true;
+								if (fNorm.contains("CAISSIER PRINCIPAL") && name.contains("CAISSIER PRINCIPAL")) return true;
+								if (fNorm.contains("CAISSIER AUXILIAIRE") && name.contains("CAISSIER AUXILIAIRE")) return true;
+								if (fNorm.contains("CASH POINT") && name.contains("CASH POINT")) return true;
+								return false;
 							})
 							.findFirst().ifPresent(pi::setFonctionObj);
 					}

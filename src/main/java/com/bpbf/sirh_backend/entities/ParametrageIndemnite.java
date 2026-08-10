@@ -36,15 +36,40 @@ public class ParametrageIndemnite {
     @JoinColumn(name = "categorie_id")
     private Categorie categorieObj;
 
-    @Transient private String typeIndemniteStr;
-    @Transient private String fonctionStr;
-    @Transient private String gradeStr;
-    @Transient private String categorieStr;
+    @Column(name = "type_indemnite")
+    private String typeIndemniteStr;
+
+    @Column(name = "fonction_str")
+    private String fonctionStr;
+
+    @Column(name = "grade_str")
+    private String gradeStr;
+
+    @Column(name = "categorie_str")
+    private String categorieStr;
 
     @JsonProperty("typeIndemnite")
     public String getTypeIndemnite() {
-        if (typeIndemniteObj != null) return typeIndemniteObj.getName();
-        return typeIndemniteStr;
+        if (typeIndemniteStr != null && !typeIndemniteStr.trim().isEmpty()) {
+            return typeIndemniteStr;
+        }
+        if (typeIndemniteObj != null && typeIndemniteObj.getName() != null && !typeIndemniteObj.getName().trim().isEmpty()) {
+            return typeIndemniteObj.getName();
+        }
+        if (code != null && !code.trim().isEmpty()) {
+            String uCode = code.toUpperCase();
+            if (uCode.contains("FCT")) return "Indemnité de fonction";
+            if (uCode.contains("TRP")) return "Indemnité de Transport";
+            if (uCode.contains("LOG")) return "Indemnité de Logement";
+            if (uCode.contains("CMP")) return "Indemnité compensatrice";
+            if (uCode.contains("AST")) return "Prime d'astreinte";
+            if (uCode.contains("GCP-CP")) return "Indemnité Cash Point";
+            if (uCode.contains("CP-CS") || uCode.contains("GCP-CS") || uCode.contains("CA-CS")) return "Indemnité de caisse";
+            if (uCode.contains("SUJ")) return "Indemnité de Sujétion";
+            if (uCode.contains("RIS")) return "Indemnité de Risque Bancaire";
+            return code;
+        }
+        return "Indemnité";
     }
 
     @JsonProperty("typeIndemnite")

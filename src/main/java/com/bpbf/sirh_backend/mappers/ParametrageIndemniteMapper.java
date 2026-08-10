@@ -13,6 +13,10 @@ public interface ParametrageIndemniteMapper {
     @Mapping(target = "fonctionId", source = "fonctionObj.id")
     @Mapping(target = "gradeId", source = "gradeObj.id")
     @Mapping(target = "categorieId", source = "categorieObj.id")
+    @Mapping(target = "typeIndemnite", expression = "java(entity.getTypeIndemnite())")
+    @Mapping(target = "fonction", expression = "java(entity.getFonction())")
+    @Mapping(target = "grade", expression = "java(entity.getGrade())")
+    @Mapping(target = "categorie", expression = "java(entity.getCategorie())")
     ParametrageIndemniteDto toDto(ParametrageIndemnite entity);
 
     @Mapping(target = "typeIndemniteObj", ignore = true)

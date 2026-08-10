@@ -180,6 +180,9 @@ public class EmployeeService {
                 dto.setCategoriePro(g.substring(0, eIdx));
             }
         }
+        if (dto.getCategoriePro() != null && dto.getEchelon() != null) {
+            dto.setGrade(dto.getCategoriePro().trim() + dto.getEchelon().trim());
+        }
 
         return dto;
     }
@@ -210,25 +213,36 @@ public class EmployeeService {
         }
 
         // ManyToOne relationship resolution by ID or Code
-        if (dto.getGrilleSalarialeId() != null) {
-            grilleSalarialeRepository.findById(dto.getGrilleSalarialeId()).ifPresent(entity::setGrilleSalariale);
-        }
         if (dto.getCategorieId() != null) {
             categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
         } else if (dto.getCategoriePro() != null && !dto.getCategoriePro().trim().isEmpty()) {
             String catCode = dto.getCategoriePro().trim();
-            categorieRepository.findAll().stream()
+            Categorie matchedCat = categorieRepository.findAll().stream()
                     .filter(c -> catCode.equalsIgnoreCase(c.getCode()) || catCode.equalsIgnoreCase(c.getLibelle()))
-                    .findFirst().ifPresent(entity::setCategorieObj);
+                    .findFirst().orElseGet(() -> {
+                        Categorie c = new Categorie();
+                        c.setCode(catCode);
+                        c.setLibelle(catCode);
+                        c.setActif(true);
+                        return categorieRepository.save(c);
+                    });
+            entity.setCategorieObj(matchedCat);
         }
 
         if (dto.getEchelonId() != null) {
             echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
         } else if (dto.getEchelon() != null && !dto.getEchelon().trim().isEmpty()) {
             String echCode = dto.getEchelon().trim();
-            echelonRepository.findAll().stream()
+            Echelon matchedEch = echelonRepository.findAll().stream()
                     .filter(e -> echCode.equalsIgnoreCase(e.getCode()) || echCode.equalsIgnoreCase(e.getLibelle()))
-                    .findFirst().ifPresent(entity::setEchelonObj);
+                    .findFirst().orElseGet(() -> {
+                        Echelon e = new Echelon();
+                        e.setCode(echCode);
+                        e.setLibelle(echCode);
+                        e.setActif(true);
+                        return echelonRepository.save(e);
+                    });
+            entity.setEchelonObj(matchedEch);
         }
 
         if (dto.getGradeId() != null) {
@@ -240,14 +254,19 @@ public class EmployeeService {
                     .findFirst().ifPresent(entity::setGradeObj);
         }
 
-        if (entity.getGradeObj() != null || dto.getGrade() != null) {
-            String targetGrade = entity.getGradeObj() != null ? entity.getGradeObj().getCode() : dto.getGrade();
-            if (targetGrade != null) {
-                grilleSalarialeRepository.findAll().stream()
-                        .filter(gs -> targetGrade.equalsIgnoreCase(gs.getCode()) || targetGrade.equalsIgnoreCase(gs.getGrade()))
-                        .findFirst().ifPresent(entity::setGrilleSalariale);
-            }
+        String catCodeResolved = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : dto.getCategoriePro();
+        String echCodeResolved = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : dto.getEchelon();
+        String targetGrade = (catCodeResolved != null && echCodeResolved != null) ? (catCodeResolved.trim() + echCodeResolved.trim()) : dto.getGrade();
+
+        if (targetGrade != null && !targetGrade.trim().isEmpty()) {
+            String cleanGrade = targetGrade.trim().toUpperCase();
+            grilleSalarialeRepository.findAll().stream()
+                    .filter(gs -> cleanGrade.equalsIgnoreCase(gs.getCode()) || cleanGrade.equalsIgnoreCase(gs.getGrade())
+                               || (catCodeResolved != null && echCodeResolved != null 
+                                   && catCodeResolved.equalsIgnoreCase(gs.getCategory()) && echCodeResolved.equalsIgnoreCase(gs.getEchellon())))
+                    .findFirst().ifPresent(entity::setGrilleSalariale);
         }
+
         if (dto.getFonction_id() != null) {
             fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
         } else if (dto.getFonction() != null && !dto.getFonction().trim().isEmpty()) {
@@ -256,25 +275,28 @@ public class EmployeeService {
                 entity.setFonction(null);
             } else {
                 String cleanName = fName.contains("(") ? fName.substring(0, fName.indexOf("(")).trim() : fName;
+                String normName = cleanName.toUpperCase().replace("É","E").replace("È","E").replace("Ê","E");
+
                 Fonction matchedFct = fonctionRepository.findAll().stream()
                         .filter(f -> f.getName() != null && (
-                                cleanName.equalsIgnoreCase(f.getName().trim()) 
-                             || cleanName.equalsIgnoreCase(f.getCode() != null ? f.getCode().trim() : "")
-                             || fName.equalsIgnoreCase(f.getName().trim())
-                             || f.getName().trim().equalsIgnoreCase(cleanName)
-                             || f.getName().toLowerCase().replace("é","e").replace("è","e").equalsIgnoreCase(cleanName.toLowerCase().replace("é","e").replace("è","e"))
+                                normName.equalsIgnoreCase(f.getName().toUpperCase().replace("É","E").replace("È","E").replace("Ê","E"))
+                             || normName.equalsIgnoreCase(f.getCode() != null ? f.getCode().toUpperCase() : "")
                         ))
                         .findFirst().orElse(null);
-                
+
                 if (matchedFct != null) {
                     entity.setFonction(matchedFct);
                 } else {
-                    fonctionRepository.findAll().stream()
-                            .filter(f -> f.getName() != null && cleanName.toLowerCase().contains(f.getName().toLowerCase().substring(0, Math.min(5, f.getName().length()))))
-                            .findFirst().ifPresent(entity::setFonction);
+                    Fonction newFct = new Fonction();
+                    newFct.setCode("FCT-" + System.currentTimeMillis());
+                    newFct.setName(cleanName);
+                    newFct.setTypeNomination("NOMMEE");
+                    newFct.setActif(true);
+                    entity.setFonction(fonctionRepository.save(newFct));
                 }
             }
         }
+
         if (dto.getEmploi_id() != null) {
             emploiRepository.findById(dto.getEmploi_id()).ifPresent(entity::setEmploi);
         }
@@ -290,11 +312,11 @@ public class EmployeeService {
         if (dto.getSuperviseur_id() != null) {
             employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
         }
-        
-        updateExtraDataFromEntity(entity);
+
+        updateExtraDataFromEntity(entity, dto);
     }
 
-    private void updateExtraDataFromEntity(Employee entity) {
+    private void updateExtraDataFromEntity(Employee entity, EmployeeDto dto) {
         try {
             java.util.Map<String, Object> existingMap = new java.util.HashMap<>();
             if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
@@ -303,18 +325,11 @@ public class EmployeeService {
                 } catch (Exception ignored) {}
             }
 
-            if (entity.getCategorieObj() != null) {
-                existingMap.put("categoriePro", entity.getCategorieObj().getCode());
-                existingMap.put("categorie", entity.getCategorieObj().getCode());
-            }
-            if (entity.getEchelonObj() != null) {
-                existingMap.put("echelon", entity.getEchelonObj().getCode());
-            }
-            String cat = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : (String) existingMap.get("categoriePro");
+            String cat = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : (dto != null ? dto.getCategoriePro() : (String) existingMap.get("categoriePro"));
             if (cat == null) cat = "CL1";
-            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (String) existingMap.get("echelon");
+            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (dto != null ? dto.getEchelon() : (String) existingMap.get("echelon"));
             if (ech == null) ech = "E01";
-            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
+            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : (dto != null ? dto.getGrade() : ""));
 
             existingMap.put("categorie", cat);
             existingMap.put("categoriePro", cat);
@@ -323,10 +338,12 @@ public class EmployeeService {
 
             if (entity.getGrilleSalariale() != null && entity.getGrilleSalariale().getSalaireBase() != null) {
                 existingMap.put("salaireBase", entity.getGrilleSalariale().getSalaireBase());
+            } else if (dto != null && dto.getSalaireBase() != null) {
+                existingMap.put("salaireBase", dto.getSalaireBase());
             }
 
             // Recalcul automatique des indemnités de barème selon le nouveau grade et fonction
-            String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : "Agent simple";
+            String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : (dto != null && dto.getFonction() != null ? dto.getFonction() : "Agent simple");
             existingMap.put("fonction", finalFonction);
             try {
                 List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService.getByGradeAndFonction(rawGrade, finalFonction);
@@ -339,7 +356,7 @@ public class EmployeeService {
                     double t = ind.getTaux() != null ? ind.getTaux() : 0;
                     if (typeInd.contains("logement") || code.contains("log")) log = t;
                     if (typeInd.contains("transport") || code.contains("trp")) trp = t;
-                    if (typeInd.contains("sujétion") || typeInd.contains("fonction") || typeInd.contains("responsabilit") || code.contains("suj") || code.contains("fct")) {
+                    if (typeInd.contains("sujét") || typeInd.contains("fonction") || typeInd.contains("responsabilit") || typeInd.contains("compensat") || code.contains("suj") || code.contains("fct") || code.contains("cmp")) {
                         sujResp += t;
                     }
                 }
