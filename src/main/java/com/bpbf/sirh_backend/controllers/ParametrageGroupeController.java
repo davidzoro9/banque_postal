@@ -1,7 +1,7 @@
 package com.bpbf.sirh_backend.controllers;
 
-import com.bpbf.sirh_backend.entities.ParametrageGroupe;
-import com.bpbf.sirh_backend.repositories.ParametrageGroupeRepository;
+import com.bpbf.sirh_backend.dtos.ParametrageGroupeDto;
+import com.bpbf.sirh_backend.services.ParametrageGroupeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,26 +13,25 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ParametrageGroupeController {
 
-    private final ParametrageGroupeRepository repository;
+    private final ParametrageGroupeService service;
 
     @GetMapping({"", "/all"})
-    public List<ParametrageGroupe> getAll() {
-        return repository.findAll();
+    public List<ParametrageGroupeDto> getAll() {
+        return service.getAll();
     }
 
     @PostMapping({"", "/create"})
-    public ParametrageGroupe create(@RequestBody ParametrageGroupe entity) {
-        return repository.save(entity);
+    public ParametrageGroupeDto create(@RequestBody ParametrageGroupeDto dto) {
+        return service.create(dto);
     }
 
     @PutMapping("/{id}")
-    public ParametrageGroupe update(@PathVariable Long id, @RequestBody ParametrageGroupe entity) {
-        entity.setId(id);
-        return repository.save(entity);
+    public ParametrageGroupeDto update(@PathVariable Long id, @RequestBody ParametrageGroupeDto dto) {
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
-        repository.deleteById(id);
+        service.delete(id);
     }
 }

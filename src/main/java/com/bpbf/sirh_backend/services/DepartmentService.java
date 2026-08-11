@@ -45,7 +45,10 @@ public class DepartmentService {
 
     private void resolveRelationships(Department entity, DepartmentDto dto) {
         if (dto.getDirecteurId() != null) {
-            employeeRepository.findById(dto.getDirecteurId()).ifPresent(entity::setDirecteurObj);
+            entity.setDirecteurObj(employeeRepository.findById(dto.getDirecteurId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ce directeur n'existe pas")));
+        } else {
+            entity.setDirecteurObj(null);
         }
     }
 

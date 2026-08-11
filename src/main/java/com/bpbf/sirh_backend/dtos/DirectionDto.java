@@ -15,4 +15,5 @@ public class DirectionDto {
     private String name;
     private String description;
     private Long departmentId;
+    private String departmentLibelle;
 }

@@ -14,6 +14,7 @@ public class RetenueDto {
     private String code;
     private String libelle;
     private Long typeRetenueId;
+    private String typeRetenueLibelle;
     private Double taux;
     private String description;
     private Boolean actif;

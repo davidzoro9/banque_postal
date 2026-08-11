@@ -1,7 +1,5 @@
 package com.bpbf.sirh_backend.dtos;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,5 +15,7 @@ public class ServiceDto {
     private String name;
     private String description;
     private Long directionId;
+    private String directionLibelle;
     private Long departmentId;
+    private String departmentLibelle;
 }

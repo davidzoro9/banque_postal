@@ -13,7 +13,9 @@ public class ParametrageGroupeDto {
     private Long id;
     private String code;
     private Long gradeId;
+    private String gradeLibelle;
     private Long categorieId;
+    private String categorieLibelle;
     private String libelle;
     private String description;
     private Boolean actif;

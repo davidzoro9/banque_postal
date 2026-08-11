@@ -10,8 +10,11 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface GrilleSalarialeMapper {
     @Mapping(source = "categorieObj.id", target = "categorieId")
+    @Mapping(source = "categorieObj.libelle", target = "categorieLibelle")
     @Mapping(source = "echelonObj.id", target = "echelonId")
+    @Mapping(source = "echelonObj.libelle", target = "echelonLibelle")
     @Mapping(source = "gradeObj.id", target = "gradeId")
+    @Mapping(source = "gradeObj.libelle", target = "gradeLibelle")
     GrilleSalarialeDto toDto(GrilleSalariale grilleSalariale);
 
     @Mapping(source = "categorieId", target = "categorieObj.id")

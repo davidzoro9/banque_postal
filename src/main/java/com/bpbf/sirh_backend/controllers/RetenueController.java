@@ -1,8 +1,7 @@
 package com.bpbf.sirh_backend.controllers;
 
-import com.bpbf.sirh_backend.entities.Retenue;
-import com.bpbf.sirh_backend.repositories.RetenueRepository;
-import com.bpbf.sirh_backend.repositories.TypeRetenueRepository;
+import com.bpbf.sirh_backend.dtos.RetenueDto;
+import com.bpbf.sirh_backend.services.RetenueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,38 +12,25 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class RetenueController {
-    private final RetenueRepository repository;
-    private final TypeRetenueRepository typeRetenueRepository;
+    private final RetenueService service;
 
     @GetMapping
-    public List<Retenue> getAll() {
-        List<Retenue> list = repository.findAll();
-        list.forEach(this::resolveRelationships);
-        return list;
+    public List<RetenueDto> getAll() {
+        return service.getAll();
     }
 
     @PostMapping
-    public Retenue create(@RequestBody Retenue entity) {
-        resolveRelationships(entity);
-        return repository.save(entity);
+    public RetenueDto create(@RequestBody RetenueDto dto) {
+        return service.create(dto);
     }
 
     @PutMapping("/{id}")
-    public Retenue update(@PathVariable Long id, @RequestBody Retenue entity) {
-        entity.setId(id);
-        resolveRelationships(entity);
-        return repository.save(entity);
+    public RetenueDto update(@PathVariable Long id, @RequestBody RetenueDto dto) {
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
-        repository.deleteById(id);
-    }
-
-    private void resolveRelationships(Retenue entity) {
-        if (entity.getTypeRetenue() == null) {
-            typeRetenueRepository.findAll().stream()
-                    .findFirst().ifPresent(entity::setTypeRetenue);
-        }
+        service.delete(id);
     }
 }

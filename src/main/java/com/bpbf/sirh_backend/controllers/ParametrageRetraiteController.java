@@ -1,7 +1,7 @@
 package com.bpbf.sirh_backend.controllers;
 
-import com.bpbf.sirh_backend.entities.ParametrageRetraite;
-import com.bpbf.sirh_backend.repositories.ParametrageRetraiteRepository;
+import com.bpbf.sirh_backend.dtos.ParametrageRetraiteDto;
+import com.bpbf.sirh_backend.services.ParametrageRetraiteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,26 +13,25 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ParametrageRetraiteController {
 
-    private final ParametrageRetraiteRepository repository;
+    private final ParametrageRetraiteService service;
 
     @GetMapping({"", "/all"})
-    public List<ParametrageRetraite> getAll() {
-        return repository.findAll();
+    public List<ParametrageRetraiteDto> getAll() {
+        return service.getAll();
     }
 
     @PostMapping({"", "/create"})
-    public ParametrageRetraite create(@RequestBody ParametrageRetraite entity) {
-        return repository.save(entity);
+    public ParametrageRetraiteDto create(@RequestBody ParametrageRetraiteDto dto) {
+        return service.create(dto);
     }
 
     @PutMapping("/{id}")
-    public ParametrageRetraite update(@PathVariable Long id, @RequestBody ParametrageRetraite entity) {
-        entity.setId(id);
-        return repository.save(entity);
+    public ParametrageRetraiteDto update(@PathVariable Long id, @RequestBody ParametrageRetraiteDto dto) {
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
-        repository.deleteById(id);
+        service.delete(id);
     }
 }

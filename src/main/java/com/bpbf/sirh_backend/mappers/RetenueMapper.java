@@ -10,6 +10,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface RetenueMapper {
     @Mapping(target = "typeRetenueId", source = "typeRetenue.id")
+    @Mapping(target = "typeRetenueLibelle", source = "typeRetenue.libelle")
     RetenueDto toDto(Retenue entity);
 
     @Mapping(target = "typeRetenue", ignore = true)

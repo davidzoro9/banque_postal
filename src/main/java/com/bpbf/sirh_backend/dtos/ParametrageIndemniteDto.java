@@ -13,9 +13,13 @@ public class ParametrageIndemniteDto {
     private Long id;
     private String code;
     private Long typeIndemniteId;
+    private String typeIndemniteLibelle;
     private Long fonctionId;
+    private String fonctionLibelle;
     private Long gradeId;
+    private String gradeLibelle;
     private Long categorieId;
+    private String categorieLibelle;
 
     private Double taux;
     private Boolean actif;

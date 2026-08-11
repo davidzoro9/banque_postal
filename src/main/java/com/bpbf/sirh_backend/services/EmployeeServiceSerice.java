@@ -28,6 +28,7 @@ public class EmployeeServiceSerice {
     }
 
     public ServiceDto createService(ServiceDto serviceDto){
+        validateSingleParent(serviceDto);
         Department department = null;
         if (serviceDto.getDepartmentId() != null) {
             department = departmentRepository.findById(serviceDto.getDepartmentId())
@@ -52,6 +53,7 @@ public class EmployeeServiceSerice {
     }
 
     public ServiceDto updateService(Long id, ServiceDto serviceDto){
+        validateSingleParent(serviceDto);
         com.bpbf.sirh_backend.entities.Service service = serviceRepository.findById(id)
                 .orElseThrow(()->new ResourceNotFoundException("Ce service n'existe pas"));
         
@@ -79,5 +81,12 @@ public class EmployeeServiceSerice {
 
     public void delete(Long id){
         serviceRepository.deleteById(id);
+    }
+
+    private void validateSingleParent(ServiceDto serviceDto) {
+        if (serviceDto.getDepartmentId() != null && serviceDto.getDirectionId() != null) {
+            throw new IllegalArgumentException(
+                    "Un service doit être rattaché soit à une direction, soit à un département, pas aux deux");
+        }
     }
 }

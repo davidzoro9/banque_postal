@@ -13,6 +13,7 @@ public class ParametrageRetraiteDto {
     private Long id;
     private String code;
     private Long gradeId;
+    private String gradeLibelle;
     private String libelle;
     private Double taux;
     private String description;

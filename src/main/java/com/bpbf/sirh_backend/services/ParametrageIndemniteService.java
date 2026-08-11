@@ -2,6 +2,7 @@ package com.bpbf.sirh_backend.services;
 
 import com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto;
 import com.bpbf.sirh_backend.entities.ParametrageIndemnite;
+import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.ParametrageIndemniteMapper;
 import com.bpbf.sirh_backend.repositories.*;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,8 @@ public class ParametrageIndemniteService {
     }
 
     public ParametrageIndemniteDto update(Long id, ParametrageIndemniteDto dto) {
-        ParametrageIndemnite entity = repository.findById(id).orElseGet(ParametrageIndemnite::new);
+        ParametrageIndemnite entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ce paramétrage d'indemnité n'existe pas"));
 
         entity.setCode(dto.getCode());
         entity.setTaux(dto.getTaux());
@@ -49,19 +51,31 @@ public class ParametrageIndemniteService {
 
     private void resolveRelationships(ParametrageIndemnite entity, ParametrageIndemniteDto dto) {
         if (dto.getTypeIndemniteId() != null) {
-            typeIndemniteRepository.findById(dto.getTypeIndemniteId()).ifPresent(entity::setTypeIndemniteObj);
+            entity.setTypeIndemniteObj(typeIndemniteRepository.findById(dto.getTypeIndemniteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ce type d'indemnité n'existe pas")));
+        } else {
+            entity.setTypeIndemniteObj(null);
         }
 
         if (dto.getFonctionId() != null) {
-            fonctionRepository.findById(dto.getFonctionId()).ifPresent(entity::setFonctionObj);
+            entity.setFonctionObj(fonctionRepository.findById(dto.getFonctionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cette fonction n'existe pas")));
+        } else {
+            entity.setFonctionObj(null);
         }
 
         if (dto.getGradeId() != null) {
-            gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+            entity.setGradeObj(gradeRepository.findById(dto.getGradeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ce grade n'existe pas")));
+        } else {
+            entity.setGradeObj(null);
         }
 
         if (dto.getCategorieId() != null) {
-            categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+            entity.setCategorieObj(categorieRepository.findById(dto.getCategorieId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cette catégorie n'existe pas")));
+        } else {
+            entity.setCategorieObj(null);
         }
     }
 

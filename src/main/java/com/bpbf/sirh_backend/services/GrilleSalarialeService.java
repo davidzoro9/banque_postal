@@ -92,19 +92,25 @@ public class GrilleSalarialeService {
     }
 
     private void resolveRelationships(GrilleSalariale entity, GrilleSalarialeDto dto) {
-        // Resolve Categorie
         if (dto.getCategorieId() != null) {
-            categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+            entity.setCategorieObj(categorieRepository.findById(dto.getCategorieId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cette catégorie n'existe pas")));
+        } else {
+            entity.setCategorieObj(null);
         }
 
-        // Resolve Echelon
         if (dto.getEchelonId() != null) {
-            echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
+            entity.setEchelonObj(echelonRepository.findById(dto.getEchelonId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cet échelon n'existe pas")));
+        } else {
+            entity.setEchelonObj(null);
         }
 
-        // Resolve Grade / Group
         if (dto.getGradeId() != null) {
-            gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+            entity.setGradeObj(gradeRepository.findById(dto.getGradeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ce grade n'existe pas")));
+        } else {
+            entity.setGradeObj(null);
         }
     }
 
