@@ -410,18 +410,23 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Groupe d'emploi</mat-label>
           <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">military_tech</mat-icon>
-          <mat-select formControlName="grade" (selectionChange)="onGrilleGroupeChange($event.value)" placeholder="Sélectionner un groupe">
+          <mat-select formControlName="gradeId" placeholder="Sélectionner un groupe">
             @for (g of grades; track g.code || g.libelle) {
-              <mat-option [value]="g.libelle || g.code">{{ g.libelle }} — {{ g.description }}</mat-option>
+              <mat-option [value]="g.id">{{ g.libelle }} — {{ g.description }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Catégorie / Classe (du Groupe)</mat-label>
-          <mat-select formControlName="categorie" (selectionChange)="formGroup.patchValue({ code: $event.value })" placeholder="Sélectionner la catégorie/classe">
-            @for (cat of (availableCategoriesForSelectedGroup.length > 0 ? availableCategoriesForSelectedGroup : allClassifications); track cat) {
+          <mat-select formControlName="categorieId" (selectionChange)="formGroup.patchValue({ code: $event.value })" placeholder="Sélectionner la catégorie/classe">
+           <!--  @for (cat of (availableCategoriesForSelectedGroup.length > 0 ? availableCategoriesForSelectedGroup : allClassifications); track cat) {
               <mat-option [value]="cat">{{ getCatCodeDisplay(cat) }}</mat-option>
+            } -->
+            @for (cat of categories; track cat.id) {
+              <mat-option [value]="cat.id">
+                {{ cat.libelle || cat.code }}
+              </mat-option>
             }
           </mat-select>
           <mat-hint>Chargée automatiquement selon le Groupe</mat-hint>
@@ -431,9 +436,11 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Échelon</mat-label>
-          <mat-select formControlName="echellon" placeholder="Sélectionner l'échelon">
-            @for (ech of echelonsList; track ech) {
-              <mat-option [value]="'' + ech">Échelon {{ ech }}</mat-option>
+          <mat-select formControlName="echelonId" placeholder="Sélectionner l'échelon">
+            @for (ech of echelons; track ech.id) {
+              <mat-option [value]="ech.id">
+                {{ ech.libelle || ech.code }}
+              </mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -456,9 +463,9 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Type de retenue</mat-label>
-          <mat-select formControlName="typeRetenue" placeholder="Sélectionner le type">
-            @for (tr of typesRetenueList; track tr) {
-              <mat-option [value]="tr">{{ tr }}</mat-option>
+          <mat-select formControlName="typeRetenueId" placeholder="Sélectionner le type">
+            @for (tr of typesRetenueList; track tr.id) {
+              <mat-option [value]="tr.id">{{ tr.libelle || tr.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -515,9 +522,9 @@
       <!-- 2. Type d'Indemnité dynamique selon la catégorie choisie -->
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Type d'indemnité *</mat-label>
-        <mat-select formControlName="typeIndemnite" placeholder="Sélectionner le type d'indemnité">
-          @for (t of typesIndemniteList; track t) {
-            <mat-option [value]="t">{{ t }}</mat-option>
+        <mat-select formControlName="typeIndemniteId" placeholder="Sélectionner le type d'indemnité">
+          @for (t of typesIndemnite; track t.id) {
+            <mat-option [value]="t.id">{{ t.libelle || t.code }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
@@ -528,19 +535,18 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <mat-form-field appearance="outline" style="width: 100%;">
             <mat-label>Groupe *</mat-label>
-            <mat-select formControlName="grade" (selectionChange)="onIndemniteGroupeChange($event.value)" placeholder="Sélectionner un groupe">
-              <mat-option value="GROUPE I">GROUPE I (Agents & Employés)</mat-option>
-              <mat-option value="GROUPE II">GROUPE II (Maîtrise & Cadres moyens)</mat-option>
-              <mat-option value="GROUPE III">GROUPE III (Cadres & Cadres sup.)</mat-option>
-              <mat-option value="GROUPE IV">GROUPE IV (Hors Catégorie)</mat-option>
+            <mat-select formControlName="gradeId" (selectionChange)="onIndemniteGradeChange()" placeholder="Sélectionner un groupe">
+              @for (g of grades; track g.id) {
+                <mat-option [value]="g.id">{{ g.libelle || g.code }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline" style="width: 100%;">
             <mat-label>Catégorie / Classe *</mat-label>
-            <mat-select formControlName="categories" multiple placeholder="Sélectionner les catégories">
-              @for (c of getCategoriesForGroupe(formGroup.get('grade')?.value); track c) {
-                <mat-option [value]="c">{{ getCatCodeDisplay(c) }}</mat-option>
+            <mat-select formControlName="categorieId" placeholder="Sélectionner une catégorie">
+              @for (c of availableIndemniteCategories; track c.id) {
+                <mat-option [value]="c.id">{{ c.libelle || c.code }}</mat-option>
               }
             </mat-select>
             <mat-hint>Filtré selon Paramétrage Groupe</mat-hint>
@@ -574,6 +580,17 @@
         <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
         <input matInput type="number" formControlName="taux" placeholder="0" min="0">
       </mat-form-field>
+
+      <!-- <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Taux exonéré (%)</mat-label>
+          <input matInput type="number" formControlName="tauxExoneration" min="0" max="100">
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Plafond exonéré (FCFA)</mat-label>
+          <input matInput type="number" formControlName="plafondExoneration" min="0">
+        </mat-form-field>
+      </div> -->
 
     } @else if (type === 'fonction') {
       <!-- ─── FORMULAIRE SPÉCIFIQUE POUR LES FONCTIONS ──────────────────────── -->
@@ -700,21 +717,21 @@
     } @else if (type === 'param-groupe') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Groupe d'emploi</mat-label>
-        <mat-select formControlName="grade" placeholder="Sélectionner le groupe">
-          @for (g of grades; track g.code || g.libelle) {
-            <mat-option [value]="g.libelle || g.code">{{ g.libelle }} — {{ g.description }}</mat-option>
+        <mat-select formControlName="gradeId" placeholder="Sélectionner le groupe">
+          @for (g of grades; track g.id) {
+            <mat-option [value]="g.id">{{ g.libelle }} — {{ g.description }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Catégories / Classes rattachées (Codes uniquement)</mat-label>
-        <mat-select formControlName="categories" multiple placeholder="Sélectionner les codes (C1, C2, CL1...)">
-          @for (cat of allClassifications; track cat) {
-            <mat-option [value]="cat">{{ cat }}</mat-option>
+        <mat-label>Catégorie / Classe</mat-label>
+        <mat-select formControlName="categorieId" placeholder="Sélectionner une catégorie">
+          @for (cat of categories; track cat.id) {
+            <mat-option [value]="cat.id">{{ cat.libelle || cat.code }}</mat-option>
           }
         </mat-select>
-        <mat-hint>Cochez les codes des catégories rattachées à ce groupe</mat-hint>
+        <mat-hint>Une ligne correspond à une association groupe/catégorie</mat-hint>
       </mat-form-field>
 
     } @else if (type === 'param-retraite') {
@@ -722,9 +739,9 @@
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Groupe d'emploi</mat-label>
-          <mat-select formControlName="grade" placeholder="Sélectionner un groupe">
-            @for (g of grades; track g.code || g.libelle) {
-              <mat-option [value]="g.libelle || g.code">{{ g.libelle }} — {{ g.description }}</mat-option>
+          <mat-select formControlName="gradeId" placeholder="Sélectionner un groupe">
+            @for (g of grades; track g.id) {
+              <mat-option [value]="g.id">{{ g.libelle }} — {{ g.description }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -786,16 +803,29 @@
         </mat-form-field>
       }
 
-      @if (type === 'departement' || type === 'direction') {
+      @if (type === 'departement') {
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Directeur de ce {{ type === 'departement' ? 'département' : 'cette direction' }}</mat-label>
           <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">person</mat-icon>
-          <mat-select formControlName="description" placeholder="Sélectionner le directeur">
-            <mat-option value="">Aucun responsable désigné</mat-option>
-            @for (emp of directeursList; track emp.libelle) {
-              <mat-option [value]="emp.libelle">
+          <mat-select formControlName="directeurId" placeholder="Sélectionner le directeur">
+            <mat-option [value]="null">Aucun responsable désigné</mat-option>
+            @for (emp of directeursList; track emp.id) {
+              <mat-option [value]="emp.id">
                 {{ emp.libelle }} @if (emp.description) { ({{ emp.description }}) }
               </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      @if (type === 'direction') {
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Département de rattachement</mat-label>
+          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
+          <mat-select formControlName="departementId" placeholder="Sélectionner un département">
+            <mat-option [value]="null">Aucun département</mat-option>
+            @for (dep of departements; track dep.id) {
+              <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -815,8 +845,8 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Catégorie / Classe *</mat-label>
           <mat-select formControlName="categorieId" placeholder="Sélectionner une catégorie">
-            @for (cat of categories; track cat.id || cat.code) {
-              <mat-option [value]="cat.id">{{ cat.libelle || cat.code }}</mat-option>
+            @for (cat of categories; track cat.id ) {
+              <mat-option [value]="cat.id">{{ cat.libelle }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -824,8 +854,8 @@
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Échelon *</mat-label>
           <mat-select formControlName="echelonId" placeholder="Sélectionner un échelon">
-            @for (ech of echelons; track ech.id || ech.code) {
-              <mat-option [value]="ech.id">{{ ech.libelle || ech.code }}</mat-option>
+            @for (ech of echelons; track ech.id ) {
+              <mat-option [value]="ech.id">{{ ech.libelle }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -836,7 +866,7 @@
           <mat-label>Groupe d'emploi (Grade)</mat-label>
           <mat-select formControlName="gradeId" placeholder="Sélectionner un groupe">
             @for (g of grades; track g.id || g.code) {
-              <mat-option [value]="g.id">{{ g.libelle || g.code }}</mat-option>
+              <mat-option [value]="g.id">{{ g.libelle }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -849,34 +879,32 @@
       </div>
     }
 
-    <!-- Select unique combiné Direction / Département — pour Service -->
+    <!-- Rattachements explicites pour éviter de confondre les identités des deux référentiels. -->
     @if (type === 'service') {
-      <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Rattachement (Direction ou Département)</mat-label>
-        <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
-        <mat-select formControlName="directionId" placeholder="Sélectionner une Direction ou un Département">
-          <mat-option value="">Aucun</mat-option>
-          @if (directions.length > 0) {
-            <mat-optgroup label="Directions (Niveau 2)">
-              @for (dir of directions; track dir.id || dir.code) {
-                <mat-option [value]="dir.id || dir.code">[Direction] {{ dir.libelle }}</mat-option>
-              }
-            </mat-optgroup>
-          }
-          @if (departements.length > 0) {
-            <mat-optgroup label="Départements (Niveau 2)">
-              @for (dep of departements; track dep.id || dep.code) {
-                <mat-option [value]="dep.id || dep.code">[Département] {{ dep.libelle }}</mat-option>
-              }
-            </mat-optgroup>
-          }
-        </mat-select>
-        <mat-hint>Liste combinée des Directions et Départements de rattachement</mat-hint>
-      </mat-form-field>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Direction de rattachement</mat-label>
+          <mat-select formControlName="directionId" (selectionChange)="onServiceDirectionChange($event.value)">
+            <mat-option [value]="null">Aucune</mat-option>
+            @for (dir of directions; track dir.id) {
+              <mat-option [value]="dir.id">{{ dir.libelle }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Département de rattachement</mat-label>
+          <mat-select formControlName="departementId" (selectionChange)="onServiceDepartmentChange($event.value)">
+            <mat-option [value]="null">Aucun</mat-option>
+            @for (dep of departements; track dep.id) {
+              <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
     }
 
     <!-- Champ Montant — visible pour la grille salariale -->
-    @if (type === 'grille-salariale') {
+    <!-- @if (type === 'grille-salariale') {
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Salaire de base (FCFA)</mat-label>
         <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">payments</mat-icon>
@@ -886,7 +914,7 @@
           <mat-error>Le montant doit être supérieur ou égal à 0</mat-error>
         }
       </mat-form-field>
-    }
+    } -->
   </mat-dialog-content>
 
   <mat-dialog-actions align="end" style="padding-top: 12px; margin-bottom: 0;">

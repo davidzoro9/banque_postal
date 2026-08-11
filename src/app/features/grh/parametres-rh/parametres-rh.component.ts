@@ -221,7 +221,7 @@ export class ParametresRhComponent implements OnInit {
       if (tab === 'typesContrats') {
         const tItem = this.typesContrats.find(i => i.id === id);
         if (tItem) {
-          this.dbRefService.deleteItem('type-contrat', tItem.code).subscribe({
+          this.dbRefService.deleteItem('type-contrat', tItem).subscribe({
             next: (items) => {
               this.typesContrats = items.map(i => ({
                 id: i.id || '',

@@ -12,16 +12,31 @@ export interface RefItem {
   description: string;
   actif: boolean;
   montant?: number;
+  agenceId?: string;
+  agenceLibelle?: string;
   departementId?: string;   // utilisé par Direction et Service
+  departementLibelle?: string;
+  departmentLibelle?: string;
   directionId?:   string;   // utilisé par Service
+  directionLibelle?: string;
+  directeurId?: string;
+  directeurLibelle?: string;
   categorieId?:   string;   // utilisé par Grille salariale
+  categorieLibelle?: string;
   echelonId?:     string;   // utilisé par Grille salariale
   gradeId?:       string;   // utilisé par Grille salariale
+  gradeLibelle?: string;
   echelle?:       string;   // utilisé par Grille salariale
   echellon?:      string;   // utilisé par Grille salariale
   typeIndemnite?: string;   // pour Paramétrage indemnité
+  typeIndemniteId?: string;
+  typeIndemniteLibelle?: string;
   typeRetenue?:   string;   // pour Paramétrage retenue (Part Agent, Part Employeur, Cotisation Sociale, etc.)
+  typeRetenueId?: string;
+  typeRetenueLibelle?: string;
   fonction?:      string;   // pour Paramétrage indemnité
+  fonctionId?: string;
+  fonctionLibelle?: string;
   grade?:         string;   // pour Paramétrage indemnité
   categorie?:     string;   // pour Paramétrage indemnité
   taux?:          number;   // pour Paramétrage indemnité / Retenue
@@ -47,14 +62,16 @@ const BACKEND_MAP: Record<string, {
     getAllPath: '',
     toFront: dto => ({
       id: String(dto.id),
-      code: dto.code || dto.grade || (dto.category && dto.echellon ? `${dto.category}${dto.echellon}` : `GS-${dto.id}`),
-      libelle: `Cat. ${dto.category || ''} - ${dto.echellon || ''}`,
-      categorie: dto.category || '',
-      echellon: dto.echellon || '',
-      grade: dto.classe || dto.grade || '',
+      code: `${dto.categorieLibelle || ''}${dto.echelonLibelle || ''}`,
+      libelle: dto.gradeLibelle || '',
+      categorie: dto.categorieLibelle || '',
+      echellon: dto.echelonLibelle || '',
+      grade: dto.gradeLibelle || '',
       categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
+      categorieLibelle: dto.categorieLibelle || '',
       echelonId: dto.echelonId ? String(dto.echelonId) : undefined,
       gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+      gradeLibelle: dto.gradeLibelle || '',
       montant: dto.basicSalary != null ? Number(dto.basicSalary) : (dto.salaireBase != null ? Number(dto.salaireBase) : 0),
       description: `Base: ${dto.basicSalary || dto.salaireBase || 0} FCFA`,
       actif: true
@@ -84,7 +101,9 @@ const BACKEND_MAP: Record<string, {
     segment: 'directions',
     getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
-                       departementId: dto.departmentId ? String(dto.departmentId) : undefined }),
+                       departementId: dto.departmentId ? String(dto.departmentId) : undefined,
+                       departementLibelle: dto.departmentLibelle || '',
+                       departmentLibelle: dto.departmentLibelle || '' }),
     toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
                         departmentId: item.departementId ? Number(item.departementId) : null }),
     toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
@@ -95,7 +114,10 @@ const BACKEND_MAP: Record<string, {
     getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
                        directionId:   dto.directionId   ? String(dto.directionId)   : undefined,
-                       departementId: dto.departmentId  ? String(dto.departmentId)  : undefined }),
+                       directionLibelle: dto.directionLibelle || '',
+                       departementId: dto.departmentId  ? String(dto.departmentId)  : undefined,
+                       departementLibelle: dto.departmentLibelle || '',
+                       departmentLibelle: dto.departmentLibelle || '' }),
     toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
                         directionId:  item.directionId   ? Number(item.directionId)   : null,
                         departmentId: item.departementId ? Number(item.departementId) : null }),
@@ -197,9 +219,13 @@ const BACKEND_MAP: Record<string, {
   'type-indemnite': {
     segment: 'typeindemnite',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: '', actif: dto.actif ?? true,
+                       tauxExoneration: dto.tauxExoneration ?? 0, plafondExoneration: dto.plafondExoneration ?? 0 }),
+    toBack:  item => ({ code: item.code, name: item.libelle, tauxExoneration: item.tauxExoneration ?? 0,
+                        plafondExoneration: item.plafondExoneration ?? 0, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle,
+                             tauxExoneration: item.tauxExoneration ?? 0,
+                             plafondExoneration: item.plafondExoneration ?? 0, actif: item.actif }),
   },
   'param-indemnite': {
     segment: 'paramindemnite',
@@ -207,29 +233,37 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({
       id: String(dto.id),
       code: dto.code || `PI-${dto.id}`,
-      libelle: dto.typeIndemnite || dto.name || 'Indemnité',
-      description: `Fonction: ${dto.fonction || '-'}, Grade: ${dto.grade || '-'}, Cat: ${dto.categorie || '-'}`,
+      libelle: dto.typeIndemniteLibelle || dto.typeIndemnite || dto.name || 'Indemnité',
+      description: `Fonction: ${dto.fonctionLibelle || '-'}, Grade: ${dto.gradeLibelle || '-'}, Cat: ${dto.categorieLibelle || '-'}`,
       actif: dto.actif ?? true,
       montant: dto.taux || dto.montant || 0,
-      typeIndemnite: dto.typeIndemnite || dto.name || '',
-      fonction: dto.fonction || '',
-      grade: dto.grade || '',
-      categorie: dto.categorie || '',
-      taux: dto.taux || dto.montant || 0,
-      tauxExoneration: dto.tauxExoneration || 0,
-      plafondExoneration: dto.plafondExoneration || 0,
+      typeIndemniteId: dto.typeIndemniteId ? String(dto.typeIndemniteId) : undefined,
+      typeIndemniteLibelle: dto.typeIndemniteLibelle || dto.typeIndemnite || dto.name || '',
+      typeIndemnite: dto.typeIndemniteLibelle || dto.typeIndemnite || dto.name || '',
+      fonctionId: dto.fonctionId ? String(dto.fonctionId) : undefined,
+      fonctionLibelle: dto.fonctionLibelle || dto.fonction || '',
+      fonction: dto.fonctionLibelle || dto.fonction || '',
+      gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+      gradeLibelle: dto.gradeLibelle || dto.grade || '',
+      grade: dto.gradeLibelle || dto.grade || '',
+      categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
+      categorieLibelle: dto.categorieLibelle || dto.categorie || '',
+      categorie: dto.categorieLibelle || dto.categorie || '',
+      taux: dto.taux ?? dto.montant ?? 0,
+      tauxExoneration: dto.tauxExoneration ?? 0,
+      plafondExoneration: dto.plafondExoneration ?? 0,
       regleType: dto.regleType || 'ORDINAIRE',
       typeNomination: dto.typeNomination || 'TOUTES'
     }),
     toBack: item => ({
       code: item.code,
-      typeIndemnite: item.typeIndemnite || item.libelle,
-      fonction: item.fonction,
-      grade: item.grade,
-      categorie: item.categorie,
-      taux: item.taux || item.montant || 0,
-      tauxExoneration: item.tauxExoneration || 0,
-      plafondExoneration: item.plafondExoneration || 0,
+      typeIndemniteId: item.typeIndemniteId ? Number(item.typeIndemniteId) : null,
+      fonctionId: item.fonctionId ? Number(item.fonctionId) : null,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      taux: item.taux ?? item.montant ?? 0,
+      tauxExoneration: item.tauxExoneration ?? 0,
+      plafondExoneration: item.plafondExoneration ?? 0,
       regleType: item.regleType || 'ORDINAIRE',
       typeNomination: item.typeNomination || 'TOUTES',
       actif: item.actif
@@ -237,13 +271,13 @@ const BACKEND_MAP: Record<string, {
     toBackUpdate: item => ({
       id: item.id,
       code: item.code,
-      typeIndemnite: item.typeIndemnite || item.libelle,
-      fonction: item.fonction,
-      grade: item.grade,
-      categorie: item.categorie,
-      taux: item.taux || item.montant || 0,
-      tauxExoneration: item.tauxExoneration || 0,
-      plafondExoneration: item.plafondExoneration || 0,
+      typeIndemniteId: item.typeIndemniteId ? Number(item.typeIndemniteId) : null,
+      fonctionId: item.fonctionId ? Number(item.fonctionId) : null,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      taux: item.taux ?? item.montant ?? 0,
+      tauxExoneration: item.tauxExoneration ?? 0,
+      plafondExoneration: item.plafondExoneration ?? 0,
       regleType: item.regleType || 'ORDINAIRE',
       typeNomination: item.typeNomination || 'TOUTES',
       actif: item.actif
@@ -255,27 +289,30 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({
       id: String(dto.id),
       code: dto.code,
-      grade: dto.grade || dto.libelle,
-      libelle: dto.libelle,
-      categorie: dto.categorie,
-      categories: dto.categorie ? dto.categorie.split(',').map((c: string) => c.trim()) : [],
+      gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+      gradeLibelle: dto.gradeLibelle || '',
+      grade: dto.gradeLibelle || '',
+      libelle: dto.gradeLibelle || dto.libelle || '',
+      categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
+      categorieLibelle: dto.categorieLibelle || '',
+      categorie: dto.categorieLibelle || '',
       description: dto.description || '',
       actif: dto.actif ?? true
     }),
     toBack: item => ({
       code: item.code,
-      grade: item.grade || item.libelle,
-      libelle: item.libelle || item.grade,
-      categorie: Array.isArray(item.categories) ? item.categories.join(', ') : item.categorie,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      libelle: item.libelle || item.gradeLibelle || item.grade || '',
       description: item.description,
       actif: item.actif
     }),
     toBackUpdate: item => ({
       id: item.id,
       code: item.code,
-      grade: item.grade || item.libelle,
-      libelle: item.libelle || item.grade,
-      categorie: Array.isArray(item.categories) ? item.categories.join(', ') : item.categorie,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      categorieId: item.categorieId ? Number(item.categorieId) : null,
+      libelle: item.libelle || item.gradeLibelle || item.grade || '',
       description: item.description,
       actif: item.actif
     }),
@@ -286,16 +323,18 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({
       id: String(dto.id),
       code: dto.code,
-      grade: dto.grade || dto.libelle,
-      libelle: dto.libelle || dto.grade,
+      gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+      gradeLibelle: dto.gradeLibelle || '',
+      grade: dto.gradeLibelle || '',
+      libelle: dto.gradeLibelle || dto.libelle || '',
       taux: dto.taux || 0,
       description: dto.description || '',
       actif: dto.actif ?? true
     }),
     toBack: item => ({
       code: item.code,
-      grade: item.grade || item.libelle,
-      libelle: item.libelle || item.grade,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      libelle: item.libelle || item.gradeLibelle || item.grade || '',
       taux: item.taux,
       description: item.description,
       actif: item.actif
@@ -303,8 +342,8 @@ const BACKEND_MAP: Record<string, {
     toBackUpdate: item => ({
       id: item.id,
       code: item.code,
-      grade: item.grade || item.libelle,
-      libelle: item.libelle || item.grade,
+      gradeId: item.gradeId ? Number(item.gradeId) : null,
+      libelle: item.libelle || item.gradeLibelle || item.grade || '',
       taux: item.taux,
       description: item.description,
       actif: item.actif
@@ -348,23 +387,35 @@ const BACKEND_MAP: Record<string, {
   'departement': {
     segment: 'departments',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.directeur || '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle, directeur: item.description }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle, directeur: item.description }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+                       directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
+                       directeurLibelle: dto.directeurLibelle || '' }),
+    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                        directeurId: item.directeurId ? Number(item.directeurId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                             directeurId: item.directeurId ? Number(item.directeurId) : null }),
   },
   'type-retenue-employe': {
-    segment: 'typeretenueemploye',
+    segment: 'type-retenue',
     getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, description: dto.description || '', actif: dto.actif ?? true }),
     toBack:  item => ({ code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
     toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, description: item.description, actif: item.actif }),
   },
   'type-retenue-emploi': {
-    segment: 'typeretenueemploi',
+    segment: 'type-retenue-emploi',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle, typeRetenue: dto.typeRetenue || 'Part Agent', taux: dto.taux || 0, description: dto.description || '', actif: dto.actif ?? true }),
-    toBack:  item => ({ code: item.code, libelle: item.libelle, typeRetenue: item.typeRetenue, taux: item.taux, description: item.description, actif: item.actif }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle, typeRetenue: item.typeRetenue, taux: item.taux, description: item.description, actif: item.actif }),
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle,
+                       typeRetenueId: dto.typeRetenueId ? String(dto.typeRetenueId) : undefined,
+                       typeRetenueLibelle: dto.typeRetenueLibelle || dto.typeRetenue || '',
+                       typeRetenue: dto.typeRetenueLibelle || dto.typeRetenue || '', taux: dto.taux ?? 0,
+                       description: dto.description || '', actif: dto.actif ?? true }),
+    toBack:  item => ({ code: item.code, libelle: item.libelle,
+                        typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
+                        taux: item.taux, description: item.description, actif: item.actif }),
+    toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle,
+                             typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
+                             taux: item.taux, description: item.description, actif: item.actif }),
   },
   'agence': {
     segment: 'agences',
@@ -521,6 +572,13 @@ export class DbRefService {
     return subject.value || [];
   }
 
+  private mutationError(err: any, fallback: string): Error {
+    const backendMessage = typeof err?.error === 'string'
+      ? err.error
+      : err?.error?.message || err?.message;
+    return new Error(backendMessage || fallback);
+  }
+
   // ─── GET ALL ───────────────────────────────────────────────────────────────
   getItems(type: string): Observable<RefItem[]> {
     const mapping = BACKEND_MAP[type];
@@ -604,13 +662,17 @@ export class DbRefService {
         map(dto => mapping.toFront(dto)),
         map(newItem => addLocalState(newItem)),
         catchError(err => {
+          if (err.status !== 404 && err.status !== 405) {
+            console.error(`[DbRefService] Backend post error for ${type}:`, err);
+            return throwError(() => this.mutationError(err, `Impossible d'enregistrer ${type} dans la base de données.`));
+          }
           return this.http.post<any>(`${baseUrl}/create`, body).pipe(
             map(dto => mapping.toFront(dto)),
             map(newItem => addLocalState(newItem)),
             catchError(err2 => {
-              console.warn(`[DbRefService] Backend post error for ${type}:`, err2);
-              const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
-              return of(addLocalState(newItem));
+              console.error(`[DbRefService] Backend post error for ${type}:`, err2);
+
+              return throwError(() => this.mutationError(err2, `Impossible d'enregistrer ${type} dans la base de données.`));
             })
           );
         })
@@ -649,8 +711,9 @@ export class DbRefService {
         map(dto => mapping.toFront(dto)),
         map(updated => updateLocalState(updated)),
         catchError(err => {
-          console.warn(`[DbRefService] Backend put error for ${type}, updating local state:`, err);
-          return of(updateLocalState(updatedItem));
+          console.error(`[DbRefService] Backend update error for ${type}:`, err);
+
+          return throwError(() => this.mutationError(err, `Impossible de modifier ${type} dans la base de données.`));
         })
       );
     }
@@ -660,25 +723,28 @@ export class DbRefService {
   }
 
   // ─── DELETE ────────────────────────────────────────────────────────────────
-  deleteItem(type: string, code: string): Observable<RefItem[]> {
+  deleteItem(type: string, item: Pick<RefItem, 'id' | 'code'>): Observable<RefItem[]> {
     const mapping = BACKEND_MAP[type];
     const subject = this.getSubject(type);
     const currentList = this.getCurrentItems(type);
-    const item = currentList.find(i => (i.code || '').toUpperCase() === (code || '').toUpperCase());
 
     const deleteLocalState = (): RefItem[] => {
-      const newList = currentList.filter(i => !this.isSameItem(i, { code } as RefItem, type, code));
+      const newList = currentList.filter(i => !this.isSameItem(i, item as RefItem, type, item.code));
       subject.next(newList);
       this.saveMockItems(type, newList);
       return newList;
     };
 
-    if (mapping && item?.id && !String(item.id).startsWith('mock_') && !String(item.id).startsWith('loc_')) {
-      return this.http.delete(`${environment.apiUrl}/${mapping.segment}/${item.id}`, { responseType: 'text' }).pipe(
+    if (mapping && item.id && !String(item.id).startsWith('mock_') && !String(item.id).startsWith('loc_')) {
+      return this.http.delete(
+        `${environment.apiUrl}/${mapping.segment}/${item.id}`,
+        { responseType: 'text' }
+      ).pipe(
         map(() => deleteLocalState()),
         catchError(err => {
-          console.warn(`[DbRefService] Backend delete error for ${type}, updating local state:`, err);
-          return of(deleteLocalState());
+          console.error(`[DbRefService] Backend delete error for ${type}:`, err);
+
+          return throwError(() => this.mutationError(err, `Impossible de supprimer ${type}.`));
         })
       );
     }
