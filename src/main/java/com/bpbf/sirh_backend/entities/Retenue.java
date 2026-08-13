@@ -22,6 +22,10 @@ public class Retenue {
     @JoinColumn(name = "type_retenue_id")
     private TypeRetenue typeRetenue;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "regime_securite_social_id")
+    private RegimeSecuriteSocial regimeSecuriteSocial;
+
     private Double taux;
     
     @Column(columnDefinition = "TEXT")

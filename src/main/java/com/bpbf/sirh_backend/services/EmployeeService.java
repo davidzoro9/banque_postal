@@ -8,6 +8,7 @@ import com.bpbf.sirh_backend.repositories.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -25,8 +26,11 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final DirectionRepository directionRepository;
     private final ServiceRepository serviceRepository;
+    private final AgenceRepository agenceRepository;
     private final ParametrageIndemniteService parametrageIndemniteService;
     private final ObjectMapper objectMapper;
+    private final RegimeSecuriteSocialRepository regimeSecuriteSocialRepository;
+    private final EmployeeProcessService employeeProcessService;
 
     public List<EmployeeDto> getAllEmployees(){
         List<Employee> employees = employeeRepository.findAll();
@@ -53,17 +57,20 @@ public class EmployeeService {
         return dto;
     }
 
+    @Transactional
     public EmployeeDto createEmployee(EmployeeDto employeeDto){
         Employee employee = employeeMapper.toEntity(employeeDto);
         resolveRelationships(employee, employeeDto);
         Employee saved = employeeRepository.save(employee);
         updateExtraDataFromEntity(saved, employeeDto);
         saved = employeeRepository.save(saved);
+        employeeProcessService.sync(saved, employeeDto);
         EmployeeDto res = employeeMapper.toDto(saved);
         updateDtoFromEntity(saved, res);
         return res;
     }
 
+    @Transactional
     public EmployeeDto updateEmployee(Long id, EmployeeDto employeeDto){
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'id: " + id));
@@ -72,15 +79,18 @@ public class EmployeeService {
         resolveRelationships(existing, employeeDto);
         updateExtraDataFromEntity(existing, employeeDto);
         Employee saved = employeeRepository.save(existing);
+        employeeProcessService.sync(saved, employeeDto);
         EmployeeDto res = employeeMapper.toDto(saved);
         updateDtoFromEntity(saved, res);
         return res;
     }
 
+    @Transactional
     public void deleteEmployee(Long id){
         if(!employeeRepository.existsById(id)){
             throw new ResourceNotFoundException("Employé non trouvé avec l'id: " + id);
         }
+        employeeProcessService.deleteForEmployee(id);
         employeeRepository.deleteById(id);
     }
 
@@ -92,6 +102,8 @@ public class EmployeeService {
         if (entity.getGrilleSalariale() != null && entity.getGrilleSalariale().getSalaireBase() != null) {
             dto.setSalaireBase(entity.getGrilleSalariale().getSalaireBase());
         }
+        dto.setDateEmbauche(entity.getDateEmbauche());
+        dto.setStatut(entity.getStatut());
 
         if (entity.getCategorieObj() != null) dto.setCategorieId(entity.getCategorieObj().getId());
         if (entity.getEchelonObj() != null) dto.setEchelonId(entity.getEchelonObj().getId());
@@ -102,8 +114,70 @@ public class EmployeeService {
         if (entity.getDepartment() != null) dto.setDepartment_id(entity.getDepartment().getId());
         if (entity.getDirection() != null) dto.setDirection_id(entity.getDirection().getId());
         if (entity.getService() != null) dto.setService_id(entity.getService().getId());
+        if (entity.getAgence() != null) dto.setAgence_id(entity.getAgence().getId());
         if (entity.getSuperviseur() != null) dto.setSuperviseur_id(entity.getSuperviseur().getId());
         if (entity.getGrilleSalariale() != null) dto.setGrilleSalarialeId(entity.getGrilleSalariale().getId());
+
+        if (entity.getFonction() != null) {
+            dto.setFonction_id(entity.getFonction().getId());
+            dto.setFonctionLibelle(entity.getFonction().getName());
+        }
+
+        if (entity.getEmploi() != null) {
+            dto.setEmploi_id(entity.getEmploi().getId());
+            dto.setEmploiLibelle(entity.getEmploi().getName());
+        }
+
+        if (entity.getDepartment() != null) {
+            dto.setDepartment_id(entity.getDepartment().getId());
+            dto.setDepartmentLibelle(entity.getDepartment().getName());
+        }
+
+        if (entity.getDirection() != null) {
+            dto.setDirection_id(entity.getDirection().getId());
+            dto.setDirectionLibelle(entity.getDirection().getName());
+        }
+
+        if (entity.getService() != null) {
+            dto.setService_id(entity.getService().getId());
+            dto.setServiceLibelle(entity.getService().getName());
+        }
+
+        if (entity.getAgence() != null) {
+            dto.setAgence_id(entity.getAgence().getId());
+            dto.setAgenceLibelle(entity.getAgence().getNomAgence());
+        }
+
+        if (entity.getCategorieObj() != null) {
+            dto.setCategorieId(entity.getCategorieObj().getId());
+            dto.setCategorieLibelle(
+                entity.getCategorieObj().getLibelle()
+            );
+        }
+
+        if (entity.getEchelonObj() != null) {
+            dto.setEchelonId(entity.getEchelonObj().getId());
+            dto.setEchelonLibelle(
+                entity.getEchelonObj().getLibelle()
+            );
+        }
+        
+        if (entity.getGradeObj() != null) {
+            dto.setGradeId(entity.getGradeObj().getId());
+            dto.setGradeLibelle(
+                entity.getGradeObj().getLibelle()
+            );
+        }
+
+        if (entity.getRegimeSecuriteSocial() != null) {
+            RegimeSecuriteSocial regime = entity.getRegimeSecuriteSocial();
+
+            dto.setRegimeSecuriteSocialId(regime.getId());
+            dto.setRegimeSecuriteSocialCode(regime.getCode());
+            dto.setRegimeSecuriteSocialLibelle(
+                regime.getLibelle()
+            );
+        }
 
         if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
             try {
@@ -122,40 +196,178 @@ public class EmployeeService {
     }
 
     private void resolveRelationships(Employee entity, EmployeeDto dto) {
-        if (dto.getCategorieId() != null) {
-            categorieRepository.findById(dto.getCategorieId()).ifPresent(entity::setCategorieObj);
+
+        if (dto.getCategorieId() == null) {
+            entity.setCategorieObj(null);
+        } else {
+            Categorie categorie = categorieRepository
+                .findById(dto.getCategorieId())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Catégorie introuvable avec l'ID : "
+                            + dto.getCategorieId()
+                    )
+                );
+
+            entity.setCategorieObj(categorie);
         }
 
-        if (dto.getEchelonId() != null) {
-            echelonRepository.findById(dto.getEchelonId()).ifPresent(entity::setEchelonObj);
+        if (dto.getEchelonId() == null) {
+            entity.setEchelonObj(null);
+        } else {
+            Echelon echelon = echelonRepository
+                .findById(dto.getEchelonId())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Échelon introuvable avec l'ID : "
+                            + dto.getEchelonId()
+                    )
+                );
+
+            entity.setEchelonObj(echelon);
         }
 
-        if (dto.getGradeId() != null) {
-            gradeRepository.findById(dto.getGradeId()).ifPresent(entity::setGradeObj);
+        if (dto.getGradeId() == null) {
+            entity.setGradeObj(null);
+        } else {
+            Grade grade = gradeRepository
+                .findById(dto.getGradeId())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Grade introuvable avec l'ID : "
+                            + dto.getGradeId()
+                    )
+                );
+
+            entity.setGradeObj(grade);
         }
 
-        if (dto.getGrilleSalarialeId() != null) {
-            grilleSalarialeRepository.findById(dto.getGrilleSalarialeId()).ifPresent(entity::setGrilleSalariale);
+        if (dto.getGrilleSalarialeId() == null) {
+            entity.setGrilleSalariale(null);
+        } else {
+            GrilleSalariale grille = grilleSalarialeRepository
+                .findById(dto.getGrilleSalarialeId())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Grille salariale introuvable avec l'ID : "
+                            + dto.getGrilleSalarialeId()
+                    )
+                );
+
+            entity.setGrilleSalariale(grille);
         }
 
-        if (dto.getFonction_id() != null) {
-            fonctionRepository.findById(dto.getFonction_id()).ifPresent(entity::setFonction);
+        if (dto.getFonction_id() == null) {
+            entity.setFonction(null);
+        } else {
+            Fonction fonction = fonctionRepository
+                .findById(dto.getFonction_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Fonction introuvable avec l'ID : "
+                            + dto.getFonction_id()
+                    )
+                );
+
+            entity.setFonction(fonction);
         }
 
-        if (dto.getEmploi_id() != null) {
-            emploiRepository.findById(dto.getEmploi_id()).ifPresent(entity::setEmploi);
+        if (dto.getEmploi_id() == null) {
+            entity.setEmploi(null);
+        } else {
+            Emploi emploi = emploiRepository
+                .findById(dto.getEmploi_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Emploi introuvable avec l'ID : "
+                            + dto.getEmploi_id()
+                    )
+                );
+
+            entity.setEmploi(emploi);
         }
-        if (dto.getDepartment_id() != null) {
-            departmentRepository.findById(dto.getDepartment_id()).ifPresent(entity::setDepartment);
+
+
+        if (dto.getDepartment_id() == null) {
+            entity.setDepartment(null);
+        } else {
+            Department department = departmentRepository
+                .findById(dto.getDepartment_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Département introuvable avec l'ID : "
+                            + dto.getDepartment_id()
+                    )
+                );
+
+            entity.setDepartment(department);
         }
-        if (dto.getDirection_id() != null) {
-            directionRepository.findById(dto.getDirection_id()).ifPresent(entity::setDirection);
+
+
+        if (dto.getDirection_id() == null) {
+            entity.setDirection(null);
+        } else {
+            Direction direction = directionRepository
+                .findById(dto.getDirection_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Direction introuvable avec l'ID : "
+                            + dto.getDirection_id()
+                    )
+                );
+
+            entity.setDirection(direction);
         }
-        if (dto.getService_id() != null) {
-            serviceRepository.findById(dto.getService_id()).ifPresent(entity::setService);
+
+
+        if (dto.getService_id() == null) {
+            entity.setService(null);
+        } else {
+            com.bpbf.sirh_backend.entities.Service service = serviceRepository
+                .findById(dto.getService_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Service introuvable avec l'ID : "
+                            + dto.getService_id()
+                    )
+                );
+
+            entity.setService(service);
         }
+
+        if (dto.getAgence_id() == null) {
+            entity.setAgence(null);
+        } else {
+            Agence agence = agenceRepository
+                .findById(dto.getAgence_id())
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Agence introuvable avec l'ID : " + dto.getAgence_id()
+                    )
+                );
+            entity.setAgence(agence);
+        }
+
+
         if (dto.getSuperviseur_id() != null) {
             employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
+        }
+
+        if (dto.getRegimeSecuriteSocialId() == null) {
+            entity.setRegimeSecuriteSocial(null);
+        } else {
+            RegimeSecuriteSocial regime =
+                regimeSecuriteSocialRepository
+                    .findById(dto.getRegimeSecuriteSocialId())
+                    .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                            "Régime de Sécurité sociale introuvable "
+                            + "avec l'ID : "
+                            + dto.getRegimeSecuriteSocialId()
+                        )
+                    );
+
+            entity.setRegimeSecuriteSocial(regime);
         }
 
         updateExtraDataFromEntity(entity, dto);
@@ -170,8 +382,16 @@ public class EmployeeService {
                 } catch (Exception ignored) {}
             }
 
-            String cat = entity.getCategorieObj() != null ? entity.getCategorieObj().getCode() : (String) existingMap.getOrDefault("categorie", "CL1");
-            String ech = entity.getEchelonObj() != null ? entity.getEchelonObj().getCode() : (String) existingMap.getOrDefault("echelon", "E01");
+            String cat = entity.getCategorieObj() != null
+                    ? (entity.getCategorieObj().getLibelle() != null
+                        ? entity.getCategorieObj().getLibelle()
+                        : entity.getCategorieObj().getCode())
+                    : (String) existingMap.getOrDefault("categorie", "CL1");
+            String ech = entity.getEchelonObj() != null
+                    ? (entity.getEchelonObj().getLibelle() != null
+                        ? entity.getEchelonObj().getLibelle()
+                        : entity.getEchelonObj().getCode())
+                    : (String) existingMap.getOrDefault("echelon", "E01");
             String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
 
             existingMap.put("categorie", cat);
@@ -242,6 +462,7 @@ public class EmployeeService {
         return res;
     }
 
+    @Transactional
     public EmployeeDto updateEmployeeByMatricule(String matricule, EmployeeDto dto) {
         Employee existing = employeeRepository.findByMatricule(matricule)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + matricule));
@@ -250,6 +471,7 @@ public class EmployeeService {
         resolveRelationships(existing, dto);
         updateExtraDataFromEntity(existing, dto);
         Employee saved = employeeRepository.save(existing);
+        employeeProcessService.sync(saved, dto);
         EmployeeDto res = employeeMapper.toDto(saved);
         updateDtoFromEntity(saved, res);
         return res;
@@ -259,9 +481,11 @@ public class EmployeeService {
         deleteEmployee(id);
     }
 
+    @Transactional
     public void deleteByMatricule(String matricule) {
         Employee employee = employeeRepository.findByMatricule(matricule)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + matricule));
+        employeeProcessService.deleteForEmployee(employee.getId());
         employeeRepository.deleteById(employee.getId());
     }
 }

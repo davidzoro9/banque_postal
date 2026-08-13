@@ -25,6 +25,8 @@ public class Employee {
     private String nom;
     private String prenom;
     private String telephone;
+    private String dateEmbauche;
+    private String statut;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "fonction_id", nullable = true)
@@ -45,6 +47,14 @@ public class Employee {
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "service_id", nullable = true)
     private Service service;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agence_id", nullable = true)
+    private Agence agence;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "regime_securite_social_id", nullable=true)
+    private RegimeSecuriteSocial regimeSecuriteSocial;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "superviseur_id", nullable = true)

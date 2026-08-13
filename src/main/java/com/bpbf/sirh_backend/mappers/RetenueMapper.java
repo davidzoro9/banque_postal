@@ -11,9 +11,13 @@ import java.util.List;
 public interface RetenueMapper {
     @Mapping(target = "typeRetenueId", source = "typeRetenue.id")
     @Mapping(target = "typeRetenueLibelle", source = "typeRetenue.libelle")
+    @Mapping(target = "regimeSecuriteSocialId", source = "regimeSecuriteSocial.id")
+    @Mapping(target = "regimeSecuriteSocialCode", source = "regimeSecuriteSocial.code")
+    @Mapping(target = "regimeSecuriteSocialLibelle", source = "regimeSecuriteSocial.libelle")
     RetenueDto toDto(Retenue entity);
 
     @Mapping(target = "typeRetenue", ignore = true)
+    @Mapping(target = "regimeSecuriteSocial", ignore = true)
     Retenue toEntity(RetenueDto dto);
 
     List<RetenueDto> toDtos(List<Retenue> list);

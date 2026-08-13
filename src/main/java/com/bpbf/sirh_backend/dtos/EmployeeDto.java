@@ -50,11 +50,6 @@ public class EmployeeDto {
     // Photo
     private String photo;
 
-    // Famille
-    private String conjointJson;
-    private String enfantsJson;
-    private String personnesChargeJson;
-
     // Job / Position dates & status
     private String dateEmbauche;
     private String statut;
@@ -91,13 +86,28 @@ public class EmployeeDto {
     private Long department_id;
     private Long direction_id;
     private Long service_id;
+    private Long agence_id;
     private Long superviseur_id;
     private Long grilleSalarialeId;
     private Long categorieId;
     private Long echelonId;
     private Long gradeId;
+    private Long regimeSecuriteSocialId;
 
     private String name;
     private String phone;
     private String state;
+
+    private String fonctionLibelle;
+    private String emploiLibelle;
+    private String departmentLibelle;
+    private String directionLibelle;
+    private String serviceLibelle;
+    private String agenceLibelle;
+    private String regimeSecuriteSocialCode;
+    private String regimeSecuriteSocialLibelle;
+
+    private String gradeLibelle;
+    private String categorieLibelle;
+    private String echelonLibelle;
 }
