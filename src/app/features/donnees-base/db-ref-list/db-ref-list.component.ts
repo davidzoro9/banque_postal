@@ -33,6 +33,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   formGroup!: FormGroup;
   dialogRef: any;
+  saving = false;
   isEditing = false;
   editingItem: RefItem | null = null;
 
@@ -49,6 +50,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   typesIndemniteList: string[] = [];
 
   typesRetenueList: RefItem[] = [];
+  regimesSecuriteSocialList: RefItem[] = [];
 
   fonctionIndemnitesList: { typeIndemnite: string; montant: number }[] = [];
 
@@ -396,6 +398,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       typeIndemniteId: [null],
       typeRetenue:   ['Part Agent'],
       typeRetenueId: [null],
+      regimeSecuriteSocialId: [null],
       fonction:      [''],
       fonctionId:    [null],
       grade:         [''],
@@ -429,7 +432,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       } else if (this.type === 'type-indemnite') {
         this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {
-        this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'taux', 'actif', 'actions'];
+        this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'regimeSecuriteSocial', 'taux', 'actif', 'actions'];
       } else if (this.type === 'grade') {
         this.displayedColumns = ['code', 'libelle', 'actif', 'actions'];
       } else if (this.type === 'param-groupe') {
@@ -555,8 +558,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
           this.typesRetenueList = [];
         }
       });
+      this.dbRefService.getItems('regime-securite-social').subscribe(items => {
+        this.regimesSecuriteSocialList = (items || []).filter(item => item.actif !== false);
+      });
     } else {
       this.typesRetenueList = [];
+      this.regimesSecuriteSocialList = [];
     }
   }
 
@@ -566,7 +573,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   private setupValidators(): void {
     this.formGroup.get('code')?.clearValidators();
-    this.formGroup.get('code')?.setValidators([Validators.maxLength(25)]);
+
+    if (this.type === 'regime-securite-social') {
+      this.formGroup.get('code')?.setValidators([
+        Validators.required,
+        Validators.maxLength(25)
+      ]);
+    } else {
+      this.formGroup.get('code')?.setValidators([
+        Validators.maxLength(25)
+      ]);
+    }
+
+
     this.formGroup.get('code')?.updateValueAndValidity();
 
     this.formGroup.get('libelle')?.clearValidators();
@@ -602,7 +621,13 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     } else if (this.type === 'param-retraite') {
       this.formGroup.get('gradeId')?.setValidators([Validators.required]);
     } else {
-      this.formGroup.get('libelle')?.setValidators([Validators.maxLength(150)]);
+      // this.formGroup.get('libelle')?.setValidators([Validators.maxLength(150)]);
+      this.formGroup.get('libelle')?.setValidators([
+        ...(this.type === 'regime-securite-social'
+          ? [Validators.required]
+          : []),
+        Validators.maxLength(150)
+      ]);
     }
 
     this.formGroup.get('libelle')?.updateValueAndValidity();
@@ -620,6 +645,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   }
 
   openAddDialog(): void {
+    if (this.dialogRef) return;
     this.isEditing = false;
     this.editingItem = null;
     this.fonctionIndemnitesList = [];
@@ -628,6 +654,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       montant: 0, agenceId: null, departementId: null, directionId: null, directeurId: null,
       categorieId: null, echelonId: null, gradeId: null, echelle: '', echellon: '',
       typeIndemnite: '', typeIndemniteId: null, typeRetenue: '', typeRetenueId: null,
+      regimeSecuriteSocialId: null,
       fonction: '', fonctionId: null, grade: '', categorie: '', categories: [], taux: 0,
       tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25, typeNomination: 'NON_NOMMEE'
     });
@@ -644,9 +671,14 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.setupValidators();
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '560px' });
+    this.dialogRef.afterClosed().subscribe(() => {
+      this.dialogRef = null;
+      this.saving = false;
+    });
   }
 
   openEditDialog(item: RefItem): void {
+    if (this.dialogRef) return;
     this.isEditing = true;
     this.editingItem = item;
 
@@ -726,6 +758,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         typeIndemnite: '',
         typeRetenue:   item.typeRetenueLibelle || item.typeRetenue || '',
         typeRetenueId: item.typeRetenueId ? String(item.typeRetenueId) : null,
+        regimeSecuriteSocialId: item.regimeSecuriteSocialId ? String(item.regimeSecuriteSocialId) : null,
         fonction:      item.fonction || '',
         grade:         item.grade || '',
         categorie:     item.categorie || '',
@@ -844,6 +877,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.setupValidators();
     this.formGroup.get('code')?.enable();
     this.dialogRef = this.dialog.open(this.dialogTpl, { width: '560px' });
+    this.dialogRef.afterClosed().subscribe(() => {
+      this.dialogRef = null;
+      this.saving = false;
+    });
   }
 
   private generateCode(type: string, libelle: string): string {
@@ -887,10 +924,14 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   onSubmit(): void {
 
+    if (this.saving) return;
+
     if (this.formGroup.invalid) {
       this.formGroup.markAllAsTouched();
       return;
     }
+
+    this.saving = true;
 
     const v = this.formGroup.getRawValue();
 
@@ -909,6 +950,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     const selectedTypeIndemnite = this.typesIndemnite.find(type => String(type.id) === String(v.typeIndemniteId));
     const selectedFonction = this.fonctions.find(fonction => String(fonction.id) === String(v.fonctionId));
     const selectedTypeRetenue = this.typesRetenueList.find(type => String(type.id) === String(v.typeRetenueId));
+    const selectedRegimeSecuriteSocial = this.regimesSecuriteSocialList.find(regime => String(regime.id) === String(v.regimeSecuriteSocialId));
     const selectedDepartement = this.departements.find(departement => String(departement.id) === String(v.departementId));
     const selectedDirection = this.directions.find(direction => String(direction.id) === String(v.directionId));
     const selectedDirecteur = this.directeursList.find(directeur => directeur.id === String(v.directeurId));
@@ -1029,6 +1071,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         typeRetenueId: String(v.typeRetenueId),
         typeRetenue:   selectedTypeRetenue?.libelle || selectedTypeRetenue?.code || '',
         typeRetenueLibelle: selectedTypeRetenue?.libelle || selectedTypeRetenue?.code || '',
+        regimeSecuriteSocialId: v.regimeSecuriteSocialId ? String(v.regimeSecuriteSocialId) : undefined,
+        regimeSecuriteSocialCode: selectedRegimeSecuriteSocial?.code || '',
+        regimeSecuriteSocialLibelle: selectedRegimeSecuriteSocial?.libelle || '',
         taux:          Number(v.taux ?? 0)
       };
     } else {
@@ -1068,7 +1113,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
           }
           this.dialogRef.close();
         },
-        error: (err)  => { alert(err.message || 'Erreur lors de la modification.'); }
+        error: (err)  => {
+          this.saving = false;
+          alert(err.message || 'Erreur lors de la modification.');
+        }
       });
     } else {
       this.dbRefService.addItem(this.type, item).subscribe({
@@ -1079,7 +1127,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
           }
           this.dialogRef.close();
         },
-        error: (err)  => { alert(err.message || 'Erreur lors de la création.'); }
+        error: (err)  => {
+          this.saving = false;
+          alert(err.message || 'Erreur lors de la création.');
+        }
       });
     }
   }

@@ -176,6 +176,16 @@
     </mat-card-content>
 
     <mat-card-actions>
+      @if (saved) {
+        <div style="margin-bottom: 12px; padding: 10px 14px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+          Modifications enregistrées.
+        </div>
+      }
+      @if (saveError) {
+        <div style="margin-bottom: 12px; padding: 10px 14px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+          {{ saveError }}
+        </div>
+      }
       <div class="sec-actions">
         <button mat-stroked-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>

@@ -19,11 +19,12 @@ const routes: Routes = [
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
   { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Liste des retenues', icon: 'money_off', type: 'type-retenue-employe' } },
-  { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Retenues par emploi',  icon: 'tune', type: 'type-retenue-emploi' } },
+  { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Retenues',  icon: 'tune', type: 'type-retenue-emploi' } },
   { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
   { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes (Burkina Faso)', icon: 'location_city', type: 'ville' } },
   { path: 'admin/param-retraite',        component: DbRefListComponent, data: { title: 'Paramétrage retraite', icon: 'event_repeat', type: 'param-retraite' } },
   { path: 'admin/param-prise-en-charge', component: DbRefListComponent, data: { title: 'Prise en charge famille', icon: 'family_restroom', type: 'param-prise-en-charge' } },
+  { path: 'admin/regimes-securite-sociale', component: DbRefListComponent, data: { title: 'Régimes de sécurité sociale', icon: 'health_and_safety', type: 'regime-securite-social' } },
 
   // ─── Gestion de carrière et compétence ────────────────────────────────────
   { path: 'carriere/categorie',    component: DbRefListComponent, data: { title: 'Catégorie professionnelle', icon: 'category',      type: 'categorie'       } },

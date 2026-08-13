@@ -215,6 +215,13 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="regimeSecuriteSocial">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Régime</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.regimeSecuriteSocialCode || row.regimeSecuriteSocialLibelle || 'Tous les régimes' }}
+              </td>
+            </ng-container>
+
             <!-- Colonnes spécifiques à Paramétrage Indemnité -->
             <ng-container matColumnDef="typeIndemnite">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Type d'indemnité</th>
@@ -366,7 +373,8 @@
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let row">
-                <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(row)">
+                <button type="button" mat-icon-button color="primary" matTooltip="Modifier"
+                        (click)="$event.stopPropagation(); openEditDialog(row)">
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button matTooltip="{{ row.actif ? 'Désactiver' : 'Activer' }}" (click)="toggleStatus(row, $event)">
@@ -477,6 +485,17 @@
           <mat-hint>0 si Barème ou Montant Variable</mat-hint>
         </mat-form-field>
       </div>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Régime de sécurité sociale</mat-label>
+        <mat-select formControlName="regimeSecuriteSocialId">
+          <mat-option [value]="null">Tous les régimes / Non applicable</mat-option>
+          @for (regime of regimesSecuriteSocialList; track regime.id) {
+            <mat-option [value]="regime.id">{{ regime.code }} — {{ regime.libelle }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>Laissez vide pour une retenue applicable à tous les régimes.</mat-hint>
+      </mat-form-field>
     } @else if (type === 'param-indemnite') {
       <!-- ─── REGLAGE DE L'INDEMNITE SELON LA GRILLE OFFICIELLE BPBF ──────────────── -->
       
@@ -600,7 +619,7 @@
           <mat-icon style="vertical-align: middle; font-size: 16px; color: var(--on-surface-2); margin-right: 4px;">badge</mat-icon>
           Type de fonction
         </label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" formGroupName="">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <!-- Option : Pas Nommée -->
           <label [class.selected-type]="formGroup.get('typeNomination')?.value === 'NON_NOMMEE'"
                  (click)="setFonctionType('NON_NOMMEE')"
@@ -758,6 +777,26 @@
         Les employés associés aux catégories de ce Groupe utiliseront cet âge pour le calcul automatique de leur date de retraite.
       </div>
     } @else if (type !== 'grille-salariale' && type !== 'param-retraite' && type !== 'param-groupe' && type !== 'grade') {
+      
+       @if (type === 'regime-securite-social') {
+          <mat-form-field appearance="outline" style="width: 100%;">
+            <mat-label>Code</mat-label>
+            <input
+              matInput
+              formControlName="code"
+              placeholder="Ex : CNSS"
+            >
+
+            @if (formGroup.get('code')?.hasError('required')) {
+              <mat-error>Le code est obligatoire</mat-error>
+            }
+
+            @if (formGroup.get('code')?.hasError('maxlength')) {
+              <mat-error>Le code ne doit pas dépasser 25 caractères</mat-error>
+            }
+          </mat-form-field>
+        }
+
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Libellé</mat-label>
         <input matInput formControlName="libelle" placeholder="Ex: Désignation / Intitulé de l'élément">
@@ -918,7 +957,9 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end" style="padding-top: 12px; margin-bottom: 0;">
-    <button mat-button mat-dialog-close>Annuler</button>
-    <button mat-raised-button color="primary" (click)="onSubmit()">Enregistrer</button>
+    <button type="button" mat-button mat-dialog-close [disabled]="saving">Annuler</button>
+    <button type="button" mat-raised-button color="primary" (click)="onSubmit()" [disabled]="saving">
+      {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+    </button>
   </mat-dialog-actions>
 </ng-template>

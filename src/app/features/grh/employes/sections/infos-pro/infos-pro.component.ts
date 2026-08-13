@@ -1,31 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { forkJoin, Observable, switchMap } from 'rxjs';
 import { EmployeeService } from '../../services/employee.service';
 import { DbRefService, RefItem } from '../../../../donnees-base/services/db-ref.service';
-import { Employee, StatutEmploye } from '../../models/employee.model';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../../../environments/environment';
-
-const SALARY_MATRIX: Record<string, { groupe: string; values: number[] }> = {
-  'C1':   { groupe: 'GROUPE I',   values: [95945, 105540, 116093, 127703, 140473, 154520, 169972, 186970, 205667, 226233, 248857, 273742, 301117, 331228, 364351] },
-  'C2':   { groupe: 'GROUPE I',   values: [104474, 114921, 126414, 139055, 152960, 168256, 185082, 203590, 223949, 246344, 270979, 298077, 327884, 360673, 396740] },
-  'C3':   { groupe: 'GROUPE I',   values: [107135, 117849, 129633, 142597, 156856, 172542, 189796, 208776, 229653, 252619, 277881, 305669, 336236, 369859, 406845] },
-  'C4':   { groupe: 'GROUPE I',   values: [115558, 127114, 139825, 153808, 169188, 186107, 204718, 225190, 247709, 272480, 299728, 329700, 362671, 398938, 438831] },
-  'C5':   { groupe: 'GROUPE I',   values: [128831, 141714, 155886, 171474, 188621, 207484, 228232, 251055, 276161, 303777, 334154, 367570, 404327, 444760, 489236] },
-  'C6':   { groupe: 'GROUPE I',   values: [157940, 173734, 191107, 210218, 231240, 254364, 279800, 307780, 338558, 372414, 409656, 450621, 495683, 545252, 599777] },
-  'C7':   { groupe: 'GROUPE I',   values: [176441, 194085, 213494, 234843, 258327, 284160, 312576, 343834, 378217, 416039, 457643, 503407, 553747, 609122, 670034] },
-  'CL1':  { groupe: 'GROUPE II',  values: [173090, 190399, 209439, 230383, 253421, 278763, 306639, 337303, 371034, 408137, 448951, 493846, 543231, 597554, 657309] },
-  'CL2':  { groupe: 'GROUPE II',  values: [203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059] },
-  'CL3':  { groupe: 'GROUPE II',  values: [278697, 306567, 337223, 370946, 408040, 448844, 493729, 543102, 597412, 657153, 722868, 795155, 874671, 962138, 1058351] },
-  'CL4':  { groupe: 'GROUPE II',  values: [405758, 446334, 490967, 540064, 594070, 653477, 718825, 790708, 869778, 956756, 1052432, 1157675, 1273442, 1400787, 1540865] },
-  'CL5':  { groupe: 'GROUPE III', values: [581390, 639529, 703482, 773830, 851213, 936334, 1029968, 1132965, 1246261, 1370887, 1507976, 1658774, 1824651, 2007116, 2207828] },
-  'CL6':  { groupe: 'GROUPE III', values: [599438, 659382, 725320, 797852, 877637, 965401, 1061941, 1168135, 1284949, 1413443, 1554788, 1710267, 1881293, 2069423, 2276365] },
-  'CL7':  { groupe: 'GROUPE III', values: [631454, 694599, 764059, 840465, 924512, 1016963, 1118659, 1230525, 1353578, 1488936, 1637829, 1801612, 1981773, 2179950, 2397946] },
-  'CL8':  { groupe: 'GROUPE III', values: [710386, 781425, 859567, 945524, 1040076, 1144084, 1258492, 1384341, 1522775, 1675053, 1842558, 2026814, 2229496, 2452445, 2697690] }
-};
+import { Employee, EmployeeSalaryInformation, StatutEmploye } from '../../models/employee.model';
 
 @Component({
   selector: 'app-infos-pro',
@@ -37,51 +16,48 @@ export class InfosProComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  saveError = '';
+  saved = false;
+  loadError = '';
   isEditing = false;
   isCreationMode = false;
   empId = '';
   
   services$!: Observable<RefItem[]>;
+  directions$!: Observable<RefItem[]>;
+  departements$!: Observable<RefItem[]>;
   agences$!: Observable<RefItem[]>;
   fonctions$!: Observable<RefItem[]>;
+  emplois$!: Observable<RefItem[]>;
   fonctionsList: RefItem[] = [];
-  directionsAndDepartements$!: Observable<RefItem[]>;
   parametragesRetraite: any[] = [];
+  grades$!: Observable<RefItem[]>;
+  categories$!: Observable<RefItem[]>;
+  echelons$!: Observable<RefItem[]>;
+  grillesSalariales$!: Observable<RefItem[]>;
+  regimesSecuriteSocial$!: Observable<RefItem[]>;
+  regimesSecuriteSocial: RefItem[] = [];
+  emplois: RefItem[] = [];
+  fonctions: RefItem[] = [];
+  directions: RefItem[] = [];
+  departements: RefItem[] = [];
+  services: RefItem[] = [];
+  agences: RefItem[] = [];
+
+  grades: RefItem[] = [];
+  categories: RefItem[] = [];
+  echelons: RefItem[] = [];
+  grillesSalariales: RefItem[] = [];
   readonly String = String; // pour usage dans le template
 
   readonly statuts: StatutEmploye[] = ['Actif', 'Inactif', 'Suspendu', "Période d'essai", 'Congé maladie', 'Détaché'];
-
-  readonly availableCategories = [
-    { code: 'C1',  label: 'C1' },
-    { code: 'C2',  label: 'C2' },
-    { code: 'C3',  label: 'C3' },
-    { code: 'C4',  label: 'C4' },
-    { code: 'C5',  label: 'C5' },
-    { code: 'C6',  label: 'C6' },
-    { code: 'C7',  label: 'C7' },
-    { code: 'CL1', label: 'CL1' },
-    { code: 'CL2', label: 'CL2' },
-    { code: 'CL3', label: 'CL3' },
-    { code: 'CL4', label: 'CL4' },
-    { code: 'CL5', label: 'CL5' },
-    { code: 'CL6', label: 'CL6' },
-    { code: 'CL7', label: 'CL7' },
-    { code: 'CL8', label: 'CL8' }
-  ];
-
-  readonly availableEchelons = Array.from({ length: 15 }, (_, i) => {
-    const num = String(i + 1).padStart(2, '0');
-    const code = `E${num}`;
-    return { code, label: code };
-  });
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
     private employeeService: EmployeeService,
-    private dbRefService: DbRefService,
-    private http: HttpClient
+    private dbRefService: DbRefService
   ) {}
 
   ngOnInit(): void {
@@ -89,46 +65,61 @@ export class InfosProComponent implements OnInit {
     this.isCreationMode = this.route.snapshot.queryParamMap.get('mode') === 'creation';
     this.isEditing = this.isCreationMode;
 
+    this.emplois$ = this.dbRefService.getItems('emploi');
     this.services$ = this.dbRefService.getItems('service');
+    this.directions$ = this.dbRefService.getItems('direction');
+    this.departements$ = this.dbRefService.getItems('departement');
     this.agences$ = this.dbRefService.getItems('agence');
     this.fonctions$ = this.dbRefService.getItems('fonction');
+    this.grades$ = this.dbRefService.getItems('grade');
+    this.categories$ = this.dbRefService.getItems('categorie');
+    this.echelons$ = this.dbRefService.getItems('echelon');
+    this.grillesSalariales$ = this.dbRefService.getItems('grille-salariale');
+    this.regimesSecuriteSocial$ = this.dbRefService.getItems('regime-securite-social');
 
-    this.fonctions$.subscribe(list => {
-      if (list && list.length > 0) {
-        this.fonctionsList = list;
-      }
+    // this.fonctions$.subscribe(list => {
+    //   if (list && list.length > 0) {
+    //     this.fonctionsList = list;
+    //   }
+    // });
+
+    this.emplois$.subscribe(items => this.emplois = items);
+    this.fonctions$.subscribe(items => {
+      this.fonctions = items;
+      this.fonctionsList = items;
+    });
+    this.directions$.subscribe(items => this.directions = items);
+    this.departements$.subscribe(items => this.departements = items);
+    this.services$.subscribe(items => this.services = items);
+    this.agences$.subscribe(items => this.agences = items);
+
+    this.grades$.subscribe(items => this.grades = items);
+    this.categories$.subscribe(items => this.categories = items);
+    this.echelons$.subscribe(items => this.echelons = items);
+    this.grillesSalariales$.subscribe(items => {
+      this.grillesSalariales = items;
     });
 
-    this.directionsAndDepartements$ = combineLatest([
-      this.dbRefService.getItems('direction'),
-      this.dbRefService.getItems('departement')
-    ]).pipe(
-      map(([dirs, deps]) => [...dirs, ...deps])
-    );
+    this.regimesSecuriteSocial$.subscribe(items => this.regimesSecuriteSocial = items.filter( item => item.actif !== false ));
 
-    // Charger les paramétrages retraite depuis le backend ou le localStorage
-    this.http.get<any[]>(`${environment.apiUrl}/parametrage-retraite`).subscribe({
-      next: (data) => { this.parametragesRetraite = data.filter(p => p.actif !== false); },
-      error: () => {
-        // Fallback localStorage
-        try {
-          const stored = localStorage.getItem('ref_param-retraite');
-          if (stored) this.parametragesRetraite = JSON.parse(stored);
-        } catch {}
-      }
+    this.dbRefService.getItems('param-retraite').subscribe(items => {
+      this.parametragesRetraite = items.filter(item => item.actif !== false);
     });
 
-    this.employeeService.getById(this.empId).subscribe(e => {
-      if (!e) { this.router.navigate(['/grh/employes']); return; }
-      this.employee = e;
-      this.buildForm();
-      this.patch(e);
-      if (!this.isCreationMode) {
-        this.form.disable();
+    this.employeeService.getById(this.empId).subscribe({
+      next: e => {
+        this.employee = e;
+        this.buildForm();
+        this.patch(e);
+        this.employeeService.getSalaryInformation(this.empId).subscribe({
+          next: information => this.patchSalaryInformation(information),
+          error: () => {}
+        });
+        if (!this.isCreationMode) this.form.disable();
+      },
+      error: err => {
+        this.loadError = err?.error?.message || 'Impossible de charger les informations professionnelles.';
       }
-
-      this.form.get('categoriePro')?.valueChanges.subscribe(() => this.updateComputedGrade());
-      this.form.get('echelon')?.valueChanges.subscribe(() => this.updateComputedGrade());
     });
   }
 
@@ -153,17 +144,17 @@ export class InfosProComponent implements OnInit {
     return upper;
   }
 
-  private updateComputedGrade(): void {
-    if (!this.form) return;
-    const cat = this.parseCat(this.form.get('categoriePro')?.value || '');
-    let ech = (this.form.get('echelon')?.value || '').trim();
-    if (ech) {
-      const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(num)) ech = num < 10 ? `E0${num}` : `E${num}`;
-    }
-    const computedGrade = (cat && ech) ? `${cat}${ech}` : (cat || ech || '');
-    this.form.get('grade')?.setValue(computedGrade, { emitEvent: false });
-  }
+  // private updateComputedGrade(): void {
+  //   if (!this.form) return;
+  //   const cat = this.parseCat(this.form.get('categoriePro')?.value || '');
+  //   let ech = (this.form.get('echelon')?.value || '').trim();
+  //   if (ech) {
+  //     const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
+  //     if (!isNaN(num)) ech = num < 10 ? `E0${num}` : `E${num}`;
+  //   }
+  //   const computedGrade = (cat && ech) ? `${cat}${ech}` : (cat || ech || '');
+  //   this.form.get('grade')?.setValue(computedGrade, { emitEvent: false });
+  // }
 
   enableEdit(): void {
     this.isEditing = true;
@@ -185,16 +176,28 @@ export class InfosProComponent implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
+      fonctionId:           [null],
+      emploiId:             [null],
+      serviceId:            [null],
+      agenceId:             [null],
+      directionId:          [null],
+      departmentId:         [null],
+
+      gradeId:              [null, Validators.required],
+      categorieId:          [null, Validators.required],
+      echelonId:            [null, Validators.required],
+      grilleSalarialeId:    [null, Validators.required],
       poste:                [''],
-      fonction:             ['Agent simple'],
+      fonction:             [''],
       customFonction:       [''],
       service:              [''],
       direction:            [''],
       departement:          [''],
       agence:               [''],
-      categoriePro:         ['CL5'],
-      echelon:              ['E01'],
-      grade:                ['CL5E01'],
+      regimeSecuriteSocialId: [null],
+      categoriePro:         [''],
+      echelon:              [''],
+      grade:                [''],
       statut:               ['Actif'],
       dateEmbauche:         [''],
       modePaiement:         ['Virement bancaire'],
@@ -204,15 +207,6 @@ export class InfosProComponent implements OnInit {
       groupeRetraiteId:     [null]
     });
 
-    // Quand le groupe retraite change → mettre à jour ageRetraite automatiquement
-    this.form.get('groupeRetraiteId')?.valueChanges.subscribe(id => {
-      if (!id) return;
-      const groupe = this.parametragesRetraite.find(p => String(p.id) === String(id));
-      if (groupe) {
-        const age = groupe.ageRetraite || groupe.taux || groupe.montant || 60;
-        this.employeeService.update(this.empId, { ageRetraite: Number(age), groupeRetraiteId: id }).subscribe();
-      }
-    });
   }
 
   private patch(e: Employee): void {
@@ -274,8 +268,30 @@ export class InfosProComponent implements OnInit {
       intituleCompte:   e.intituleCompte || (e.nom && e.prenom ? `${e.prenom} ${e.nom}` : ''),
       banque:           e.banque || '',
       iban:             e.iban || '',
-      groupeRetraiteId: e.groupeRetraiteId || null
+      groupeRetraiteId: e.groupeRetraiteId || null,
+
+      fonctionId: e.fonctionId || null,
+      emploiId: e.emploiId || null,
+      serviceId: e.serviceId || null,
+      agenceId: e.agenceId || null,
+      directionId: e.directionId || null,
+      departmentId: e.departmentId || null,
+      regimeSecuriteSocialId: e.regimeSecuriteSocialId || null,
+
+      gradeId: e.gradeId || null,
+      categorieId: e.categorieId || null,
+      echelonId: e.echelonId || null,
+      grilleSalarialeId: e.grilleSalarialeId || null,
     });
+  }
+
+  private patchSalaryInformation(information: EmployeeSalaryInformation): void {
+    const values: Record<string, string> = {};
+    if (information.modePaiement) values['modePaiement'] = information.modePaiement;
+    if (information.intituleCompte) values['intituleCompte'] = information.intituleCompte;
+    if (information.banque) values['banque'] = information.banque;
+    if (information.iban) values['iban'] = information.iban;
+    this.form.patchValue(values);
   }
 
   get initials(): string {
@@ -283,18 +299,123 @@ export class InfosProComponent implements OnInit {
     return `${(this.employee.prenom?.[0] || '')}${(this.employee.nom?.[0] || '')}`.toUpperCase() || '??';
   }
 
+  get selectedFonction(): RefItem | undefined {
+    const fonctionId = this.form.get('fonctionId')?.value;
+
+    return this.fonctions.find(
+      item => String(item.id) === String(fonctionId)
+    );
+  }
+
+  get selectedFonctionName(): string {
+    return (
+      this.selectedFonction?.libelle ||
+      this.selectedFonction?.code ||
+      ''
+    ).toUpperCase();
+  }
+
+  get isChefService(): boolean {
+    return this.selectedFonctionName.includes('CHEF DE SERVICE');
+  }
+
+  get isDirecteurDepartement(): boolean {
+    return (
+      this.selectedFonctionName.includes('DIRECTEUR DE DEPARTEMENT') ||
+      this.selectedFonctionName.includes('RESPONSABLE DE DEPARTEMENT')
+    );
+  }
+
+  get availableSalaryCategories(): RefItem[] {
+    const gradeId = this.form.get('gradeId')?.value;
+
+    if (!gradeId) {
+      return this.categories;
+    }
+
+    const allowedCategoryIds = new Set(
+      this.grillesSalariales
+        .filter(grid =>
+          String(grid.gradeId) === String(gradeId)
+        )
+        .map(grid => String(grid.categorieId))
+    );
+
+    return this.categories.filter(category =>
+      allowedCategoryIds.has(String(category.id))
+    );
+  }
+
+  get availableSalaryEchelons(): RefItem[] {
+    const gradeId = this.form.get('gradeId')?.value;
+    const categorieId = this.form.get('categorieId')?.value;
+
+    if (!gradeId || !categorieId) {
+      return [];
+    }
+
+    const allowedEchelonIds = new Set(
+      this.grillesSalariales
+        .filter(grid =>
+          String(grid.gradeId) === String(gradeId) &&
+          String(grid.categorieId) === String(categorieId)
+        )
+        .map(grid => String(grid.echelonId))
+    );
+
+    return this.echelons.filter(echelon =>
+      allowedEchelonIds.has(String(echelon.id))
+    );
+  }
+
+  onClassificationChange(): void {
+    const gradeId = this.form.get('gradeId')?.value;
+    const categorieId = this.form.get('categorieId')?.value;
+    const echelonId = this.form.get('echelonId')?.value;
+
+    const grid = this.grillesSalariales.find(item =>
+      String(item.gradeId) === String(gradeId) &&
+      String(item.categorieId) === String(categorieId) &&
+      String(item.echelonId) === String(echelonId)
+    );
+
+    this.form.patchValue({
+      grilleSalarialeId: grid?.id || null
+    });
+  }
+
+  onGradeChange(): void {
+    this.form.patchValue({
+      categorieId: null,
+      echelonId: null,
+      grilleSalarialeId: null
+    });
+  }
+
+  onCategoryChange(): void {
+    this.form.patchValue({
+      echelonId: null,
+      grilleSalarialeId: null
+    });
+  }
+
+  get selectedSalaryGrid(): RefItem | undefined {
+    const id = this.form.get('grilleSalarialeId')?.value;
+
+    return this.grillesSalariales.find(
+      item => String(item.id) === String(id)
+    );
+  }
+
   save(next?: string): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.saving = true;
+    this.saveError = '';
+    this.saved = false;
     const v = this.form.getRawValue();
-
-    const catCode = this.parseCat(v.categoriePro) || 'CL5';
-    let echCode = (v.echelon || 'E01').trim();
-    const echNum = parseInt(echCode.replace(/[^0-9]/g, ''), 10) || 1;
-    echCode = echNum < 10 ? `E0${echNum}` : `E${echNum}`;
-    const computedGrade = `${catCode}${echCode}`;
-
-    let resolvedFonction = v.fonction;
 
     // Résoudre l'âge de retraite depuis le groupe sélectionné
     let ageRetraiteResolu: number | undefined;
@@ -303,16 +424,56 @@ export class InfosProComponent implements OnInit {
       if (grp) ageRetraiteResolu = Number(grp.ageRetraite || grp.taux || grp.montant || 60);
     }
 
+    const selectedFonction = this.fonctions.find(item => String(item.id) === String(v.fonctionId));
+
+    const selectedEmploi = this.emplois.find(item => String(item.id) === String(v.emploiId));
+
+    const selectedService = this.services.find(item => String(item.id) === String(v.serviceId));
+
+    const selectedAgence = this.agences.find(item => String(item.id) === String(v.agenceId));
+
+    const selectedDirection = this.directions.find(item => String(item.id) === String(v.directionId));
+
+    const selectedDepartment = this.departements.find(item => String(item.id) === String(v.departmentId));
+
+    const selectedGrade = this.grades.find(item => String(item.id) === String(v.gradeId));
+
+    const selectedCategory = this.categories.find(item => String(item.id) === String(v.categorieId));
+
+    const selectedEchelon = this.echelons.find(item => String(item.id) === String(v.echelonId));
+
+    const selectedRegimeSecuriteSocial = this.regimesSecuriteSocial.find(item => String(item.id) === String(v.regimeSecuriteSocialId));
+
     const updatePayload: Partial<Employee> = {
-      poste:            v.poste,
-      fonction:         resolvedFonction,
-      service:          v.service,
-      direction:        v.direction || v.departement,
-      departement:      v.departement || v.direction,
-      agence:           v.agence,
-      categoriePro:     catCode,
-      echelon:          echCode,
-      grade:            computedGrade,
+
+      fonctionId: v.fonctionId,
+      emploiId: v.emploiId,
+      serviceId: v.serviceId,
+      agenceId: v.agenceId,
+      directionId: v.directionId,
+      departmentId: v.departmentId,
+
+      gradeId: v.gradeId,
+      categorieId: v.categorieId,
+      echelonId: v.echelonId,
+      grilleSalarialeId: v.grilleSalarialeId,
+
+      regimeSecuriteSocialId: v.regimeSecuriteSocialId,
+
+      regimeSecuriteSocialCode: selectedRegimeSecuriteSocial?.code || '',
+
+      regimeSecuriteSocialLibelle: selectedRegimeSecuriteSocial?.libelle || '',
+
+      poste:            selectedEmploi?.libelle || selectedEmploi?.code || '',
+      fonction:         selectedFonction?.libelle || selectedFonction?.code || '',
+      service:          selectedService?.libelle || selectedService?.code || '',
+      direction:        selectedDirection?.libelle || selectedDirection?.code || '',
+      departement:      selectedDepartment?.libelle || selectedDepartment?.code || '',
+      agence:           selectedAgence?.libelle || selectedAgence?.code || '',
+      categoriePro:     selectedCategory?.libelle || selectedCategory?.code || '',
+      echelon:          selectedEchelon?.libelle || selectedEchelon?.code || '',
+      grade:            this.selectedSalaryGrid?.code || selectedGrade?.libelle || selectedGrade?.code || '',
+      salaireBase:      this.selectedSalaryGrid?.montant || 0,
       statut:           v.statut,
       dateEmbauche:     v.dateEmbauche,
       modePaiement:     v.modePaiement,
@@ -323,25 +484,39 @@ export class InfosProComponent implements OnInit {
       ...(ageRetraiteResolu !== undefined && { ageRetraite: ageRetraiteResolu })
     };
 
-    if (SALARY_MATRIX[catCode]) {
-      const matrixInfo = SALARY_MATRIX[catCode];
-      const echIdx = Math.max(0, Math.min(14, echNum - 1));
-      const baseSal = matrixInfo.values[echIdx] || matrixInfo.values[0];
-      updatePayload.salaireBase = baseSal;
-    }
-
-    this.employeeService.update(this.empId, updatePayload).subscribe(updated => {
-      this.saving = false;
-      if (updated) {
+    this.employeeService.update(this.empId, updatePayload).pipe(
+      switchMap(() => forkJoin({
+        employee: this.employeeService.getById(this.empId),
+        salaryInformation: this.employeeService.getSalaryInformation(this.empId)
+      }))
+    ).subscribe({
+      next: ({ employee: updated, salaryInformation }) => {
+        this.saving = false;
         this.employee = updated;
         this.patch(updated);
-      }
-      if (this.isCreationMode && next) {
-        this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
-      } else {
-        this.isEditing = false;
-        this.form.disable();
-        this.router.navigate(['/grh/employes', this.empId]);
+        this.patchSalaryInformation(salaryInformation);
+
+        const persisted = this.form.getRawValue();
+        const classificationPersisted =
+          String(persisted.gradeId) === String(v.gradeId) &&
+          String(persisted.categorieId) === String(v.categorieId) &&
+          String(persisted.echelonId) === String(v.echelonId) &&
+          String(persisted.grilleSalarialeId) === String(v.grilleSalarialeId);
+
+        if (!classificationPersisted) {
+          this.saveError = 'La classification enregistrée n’a pas pu être relue depuis le backend.';
+          return;
+        }
+
+        if (this.isCreationMode && next) {
+          this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
+        } else {
+          this.saved = true;
+        }
+      },
+      error: err => {
+        this.saving = false;
+        this.saveError = err?.error?.message || err?.message || 'Impossible d’enregistrer les informations professionnelles.';
       }
     });
   }

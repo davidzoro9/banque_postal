@@ -30,9 +30,10 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
       { id: 'param-indemnite',  label: 'Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
+      { id: 'regime-securite-social', label: 'Régimes de sécurité sociale', icon: 'health_and_safety', route: '/donnees-base/admin/regimes-securite-sociale' },
       { id: 'param-prise-en-charge', label: 'Prise en charge famille', icon: 'family_restroom', route: '/donnees-base/admin/param-prise-en-charge' },
       { id: 'types-retenues',   label: 'Liste des retenues',       icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
-      { id: 'param-paie-taux',  label: 'Retenues par emploi',      icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
+      { id: 'param-paie-taux',  label: 'Retenues',                 icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
 
       { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
       { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },

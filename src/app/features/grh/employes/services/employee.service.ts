@@ -3,10 +3,19 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { Employee, StatutEmploye } from '../models/employee.model';
+import {
+  Employee,
+  EmployeeExemption,
+  EmployeeFamily,
+  EmployeeIndemnity,
+  EmployeeSalaryInformation,
+  EmployeeSalarySituation,
+  StatutEmploye
+} from '../models/employee.model';
 
 const createDefaultEmployee = (partial: Partial<Employee>): Employee => {
   return {
+    ...partial,
     id: partial.id || `emp-${Date.now()}`,
     matricule: partial.matricule || 'EMP-000',
     nom: partial.nom || '',
@@ -97,15 +106,31 @@ export class EmployeeService {
     if (emp.fonction) extraDataObj.fonction = emp.fonction;
     if (emp.salaireBase !== undefined) extraDataObj.salaireBase = emp.salaireBase;
     if (emp.primeLogement !== undefined) extraDataObj.primeLogement = emp.primeLogement;
-    if (emp.enfants) extraDataObj.enfants = emp.enfants;
-    if (emp.conjoint) extraDataObj.conjoint = emp.conjoint;
-
     result.extraData = JSON.stringify(extraDataObj);
 
+    result.fonction_id = emp.fonctionId ? Number(emp.fonctionId) : null;
+
+    result.emploi_id = emp.emploiId ? Number(emp.emploiId) : null;
+
+    result.department_id = emp.departmentId ? Number(emp.departmentId) : null;
+
+    result.direction_id = emp.directionId ? Number(emp.directionId) : null;
+
+    result.service_id = emp.serviceId ? Number(emp.serviceId) : null;
+
+    result.agence_id = emp.agenceId ? Number(emp.agenceId) : null;
+
+    result.gradeId = emp.gradeId ? Number(emp.gradeId) : null;
+
+    result.categorieId = emp.categorieId ? Number(emp.categorieId) : null;
+
+    result.echelonId = emp.echelonId ? Number(emp.echelonId) : null;
+
+    result.grilleSalarialeId =  emp.grilleSalarialeId ? Number(emp.grilleSalarialeId) : null;
+
+    result.regimeSecuriteSocialId = emp.regimeSecuriteSocialId ? Number(emp.regimeSecuriteSocialId) : null;
+
     if (emp.contactsUrgence) result.contactsUrgenceJson = JSON.stringify(emp.contactsUrgence);
-    if (emp.conjoint) result.conjointJson = JSON.stringify(emp.conjoint);
-    if (emp.enfants) result.enfantsJson = JSON.stringify(emp.enfants);
-    if (emp.personnesCharge) result.personnesChargeJson = JSON.stringify(emp.personnesCharge);
     if (emp.autresIndemnites) result.autresIndemnitesJson = JSON.stringify(emp.autresIndemnites);
     if (emp.exonerationsFiscales) result.exonerationsFiscalesJson = JSON.stringify(emp.exonerationsFiscales);
     if (emp.exonerationsSociales) result.exonerationsSocialesJson = JSON.stringify(emp.exonerationsSociales);
@@ -126,6 +151,14 @@ export class EmployeeService {
     delete result.documents;
     delete result.evaluations;
     delete result.historiqueActions;
+    delete result.fonctionId;
+    delete result.emploiId;
+    delete result.departmentId;
+    delete result.directionId;
+    delete result.serviceId;
+    delete result.agenceId;
+    delete result.regimeSecuriteSocialCode;
+    delete result.regimeSecuriteSocialLibelle;
     
     return result;
   }
@@ -135,9 +168,6 @@ export class EmployeeService {
     
     // Parse JSON fields safely
     try { result.contactsUrgence = db.contactsUrgenceJson ? JSON.parse(db.contactsUrgenceJson) : []; } catch (e) { result.contactsUrgence = []; }
-    try { result.conjoint = db.conjointJson ? JSON.parse(db.conjointJson) : undefined; } catch (e) { result.conjoint = undefined; }
-    try { result.enfants = db.enfantsJson ? JSON.parse(db.enfantsJson) : []; } catch (e) { result.enfants = []; }
-    try { result.personnesCharge = db.personnesChargeJson ? JSON.parse(db.personnesChargeJson) : []; } catch (e) { result.personnesCharge = []; }
     try { result.autresIndemnites = db.autresIndemnitesJson ? JSON.parse(db.autresIndemnitesJson) : []; } catch (e) { result.autresIndemnites = []; }
     try { result.exonerationsFiscales = db.exonerationsFiscalesJson ? JSON.parse(db.exonerationsFiscalesJson) : []; } catch (e) { result.exonerationsFiscales = []; }
     try { result.exonerationsSociales = db.exonerationsSocialesJson ? JSON.parse(db.exonerationsSocialesJson) : []; } catch (e) { result.exonerationsSociales = []; }
@@ -154,8 +184,6 @@ export class EmployeeService {
         if (extra.fonction) result.fonction = extra.fonction;
         if (extra.salaireBase) result.salaireBase = Number(extra.salaireBase);
         if (extra.primeLogement) result.primeLogement = Number(extra.primeLogement);
-        if (extra.enfants && Array.isArray(extra.enfants)) result.enfants = extra.enfants;
-        if (extra.conjoint) result.conjoint = extra.conjoint;
       } catch (e) {}
     }
 
@@ -167,6 +195,42 @@ export class EmployeeService {
         result.echelon = g.substring(eIdx);
       }
     }
+
+    result.fonctionId = db.fonction_id != null ? String(db.fonction_id) : undefined;
+
+    result.emploiId = db.emploi_id != null ? String(db.emploi_id) : undefined;
+
+    result.departmentId = db.department_id != null ? String(db.department_id) : undefined;
+
+    result.directionId = db.direction_id != null ? String(db.direction_id) : undefined;
+
+    result.serviceId = db.service_id != null ? String(db.service_id) : undefined;
+
+    result.agenceId = db.agence_id != null ? String(db.agence_id) : undefined;
+
+    result.gradeId = db.gradeId != null ? String(db.gradeId) : undefined;
+
+    result.categorieId = db.categorieId != null ? String(db.categorieId) : undefined;
+
+    result.echelonId = db.echelonId != null ? String(db.echelonId) : undefined;
+
+    result.grilleSalarialeId =  db.grilleSalarialeId != null ? String(db.grilleSalarialeId) : undefined;
+
+    result.regimeSecuriteSocialId = db.regimeSecuriteSocialId != null ? String(db.regimeSecuriteSocialId) : undefined;
+
+    result.regimeSecuriteSocialCode = db.regimeSecuriteSocialCode || '';
+
+    result.regimeSecuriteSocialLibelle =  db.regimeSecuriteSocialLibelle || '';
+
+    result.fonction = db.fonctionLibelle || result.fonction || '';
+    result.poste = db.emploiLibelle || result.poste || '';
+    result.service = db.serviceLibelle || result.service || '';
+    result.agence = db.agenceLibelle || result.agence || '';
+    result.direction = db.directionLibelle || result.direction || '';
+    result.departement = db.departmentLibelle || result.departement || '';
+    result.categoriePro = db.categorieLibelle || result.categoriePro || '';
+    result.echelon = db.echelonLibelle || result.echelon || '';
+    result.grade = db.grilleSalarialeLibelle || result.grade || '';
     
     return createDefaultEmployee(result);
   }
@@ -205,10 +269,52 @@ export class EmployeeService {
   getById(id: string): Observable<Employee> {
     return this.http.get<any>(`${environment.apiUrl}/employes/${id}`).pipe(
       map(item => this.toFrontend(item)),
-      catchError(() => {
-        return of({} as Employee);
+      tap(employee => {
+        const index = this.employees.findIndex(item => String(item.id) === String(employee.id));
+        if (index >= 0) {
+          this.employees[index] = employee;
+        } else {
+          this.employees.push(employee);
+        }
+        this.employeesSubject.next([...this.employees]);
       })
     );
+  }
+
+  getFamily(id: string): Observable<EmployeeFamily[]> {
+    return this.http.get<EmployeeFamily[]>(`${environment.apiUrl}/employes/${id}/famille`);
+  }
+
+  createFamilyMember(id: string, data: Omit<EmployeeFamily, 'id'>): Observable<EmployeeFamily> {
+    return this.http.post<EmployeeFamily>(`${environment.apiUrl}/employes/${id}/famille`, data);
+  }
+
+  updateFamilyMember(id: string, memberId: number | string, data: EmployeeFamily): Observable<EmployeeFamily> {
+    return this.http.put<EmployeeFamily>(`${environment.apiUrl}/employes/${id}/famille/${memberId}`, data);
+  }
+
+  deleteFamilyMember(id: string, memberId: number | string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/employes/${id}/famille/${memberId}`);
+  }
+
+  getSalaryInformation(id: string): Observable<EmployeeSalaryInformation> {
+    return this.http.get<EmployeeSalaryInformation>(`${environment.apiUrl}/employes/${id}/informations-salariales`);
+  }
+
+  updateSalaryInformation(id: string, data: EmployeeSalaryInformation): Observable<EmployeeSalaryInformation> {
+    return this.http.put<EmployeeSalaryInformation>(`${environment.apiUrl}/employes/${id}/informations-salariales`, data);
+  }
+
+  getSalarySituation(id: string): Observable<EmployeeSalarySituation> {
+    return this.http.get<EmployeeSalarySituation>(`${environment.apiUrl}/employes/${id}/situation-salariale`);
+  }
+
+  getEmployeeIndemnities(id: string): Observable<EmployeeIndemnity[]> {
+    return this.http.get<EmployeeIndemnity[]>(`${environment.apiUrl}/employes/${id}/indemnites`);
+  }
+
+  getEmployeeExemptions(id: string): Observable<EmployeeExemption[]> {
+    return this.http.get<EmployeeExemption[]>(`${environment.apiUrl}/employes/${id}/exonerations`);
   }
 
   create(data: Omit<Employee, 'id'>): Observable<Employee> {
@@ -224,7 +330,8 @@ export class EmployeeService {
   }
 
   update(id: string, data: Partial<Employee>): Observable<Employee> {
-    const backendData = this.toBackend(data);
+    const current = this.employees.find(employee => String(employee.id) === String(id));
+    const backendData = this.toBackend(current ? { ...current, ...data } : data);
     return this.http.put<any>(`${environment.apiUrl}/employes/${id}`, backendData).pipe(
       map(item => {
         const updated = this.toFrontend(item);

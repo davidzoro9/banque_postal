@@ -36,6 +36,67 @@ export interface ExonerationItem {
   montant: number;
 }
 
+export type LienParente = 'CONJOINT' | 'ENFANT' | 'PERE' | 'MERE' | 'FRERE' | 'SOEUR' | 'AUTRE';
+
+export interface EmployeeFamily {
+  id?: number | string;
+  employeeId: number | string;
+  nom: string;
+  prenom: string;
+  dateNaissance: string | null;
+  lienParente: LienParente;
+  estCharge: boolean;
+  statut: string;
+}
+
+export interface EmployeeSalaryInformation {
+  id?: number | string;
+  employeeId: number | string;
+  modePaiement: ModePaiement;
+  banque: string;
+  iban: string;
+  intituleCompte: string;
+  salaireBrut?: number;
+}
+
+export interface EmployeeSalarySituation {
+  id?: number | string;
+  employeeId: number | string;
+  grilleSalarialeId?: number | string;
+  categorieId?: number | string;
+  categorieLibelle?: string;
+  echelonId?: number | string;
+  echelonLibelle?: string;
+  gradeId?: number | string;
+  gradeLibelle?: string;
+  salaireBase: number;
+  totalIndemnites: number;
+  salaireBrut: number;
+}
+
+export interface EmployeeIndemnity {
+  id: number | string;
+  typeIndemniteId: number | string;
+  typeIndemniteCode?: string;
+  libelle: string;
+  employeeId: number | string;
+  parametrageIndemniteId?: number | string;
+  montant: number;
+  actif: boolean;
+}
+
+export interface EmployeeExemption {
+  id: number | string;
+  typeIndemniteId: number | string;
+  typeIndemniteCode?: string;
+  libelle: string;
+  employeeId: number | string;
+  indemniteEmployeId: number | string;
+  montant: number;
+  tauxExonere: number;
+  plafondExonere: number;
+}
+
 export interface DocumentRH {
   id: string;
   libelle: string;
@@ -125,6 +186,12 @@ export interface Employee {
   numeroPoste?: string;
   directeurHierarchique?: string;
   organismeRetraite?: string;
+  fonctionId?: string;
+  emploiId?: string;
+  departmentId?: string;
+  directionId?: string;
+  serviceId?: string;
+  agenceId?: string;
 
   // Catégorie
   categoriePro: string;
@@ -132,6 +199,10 @@ export interface Employee {
   grade: string;
   niveau: string;
   echelle?: string;
+  gradeId?: string;
+  categorieId?: string;
+  echelonId?: string;
+  grilleSalarialeId?: string;
 
   // Indemnités
   primeLogement: number;
@@ -161,6 +232,10 @@ export interface Employee {
   observations: string;
   evaluations: Evaluation[];
   historiqueActions: ActionRH[];
+
+  regimeSecuriteSocialId?: string;
+  regimeSecuriteSocialCode?: string;
+  regimeSecuriteSocialLibelle?: string;
 }
 
 export const STATUT_COLORS: Record<StatutEmploye, { background: string; color: string }> = {

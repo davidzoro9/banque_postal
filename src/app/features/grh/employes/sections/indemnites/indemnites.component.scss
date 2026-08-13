@@ -9,11 +9,15 @@
 .total-lbl { font-size: 14px; font-weight: 600; color: var(--on-surface-2); }
 .total-val { font-size: 18px; font-weight: 800; color: #004080; }
 
-.readonly-field {
-  input[readonly] {
-    background-color: #f1f5f9 !important;
-    cursor: not-allowed !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
-  }
+.simple-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.simple-row { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 14px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.simple-row:last-child { border-bottom: 0; }
+.code-badge { width: fit-content; padding: 4px 9px; border-radius: 6px; background: var(--surface-variant); color: var(--on-surface-2); font-size: 12px; font-weight: 700; }
+.row-label { color: var(--on-surface); font-size: 14px; font-weight: 600; }
+.row-amount { color: #004080; font-size: 15px; font-weight: 800; white-space: nowrap; }
+.empty-state { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 28px 16px; color: var(--on-surface-3); font-size: 13px; }
+
+@media (max-width: 640px) {
+  .simple-row { grid-template-columns: 1fr auto; }
+  .code-badge { grid-column: 1 / -1; }
 }

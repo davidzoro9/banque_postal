@@ -15,7 +15,8 @@ export function computeEmployeeFamilyCharges(
   emp: any,
   optionsOrAgeMaxStd?: { ageMaxStd?: number; ageMaxEtud?: number; maxCap?: number; conjointActif?: boolean } | number,
   ageMaxEtudParam = 20,
-  maxCapParam = 4
+  maxCapParam = 4,
+  membres?: Array<{ estCharge?: boolean }>
 ): number {
   if (!emp) return 0;
 
@@ -31,6 +32,10 @@ export function computeEmployeeFamilyCharges(
     if (optionsOrAgeMaxStd.conjointActif != null) conjointActif = optionsOrAgeMaxStd.conjointActif;
   } else if (typeof optionsOrAgeMaxStd === 'number') {
     ageMaxStd = optionsOrAgeMaxStd;
+  }
+
+  if (membres) {
+    return Math.min(maxCap, membres.filter(membre => membre.estCharge).length);
   }
 
   // 1. Conjoint non-salarié

@@ -5,6 +5,8 @@ import { EmployeeService } from '../../../grh/employes/services/employee.service
 import { Employee } from '../../../grh/employes/models/employee.model';
 import { calculateOfficialIUTS, computeEmployeeFamilyCharges } from '../../../../core/utils/iuts-calculator.utils';
 import { DbRefService } from '../../../donnees-base/services/db-ref.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-generer-bulletins',
@@ -83,16 +85,27 @@ export class GenererBulletinsComponent implements OnInit {
 
   private genererBulletinsDepuisEmployees(employeeList?: Employee[]): void {
     if (employeeList && employeeList.length > 0) {
-      const calculated = employeeList.map(emp => this.buildBulletinFromEmployee(emp));
-      this.bulletins = this.adapterBulletinsSelonSession(calculated);
-      this.restaurerSessionState();
-      this.isCalculating = false;
+      this.buildBulletins(employeeList);
       return;
     }
 
     this.employeeService.getAll().subscribe(employees => {
       const list = (employees && employees.length > 0) ? employees : [];
-      const calculated = list.map(emp => this.buildBulletinFromEmployee(emp));
+      this.buildBulletins(list);
+    });
+  }
+
+  private buildBulletins(employees: Employee[]): void {
+    if (employees.length === 0) {
+      this.bulletins = [];
+      this.isCalculating = false;
+      return;
+    }
+
+    forkJoin(employees.map(emp => this.employeeService.getFamily(String(emp.id)).pipe(
+      catchError(() => of(undefined))
+    ))).subscribe(families => {
+      const calculated = employees.map((emp, index) => this.buildBulletinFromEmployee(emp, families[index]));
       this.bulletins = this.adapterBulletinsSelonSession(calculated);
       this.restaurerSessionState();
       this.isCalculating = false;
@@ -125,7 +138,7 @@ export class GenererBulletinsComponent implements OnInit {
     return `${cat}${ech}`;
   }
 
-  private buildBulletinFromEmployee(emp: Employee): any {
+  private buildBulletinFromEmployee(emp: Employee, famille?: Array<{ estCharge?: boolean }>): any {
     const sBase = emp.salaireBase || 150000;
     const pLog = emp.primeLogement || 0;
     const pTrans = emp.primeTransport || 0;
@@ -143,7 +156,7 @@ export class GenererBulletinsComponent implements OnInit {
     }
 
     const pecParams = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : undefined;
-    const nCharges = computeEmployeeFamilyCharges(emp, pecParams);
+    const nCharges = computeEmployeeFamilyCharges(emp, pecParams, 20, 4, famille);
     const computedGrade = this.computeGradeCode(emp);
 
     const calc = calculateOfficialIUTS(sBase, indemnitesList, {

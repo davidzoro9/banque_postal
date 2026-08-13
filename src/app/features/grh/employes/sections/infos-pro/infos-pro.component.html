@@ -28,6 +28,11 @@
     </mat-card-header>
 
     <mat-card-content>
+      @if (loadError) {
+        <div style="margin-bottom: 16px; padding: 12px 14px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+          {{ loadError }}
+        </div>
+      }
       @if (!employee) {
       <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
       }
@@ -63,109 +68,187 @@
         <div class="form-grid-2">
           <mat-form-field appearance="outline">
             <mat-label>Fonction / Nomination</mat-label>
-            <mat-select formControlName="fonction">
-              <mat-option value="Agent simple">Agent simple (Sans nomination)</mat-option>
-              
-              @for (fct of (fonctions$ | async); track fct.id || fct.code) {
-                <mat-option [value]="fct.libelle || fct.name || fct.code">{{ fct.libelle || fct.name || fct.code }}</mat-option>
-              }
-            </mat-select>
+            <mat-select formControlName="fonctionId">
+            <mat-option [value]="null">
+              Agent simple, sans nomination
+            </mat-option>
+
+            @for (fonction of fonctions$ | async; track fonction.id) {
+              <mat-option [value]="fonction.id">
+                {{ fonction.libelle || fonction.code }}
+              </mat-option>
+            }
+          </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Emploi / Emploi occupé</mat-label>
-            <input matInput formControlName="poste" placeholder="Ex: Informaticien, Comptable, Analyste...">
+            <mat-select formControlName="emploiId">
+              <mat-option [value]="null">Aucun emploi</mat-option>
+
+              @for (emploi of emplois$ | async; track emploi.id) {
+                <mat-option [value]="emploi.id">
+                  {{ emploi.libelle || emploi.code }}
+                </mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <!-- Si DIRECTEUR DE DEPARTEMENT ou RESPONSABLE DE DEPARTEMENT -> Sélection dynamique du Département -->
-          @if (form.get('fonction')?.value === 'DIRECTEUR DE DEPARTEMENT' || form.get('fonction')?.value === 'RESPONSABLE DE DEPARTEMENT') {
+          @if (isDirecteurDepartement) {
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Département de nomination*</mat-label>
-              <mat-select formControlName="direction">
-                <mat-option value="">— Choisir le département —</mat-option>
-                @for (item of directionsAndDepartements$ | async; track item.code) {
-                  <mat-option [value]="item.libelle">{{ item.libelle }}</mat-option>
+              <mat-select formControlName="departmentId">
+                <mat-option [value]="null">— Choisir le département —</mat-option>
+                @for (item of departements$ | async; track item.id) {
+                  <mat-option [value]="item.id">{{ item.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
           <!-- Si CHEF DE SERVICE -> Sélection dynamique du Service -->
-          @if (form.get('fonction')?.value === 'CHEF DE SERVICE') {
+          @if (isChefService) {
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Service de nomination*</mat-label>
-              <mat-select formControlName="service">
+              <mat-select formControlName="serviceId">
                 <mat-option value="">— Choisir le service —</mat-option>
-                @for (srv of services$ | async; track srv.code) {
-                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                @for (srv of services$ | async; track srv.id) {
+                  <mat-option [value]="srv.id">{{ srv.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
           <!-- Si CHEF D'AGENCE -> Sélection dynamique de l'Agence -->
-          @if (form.get('fonction')?.value === "CHEF D'AGENCE") {
+          @if (selectedFonctionName.includes("CHEF D'AGENCE")) {
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Agence de nomination*</mat-label>
-              <mat-select formControlName="agence">
-                <mat-option value="">— Choisir l'agence —</mat-option>
-                @for (ag of agences$ | async; track ag.code) {
-                  <mat-option [value]="ag.libelle">{{ ag.libelle }}</mat-option>
+              <mat-select formControlName="agenceId">
+                <mat-option [value]="null">— Choisir l'agence —</mat-option>
+                @for (ag of agences$ | async; track ag.id) {
+                  <mat-option [value]="ag.id">{{ ag.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
           <!-- Champs généraux de rattachement structurel -->
-          @if (form.get('fonction')?.value !== 'CHEF DE SERVICE') {
+          @if (!isChefService) {
             <mat-form-field appearance="outline">
               <mat-label>Service (Optionnel)</mat-label>
-              <mat-select formControlName="service">
+              <mat-select formControlName="serviceId">
                 <mat-option value="">— Aucun service —</mat-option>
-                @for (srv of services$ | async; track srv.code) {
-                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                @for (srv of services$ | async; track srv.id) {
+                  <mat-option [value]="srv.id">{{ srv.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
-          @if (form.get('fonction')?.value !== 'DIRECTEUR DE DEPARTEMENT' && form.get('fonction')?.value !== 'RESPONSABLE DE DEPARTEMENT') {
+          @if (!isDirecteurDepartement) {
             <mat-form-field appearance="outline">
               <mat-label>Direction / Département</mat-label>
-              <mat-select formControlName="direction">
-                <mat-option value="">— Aucune direction / département —</mat-option>
-                @for (item of directionsAndDepartements$ | async; track item.code) {
-                  <mat-option [value]="item.libelle">{{ item.libelle }}</mat-option>
+              <mat-select formControlName="directionId">
+                <mat-option [value]="null">— Aucune direction —</mat-option>
+                @for (item of directions$ | async; track item.id) {
+                  <mat-option [value]="item.id">{{ item.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
+
+
+          <mat-form-field appearance="outline">
+            <mat-label>Régime de sécurité sociale</mat-label>
+
+            <mat-select
+              formControlName="regimeSecuriteSocialId">
+
+              <mat-option [value]="null">
+                Aucun régime
+              </mat-option>
+
+              @for (
+                regime of regimesSecuriteSocial$ | async;
+                track regime.id
+              ) {
+                <mat-option [value]="regime.id">
+                  {{ regime.code }} — {{ regime.libelle }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         </div>
 
         <p class="form-section-label">Classification & Grille salariale</p>
         <div class="form-grid-3">
+
           <mat-form-field appearance="outline">
-            <mat-label>Catégorie / Classe</mat-label>
-            <mat-select formControlName="categoriePro">
-              @for (c of availableCategories; track c.code) {
-                <mat-option [value]="c.code">{{ c.label }}</mat-option>
+            <mat-label>Groupe/Grade</mat-label>
+
+            <mat-select
+              formControlName="gradeId"
+              (selectionChange)="onGradeChange()">
+
+              @for (grade of grades$ | async; track grade.id) {
+                <mat-option [value]="grade.id">
+                  {{ grade.libelle || grade.code }}
+                </mat-option>
               }
             </mat-select>
+            @if (form.get('gradeId')?.hasError('required')) {
+              <mat-error>Le groupe est obligatoire</mat-error>
+            }
+          </mat-form-field>
+
+
+          <mat-form-field appearance="outline">
+            <mat-label>Catégorie/Classe</mat-label>
+
+            <mat-select
+              formControlName="categorieId"
+              (selectionChange)="onCategoryChange()">
+
+              @for (categorie of availableSalaryCategories; track categorie.id) {
+                <mat-option [value]="categorie.id">
+                  {{ categorie.libelle || categorie.code }}
+                </mat-option>
+              }
+            </mat-select>
+            @if (form.get('categorieId')?.hasError('required')) {
+              <mat-error>La catégorie est obligatoire</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Échelon</mat-label>
-            <mat-select formControlName="echelon">
-              @for (ech of availableEchelons; track ech.code) {
-                <mat-option [value]="ech.code">{{ ech.label }}</mat-option>
+
+            <mat-select
+              formControlName="echelonId"
+              (selectionChange)="onClassificationChange()">
+
+              @for (echelon of availableSalaryEchelons; track echelon.id) {
+                <mat-option [value]="echelon.id">
+                  {{ echelon.libelle || echelon.code }}
+                </mat-option>
               }
             </mat-select>
+            @if (form.get('echelonId')?.hasError('required')) {
+              <mat-error>L’échelon est obligatoire</mat-error>
+            }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="readonly-field">
-            <mat-label>Grade calculé</mat-label>
-            <input matInput formControlName="grade" readonly>
-            <mat-icon matSuffix style="color: #0060B3;">verified</mat-icon>
+          <mat-form-field appearance="outline">
+            <mat-label>Salaire de base</mat-label>
+
+            <input
+              matInput
+              [value]="selectedSalaryGrid?.montant || 0"
+              readonly>
+            @if (form.get('grilleSalarialeId')?.hasError('required')) {
+              <mat-error>Aucune grille ne correspond à cette classification</mat-error>
+            }
           </mat-form-field>
         </div>
 
@@ -235,7 +318,17 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <div class="sec-actions">
+          @if (saved) {
+            <div style="margin-bottom: 12px; padding: 10px 14px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+              Modifications enregistrées.
+            </div>
+          }
+          @if (saveError) {
+            <div style="margin-bottom: 12px; padding: 10px 14px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+              {{ saveError }}
+            </div>
+          }
+          <div class="sec-actions">
         <button mat-stroked-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>
           Retour au menu

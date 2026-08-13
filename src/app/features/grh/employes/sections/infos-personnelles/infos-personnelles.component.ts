@@ -16,6 +16,8 @@ export class InfosPersonnellesComponent implements OnInit {
   employee?: Employee;
   form!: FormGroup;
   saving = false;
+  saved = false;
+  saveError = '';
   isEditing = false;
   empId = '';
   villes: RefItem[] = [];
@@ -170,6 +172,8 @@ export class InfosPersonnellesComponent implements OnInit {
   save(next?: string): void {
     if (this.form.invalid) return;
     this.saving = true;
+    this.saved = false;
+    this.saveError = '';
     const v = this.form.getRawValue();
     
     let dob = v.dateNaissance;
@@ -192,11 +196,17 @@ export class InfosPersonnellesComponent implements OnInit {
       contactUrgenceNom: v.contactUrgenceNom,
       contactUrgenceTelephone: v.contactUrgenceTelephone,
       contactUrgenceLien: v.contactUrgenceLien
-    }).subscribe(() => {
-      this.saving = false;
-      this.isEditing = false;
-      this.form.disable();
-      if (next) this.router.navigate(['/grh/employes', this.empId, next]);
+    }).subscribe({
+      next: updated => {
+        this.saving = false;
+        this.employee = updated;
+        this.saved = true;
+        if (next) this.router.navigate(['/grh/employes', this.empId, next]);
+      },
+      error: err => {
+        this.saving = false;
+        this.saveError = err?.error?.message || err?.message || 'Impossible d’enregistrer les informations personnelles.';
+      }
     });
   }
 

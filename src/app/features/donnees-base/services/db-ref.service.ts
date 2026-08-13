@@ -34,6 +34,9 @@ export interface RefItem {
   typeRetenue?:   string;   // pour Paramétrage retenue (Part Agent, Part Employeur, Cotisation Sociale, etc.)
   typeRetenueId?: string;
   typeRetenueLibelle?: string;
+  regimeSecuriteSocialId?: string;
+  regimeSecuriteSocialCode?: string;
+  regimeSecuriteSocialLibelle?: string;
   fonction?:      string;   // pour Paramétrage indemnité
   fonctionId?: string;
   fonctionLibelle?: string;
@@ -57,6 +60,33 @@ const BACKEND_MAP: Record<string, {
   toBack: (item: RefItem) => any;
   toBackUpdate: (item: RefItem) => any;
 }> = {
+  'regime-securite-social': {
+    segment: 'regime-securite-social',
+    getAllPath: '',
+
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code,
+      libelle: dto.libelle,
+      description: dto.description || '',
+      actif: dto.actif ?? true
+    }),
+
+    toBack: item => ({
+      code: item.code,
+      libelle: item.libelle,
+      description: item.description,
+      actif: item.actif
+    }),
+
+    toBackUpdate: item => ({
+      id: item.id ? Number(item.id) : null,
+      code: item.code,
+      libelle: item.libelle,
+      description: item.description,
+      actif: item.actif
+    })
+  },
   'grille-salariale': {
     segment: 'grillesalariale',
     getAllPath: '',
@@ -408,14 +438,19 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.libelle,
                        typeRetenueId: dto.typeRetenueId ? String(dto.typeRetenueId) : undefined,
                        typeRetenueLibelle: dto.typeRetenueLibelle || dto.typeRetenue || '',
-                       typeRetenue: dto.typeRetenueLibelle || dto.typeRetenue || '', taux: dto.taux ?? 0,
+                       typeRetenue: dto.typeRetenueLibelle || dto.typeRetenue || '',
+                       regimeSecuriteSocialId: dto.regimeSecuriteSocialId ? String(dto.regimeSecuriteSocialId) : undefined,
+                       regimeSecuriteSocialCode: dto.regimeSecuriteSocialCode || '',
+                       regimeSecuriteSocialLibelle: dto.regimeSecuriteSocialLibelle || '', taux: dto.taux ?? 0,
                        description: dto.description || '', actif: dto.actif ?? true }),
     toBack:  item => ({ code: item.code, libelle: item.libelle,
-                        typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
-                        taux: item.taux, description: item.description, actif: item.actif }),
+                         typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
+                         regimeSecuriteSocialId: item.regimeSecuriteSocialId ? Number(item.regimeSecuriteSocialId) : null,
+                         taux: item.taux, description: item.description, actif: item.actif }),
     toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle,
-                             typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
-                             taux: item.taux, description: item.description, actif: item.actif }),
+                              typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
+                              regimeSecuriteSocialId: item.regimeSecuriteSocialId ? Number(item.regimeSecuriteSocialId) : null,
+                              taux: item.taux, description: item.description, actif: item.actif }),
   },
   'agence': {
     segment: 'agences',

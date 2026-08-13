@@ -113,7 +113,7 @@
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.25s ease;
-  &.open { max-height: 500px; }
+  &.open { max-height: 2000px; }
 }
 
 .child-item {
