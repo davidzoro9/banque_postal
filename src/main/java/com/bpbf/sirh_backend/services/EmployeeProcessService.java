@@ -22,11 +22,12 @@ public class EmployeeProcessService {
     private final IndemniteEmployeRepository indemniteRepository;
     private final ExonerationEmployeRepository exonerationRepository;
     private final ParametrageIndemniteRepository parametrageRepository;
+    private final InformationSalarialeRetenueRepository informationRetenueRepository;
+    private final InformationSalarialeCalculService informationCalculService;
 
     @Transactional
     public void sync(Employee employee, EmployeeDto dto) {
-        upsertInformation(employee, dto.getModePaiement(), dto.getBanque(), dto.getIban(),
-                dto.getIntituleCompte(), dto.getSalaireBrut());
+        upsertInformation(employee, dto.getModePaiement(), dto.getBanque(), dto.getIban(), dto.getIntituleCompte());
 
         Long fonctionId = idOf(employee.getFonction());
         Long gradeId = idOf(employee.getGradeObj());
@@ -93,6 +94,7 @@ public class EmployeeProcessService {
             exoneration.setMontant(calculateExoneration(indemnite.getMontant(), taux, plafond));
             exonerationRepository.save(exoneration);
         }
+        informationCalculService.recalculate(employee);
     }
 
     static double calculateExoneration(Double montant, Double taux, Double plafond) {
@@ -113,7 +115,9 @@ public class EmployeeProcessService {
         FamilleEmploye entity = new FamilleEmploye();
         entity.setEmployee(employee);
         copyFamille(dto, entity);
-        return toDto(familleRepository.save(entity));
+        FamilleEmploye saved = familleRepository.save(entity);
+        informationCalculService.recalculate(employee);
+        return toDto(saved);
     }
 
     @Transactional
@@ -123,7 +127,9 @@ public class EmployeeProcessService {
                 .filter(membre -> membre.getEmployee().getId().equals(employee.getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Membre de famille non trouvé: " + membreId));
         copyFamille(dto, entity);
-        return toDto(familleRepository.save(entity));
+        FamilleEmploye saved = familleRepository.save(entity);
+        informationCalculService.recalculate(employee);
+        return toDto(saved);
     }
 
     @Transactional
@@ -133,20 +139,33 @@ public class EmployeeProcessService {
                 .filter(membre -> membre.getEmployee().getId().equals(employee.getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Membre de famille non trouvé: " + membreId));
         familleRepository.delete(entity);
+        familleRepository.flush();
+        informationCalculService.recalculate(employee);
     }
 
     @Transactional(readOnly = true)
     public InformationSalarialeDto getInformation(String idOrMatricule) {
         Employee employee = resolveEmployee(idOrMatricule);
-        return informationRepository.findByEmployeeId(employee.getId()).map(this::toDto)
-                .orElseGet(() -> new InformationSalarialeDto(null, employee.getId(), null, null, null, null, null));
+        return informationRepository.findByEmployeeId(employee.getId())
+                .map(informationCalculService::toDto)
+                .orElseGet(() -> {
+                    InformationSalarialeDto dto = new InformationSalarialeDto();
+                    dto.setEmployeeId(employee.getId());
+                    return dto;
+                });
     }
 
     @Transactional
     public InformationSalarialeDto putInformation(String idOrMatricule, InformationSalarialeDto dto) {
         Employee employee = resolveEmployee(idOrMatricule);
-        return toDto(upsertInformation(employee, dto.getModePaiement(), dto.getBanque(), dto.getIban(),
-                dto.getIntituleCompte(), dto.getSalaireBrut()));
+        upsertInformation(employee, dto.getModePaiement(), dto.getBanque(), dto.getIban(), dto.getIntituleCompte());
+        return informationCalculService.toDto(informationCalculService.recalculate(employee));
+    }
+
+    @Transactional
+    public InformationSalarialeDto recalculateInformation(String idOrMatricule) {
+        Employee employee = resolveEmployee(idOrMatricule);
+        return informationCalculService.toDto(informationCalculService.recalculate(employee));
     }
 
     @Transactional(readOnly = true)
@@ -179,12 +198,14 @@ public class EmployeeProcessService {
         indemniteRepository.deleteByEmployeeId(employeeId);
         indemniteRepository.flush();
         situationRepository.deleteByEmployeeId(employeeId);
+        informationRepository.findByEmployeeId(employeeId)
+                .ifPresent(information -> informationRetenueRepository.deleteByInformationSalarialeId(information.getId()));
         informationRepository.deleteByEmployeeId(employeeId);
         familleRepository.deleteByEmployeeId(employeeId);
     }
 
     private InformationSalariale upsertInformation(Employee employee, String modePaiement, String banque,
-                                                     String iban, String intituleCompte, Double salaireBrut) {
+                                                     String iban, String intituleCompte) {
         InformationSalariale entity = informationRepository.findByEmployeeId(employee.getId())
                 .orElseGet(InformationSalariale::new);
         entity.setEmployee(employee);
@@ -192,7 +213,6 @@ public class EmployeeProcessService {
         if (banque != null) entity.setBanque(banque);
         if (iban != null) entity.setIban(iban);
         if (intituleCompte != null) entity.setIntituleCompte(intituleCompte);
-        if (salaireBrut != null) entity.setSalaireBrut(salaireBrut);
         return informationRepository.save(entity);
     }
 
@@ -227,11 +247,6 @@ public class EmployeeProcessService {
         entity.setLienParente(dto.getLienParente());
         entity.setEstCharge(Boolean.TRUE.equals(dto.getEstCharge()));
         entity.setStatut(dto.getStatut());
-    }
-
-    private InformationSalarialeDto toDto(InformationSalariale e) {
-        return new InformationSalarialeDto(e.getId(), e.getEmployee().getId(), e.getModePaiement(),
-                e.getBanque(), e.getIban(), e.getIntituleCompte(), e.getSalaireBrut());
     }
 
     private SituationSalarialeDto toDto(SituationSalariale e) {

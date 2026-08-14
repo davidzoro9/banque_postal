@@ -3,6 +3,8 @@ package com.bpbf.sirh_backend.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Getter
 @Setter
@@ -22,5 +24,47 @@ public class InformationSalariale {
     private String banque;
     private String iban;
     private String intituleCompte;
-    private Double salaireBrut;
+    @Column(precision = 19, scale = 2)
+    private BigDecimal salaireBase;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal totalIndemnites;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal remunerationBrute;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal totalExonerations;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal baseImposable;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal abattementForfaitaire;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal totalRetenuesAgent;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal totalRetenuesEmployeur;
+
+    private Integer nombrePersonnesCharge;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal iutsSansCharge;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal tauxReductionCharge;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal reductionIutsCharge;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal iutsAvecCharge;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal totalDeduitEmploye;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal salaireNet;
 }

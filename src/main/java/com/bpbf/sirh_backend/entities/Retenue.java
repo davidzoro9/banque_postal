@@ -27,6 +27,10 @@ public class Retenue {
     private RegimeSecuriteSocial regimeSecuriteSocial;
 
     private Double taux;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "base_calcul", nullable = false, length = 50)
+    private BaseCalculRetenue baseCalcul = BaseCalculRetenue.REMUNERATION_BRUTE;
     
     @Column(columnDefinition = "TEXT")
     private String description;

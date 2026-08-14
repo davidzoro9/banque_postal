@@ -68,6 +68,11 @@ public class EmployeeController {
         return employeeProcessService.putInformation(id, dto);
     }
 
+    @PostMapping("/{id}/informations-salariales/recalculer")
+    public InformationSalarialeDto recalculateInformationsSalariales(@PathVariable String id) {
+        return employeeProcessService.recalculateInformation(id);
+    }
+
     @GetMapping("/{id}/indemnites")
     public List<IndemniteEmployeDto> getIndemnites(@PathVariable String id) {
         return employeeProcessService.getIndemnites(id);

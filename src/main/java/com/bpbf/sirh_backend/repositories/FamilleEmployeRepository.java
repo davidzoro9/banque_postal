@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface FamilleEmployeRepository extends JpaRepository<FamilleEmploye, Long> {
     List<FamilleEmploye> findByEmployeeIdOrderByNomAscPrenomAsc(Long employeeId);
+    long countByEmployeeIdAndEstChargeTrue(Long employeeId);
     void deleteByEmployeeId(Long employeeId);
 }

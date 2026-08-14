@@ -1,5 +1,6 @@
 package com.bpbf.sirh_backend.dtos;
 
+import com.bpbf.sirh_backend.entities.BaseCalculRetenue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,7 @@ public class RetenueDto {
     private String regimeSecuriteSocialCode;
     private String regimeSecuriteSocialLibelle;
     private Double taux;
+    private BaseCalculRetenue baseCalcul;
     private String description;
     private Boolean actif;
 }
