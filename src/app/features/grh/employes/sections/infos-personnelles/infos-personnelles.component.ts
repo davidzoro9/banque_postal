@@ -201,7 +201,12 @@ export class InfosPersonnellesComponent implements OnInit {
         this.saving = false;
         this.employee = updated;
         this.saved = true;
-        if (next) this.router.navigate(['/grh/employes', this.empId, next]);
+        if (next) {
+          this.router.navigate(['/grh/employes', this.empId, next]);
+        } else {
+          this.form.disable();
+          this.isEditing = false;
+        }
       },
       error: err => {
         this.saving = false;

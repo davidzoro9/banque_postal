@@ -20,6 +20,7 @@ export const EMPLOYEE_SECTIONS: SectionDef[] = [
   { id: 'situation-salariale', title: 'Situation salariale', subtitle: 'Catégorie, échelon & barème', icon: 'military_tech', route: 'situation-salariale' },
   { id: 'indemnites', title: 'Indemnités', subtitle: 'Primes & indemnités calculées', icon: 'paid', route: 'indemnites' },
   { id: 'exonerations', title: 'Exonérations', subtitle: 'Exonérations fiscales & sociales', icon: 'receipt_long', route: 'exonerations' },
+  // { id: 'retenues', title: 'Retenues', subtitle: 'Cotisations et retenues salariales', icon: 'remove_circle', route: 'retenues' },
   { id: 'salaire', title: 'Informations salariales', subtitle: 'Mode de paiement & compte bancaire', icon: 'account_balance_wallet', route: 'salaire' },
   { id: 'dossier', title: 'Dossier individuel', subtitle: 'Pièces jointes & documents RH', icon: 'folder_open', route: 'dossier' },
   { id: 'notes-rh', title: 'Notes RH', subtitle: 'Évaluations, sanctions & observations', icon: 'note_alt', route: 'notes-rh' }

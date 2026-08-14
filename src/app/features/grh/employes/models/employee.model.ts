@@ -56,7 +56,36 @@ export interface EmployeeSalaryInformation {
   banque: string;
   iban: string;
   intituleCompte: string;
-  salaireBrut?: number;
+  salaireBase: number;
+  indemnites: EmployeeIndemnity[];
+  totalIndemnites: number;
+  remunerationBrute: number;
+  totalExonerations: number;
+  abattementForfaitaire: number;
+  baseImposable: number;
+  retenuesAgent: EmployeeSalaryDeduction[];
+  totalRetenuesAgent: number;
+  retenuesEmployeur: EmployeeSalaryDeduction[];
+  totalRetenuesEmployeur: number;
+  nombrePersonnesCharge: number;
+  iutsSansCharge: number;
+  tauxReductionCharge: number;
+  reductionIutsCharge: number;
+  iutsAvecCharge: number;
+  totalDeduitEmploye: number;
+  salaireNet: number;
+}
+
+export interface EmployeeSalaryDeduction {
+  id: number | string;
+  retenueId: number | string;
+  code: string;
+  libelle: string;
+  typeRetenueCode: string;
+  baseCalcul: 'SALAIRE_BASE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
+  montantBase: number;
+  taux: number;
+  montantCalcule: number;
 }
 
 export interface EmployeeSalarySituation {

@@ -222,6 +222,13 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="baseCalcul">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Base de calcul</th>
+              <td mat-cell *matCellDef="let row">
+                {{ row.baseCalcul === 'SALAIRE_BASE' ? 'Salaire de base' : (row.baseCalcul === 'BASE_IMPOSABLE' ? 'Base imposable' : 'Rémunération brute') }}
+              </td>
+            </ng-container>
+
             <!-- Colonnes spécifiques à Paramétrage Indemnité -->
             <ng-container matColumnDef="typeIndemnite">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Type d'indemnité</th>
@@ -495,6 +502,18 @@
           }
         </mat-select>
         <mat-hint>Laissez vide pour une retenue applicable à tous les régimes.</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Base de calcul</mat-label>
+        <mat-select formControlName="baseCalcul">
+          <mat-option value="SALAIRE_BASE">Salaire de base</mat-option>
+          <mat-option value="REMUNERATION_BRUTE">Rémunération brute</mat-option>
+          <mat-option value="BASE_IMPOSABLE">Base imposable</mat-option>
+        </mat-select>
+        @if (formGroup.get('baseCalcul')?.hasError('required')) {
+          <mat-error>La base de calcul est obligatoire</mat-error>
+        }
       </mat-form-field>
     } @else if (type === 'param-indemnite') {
       <!-- ─── REGLAGE DE L'INDEMNITE SELON LA GRILLE OFFICIELLE BPBF ──────────────── -->

@@ -399,6 +399,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       typeRetenue:   ['Part Agent'],
       typeRetenueId: [null],
       regimeSecuriteSocialId: [null],
+      baseCalcul: ['REMUNERATION_BRUTE'],
       fonction:      [''],
       fonctionId:    [null],
       grade:         [''],
@@ -432,7 +433,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       } else if (this.type === 'type-indemnite') {
         this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {
-        this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'regimeSecuriteSocial', 'taux', 'actif', 'actions'];
+        this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'regimeSecuriteSocial', 'baseCalcul', 'taux', 'actif', 'actions'];
       } else if (this.type === 'grade') {
         this.displayedColumns = ['code', 'libelle', 'actif', 'actions'];
       } else if (this.type === 'param-groupe') {
@@ -593,6 +594,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('typeIndemniteId')?.clearValidators();
     this.formGroup.get('typeRetenue')?.clearValidators();
     this.formGroup.get('typeRetenueId')?.clearValidators();
+    this.formGroup.get('baseCalcul')?.clearValidators();
     this.formGroup.get('fonctionId')?.clearValidators();
     this.formGroup.get('directeurId')?.clearValidators();
     this.formGroup.get('departementId')?.clearValidators();
@@ -611,6 +613,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       }
     } else if (this.type === 'type-retenue-emploi') {
       this.formGroup.get('typeRetenueId')?.setValidators([Validators.required]);
+      this.formGroup.get('baseCalcul')?.setValidators([Validators.required]);
     } else if (this.type === 'grille-salariale') {
       this.formGroup.get('gradeId')?.setValidators([Validators.required]);
       this.formGroup.get('categorieId')?.setValidators([Validators.required]);
@@ -635,6 +638,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('typeIndemniteId')?.updateValueAndValidity();
     this.formGroup.get('typeRetenue')?.updateValueAndValidity();
     this.formGroup.get('typeRetenueId')?.updateValueAndValidity();
+    this.formGroup.get('baseCalcul')?.updateValueAndValidity();
     this.formGroup.get('fonctionId')?.updateValueAndValidity();
     this.formGroup.get('directeurId')?.updateValueAndValidity();
     this.formGroup.get('departementId')?.updateValueAndValidity();
@@ -655,6 +659,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       categorieId: null, echelonId: null, gradeId: null, echelle: '', echellon: '',
       typeIndemnite: '', typeIndemniteId: null, typeRetenue: '', typeRetenueId: null,
       regimeSecuriteSocialId: null,
+      baseCalcul: 'REMUNERATION_BRUTE',
       fonction: '', fonctionId: null, grade: '', categorie: '', categories: [], taux: 0,
       tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25, typeNomination: 'NON_NOMMEE'
     });
@@ -759,6 +764,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         typeRetenue:   item.typeRetenueLibelle || item.typeRetenue || '',
         typeRetenueId: item.typeRetenueId ? String(item.typeRetenueId) : null,
         regimeSecuriteSocialId: item.regimeSecuriteSocialId ? String(item.regimeSecuriteSocialId) : null,
+        baseCalcul: item.baseCalcul || 'REMUNERATION_BRUTE',
         fonction:      item.fonction || '',
         grade:         item.grade || '',
         categorie:     item.categorie || '',
@@ -1074,7 +1080,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         regimeSecuriteSocialId: v.regimeSecuriteSocialId ? String(v.regimeSecuriteSocialId) : undefined,
         regimeSecuriteSocialCode: selectedRegimeSecuriteSocial?.code || '',
         regimeSecuriteSocialLibelle: selectedRegimeSecuriteSocial?.libelle || '',
-        taux:          Number(v.taux ?? 0)
+        taux:          Number(v.taux ?? 0),
+        baseCalcul:    v.baseCalcul
       };
     } else {
       const libelleVal = v.libelle && v.libelle.trim() ? v.libelle.trim() : (this.editingItem?.libelle || 'Nouvel Élément');

@@ -4,6 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
+export type BaseCalculRetenue = 'SALAIRE_BASE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
+
 export interface RefItem {
   id?: string;
   code: string;
@@ -43,6 +45,7 @@ export interface RefItem {
   grade?:         string;   // pour Paramétrage indemnité
   categorie?:     string;   // pour Paramétrage indemnité
   taux?:          number;   // pour Paramétrage indemnité / Retenue
+  baseCalcul?: BaseCalculRetenue;
   tauxAbattement?: number;  // pour Catégorie (Abattement brut pour IUTS)
   tauxExoneration?: number; // pour Paramétrage indemnité (% Exonéré)
   plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
@@ -442,15 +445,18 @@ const BACKEND_MAP: Record<string, {
                        regimeSecuriteSocialId: dto.regimeSecuriteSocialId ? String(dto.regimeSecuriteSocialId) : undefined,
                        regimeSecuriteSocialCode: dto.regimeSecuriteSocialCode || '',
                        regimeSecuriteSocialLibelle: dto.regimeSecuriteSocialLibelle || '', taux: dto.taux ?? 0,
+                       baseCalcul: dto.baseCalcul || 'REMUNERATION_BRUTE',
                        description: dto.description || '', actif: dto.actif ?? true }),
     toBack:  item => ({ code: item.code, libelle: item.libelle,
                          typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
                          regimeSecuriteSocialId: item.regimeSecuriteSocialId ? Number(item.regimeSecuriteSocialId) : null,
-                         taux: item.taux, description: item.description, actif: item.actif }),
+                          taux: item.taux, baseCalcul: item.baseCalcul || 'REMUNERATION_BRUTE',
+                          description: item.description, actif: item.actif }),
     toBackUpdate: item => ({ id: item.id, code: item.code, libelle: item.libelle,
                               typeRetenueId: item.typeRetenueId ? Number(item.typeRetenueId) : null,
                               regimeSecuriteSocialId: item.regimeSecuriteSocialId ? Number(item.regimeSecuriteSocialId) : null,
-                              taux: item.taux, description: item.description, actif: item.actif }),
+                               taux: item.taux, baseCalcul: item.baseCalcul || 'REMUNERATION_BRUTE',
+                               description: item.description, actif: item.actif }),
   },
   'agence': {
     segment: 'agences',

@@ -1,23 +1,28 @@
 .spin-icon { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-.salary-summary {
-  display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap;
-}
-.sal-item {
-  flex: 1; min-width: 180px;
-  background: var(--surface-variant); border-radius: 10px; padding: 14px 18px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.sal-lbl { font-size: 12px; color: var(--on-surface-3); font-weight: 600; }
-.sal-val { font-size: 16px; font-weight: 800; color: var(--on-surface); }
-.sal-val.highlight { color: #004080; font-size: 18px; }
-
-.readonly-field {
-  input[readonly] {
-    background-color: #f1f5f9 !important;
-    cursor: not-allowed !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
-  }
-}
+.loading, .empty { padding: 20px; color: var(--on-surface-3); text-align: center; }
+.error-box { padding: 12px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #b91c1c; }
+.success-box { margin-bottom: 14px; padding: 12px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; color: #166534; }
+.recalculate-button { margin-left: auto; align-self: center; }
+.totals-grid, .iuts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.total-card, .iuts-grid > div { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-variant); }
+.total-card span, .iuts-grid span { color: var(--on-surface-3); font-size: 12px; font-weight: 600; }
+.total-card strong, .iuts-grid strong { color: var(--on-surface); font-size: 15px; }
+.positive { color: #166534 !important; }
+.salary-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.salary-panel { margin-bottom: 18px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.salary-panel h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 14px; font-size: 15px; }
+.assets h3 { color: #166534; } .deductions h3 { color: #991b1b; } .employer h3 { color: #1d4ed8; }
+.salary-row, .deduction-row, .panel-total { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.deduction-row > div { display: flex; flex-direction: column; gap: 3px; }
+.deduction-row small { color: var(--on-surface-3); }
+.deduction-row > span { white-space: nowrap; font-weight: 700; }
+.panel-total { border: 0; padding-bottom: 0; font-weight: 800; }
+.net-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; margin-top: 20px; border-radius: 10px; background: #334155; color: white; }
+.net-box > div { display: flex; justify-content: space-between; padding: 18px; background: #0f172a; }
+.net-box > div:last-child strong { color: #ffc700; font-size: 20px; }
+.bank-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; padding: 16px; border-radius: 10px; background: var(--surface-variant); font-size: 13px; }
+.bank-box h3 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 14px; }
+@media (max-width: 900px) { .totals-grid, .iuts-grid, .bank-box { grid-template-columns: 1fr 1fr; } .salary-columns { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .totals-grid, .iuts-grid, .bank-box, .net-box { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .recalculate-button { margin: 12px 0 0 56px; } }

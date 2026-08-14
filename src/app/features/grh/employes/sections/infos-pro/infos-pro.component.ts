@@ -512,6 +512,8 @@ export class InfosProComponent implements OnInit {
           this.router.navigate(['/grh/employes', this.empId, next], { queryParams: { mode: 'creation' } });
         } else {
           this.saved = true;
+          this.form.disable();
+          this.isEditing = false;
         }
       },
       error: err => {

@@ -305,6 +305,13 @@ export class EmployeeService {
     return this.http.put<EmployeeSalaryInformation>(`${environment.apiUrl}/employes/${id}/informations-salariales`, data);
   }
 
+  recalculateSalaryInformation(id: string): Observable<EmployeeSalaryInformation> {
+    return this.http.post<EmployeeSalaryInformation>(
+      `${environment.apiUrl}/employes/${id}/informations-salariales/recalculer`,
+      null
+    );
+  }
+
   getSalarySituation(id: string): Observable<EmployeeSalarySituation> {
     return this.http.get<EmployeeSalarySituation>(`${environment.apiUrl}/employes/${id}/situation-salariale`);
   }

@@ -1,49 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import {
-  Employee,
-  EmployeeExemption,
-  EmployeeIndemnity,
-  EmployeeSalaryInformation,
-  EmployeeSalarySituation
-} from '../../models/employee.model';
+import { Employee, EmployeeSalaryInformation } from '../../models/employee.model';
 import { EmployeeService } from '../../services/employee.service';
-
-export interface IndemniteDetailItem {
-  libelle: string;
-  montant: number;
-}
-
-export interface SalaryCalcDetails {
-  salaireBase: number;
-  indemnitesList: IndemniteDetailItem[];
-  totalIndemnite: number;
-  remunerationBrut: number;
-  montantCnss: number;
-  fondsSoutienPat: number;
-  partPatronaleCnss: number;
-  crrae: number;
-  salaireBrutImposable: number;
-  abattementForfaitaire: number;
-  totalExoneration: number;
-  baseImposable: number;
-  iuts0Charge: number;
-  montantCharge: number;
-  iutsAvecCharge: number;
-  mutuel: number;
-  totalRetenue: number;
-  remunerationTotale: number;
-  netAPayer: number;
-}
-
-const EMPTY_CALC: SalaryCalcDetails = {
-  salaireBase: 0, indemnitesList: [], totalIndemnite: 0, remunerationBrut: 0,
-  montantCnss: 0, fondsSoutienPat: 0, partPatronaleCnss: 0, crrae: 0,
-  salaireBrutImposable: 0, abattementForfaitaire: 0, totalExoneration: 0,
-  baseImposable: 0, iuts0Charge: 0, montantCharge: 0, iutsAvecCharge: 0,
-  mutuel: 0, totalRetenue: 0, remunerationTotale: 0, netAPayer: 0
-};
 
 @Component({
   selector: 'app-salaire',
@@ -53,9 +11,11 @@ const EMPTY_CALC: SalaryCalcDetails = {
 })
 export class SalaireComponent implements OnInit {
   employee?: Employee;
-  salaryInformation?: EmployeeSalaryInformation;
+  information?: EmployeeSalaryInformation;
   empId = '';
-  calc: SalaryCalcDetails = { ...EMPTY_CALC };
+  error = '';
+  message = '';
+  recalculating = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -65,44 +25,45 @@ export class SalaireComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.employeeService.getById(this.empId).subscribe(e => {
-      if (!e?.id) { this.router.navigate(['/grh/employes']); return; }
-      this.employee = e;
-      forkJoin({
-        information: this.employeeService.getSalaryInformation(this.empId),
-        situation: this.employeeService.getSalarySituation(this.empId),
-        indemnities: this.employeeService.getEmployeeIndemnities(this.empId),
-        exemptions: this.employeeService.getEmployeeExemptions(this.empId)
-      }).subscribe(({ information, situation, indemnities, exemptions }) => {
-        this.salaryInformation = information;
-        this.calc = this.buildViewModel(situation, indemnities || [], exemptions || []);
-      });
+    this.employeeService.getById(this.empId).subscribe({
+      next: employee => {
+        if (!employee?.id) { this.router.navigate(['/grh/employes']); return; }
+        this.employee = employee;
+        this.loadInformation();
+      },
+      error: () => this.router.navigate(['/grh/employes'])
     });
   }
 
-  private buildViewModel(
-    situation: EmployeeSalarySituation,
-    indemnities: EmployeeIndemnity[],
-    exemptions: EmployeeExemption[]
-  ): SalaryCalcDetails {
-    const list = indemnities
-      .filter(row => row.actif !== false)
-      .map(row => ({ libelle: row.libelle || row.typeIndemniteCode || '', montant: Number(row.montant) || 0 }));
-    const totalExoneration = exemptions.reduce((total, row) => total + (Number(row.montant) || 0), 0);
-    const salaireBrut = Number(situation.salaireBrut) || 0;
+  private loadInformation(): void {
+    this.employeeService.getSalaryInformation(this.empId).subscribe({
+      next: information => this.information = information,
+      error: () => this.error = 'Impossible de charger les informations salariales.'
+    });
+  }
 
-    return {
-      ...EMPTY_CALC,
-      salaireBase: Number(situation.salaireBase) || 0,
-      indemnitesList: list,
-      totalIndemnite: Number(situation.totalIndemnites) || 0,
-      remunerationBrut: salaireBrut,
-      salaireBrutImposable: salaireBrut,
-      totalExoneration,
-      baseImposable: Math.max(0, salaireBrut - totalExoneration),
-      remunerationTotale: salaireBrut,
-      netAPayer: 0
-    };
+  recalculate(): void {
+    if (this.recalculating) return;
+    this.recalculating = true;
+    this.error = '';
+    this.message = '';
+    this.employeeService.recalculateSalaryInformation(this.empId).subscribe({
+      next: information => {
+        this.information = information;
+        this.recalculating = false;
+        this.message = 'Résumé salarial recalculé et enregistré.';
+      },
+      error: err => {
+        this.recalculating = false;
+        this.error = err?.error?.message || 'Impossible de recalculer le résumé salarial.';
+      }
+    });
+  }
+
+  baseLabel(base: string): string {
+    if (base === 'SALAIRE_BASE') return 'Salaire de base';
+    if (base === 'BASE_IMPOSABLE') return 'Base imposable';
+    return 'Rémunération brute';
   }
 
   get initials(): string {
