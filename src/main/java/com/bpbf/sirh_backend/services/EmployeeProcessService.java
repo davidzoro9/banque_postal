@@ -24,6 +24,7 @@ public class EmployeeProcessService {
     private final ParametrageIndemniteRepository parametrageRepository;
     private final InformationSalarialeRetenueRepository informationRetenueRepository;
     private final InformationSalarialeCalculService informationCalculService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
     public void sync(Employee employee, EmployeeDto dto) {
@@ -94,7 +95,66 @@ public class EmployeeProcessService {
             exoneration.setMontant(calculateExoneration(indemnite.getMontant(), taux, plafond));
             exonerationRepository.save(exoneration);
         }
+
+        // ─── Synchronisation automatique des membres de famille pour charges IUTS ──
+        familleRepository.deleteByEmployeeId(employee.getId());
+        familleRepository.flush();
+
+        if (dto.getConjoint() != null) {
+            try {
+                java.util.Map<String, Object> conj = objectMapper.convertValue(dto.getConjoint(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                String nom = (String) conj.getOrDefault("nom", "");
+                String prenom = (String) conj.getOrDefault("prenom", "");
+                boolean travail = Boolean.TRUE.equals(conj.get("travail"));
+                if ((nom != null && !nom.isBlank()) || (prenom != null && !prenom.isBlank())) {
+                    FamilleEmploye f = new FamilleEmploye();
+                    f.setEmployee(employee);
+                    f.setNom(nom != null && !nom.isBlank() ? nom : "Conjoint");
+                    f.setPrenom(prenom != null && !prenom.isBlank() ? prenom : "");
+                    f.setLienParente(LienParente.CONJOINT);
+                    f.setDateNaissance(parseLocalDate(conj.get("dateNaissance")));
+                    f.setEstCharge(!travail);
+                    f.setStatut("Actif");
+                    familleRepository.save(f);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (dto.getEnfants() != null) {
+            try {
+                java.util.List<java.util.Map<String, Object>> enfantsList = objectMapper.convertValue(dto.getEnfants(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {});
+                if (enfantsList != null) {
+                    for (java.util.Map<String, Object> enf : enfantsList) {
+                        String nom = (String) enf.getOrDefault("nom", "");
+                        if (nom != null && !nom.isBlank()) {
+                            FamilleEmploye f = new FamilleEmploye();
+                            f.setEmployee(employee);
+                            f.setNom(nom);
+                            f.setPrenom((String) enf.getOrDefault("prenom", ""));
+                            f.setLienParente(LienParente.ENFANT);
+                            f.setDateNaissance(parseLocalDate(enf.get("dateNaissance")));
+                            f.setEstCharge(true);
+                            f.setStatut("Actif");
+                            familleRepository.save(f);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        familleRepository.flush();
+
         informationCalculService.recalculate(employee);
+    }
+
+    private static java.time.LocalDate parseLocalDate(Object val) {
+        if (val == null) return null;
+        String s = val.toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return java.time.LocalDate.parse(s.substring(0, Math.min(s.length(), 10)));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     static double calculateExoneration(Double montant, Double taux, Double plafond) {

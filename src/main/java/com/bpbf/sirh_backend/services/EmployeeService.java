@@ -95,28 +95,45 @@ public class EmployeeService {
     }
 
     private void updateDtoFromEntity(Employee entity, EmployeeDto dto) {
-        if (entity == null || dto == null) return;
+        if (entity == null || dto == null)
+            return;
         if (dto.getName() == null || dto.getName().isEmpty()) {
-            dto.setName((dto.getPrenom() != null ? dto.getPrenom() : "") + " " + (dto.getNom() != null ? dto.getNom() : ""));
+            dto.setName((dto.getPrenom() != null ? dto.getPrenom() : "") + " "
+                    + (dto.getNom() != null ? dto.getNom() : ""));
         }
+        dto.setModePaiement(entity.getModePaiement());
+        dto.setBanque(entity.getBanque());
+        dto.setIban(entity.getIban());
+        dto.setIntituleCompte(entity.getIntituleCompte());
         if (entity.getGrilleSalariale() != null && entity.getGrilleSalariale().getSalaireBase() != null) {
             dto.setSalaireBase(entity.getGrilleSalariale().getSalaireBase());
         }
         dto.setDateEmbauche(entity.getDateEmbauche());
         dto.setStatut(entity.getStatut());
 
-        if (entity.getCategorieObj() != null) dto.setCategorieId(entity.getCategorieObj().getId());
-        if (entity.getEchelonObj() != null) dto.setEchelonId(entity.getEchelonObj().getId());
-        if (entity.getGradeObj() != null) dto.setGradeId(entity.getGradeObj().getId());
+        if (entity.getCategorieObj() != null)
+            dto.setCategorieId(entity.getCategorieObj().getId());
+        if (entity.getEchelonObj() != null)
+            dto.setEchelonId(entity.getEchelonObj().getId());
+        if (entity.getGradeObj() != null)
+            dto.setGradeId(entity.getGradeObj().getId());
 
-        if (entity.getFonction() != null) dto.setFonction_id(entity.getFonction().getId());
-        if (entity.getEmploi() != null) dto.setEmploi_id(entity.getEmploi().getId());
-        if (entity.getDepartment() != null) dto.setDepartment_id(entity.getDepartment().getId());
-        if (entity.getDirection() != null) dto.setDirection_id(entity.getDirection().getId());
-        if (entity.getService() != null) dto.setService_id(entity.getService().getId());
-        if (entity.getAgence() != null) dto.setAgence_id(entity.getAgence().getId());
-        if (entity.getSuperviseur() != null) dto.setSuperviseur_id(entity.getSuperviseur().getId());
-        if (entity.getGrilleSalariale() != null) dto.setGrilleSalarialeId(entity.getGrilleSalariale().getId());
+        if (entity.getFonction() != null)
+            dto.setFonction_id(entity.getFonction().getId());
+        if (entity.getEmploi() != null)
+            dto.setEmploi_id(entity.getEmploi().getId());
+        if (entity.getDepartment() != null)
+            dto.setDepartment_id(entity.getDepartment().getId());
+        if (entity.getDirection() != null)
+            dto.setDirection_id(entity.getDirection().getId());
+        if (entity.getService() != null)
+            dto.setService_id(entity.getService().getId());
+        if (entity.getAgence() != null)
+            dto.setAgence_id(entity.getAgence().getId());
+        if (entity.getSuperviseur() != null)
+            dto.setSuperviseur_id(entity.getSuperviseur().getId());
+        if (entity.getGrilleSalariale() != null)
+            dto.setGrilleSalarialeId(entity.getGrilleSalariale().getId());
 
         if (entity.getFonction() != null) {
             dto.setFonction_id(entity.getFonction().getId());
@@ -151,22 +168,19 @@ public class EmployeeService {
         if (entity.getCategorieObj() != null) {
             dto.setCategorieId(entity.getCategorieObj().getId());
             dto.setCategorieLibelle(
-                entity.getCategorieObj().getLibelle()
-            );
+                    entity.getCategorieObj().getLibelle());
         }
 
         if (entity.getEchelonObj() != null) {
             dto.setEchelonId(entity.getEchelonObj().getId());
             dto.setEchelonLibelle(
-                entity.getEchelonObj().getLibelle()
-            );
+                    entity.getEchelonObj().getLibelle());
         }
-        
+
         if (entity.getGradeObj() != null) {
             dto.setGradeId(entity.getGradeObj().getId());
             dto.setGradeLibelle(
-                entity.getGradeObj().getLibelle()
-            );
+                    entity.getGradeObj().getLibelle());
         }
 
         if (entity.getRegimeSecuriteSocial() != null) {
@@ -175,13 +189,14 @@ public class EmployeeService {
             dto.setRegimeSecuriteSocialId(regime.getId());
             dto.setRegimeSecuriteSocialCode(regime.getCode());
             dto.setRegimeSecuriteSocialLibelle(
-                regime.getLibelle()
-            );
+                    regime.getLibelle());
         }
 
-               if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
+        if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
             try {
-                java.util.Map<String, Object> map = objectMapper.readValue(entity.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                java.util.Map<String, Object> map = objectMapper.readValue(entity.getExtraData(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                        });
                 if (map.containsKey("primeLogement") && map.get("primeLogement") != null) {
                     dto.setPrimeLogement(Double.valueOf(map.get("primeLogement").toString()));
                 }
@@ -198,9 +213,11 @@ public class EmployeeService {
                 if (map.containsKey("enfants")) {
                     dto.setEnfants(map.get("enfants"));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
+
     private void resolveRelationships(Employee entity, EmployeeDto dto) {
 
         if (dto.getCategorieId() == null) {

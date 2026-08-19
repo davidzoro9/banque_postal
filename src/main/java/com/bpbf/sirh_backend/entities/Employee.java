@@ -26,7 +26,7 @@ public class Employee {
     private String prenom;
     private String nomJeuneFille;
     private String sexe;
-    private String dateNaissance;   // Format "YYYY-MM-DD"
+    private String dateNaissance; // Format "YYYY-MM-DD"
     private String lieuNaissance;
     private String nationalite;
     private String numeroCNI;
@@ -39,6 +39,11 @@ public class Employee {
     private String telephone;
     private String dateEmbauche;
     private String statut;
+    // ─── Informations Bancaires & Paiement ──────────────────────────
+    private String modePaiement;
+    private String banque;
+    private String iban;
+    private String intituleCompte;
 
     // ─── Contacts d'urgence ─────────────────────────────────────────
     private String contactUrgenceNom;
@@ -53,7 +58,7 @@ public class Employee {
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "fonction_id", nullable = true)
-    private Fonction fonction;  
+    private Fonction fonction;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "emploi_id", nullable = true)
