@@ -12,8 +12,6 @@ public interface DirectionMapper {
 
     @Mapping(source = "department.id", target = "departmentId")
     @Mapping(source = "department.name", target = "departmentLibelle")
-    @Mapping(source = "agence.id", target = "agenceId")
-    @Mapping(source = "agence.nomAgence", target = "agenceLibelle")
     DirectionDto toDto(Direction direction);
 
     @Mapping(target = "department", ignore = true)

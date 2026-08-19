@@ -16,7 +16,4 @@ public class DirectionDto {
     private String description;
     private Long departmentId;
     private String departmentLibelle;
-
-    private Long agenceId;
-    private String agenceLibelle;
 }
