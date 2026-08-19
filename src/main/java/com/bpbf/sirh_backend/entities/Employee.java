@@ -20,17 +20,40 @@ public class Employee {
     private String matricule;
     private String email;
     private String phone;
-    
-    // Front-end fields mapped directly for indexing / reference
+
+    // ─── État Civil & Identité ─────────────────────────────────────
     private String nom;
     private String prenom;
+    private String nomJeuneFille;
+    private String sexe;
+    private String dateNaissance;   // Format "YYYY-MM-DD"
+    private String lieuNaissance;
+    private String nationalite;
+    private String numeroCNI;
+
+    // ─── Coordonnées ────────────────────────────────────────────────
+    private String adresse;
+    private String ville;
+    private String codePostal;
+    private String pays;
     private String telephone;
     private String dateEmbauche;
     private String statut;
 
+    // ─── Contacts d'urgence ─────────────────────────────────────────
+    private String contactUrgenceNom;
+    private String contactUrgenceTelephone;
+    private String contactUrgenceLien;
+
+    // ─── Études & Diplômes ──────────────────────────────────────────
+    private String dernierDiplome;
+    private String diplomeRecrutement;
+    private String brancheEtude;
+    private String ecoleUniversite;
+
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "fonction_id", nullable = true)
-    private Fonction fonction;
+    private Fonction fonction;  
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "emploi_id", nullable = true)
@@ -53,7 +76,7 @@ public class Employee {
     private Agence agence;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "regime_securite_social_id", nullable=true)
+    @JoinColumn(name = "regime_securite_social_id", nullable = true)
     private RegimeSecuriteSocial regimeSecuriteSocial;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
