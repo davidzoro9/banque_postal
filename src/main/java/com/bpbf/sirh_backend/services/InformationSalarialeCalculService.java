@@ -67,19 +67,20 @@ public class InformationSalarialeCalculService {
         BigDecimal totalAgent = zero();
         BigDecimal totalEmployeur = zero();
         for (Retenue retenue : findApplicableRetenues(employee)) {
-            if (retenue.getTypeRetenue() == null || isIuts(retenue)) continue;
+            if (retenue == null || isIuts(retenue)) continue;
 
             BigDecimal montantBase = resolveBase(retenue.getBaseCalcul(), salaireBase, remunerationBrute, baseImposable);
             BigDecimal taux = money(retenue.getTaux());
             BigDecimal montant = calculatePercentage(montantBase, taux);
-            boolean employeur = isEmployeur(retenue.getTypeRetenue());
+            boolean employeur = isEmployeur(retenue);
 
             InformationSalarialeRetenue line = new InformationSalarialeRetenue();
             line.setInformationSalariale(information);
             line.setRetenue(retenue);
             line.setCode(retenue.getCode());
             line.setLibelle(retenue.getLibelle());
-            line.setTypeRetenueCode(retenue.getTypeRetenue().getCode());
+            line.setTypeRetenueCode(retenue.getTypeRetenue() != null && retenue.getTypeRetenue().getCode() != null
+                    ? retenue.getTypeRetenue().getCode() : (employeur ? "EMPLOYEUR" : "AGENT"));
             line.setBaseCalcul(retenue.getBaseCalcul() == null
                     ? BaseCalculRetenue.REMUNERATION_BRUTE : retenue.getBaseCalcul());
             line.setMontantBase(montantBase);
@@ -121,7 +122,7 @@ public class InformationSalarialeCalculService {
                     line.getId(), line.getRetenue().getId(), line.getCode(), line.getLibelle(),
                     line.getTypeRetenueCode(), line.getBaseCalcul(), line.getMontantBase(),
                     line.getTaux(), line.getMontantCalcule());
-            if (isEmployeur(line.getRetenue().getTypeRetenue())) employeur.add(dto);
+            if (isEmployeur(line.getRetenue())) employeur.add(dto);
             else agent.add(dto);
         }
 
@@ -205,11 +206,16 @@ public class InformationSalarialeCalculService {
         return remunerationBrute;
     }
 
-    private boolean isEmployeur(TypeRetenue type) {
-        String value = (type.getCode() == null ? "" : type.getCode()) + " "
-                + (type.getLibelle() == null ? "" : type.getLibelle());
-        String normalized = value.toUpperCase(Locale.ROOT);
-        return normalized.contains("EMPLOYEUR") || normalized.contains("PATRON");
+    private boolean isEmployeur(Retenue retenue) {
+        if (retenue == null) return false;
+        String typeVal = "";
+        if (retenue.getTypeRetenue() != null) {
+            typeVal = (retenue.getTypeRetenue().getCode() == null ? "" : retenue.getTypeRetenue().getCode()) + " "
+                    + (retenue.getTypeRetenue().getLibelle() == null ? "" : retenue.getTypeRetenue().getLibelle());
+        }
+        String full = (typeVal + " " + (retenue.getCode() != null ? retenue.getCode() : "") + " "
+                + (retenue.getLibelle() != null ? retenue.getLibelle() : "")).toUpperCase(Locale.ROOT);
+        return full.contains("EMPLOYEUR") || full.contains("PATRON");
     }
 
     private static boolean isIuts(Retenue retenue) {
