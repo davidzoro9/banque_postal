@@ -110,4 +110,9 @@ public class EmployeeDto {
     private String gradeLibelle;
     private String categorieLibelle;
     private String echelonLibelle;
+
+        // Famille
+    private Object conjoint;
+    private Object enfants;
+
 }

@@ -32,7 +32,7 @@ public class EmployeeService {
     private final RegimeSecuriteSocialRepository regimeSecuriteSocialRepository;
     private final EmployeeProcessService employeeProcessService;
 
-    public List<EmployeeDto> getAllEmployees(){
+    public List<EmployeeDto> getAllEmployees() {
         List<Employee> employees = employeeRepository.findAll();
         List<EmployeeDto> dtos = employeeMapper.toDtos(employees);
         for (int i = 0; i < employees.size(); i++) {
@@ -41,7 +41,7 @@ public class EmployeeService {
         return dtos;
     }
 
-    public EmployeeDto getEmployeeById(Long id){
+    public EmployeeDto getEmployeeById(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'id: " + id));
         EmployeeDto dto = employeeMapper.toDto(employee);
@@ -49,7 +49,7 @@ public class EmployeeService {
         return dto;
     }
 
-    public EmployeeDto getEmployeeByMatricule(String matricule){
+    public EmployeeDto getEmployeeByMatricule(String matricule) {
         Employee employee = employeeRepository.findByMatricule(matricule)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + matricule));
         EmployeeDto dto = employeeMapper.toDto(employee);
@@ -58,7 +58,7 @@ public class EmployeeService {
     }
 
     @Transactional
-    public EmployeeDto createEmployee(EmployeeDto employeeDto){
+    public EmployeeDto createEmployee(EmployeeDto employeeDto) {
         Employee employee = employeeMapper.toEntity(employeeDto);
         resolveRelationships(employee, employeeDto);
         Employee saved = employeeRepository.save(employee);
@@ -71,7 +71,7 @@ public class EmployeeService {
     }
 
     @Transactional
-    public EmployeeDto updateEmployee(Long id, EmployeeDto employeeDto){
+    public EmployeeDto updateEmployee(Long id, EmployeeDto employeeDto) {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'id: " + id));
 
@@ -86,8 +86,8 @@ public class EmployeeService {
     }
 
     @Transactional
-    public void deleteEmployee(Long id){
-        if(!employeeRepository.existsById(id)){
+    public void deleteEmployee(Long id) {
+        if (!employeeRepository.existsById(id)) {
             throw new ResourceNotFoundException("Employé non trouvé avec l'id: " + id);
         }
         employeeProcessService.deleteForEmployee(id);
@@ -179,7 +179,7 @@ public class EmployeeService {
             );
         }
 
-        if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
+               if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
             try {
                 java.util.Map<String, Object> map = objectMapper.readValue(entity.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                 if (map.containsKey("primeLogement") && map.get("primeLogement") != null) {
@@ -190,24 +190,27 @@ public class EmployeeService {
                 }
                 if (map.containsKey("primeResponsabilite") && map.get("primeResponsabilite") != null) {
                     dto.setPrimeResponsabilite(Double.valueOf(map.get("primeResponsabilite").toString()));
+                } // 🛡️ Accolade bien fermée ici
+
+                if (map.containsKey("conjoint")) {
+                    dto.setConjoint(map.get("conjoint"));
+                }
+                if (map.containsKey("enfants")) {
+                    dto.setEnfants(map.get("enfants"));
                 }
             } catch (Exception ignored) {}
         }
     }
-
     private void resolveRelationships(Employee entity, EmployeeDto dto) {
 
         if (dto.getCategorieId() == null) {
             entity.setCategorieObj(null);
         } else {
             Categorie categorie = categorieRepository
-                .findById(dto.getCategorieId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Catégorie introuvable avec l'ID : "
-                            + dto.getCategorieId()
-                    )
-                );
+                    .findById(dto.getCategorieId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Catégorie introuvable avec l'ID : "
+                                    + dto.getCategorieId()));
 
             entity.setCategorieObj(categorie);
         }
@@ -216,13 +219,10 @@ public class EmployeeService {
             entity.setEchelonObj(null);
         } else {
             Echelon echelon = echelonRepository
-                .findById(dto.getEchelonId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Échelon introuvable avec l'ID : "
-                            + dto.getEchelonId()
-                    )
-                );
+                    .findById(dto.getEchelonId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Échelon introuvable avec l'ID : "
+                                    + dto.getEchelonId()));
 
             entity.setEchelonObj(echelon);
         }
@@ -231,13 +231,10 @@ public class EmployeeService {
             entity.setGradeObj(null);
         } else {
             Grade grade = gradeRepository
-                .findById(dto.getGradeId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Grade introuvable avec l'ID : "
-                            + dto.getGradeId()
-                    )
-                );
+                    .findById(dto.getGradeId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Grade introuvable avec l'ID : "
+                                    + dto.getGradeId()));
 
             entity.setGradeObj(grade);
         }
@@ -246,13 +243,10 @@ public class EmployeeService {
             entity.setGrilleSalariale(null);
         } else {
             GrilleSalariale grille = grilleSalarialeRepository
-                .findById(dto.getGrilleSalarialeId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Grille salariale introuvable avec l'ID : "
-                            + dto.getGrilleSalarialeId()
-                    )
-                );
+                    .findById(dto.getGrilleSalarialeId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Grille salariale introuvable avec l'ID : "
+                                    + dto.getGrilleSalarialeId()));
 
             entity.setGrilleSalariale(grille);
         }
@@ -261,13 +255,10 @@ public class EmployeeService {
             entity.setFonction(null);
         } else {
             Fonction fonction = fonctionRepository
-                .findById(dto.getFonction_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Fonction introuvable avec l'ID : "
-                            + dto.getFonction_id()
-                    )
-                );
+                    .findById(dto.getFonction_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Fonction introuvable avec l'ID : "
+                                    + dto.getFonction_id()));
 
             entity.setFonction(fonction);
         }
@@ -276,61 +267,46 @@ public class EmployeeService {
             entity.setEmploi(null);
         } else {
             Emploi emploi = emploiRepository
-                .findById(dto.getEmploi_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Emploi introuvable avec l'ID : "
-                            + dto.getEmploi_id()
-                    )
-                );
+                    .findById(dto.getEmploi_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Emploi introuvable avec l'ID : "
+                                    + dto.getEmploi_id()));
 
             entity.setEmploi(emploi);
         }
-
 
         if (dto.getDepartment_id() == null) {
             entity.setDepartment(null);
         } else {
             Department department = departmentRepository
-                .findById(dto.getDepartment_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Département introuvable avec l'ID : "
-                            + dto.getDepartment_id()
-                    )
-                );
+                    .findById(dto.getDepartment_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Département introuvable avec l'ID : "
+                                    + dto.getDepartment_id()));
 
             entity.setDepartment(department);
         }
-
 
         if (dto.getDirection_id() == null) {
             entity.setDirection(null);
         } else {
             Direction direction = directionRepository
-                .findById(dto.getDirection_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Direction introuvable avec l'ID : "
-                            + dto.getDirection_id()
-                    )
-                );
+                    .findById(dto.getDirection_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Direction introuvable avec l'ID : "
+                                    + dto.getDirection_id()));
 
             entity.setDirection(direction);
         }
-
 
         if (dto.getService_id() == null) {
             entity.setService(null);
         } else {
             com.bpbf.sirh_backend.entities.Service service = serviceRepository
-                .findById(dto.getService_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Service introuvable avec l'ID : "
-                            + dto.getService_id()
-                    )
-                );
+                    .findById(dto.getService_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Service introuvable avec l'ID : "
+                                    + dto.getService_id()));
 
             entity.setService(service);
         }
@@ -339,15 +315,11 @@ public class EmployeeService {
             entity.setAgence(null);
         } else {
             Agence agence = agenceRepository
-                .findById(dto.getAgence_id())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "Agence introuvable avec l'ID : " + dto.getAgence_id()
-                    )
-                );
+                    .findById(dto.getAgence_id())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Agence introuvable avec l'ID : " + dto.getAgence_id()));
             entity.setAgence(agence);
         }
-
 
         if (dto.getSuperviseur_id() != null) {
             employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
@@ -356,16 +328,12 @@ public class EmployeeService {
         if (dto.getRegimeSecuriteSocialId() == null) {
             entity.setRegimeSecuriteSocial(null);
         } else {
-            RegimeSecuriteSocial regime =
-                regimeSecuriteSocialRepository
+            RegimeSecuriteSocial regime = regimeSecuriteSocialRepository
                     .findById(dto.getRegimeSecuriteSocialId())
-                    .orElseThrow(() ->
-                        new ResourceNotFoundException(
+                    .orElseThrow(() -> new ResourceNotFoundException(
                             "Régime de Sécurité sociale introuvable "
-                            + "avec l'ID : "
-                            + dto.getRegimeSecuriteSocialId()
-                        )
-                    );
+                                    + "avec l'ID : "
+                                    + dto.getRegimeSecuriteSocialId()));
 
             entity.setRegimeSecuriteSocial(regime);
         }
@@ -378,21 +346,25 @@ public class EmployeeService {
             java.util.Map<String, Object> existingMap = new java.util.HashMap<>();
             if (entity.getExtraData() != null && !entity.getExtraData().trim().isEmpty()) {
                 try {
-                    existingMap = objectMapper.readValue(entity.getExtraData(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-                } catch (Exception ignored) {}
+                    existingMap = objectMapper.readValue(entity.getExtraData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                            });
+                } catch (Exception ignored) {
+                }
             }
 
             String cat = entity.getCategorieObj() != null
                     ? (entity.getCategorieObj().getLibelle() != null
-                        ? entity.getCategorieObj().getLibelle()
-                        : entity.getCategorieObj().getCode())
+                            ? entity.getCategorieObj().getLibelle()
+                            : entity.getCategorieObj().getCode())
                     : (String) existingMap.getOrDefault("categorie", "CL1");
             String ech = entity.getEchelonObj() != null
                     ? (entity.getEchelonObj().getLibelle() != null
-                        ? entity.getEchelonObj().getLibelle()
-                        : entity.getEchelonObj().getCode())
+                            ? entity.getEchelonObj().getLibelle()
+                            : entity.getEchelonObj().getCode())
                     : (String) existingMap.getOrDefault("echelon", "E01");
-            String rawGrade = (cat != null && ech != null) ? (cat + ech) : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
+            String rawGrade = (cat != null && ech != null) ? (cat + ech)
+                    : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
 
             existingMap.put("categorie", cat);
             existingMap.put("categoriePro", cat);
@@ -408,23 +380,36 @@ public class EmployeeService {
             String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : "Agent simple";
             existingMap.put("fonction", finalFonction);
             try {
-                List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService.getByGradeAndFonction(rawGrade, finalFonction);
+                List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnites = parametrageIndemniteService
+                        .getByGradeAndFonction(rawGrade, finalFonction);
                 double log = 0;
                 double trp = 0;
                 double sujResp = 0;
                 for (com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto ind : indemnites) {
                     String code = ind.getCode() != null ? ind.getCode().toLowerCase() : "";
                     double t = ind.getTaux() != null ? ind.getTaux() : 0;
-                    if (code.contains("log")) log = t;
-                    if (code.contains("trp")) trp = t;
+                    if (code.contains("log"))
+                        log = t;
+                    if (code.contains("trp"))
+                        trp = t;
                     if (code.contains("suj") || code.contains("fct") || code.contains("cmp")) {
                         sujResp += t;
                     }
                 }
-                if (log > 0) existingMap.put("primeLogement", log);
-                if (trp > 0) existingMap.put("primeTransport", trp);
-                if (sujResp > 0) existingMap.put("primeResponsabilite", sujResp);
-            } catch (Exception ignored) {}
+                if (log > 0)
+                    existingMap.put("primeLogement", log);
+                if (trp > 0)
+                    existingMap.put("primeTransport", trp);
+                if (sujResp > 0)
+                    existingMap.put("primeResponsabilite", sujResp);
+            } catch (Exception ignored) {
+            }
+            if (dto != null && dto.getConjoint() != null) {
+                existingMap.put("conjoint", dto.getConjoint());
+            }
+            if (dto != null && dto.getEnfants() != null) {
+                existingMap.put("enfants", dto.getEnfants());
+            }
 
             entity.setExtraData(objectMapper.writeValueAsString(existingMap));
         } catch (Exception e) {
@@ -445,11 +430,13 @@ public class EmployeeService {
         res.put("matricule", emp.getMatricule());
         res.put("nomComplet", emp.getName() != null ? emp.getName() : (emp.getPrenom() + " " + emp.getNom()));
         res.put("salaireBase", emp.getSalaireBase());
-        
-        List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnitesBareme = parametrageIndemniteService.getByGradeAndFonction("", "");
+
+        List<com.bpbf.sirh_backend.dtos.ParametrageIndemniteDto> indemnitesBareme = parametrageIndemniteService
+                .getByGradeAndFonction("", "");
         res.put("indemnitesBareme", indemnitesBareme);
 
-        double totalIndemnites = indemnitesBareme.stream().mapToDouble(i -> i.getTaux() != null ? i.getTaux() : 0.0).sum();
+        double totalIndemnites = indemnitesBareme.stream().mapToDouble(i -> i.getTaux() != null ? i.getTaux() : 0.0)
+                .sum();
         if (totalIndemnites == 0) {
             double log = emp.getPrimeLogement() != null ? emp.getPrimeLogement() : 0;
             double trp = emp.getPrimeTransport() != null ? emp.getPrimeTransport() : 0;
