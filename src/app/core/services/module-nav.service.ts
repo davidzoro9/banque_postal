@@ -17,31 +17,29 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
     children: [
       { id: 'emploi',           label: 'Poste / Emploi',           icon: 'work',                route: '/donnees-base/admin/emploi'           },
       { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
-      { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
-      { id: 'direction',        label: 'Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
+      { id: 'banque',           label: 'Banque',                   icon: 'money_on',            route: '/donnees-base/admin/banque'            },
+      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
+      // { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
+      { id: 'direction',        label: 'Département / Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
-
-      { id: 'categorie',        label: 'Catégorie',                icon: 'category',           route: '/donnees-base/carriere/categorie'     },
-      { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
-      { id: 'param-groupe',     label: 'Paramétrage Groupe',       icon: 'tune',                route: '/donnees-base/carriere/param-groupe'   },
+       { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+      { id: 'categorie',        label: 'Catégorie / Classe',                icon: 'category',           route: '/donnees-base/carriere/categorie'     },
       { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
       { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
-
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
-      { id: 'param-indemnite',  label: 'Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-      { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
       { id: 'regime-securite-social', label: 'Régimes de sécurité sociale', icon: 'health_and_safety', route: '/donnees-base/admin/regimes-securite-sociale' },
-      { id: 'param-prise-en-charge', label: 'Prise en charge famille', icon: 'family_restroom', route: '/donnees-base/admin/param-prise-en-charge' },
       { id: 'types-retenues',   label: 'Liste des retenues',       icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
-      { id: 'param-paie-taux',  label: 'Retenues',                 icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
-
-      { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
       { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
       { id: 'type-conge',       label: 'Type congé/absence',       icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
-      { id: 'ville',            label: 'Villes',                   icon: 'location_city',        route: '/donnees-base/admin/ville'            },
-      { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',         route: '/donnees-base/carriere/competences'   },
-      { id: 'type-formation',   label: 'Type de formation',        icon: 'school',             route: '/donnees-base/carriere/type-formation'},
-      { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',          route: '/donnees-base/carriere/type-evaluation'}
+      { id: 'param-groupe',     label: 'Paramétrage Groupe',       icon: 'tune',                route: '/donnees-base/carriere/param-groupe'   },
+      { id: 'param-indemnite',  label: 'Paramétrage Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      /*{ id: 'param-prise-en-charge', label: 'Prise en charge famille', icon: 'family_restroom', route: '/donnees-base/admin/param-prise-en-charge' },*/
+      { id: 'param-paie-taux',  label: 'Paramétrage Retenues',                 icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
+      { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
+      /*{ id: 'ville',            label: 'Villes',                   icon: 'location_city',       route: '/donnees-base/admin/ville'            },
+      { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',          route: '/donnees-base/carriere/competences'   },
+      { id: 'type-formation',   label: 'Type de formation',        icon: 'school',              route: '/donnees-base/carriere/type-formation'},
+      { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',           route: '/donnees-base/carriere/type-evaluation'}*/
     ]
   },
   {

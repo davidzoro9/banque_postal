@@ -63,6 +63,29 @@ const BACKEND_MAP: Record<string, {
   toBack: (item: RefItem) => any;
   toBackUpdate: (item: RefItem) => any;
 }> = {
+  'banque': {
+    segment: 'banques',
+    getAllPath: '',
+
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code,
+      libelle: dto.libelle,
+      description: dto.description || '',
+      actif: dto.actif ?? true
+    }),
+
+    toBack: item => ({
+      code: item.code,
+      libelle: item.libelle
+    }),
+
+    toBackUpdate: item => ({
+      id: item.id ? Number(item.id) : null,
+      code: item.code,
+      libelle: item.libelle
+    })
+  },
   'regime-securite-social': {
     segment: 'regime-securite-social',
     getAllPath: '',
@@ -136,11 +159,14 @@ const BACKEND_MAP: Record<string, {
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
                        departementId: dto.departmentId ? String(dto.departmentId) : undefined,
                        departementLibelle: dto.departmentLibelle || '',
-                       departmentLibelle: dto.departmentLibelle || '' }),
+                       departmentLibelle: dto.departmentLibelle || '' ,
+                       agenceId: dto.agenceId ? String(dto.agenceId) : undefined,
+                       agenceLibelle: dto.agenceLibelle || ''
+                     }),
     toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
-                        departmentId: item.departementId ? Number(item.departementId) : null }),
+                        departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
     toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
-                             departmentId: item.departementId ? Number(item.departementId) : null }),
+                             departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
   },
   'service': {
     segment: 'services',

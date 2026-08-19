@@ -597,6 +597,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('baseCalcul')?.clearValidators();
     this.formGroup.get('fonctionId')?.clearValidators();
     this.formGroup.get('directeurId')?.clearValidators();
+    this.formGroup.get('agenceId')?.clearValidators();
     this.formGroup.get('departementId')?.clearValidators();
     this.formGroup.get('directionId')?.clearValidators();
     this.formGroup.get('gradeId')?.clearValidators();
@@ -642,6 +643,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('fonctionId')?.updateValueAndValidity();
     this.formGroup.get('directeurId')?.updateValueAndValidity();
     this.formGroup.get('departementId')?.updateValueAndValidity();
+    this.formGroup.get('agenceId')?.updateValueAndValidity();
     this.formGroup.get('directionId')?.updateValueAndValidity();
     this.formGroup.get('gradeId')?.updateValueAndValidity();
     this.formGroup.get('categorieId')?.updateValueAndValidity();
@@ -953,6 +955,10 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       echelon => String(echelon.id) === String(v.echelonId)
     );
 
+    const selectedAgence = this.agences.find(
+      agence => String(agence.id) === String(v.agenceId)
+    );
+
     const selectedTypeIndemnite = this.typesIndemnite.find(type => String(type.id) === String(v.typeIndemniteId));
     const selectedFonction = this.fonctions.find(fonction => String(fonction.id) === String(v.fonctionId));
     const selectedTypeRetenue = this.typesRetenueList.find(type => String(type.id) === String(v.typeRetenueId));
@@ -1094,6 +1100,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         actif:         v.actif ?? true,
         montant:       v.montant ? Number(v.montant) : undefined,
         agenceId:      v.agenceId ? String(v.agenceId) : undefined,
+        agenceLibelle: selectedAgence?.libelle,
         departementId: v.departementId ? String(v.departementId) : undefined,
         departementLibelle: selectedDepartement?.libelle,
         departmentLibelle: selectedDepartement?.libelle,
