@@ -323,7 +323,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   getGradeConcat(row: any): string {
     if (!row) return '-';
     const cat = this.getCatCodeDisplay(row.categorie || row.code);
-    const ech = this.getEchelonCodeDisplay(row.echellon);
+    const ech = this.getEchelonCodeDisplay(row.echellon || row.code);
     return `${cat}${ech}`;
   }
 
@@ -1103,7 +1103,6 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         agenceLibelle: selectedAgence?.libelle,
         departementId: v.departementId ? String(v.departementId) : undefined,
         departementLibelle: selectedDepartement?.libelle,
-        departmentLibelle: selectedDepartement?.libelle,
         directionId:   v.directionId ? String(v.directionId) : undefined,
         directionLibelle: selectedDirection?.libelle,
         directeurId:   v.directeurId ? String(v.directeurId) : undefined,

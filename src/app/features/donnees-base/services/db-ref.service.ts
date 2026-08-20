@@ -65,7 +65,7 @@ const BACKEND_MAP: Record<string, {
 }> = {
   'banque': {
     segment: 'banques',
-    getAllPath: '',
+    getAllPath: '/all',
 
     toFront: dto => ({
       id: String(dto.id),
@@ -77,13 +77,17 @@ const BACKEND_MAP: Record<string, {
 
     toBack: item => ({
       code: item.code,
-      libelle: item.libelle
+      libelle: item.libelle,
+      description: item.description,
+      actif: item.actif
     }),
 
     toBackUpdate: item => ({
       id: item.id ? Number(item.id) : null,
       code: item.code,
-      libelle: item.libelle
+      libelle: item.libelle,
+      description: item.description,
+      actif: item.actif
     })
   },
   'regime-securite-social': {

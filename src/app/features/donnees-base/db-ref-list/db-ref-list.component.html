@@ -301,7 +301,7 @@
 
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Salaire de base (FCFA)</mat-label>
-        <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
+        <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon> -->
         <input matInput type="number" formControlName="montant" placeholder="Ex: 250000" min="0">
       </mat-form-field>
     } @else if (type === 'type-retenue-emploi') {
@@ -324,7 +324,7 @@
 
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Pourcentage / Taux (%)</mat-label>
-        <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon>
+        <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon> -->
         <input matInput type="number" formControlName="taux" placeholder="Ex: 5.5" min="0" max="100" step="0.1">
         <mat-hint>0 si Barème ou Montant Variable</mat-hint>
       </mat-form-field>
@@ -443,7 +443,7 @@
       <!-- 4. Taux / Montant (FCFA) -->
       <mat-form-field appearance="outline" style="width: 100%;">
         <mat-label>Taux / Montant (FCFA) *</mat-label>
-        <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
+        <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon> -->
         <input matInput type="number" formControlName="taux" placeholder="0" min="0">
       </mat-form-field>
 
@@ -680,7 +680,7 @@
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Âge de retraite (ans)</mat-label>
-          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">event</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">event</mat-icon> -->
           <input matInput type="number" formControlName="taux" placeholder="Ex: 58, 60 ou 63" min="45" max="75">
         </mat-form-field>
 
@@ -748,14 +748,14 @@
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Taux Exonéré (%)</mat-label>
-          <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon> -->
           <input matInput type="number" formControlName="tauxExoneration" placeholder="Ex: 20" min="0" max="100">
         </mat-form-field>
 
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Plafond Exonéré (FCFA)</mat-label>
-          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">shield</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">shield</mat-icon> -->
           <input matInput type="number" formControlName="plafondExoneration" placeholder="Ex: 70000" min="0">
         </mat-form-field>
       }
@@ -771,7 +771,7 @@
       @if (type === 'departement') {
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Directeur de ce {{ type === 'departement' ? 'département' : 'cette direction' }}</mat-label>
-          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">person</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">person</mat-icon> -->
           <mat-select formControlName="directeurId" placeholder="Sélectionner le directeur">
             <mat-option [value]="null">Aucun responsable désigné</mat-option>
             @for (emp of directeursList; track emp.id) {
@@ -786,8 +786,8 @@
       @if (type === 'direction') {
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Agence</mat-label>
-          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon>
-          <mat-select formControlName="departementId" placeholder="Sélectionner une agence">
+          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon> -->
+          <mat-select formControlName="agenceId" placeholder="Sélectionner une agence">
             <mat-option [value]="null">Aucune agence</mat-option>
             @for (agence of agences; track agence.id) {
               <mat-option [value]="agence.id">{{ agence.libelle }}</mat-option>
@@ -799,7 +799,7 @@
       @if (type === 'param-prise-en-charge') {
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Valeur / Limite (Âge max ou nombre de charges)</mat-label>
-          <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">tune</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">tune</mat-icon> -->
           <input matInput type="number" formControlName="taux" placeholder="Ex: 18, 20 ou 4" min="0" max="100">
           <mat-hint>Entrer l'âge maximum pour les enfants ou le nombre max de charges admises</mat-hint>
         </mat-form-field>
@@ -811,7 +811,7 @@
           <mat-label>Catégorie / Classe *</mat-label>
           <mat-select formControlName="categorieId" placeholder="Sélectionner une catégorie">
             @for (cat of categories; track cat.id ) {
-              <mat-option [value]="cat.id">{{ cat.libelle }}</mat-option>
+              <mat-option [value]="cat.id">{{ cat.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -820,7 +820,7 @@
           <mat-label>Échelon *</mat-label>
           <mat-select formControlName="echelonId" placeholder="Sélectionner un échelon">
             @for (ech of echelons; track ech.id ) {
-              <mat-option [value]="ech.id">{{ ech.libelle }}</mat-option>
+              <mat-option [value]="ech.id">{{ ech.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -831,14 +831,14 @@
           <mat-label>Groupe d'emploi (Grade)</mat-label>
           <mat-select formControlName="gradeId" placeholder="Sélectionner un groupe">
             @for (g of grades; track g.id || g.code) {
-              <mat-option [value]="g.id">{{ g.libelle }}</mat-option>
+              <mat-option [value]="g.id">{{ g.code }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Salaire de base (FCFA) *</mat-label>
-          <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon>
+          <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon> -->
           <input matInput type="number" formControlName="montant" placeholder="Ex: 250000" min="0">
         </mat-form-field>
       </div>
