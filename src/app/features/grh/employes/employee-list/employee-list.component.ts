@@ -22,7 +22,7 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   module = APP_MODULES.find(m => m.id === 'grh')!;
 
-  displayedColumns = ['avatar', 'matricule', 'nom', 'poste', 'service', 'statut', 'dateEmbauche', 'dateRetraite', 'actions'];
+  displayedColumns = ['matricule', 'nom', 'grade', 'poste', 'fonction', 'service', 'dateEmbauche', 'dateRetraite', 'statut', 'actions'];
   dataSource = new MatTableDataSource<Employee>();
 
   searchQuery = '';
@@ -105,6 +105,51 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!emp.nom || !emp.prenom) return '#0060B3';
     const idx = (emp.nom.charCodeAt(0) + emp.prenom.charCodeAt(0)) % colors.length;
     return colors[idx];
+  }
+
+  getGradeConcat(emp: Employee): string {
+    // 1. Si déjà au format concaténé (ex: C1E01, CL2E05)
+    if (emp.grade && /^(C|CL)\d+E\d+$/i.test(emp.grade.trim())) {
+      return emp.grade.trim().toUpperCase();
+    }
+
+    // 2. Extraire la catégorie (ex: '1ère CATEGORIE' -> 'C1', 'CLASSE 2' -> 'CL2', 'C1' -> 'C1', 'CL3' -> 'CL3')
+    let rawCat = (emp.categoriePro || (emp as any).categorie || '').trim().toUpperCase();
+    let catCode = '';
+    if (rawCat.startsWith('CL') || rawCat.includes('CLASSE')) {
+      const match = rawCat.match(/\d+|I{1,3}|IV|V|VI{1,3}|VIII/);
+      if (match) {
+        catCode = `CL${match[0]}`;
+      } else {
+        catCode = rawCat;
+      }
+    } else if (rawCat.startsWith('C') && /^C\d+/.test(rawCat)) {
+      catCode = rawCat.match(/^C\d+/)?.[0] || rawCat;
+    } else {
+      const num = rawCat.replace(/[^0-9]/g, '');
+      if (num) {
+        catCode = `C${num}`;
+      } else {
+        catCode = rawCat;
+      }
+    }
+
+    // 3. Extraire l'échelon (ex: 'ECHELON 1' -> 'E01', 'E01' -> 'E01', '1' -> 'E01')
+    let rawEch = (emp.echelon || '').trim().toUpperCase();
+    let echCode = '';
+    const echNumMatch = rawEch.replace(/[^0-9]/g, '');
+    if (echNumMatch) {
+      const num = parseInt(echNumMatch, 10);
+      echCode = num < 10 ? `E0${num}` : `E${num}`;
+    } else if (rawEch) {
+      echCode = rawEch.startsWith('E') ? rawEch : `E${rawEch}`;
+    }
+
+    if (catCode && echCode) {
+      return `${catCode}${echCode}`;
+    }
+
+    return emp.grade || catCode || echCode || '—';
   }
 
   getDateRetraite(emp: Employee): { dateStr: string; yearsLeft: number | null } {

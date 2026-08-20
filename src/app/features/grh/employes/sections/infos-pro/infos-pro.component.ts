@@ -29,6 +29,7 @@ export class InfosProComponent implements OnInit {
   agences$!: Observable<RefItem[]>;
   fonctions$!: Observable<RefItem[]>;
   emplois$!: Observable<RefItem[]>;
+  banques$!: Observable<RefItem[]>;
   fonctionsList: RefItem[] = [];
   parametragesRetraite: any[] = [];
   grades$!: Observable<RefItem[]>;
@@ -43,6 +44,7 @@ export class InfosProComponent implements OnInit {
   departements: RefItem[] = [];
   services: RefItem[] = [];
   agences: RefItem[] = [];
+  banques: RefItem[] = [];
 
   grades: RefItem[] = [];
   categories: RefItem[] = [];
@@ -76,6 +78,8 @@ export class InfosProComponent implements OnInit {
     this.echelons$ = this.dbRefService.getItems('echelon');
     this.grillesSalariales$ = this.dbRefService.getItems('grille-salariale');
     this.regimesSecuriteSocial$ = this.dbRefService.getItems('regime-securite-social');
+    this.banques$ = this.dbRefService.getItems('banque');
+    this.banques$.subscribe(items => this.banques = items || []);
 
     // this.fonctions$.subscribe(list => {
     //   if (list && list.length > 0) {
@@ -172,6 +176,49 @@ export class InfosProComponent implements OnInit {
 
   get showBancaire(): boolean {
     return this.form.get('modePaiement')?.value === 'Virement bancaire';
+  }
+
+  get calculatedRetirementDateStr(): string {
+    if (!this.employee?.dateNaissance) return '—';
+    const birthDate = new Date(this.employee.dateNaissance);
+    if (isNaN(birthDate.getTime())) return '—';
+
+    // 1. Trouver le Groupe de l'employé sélectionné dans le formulaire ou l'objet employé
+    const gradeId = this.form?.get('gradeId')?.value || this.employee?.gradeId;
+    const gradeObj = this.grades.find(g => String(g.id) === String(gradeId));
+    const gradeLabel = (gradeObj?.libelle || gradeObj?.code || this.employee?.grade || '').toUpperCase();
+
+    const catId = this.form?.get('categorieId')?.value || this.employee?.categorieId;
+    const catObj = this.categories.find(c => String(c.id) === String(catId));
+    const catLabel = (catObj?.libelle || catObj?.code || this.employee?.categoriePro || '').toUpperCase();
+
+    let groupe = 'GROUPE I';
+    if (gradeLabel.includes('GROUPE III') || gradeLabel.includes('III') || catLabel.startsWith('CL5') || catLabel.startsWith('CL6') || catLabel.startsWith('CL7') || catLabel.startsWith('CL8')) {
+      groupe = 'GROUPE III';
+    } else if (gradeLabel.includes('GROUPE II') || gradeLabel.includes('II') || catLabel.startsWith('CL1') || catLabel.startsWith('CL2') || catLabel.startsWith('CL3') || catLabel.startsWith('CL4')) {
+      groupe = 'GROUPE II';
+    }
+
+    // 2. Trouver l'âge depuis param-retraite dans Données de base
+    let age = groupe === 'GROUPE III' ? 65 : 60;
+    const paramRet = this.parametragesRetraite.find(p => {
+      const codeOrLib = ((p.code || '') + ' ' + (p.libelle || '') + ' ' + (p.grade || '')).toUpperCase();
+      return codeOrLib.includes(groupe);
+    });
+    if (paramRet && (paramRet.taux || paramRet.ageRetraite || paramRet.montant)) {
+      age = Number(paramRet.taux || paramRet.ageRetraite || paramRet.montant);
+    }
+
+    // 3. Calculer la date exacte (sans afficher l'âge)
+    const retirementYear = birthDate.getFullYear() + age;
+    const retirementDate = new Date(birthDate);
+    retirementDate.setFullYear(retirementYear);
+
+    const day = String(retirementDate.getDate()).padStart(2, '0');
+    const month = String(retirementDate.getMonth() + 1).padStart(2, '0');
+    const year = retirementDate.getFullYear();
+
+    return `${day}/${month}/${year}`;
   }
 
   private buildForm(): void {
