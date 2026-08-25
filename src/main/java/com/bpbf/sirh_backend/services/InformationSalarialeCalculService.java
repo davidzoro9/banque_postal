@@ -212,7 +212,6 @@ public class InformationSalarialeCalculService {
 
     private boolean isEmployeur(Retenue retenue) {
         if (retenue == null) return false;
-<<<<<<< HEAD
         String typeVal = "";
         if (retenue.getTypeRetenue() != null) {
             typeVal = (retenue.getTypeRetenue().getCode() == null ? "" : retenue.getTypeRetenue().getCode()) + " "
@@ -221,21 +220,6 @@ public class InformationSalarialeCalculService {
         String full = (typeVal + " " + (retenue.getCode() != null ? retenue.getCode() : "") + " "
                 + (retenue.getLibelle() != null ? retenue.getLibelle() : "")).toUpperCase(Locale.ROOT);
         return full.contains("EMPLOYEUR") || full.contains("PATRON");
-=======
-        if (retenue.getTypeRetenue() != null) {
-            return isEmployeur(retenue.getTypeRetenue());
-        }
-        String lib = (retenue.getLibelle() == null ? "" : retenue.getLibelle()).toUpperCase(Locale.ROOT);
-        String code = (retenue.getCode() == null ? "" : retenue.getCode()).toUpperCase(Locale.ROOT);
-        return lib.contains("EMPLOYEUR") || lib.contains("PATRON") || code.contains("EMPLOYEUR") || code.contains("PATRON");
-    }
-
-    private boolean isEmployeur(TypeRetenue type) {
-        String value = (type.getCode() == null ? "" : type.getCode()) + " "
-                + (type.getLibelle() == null ? "" : type.getLibelle());
-        String normalized = value.toUpperCase(Locale.ROOT);
-        return normalized.contains("EMPLOYEUR") || normalized.contains("PATRON");
->>>>>>> 75197dc (feat(paie): support multi-routes, recalcul dynamique indemnite_employe et corrections services paie)
     }
 
     private static boolean isIuts(Retenue retenue) {
