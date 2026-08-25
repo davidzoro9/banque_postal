@@ -524,7 +524,442 @@ export class GenererBulletinsComponent implements OnInit {
     this.selectedBulletin = null;
   }
 
-  imprimerBulletin(): void {
-    window.print();
+  imprimerBulletin(bulletin?: any): void {
+    const b = bulletin || this.selectedBulletin;
+    if (!b) return;
+
+    const printWin = window.open('', '_blank', 'width=950,height=1100');
+    if (!printWin) {
+      alert('Veuillez autoriser les fenêtres pop-up pour imprimer le bulletin.');
+      return;
+    }
+
+    const formatMoney = (n: number) => {
+      const val = (n || 0);
+      return val.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    };
+
+    // Construction dynamique des lignes d'indemnités
+    let indemnitesLinesHtml = '';
+    if (b.indemnitesDetails && b.indemnitesDetails.length > 0) {
+      b.indemnitesDetails.forEach((ind: any, idx: number) => {
+        const codeIndem = ind.code ? ind.code : `x_indem_${idx + 1}`;
+        indemnitesLinesHtml += `
+          <tr>
+            <td style="font-family: monospace; font-size: 11px; padding: 3px 6px;">${codeIndem}</td>
+            <td style="padding: 3px 6px;">..${ind.typeIndemnite} ${b.isProrata ? `(${b.joursPresents}/30 J)` : ''}</td>
+            <td style="text-align: right; padding: 3px 6px; font-family: monospace;">${formatMoney(ind.montant)}</td>
+          </tr>
+        `;
+      });
+    } else {
+      indemnitesLinesHtml += `
+        <tr>
+          <td style="font-family: monospace; font-size: 11px; padding: 3px 6px;">x_indem_loge</td>
+          <td style="padding: 3px 6px;">..INDEMNITE DE LOGEMENT</td>
+          <td style="text-align: right; padding: 3px 6px; font-family: monospace;">${formatMoney(b.primeLogement || 35000)}</td>
+        </tr>
+        <tr>
+          <td style="font-family: monospace; font-size: 11px; padding: 3px 6px;">x_indem_trans</td>
+          <td style="padding: 3px 6px;">..INDEMNITE DE TRANSPORT</td>
+          <td style="text-align: right; padding: 3px 6px; font-family: monospace;">${formatMoney(b.primeTransport || 30000)}</td>
+        </tr>
+      `;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <title>Feuille de paie - ${b.employeeName} - ${b.mois || this.periode}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 12mm 15mm 12mm 15mm;
+          }
+          body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #1a1a1a;
+            background: #ffffff;
+            margin: 0;
+            padding: 10px;
+            font-size: 11.5px;
+            line-height: 1.35;
+          }
+          .brand-header {
+            margin-bottom: 20px;
+          }
+          .brand-logo {
+            max-height: 48px;
+            margin-bottom: 6px;
+          }
+          .header-line {
+            border-bottom: 2px solid #000000;
+            margin-bottom: 6px;
+          }
+          .company-info {
+            font-size: 10.5px;
+            color: #262626;
+            line-height: 1.3;
+          }
+          .company-info strong {
+            font-size: 11.5px;
+            text-transform: uppercase;
+          }
+          .main-title {
+            color: #b24522;
+            font-size: 22px;
+            font-weight: bold;
+            margin: 18px 0 4px 0;
+          }
+          .sub-title {
+            font-size: 11.5px;
+            color: #333333;
+            margin-bottom: 14px;
+          }
+          .employee-box {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 22px;
+            font-size: 11px;
+          }
+          .employee-box td {
+            border: 1px solid #bfbfbf;
+            padding: 4.5px 8px;
+          }
+          .employee-box td.label-cell {
+            font-weight: bold;
+            color: #000000;
+            width: 15%;
+            background: #fafafa;
+          }
+          .employee-box td.val-cell {
+            width: 35%;
+          }
+          .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 16px 0 6px 0;
+            border-bottom: 1px solid #94a3b8;
+            padding-bottom: 4px;
+          }
+          .payroll-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 18px;
+          }
+          .payroll-table th {
+            border-bottom: 1.5px solid #000000;
+            padding: 5px 6px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 11px;
+          }
+          .payroll-table td {
+            padding: 3.5px 6px;
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .payroll-table tr.header-cat td {
+            font-weight: bold;
+            color: #000000;
+            padding-top: 6px;
+          }
+          .footer-info {
+            text-align: center;
+            font-size: 9.5px;
+            color: #475569;
+            border-top: 1.5px solid #000000;
+            padding-top: 6px;
+            margin-top: 25px;
+          }
+          .signature-box {
+            text-align: right;
+            margin-top: 25px;
+            margin-bottom: 30px;
+            padding-right: 25px;
+          }
+          .signature-box strong {
+            font-size: 11.5px;
+          }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- 1. En-tête officiel BPBF -->
+        <div class="brand-header">
+          <img src="/bpbf-logo.png" alt="BPBF" class="brand-logo" onerror="this.style.display='none'">
+          <div class="header-line"></div>
+          <div class="company-info">
+            <strong>BANQUE POSTALE DU BURKINA FASO (BPBF)</strong><br>
+            Avenue Nelson Mandela, 01 BP 600 Ouagadougou 01<br>
+            Ouagadougou<br>
+            BURKINA FASO
+          </div>
+        </div>
+
+        <!-- 2. Titre & Sous-titre Odoo Style -->
+        <div class="main-title">Feuille de paie</div>
+        <div class="sub-title">Bulletin de paie de ${b.employeeName} pour ${(b.mois || this.periode).toLowerCase().replace(' ', '-')}</div>
+
+        <!-- 3. Cartouche Employé Odoo -->
+        <table class="employee-box">
+          <tr>
+            <td class="label-cell">Nom</td>
+            <td class="val-cell"><strong>${b.employeeName}</strong></td>
+            <td class="label-cell">Désignation</td>
+            <td class="val-cell">${b.fonction || 'Agent'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Adresse</td>
+            <td class="val-cell">Ouagadougou, BURKINA FASO</td>
+            <td class="label-cell">Grade / Catégorie</td>
+            <td class="val-cell">${b.grade || 'CLASSE I'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Courriel</td>
+            <td class="val-cell">${(b.employeeName.toLowerCase().replace(/\s+/g, '.') + '@bpbf.bf')}</td>
+            <td class="label-cell">N° d'identification</td>
+            <td class="val-cell"><strong>${b.matricule}</strong></td>
+          </tr>
+          <tr>
+            <td class="label-cell">Référence</td>
+            <td class="val-cell">SLIP/${b.anneeCode || '2026'}/${b.moisCode || '08'}-${b.matricule}</td>
+            <td class="label-cell">Compte bancaire</td>
+            <td class="val-cell" style="font-family: monospace;">${b.iban || 'BF056 01001 505511059401'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Date du</td>
+            <td class="val-cell">01/${b.moisCode || '08'}/${b.anneeCode || '2026'}</td>
+            <td class="label-cell">Date au</td>
+            <td class="val-cell">31/${b.moisCode || '08'}/${b.anneeCode || '2026'}</td>
+          </tr>
+        </table>
+
+        <!-- 4. Détails par catégorie de règle de salaire -->
+        <div class="section-title">Détails par catégorie de règle de salaire</div>
+        <table class="payroll-table">
+          <thead>
+            <tr>
+              <th style="width: 28%;">Code</th>
+              <th style="width: 52%;">Catégorie de règle salariale</th>
+              <th style="width: 20%; text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- ELEMENT -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">ELEMENT</td>
+              <td>ELEMENT</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBase + b.salaireBrut)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_salaire_base</td>
+              <td>..SALAIRE DE BASE ${b.isProrata ? `(${b.joursPresents}/30 J)` : ''}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBase)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_salaire_brut</td>
+              <td>..SALAIRE BRUT</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBrut)}</td>
+            </tr>
+
+            <!-- INDEMNITES -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">INDEMNITES</td>
+              <td>INDEMNITES</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.totalIndemnites)}</td>
+            </tr>
+            ${indemnitesLinesHtml}
+
+            <!-- PRECOMPTE -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">PRECOMPTE</td>
+              <td>PRECOMPTE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.avanceSurSolde || 0)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">mnt_percu_av_solde</td>
+              <td>..AVANCE SUR SOLDE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.avanceSurSolde || 0)}</td>
+            </tr>
+
+            <!-- RETENUE -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">RETENUE</td>
+              <td>RETENUE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.totalRetenues)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_patronal_carfo</td>
+              <td>..PART PATRONALE CARFO</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.partPatronaleCarfo)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_carfo</td>
+              <td>..COTISATION CARFO</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCarfoAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_patronal_cnss</td>
+              <td>..RETENUE CNSS (PART EMPLOYEUR)</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.partPatronaleCnss)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_cnss</td>
+              <td>..RETENUE CNSS (PART AGENT)</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCnssAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_patronal_crrae</td>
+              <td>..COTISATION CRRAE-UMOA (PART EMPLOYEUR)</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.partPatronaleCrrae)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_mnt_crrae</td>
+              <td>..COTISATION CRRAE-UMOA (PART AGENT)</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCrraeAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_iuts_net</td>
+              <td>..IUTS DU MOIS</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.impotIUTS)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_salaire_net_reconquete</td>
+              <td>..RETENUE FONDS DE SOUTIEN PATRIOTIQUE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.retenueFSP)}</td>
+            </tr>
+
+            <!-- BASE IMPOSABLE -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">BI</td>
+              <td>BI</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.baseImposable)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_salaire_net_imposable</td>
+              <td>..BASE IMPOSABLE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.baseImposable)}</td>
+            </tr>
+
+            <!-- AVOIR -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">AVOIR</td>
+              <td>AVOIR</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBrut)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_remuneration_total</td>
+              <td>..TOTAL AVOIR</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBrut)}</td>
+            </tr>
+
+            <!-- TOTALRETENUE -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">TOTALRETENUE</td>
+              <td>TOTALRETENUE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.totalRetenues)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">mnt_total_retenues</td>
+              <td>..TOTAL RETENUE</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.totalRetenues)}</td>
+            </tr>
+
+            <!-- NET -->
+            <tr class="header-cat">
+              <td style="font-family: monospace;">NET</td>
+              <td>NET</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireNet)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace; font-size: 11px;">x_net_payer</td>
+              <td>..NET A PAYER</td>
+              <td style="text-align: right; font-family: monospace; font-weight: bold;">${formatMoney(b.salaireNet)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 5. Lignes de bulletin de paie par registre de contribution -->
+        <div class="section-title">Lignes de bulletin de paie par registre de contribution</div>
+        <table class="payroll-table">
+          <thead>
+            <tr>
+              <th style="width: 20%;">Code</th>
+              <th style="width: 35%;">Nom</th>
+              <th style="width: 15%;">Quantité/taux</th>
+              <th style="width: 15%; text-align: right;">Montant</th>
+              <th style="width: 15%; text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-family: monospace;">CARFO_AG</td>
+              <td>Cotisation Retraite CARFO Agent</td>
+              <td>${b.quantitePresence || 1} / 8.00%</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBase)}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCarfoAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace;">CNSS_AG</td>
+              <td>Sécurité Sociale CNSS Agent</td>
+              <td>${b.quantitePresence || 1} / 5.50%</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBrut)}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCnssAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace;">CRRAE_AG</td>
+              <td>Retraite Complémentaire CRRAE Agent</td>
+              <td>${b.quantitePresence || 1} / 3.00%</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.salaireBase)}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.cotisationCrraeAgent)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace;">IUTS</td>
+              <td>Impôt Unique sur les Traitements et Salaires</td>
+              <td>${b.nombreCharges || 0} charge(s)</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.baseImposable)}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.impotIUTS)}</td>
+            </tr>
+            <tr>
+              <td style="font-family: monospace;">FSP</td>
+              <td>Fonds de Soutien Patriotique</td>
+              <td>1.00%</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.baseImposable)}</td>
+              <td style="text-align: right; font-family: monospace;">${formatMoney(b.retenueFSP)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 6. Signature autorisée -->
+        <div class="signature-box">
+          <strong>Signature autorisée</strong>
+        </div>
+
+        <!-- 7. Pied de page officiel -->
+        <div class="footer-info">
+          contact@bpbf.bf &nbsp;&nbsp;&nbsp; https://www.bpbf.bf<br>
+          Page : 1 / 1
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWin.document.open();
+    printWin.document.write(htmlContent);
+    printWin.document.close();
   }
 }
