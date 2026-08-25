@@ -203,16 +203,10 @@ public class EmployeeProcessService {
         informationCalculService.recalculate(employee);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public InformationSalarialeDto getInformation(String idOrMatricule) {
         Employee employee = resolveEmployee(idOrMatricule);
-        return informationRepository.findByEmployeeId(employee.getId())
-                .map(informationCalculService::toDto)
-                .orElseGet(() -> {
-                    InformationSalarialeDto dto = new InformationSalarialeDto();
-                    dto.setEmployeeId(employee.getId());
-                    return dto;
-                });
+        return informationCalculService.toDto(informationCalculService.recalculate(employee));
     }
 
     @Transactional
