@@ -41,16 +41,6 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'type-formation',   label: 'Type de formation',        icon: 'school',              route: '/donnees-base/carriere/type-formation'},
       { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',           route: '/donnees-base/carriere/type-evaluation'}*/
     ]
-  },
-  {
-    id: 'paie-section',
-    label: 'Paie',
-    icon: 'payments',
-    children: [
-      { id: 'rubrique',         label: 'Rubrique de paie',         icon: 'receipt_long',        route: '/donnees-base/paie/rubrique'          },
-      { id: 'bareme',           label: 'Barème fiscal',            icon: 'calculate',           route: '/donnees-base/paie/bareme'            },
-      { id: 'mode-paiement',    label: 'Mode de paiement',         icon: 'payments',            route: '/donnees-base/paie/mode-paiement'     }
-    ]
   }
 ];
 
@@ -69,7 +59,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'liste-employes',     label: 'Liste des employés',      icon: 'list_alt',              route: '/grh/employes'           },
         { id: 'fiche-infos-perso',  label: 'Infos personnelles',      icon: 'person',                route: '__emp__/infos-personnelles' },
-        { id: 'fiche-infos-pro',    label: 'Informations professionnelles', icon: 'work',          route: '__emp__/infos-pro'       }
+        { id: 'fiche-infos-pro',    label: 'Infos professionnelles',  icon: 'work',                  route: '__emp__/infos-pro'       }
       ]
     },
     {
@@ -103,11 +93,8 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Gestion de la Paie',
       icon: 'payments',
       children: [
-        { id: 'bulletins', label: 'Bulletins de paie', icon: 'receipt', route: '/paie/bulletins/generer' },
-        { id: 'generer',   label: 'Générer la paie',   icon: 'autorenew', route: '/paie/bulletins/generer' },
-        { id: 'valider',   label: 'Valider la paie',   icon: 'verified', route: '/paie/bulletins/generer' },
-        { id: 'cloture',   label: 'Clôture de paie',   icon: 'lock',     route: '/paie/bulletins/generer' },
-        { id: 'historique',label: 'Historique',        icon: 'history',  route: '/paie/bulletins/historique' }
+        { id: 'generer',   label: 'Génération & Bulletins', icon: 'autorenew', route: '/paie/bulletins/generer' },
+        { id: 'historique',label: 'Historique des Paies',  icon: 'history',  route: '/paie/bulletins/historique' }
       ]
     }
   ],

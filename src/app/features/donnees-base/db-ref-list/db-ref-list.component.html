@@ -848,7 +848,7 @@
     @if (type === 'service') {
       <div appearance="outline" style="width: 100%;">
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Departement / Diretion</mat-label>
+          <mat-label>Département / Direction</mat-label>
           <mat-select formControlName="directionId" (selectionChange)="onServiceDirectionChange($event.value)">
             <mat-option [value]="null">Aucune</mat-option>
             @for (dir of directions; track dir.id) {

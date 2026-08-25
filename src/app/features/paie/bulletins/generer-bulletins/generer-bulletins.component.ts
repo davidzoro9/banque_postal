@@ -102,14 +102,218 @@ export class GenererBulletinsComponent implements OnInit {
       return;
     }
 
-    forkJoin(employees.map(emp => this.employeeService.getFamily(String(emp.id)).pipe(
-      catchError(() => of(undefined))
-    ))).subscribe(families => {
-      const calculated = employees.map((emp, index) => this.buildBulletinFromEmployee(emp, families[index]));
-      this.bulletins = this.adapterBulletinsSelonSession(calculated);
-      this.restaurerSessionState();
-      this.isCalculating = false;
+    forkJoin(employees.map(emp => 
+      this.employeeService.getSalaryInformation(String(emp.id)).pipe(
+        catchError(() => of(null))
+      )
+    )).subscribe(infoDtos => {
+      forkJoin(employees.map(emp => this.employeeService.getFamily(String(emp.id)).pipe(
+        catchError(() => of(undefined))
+      ))).subscribe(familles => {
+        const calculated = employees.map((emp, index) => {
+          return this.mapBulletinFromInfoDtoOrEmployee(emp, infoDtos[index], familles[index]);
+        });
+        this.bulletins = this.adapterBulletinsSelonSession(calculated);
+        this.restaurerSessionState();
+        this.isCalculating = false;
+      });
     });
+  }
+
+  private parseEmployeeHireDate(dateStr?: string): Date | null {
+    if (!dateStr) return null;
+    const str = String(dateStr).trim();
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        const p1 = parseInt(parts[0], 10);
+        const p2 = parseInt(parts[1], 10);
+        const p3 = parseInt(parts[2], 10);
+        if (p1 > 12) {
+          // DD/MM/YYYY
+          return new Date(p3, p2 - 1, p1);
+        } else if (p2 > 12) {
+          // MM/DD/YYYY
+          return new Date(p3, p1 - 1, p2);
+        } else {
+          // Default MM/DD/YYYY (e.g. 8/25/2026 from datepicker)
+          return new Date(p3, p1 - 1, p2);
+        }
+      }
+    } else if (str.includes('-')) {
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        const p1 = parseInt(parts[0], 10);
+        const p2 = parseInt(parts[1], 10);
+        const p3 = parseInt(parts[2], 10);
+        if (p1 > 1000) {
+          return new Date(p1, p2 - 1, p3);
+        } else {
+          return new Date(p3, p2 - 1, p1);
+        }
+      }
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private mapBulletinFromInfoDtoOrEmployee(emp: Employee, infoDto: any, famille?: any): any {
+    const payMonth = this.moisIndex; // 0-indexed (6 = Juillet, 7 = Août, etc.)
+    const payYear = 2026;
+    const daysInMonthCal = new Date(payYear, payMonth + 1, 0).getDate();
+    const mmStr = String(payMonth + 1).padStart(2, '0');
+    const startPeriodStr = `01/${mmStr}/${payYear}`;
+    const endPeriodStr = `${daysInMonthCal}/${mmStr}/${payYear}`;
+
+    // Calcul du Prorata Temporis basé sur la date de prise de fonction / embauche
+    const hireDate = this.parseEmployeeHireDate(emp.dateEmbauche);
+    let ratioPresence = 1.0;
+    let isProrata = false;
+    let joursPresents = 30;
+
+    if (hireDate) {
+      const hYear = hireDate.getFullYear();
+      const hMonth = hireDate.getMonth();
+      const hDay = hireDate.getDate();
+
+      if (hYear === payYear && hMonth === payMonth) {
+        // Embauché pendant le mois de paie en cours !
+        const joursReels = Math.max(1, daysInMonthCal - hDay + 1);
+        joursPresents = Math.min(30, joursReels);
+        ratioPresence = Math.min(1, Math.max(0, joursPresents / 30));
+        isProrata = true;
+      } else if (hireDate > new Date(payYear, payMonth, daysInMonthCal)) {
+        // Embauché dans un mois futur
+        ratioPresence = 0;
+        joursPresents = 0;
+        isProrata = true;
+      } else {
+        // Déjà en poste
+        ratioPresence = 1.0;
+        joursPresents = 30;
+        isProrata = false;
+      }
+    }
+
+    const quantitePresence = Number(ratioPresence.toFixed(2));
+    const tauxPresence = Number((ratioPresence * 100).toFixed(2));
+
+    const sBaseMensuel = (infoDto && infoDto.salaireBase && Number(infoDto.salaireBase) > 0)
+      ? Number(infoDto.salaireBase)
+      : (emp.salaireBase || 95945);
+
+    const sBase = Math.round(sBaseMensuel * ratioPresence);
+
+    let rawIndemnitesMensuelles = (infoDto && infoDto.indemnites && infoDto.indemnites.length > 0)
+      ? infoDto.indemnites.map((i: any) => ({
+          typeIndemnite: (i.libelle || i.typeIndemniteCode || 'INDEMNITE').toUpperCase(),
+          code: i.typeIndemniteCode || i.code || '',
+          montantMensuel: Number(i.montant) || 0
+        }))
+      : [];
+
+    if (rawIndemnitesMensuelles.length === 0) {
+      if (emp.primeLogement && emp.primeLogement > 0) {
+        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE LOGEMENT', code: '200', montantMensuel: emp.primeLogement });
+      }
+      if (emp.primeTransport && emp.primeTransport > 0) {
+        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE TRANSPORT / ASTREINTE', code: '210', montantMensuel: emp.primeTransport });
+      }
+      if (emp.primeResponsabilite && emp.primeResponsabilite > 0) {
+        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE RESPONSABILITE / CAISSE', code: '230', montantMensuel: emp.primeResponsabilite });
+      }
+      if (emp.autresIndemnites && emp.autresIndemnites.length > 0) {
+        emp.autresIndemnites.forEach((ai, idx) => {
+          if (ai.montant > 0) rawIndemnitesMensuelles.push({ typeIndemnite: (ai.libelle || 'INDEMNITE').toUpperCase(), code: `29${idx + 1}`, montantMensuel: ai.montant });
+        });
+      }
+    }
+
+    const rawIndemnites = rawIndemnitesMensuelles.map((i: any) => ({
+      typeIndemnite: i.typeIndemnite,
+      code: i.code,
+      montant: Math.round(i.montantMensuel * ratioPresence)
+    }));
+
+    const totIndem = rawIndemnites.reduce((acc: number, item: any) => acc + item.montant, 0);
+    const brut = sBase + totIndem;
+
+    const pecParams = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : undefined;
+    const nCharges = computeEmployeeFamilyCharges(emp, pecParams, 20, 4, famille);
+    const computedGrade = this.computeGradeCode(emp);
+
+    const calc = calculateOfficialIUTS(sBase, rawIndemnites.map((i: any) => ({ libelle: i.typeIndemnite, montant: i.montant })), {
+      vehiculeFourni: emp.vehiculeFourni,
+      logementFourni: emp.logementFourni,
+      nombreChargesFamille: nCharges,
+      inclureFSP: true,
+      inclureCRRAE: true
+    });
+
+    const abattementForfaitaire = calc.abattementForfaitaire || Math.round(sBase * 0.20);
+    const exoFiscalesIndemnites = (calc.totalExonerations && calc.totalExonerations > abattementForfaitaire)
+      ? (calc.totalExonerations - abattementForfaitaire)
+      : Math.round(totIndem * 0.20);
+    const baseImposable = calc.baseImposable || Math.max(0, brut - abattementForfaitaire - exoFiscalesIndemnites);
+
+    // Retenues salariales Agent
+    const cotisationCarfoAgent = Math.round(sBase * 0.08);
+    const cotisationCnssAgent = Math.round(brut * 0.055);
+    const cotisationCrraeAgent = Math.round(sBase * 0.03);
+    const impotIUTS = calc.iutsNet || 0;
+    const retenueFSP = calc.fondsSoutienPat || Math.round(baseImposable * 0.01);
+    const avanceSurSolde = 0;
+    const totalRetenuesAgent = cotisationCarfoAgent + cotisationCrraeAgent + impotIUTS + retenueFSP + avanceSurSolde;
+
+    // Retenues patronales Employeur
+    const partPatronaleCarfo = Math.round(sBase * 0.14);
+    const partPatronaleCnss = Math.round(brut * 0.16);
+    const partPatronaleCrrae = Math.round(sBase * 0.06);
+    const totalRetenuesPatronales = partPatronaleCarfo + partPatronaleCnss + partPatronaleCrrae;
+
+    const salaireNet = brut - totalRetenuesAgent;
+
+    return {
+      employeeId: emp.id,
+      employeeName: `${emp.nom || ''} ${emp.prenom || ''}`.trim().toUpperCase() || 'COLLABORATEUR',
+      matricule: emp.matricule || 'EMP-001',
+      fonction: emp.fonction || emp.poste || emp.service || 'Agent',
+      grade: computedGrade,
+      categorie: emp.categoriePro || 'CLASSE I',
+      dateEmbauche: emp.dateEmbauche,
+      isProrata,
+      joursPresents,
+      quantitePresence,
+      tauxPresence,
+      periodeTexte: `${startPeriodStr} - ${endPeriodStr} (${this.periode})`,
+      moisCode: mmStr,
+      anneeCode: String(payYear),
+      mois: this.periode,
+      salaireBase: sBase,
+      salaireBaseMensuel: sBaseMensuel,
+      totalIndemnites: totIndem,
+      salaireBrut: brut,
+      indemnitesDetails: rawIndemnites,
+      abattementForfaitaire,
+      exoFiscalesIndemnites,
+      baseImposable,
+      cotisationCarfoAgent,
+      cotisationCnssAgent,
+      cotisationCrraeAgent,
+      impotIUTS,
+      retenueFSP,
+      avanceSurSolde,
+      totalRetenues: totalRetenuesAgent,
+      partPatronaleCarfo,
+      partPatronaleCnss,
+      partPatronaleCrrae,
+      totalRetenuesPatronales,
+      salaireNet,
+      nombreCharges: nCharges,
+      banque: (infoDto && infoDto.banque) || 'BANQUE POSTALE DU BURKINA FASO - BPBF',
+      iban: (infoDto && infoDto.iban) || 'BF056 01001 505511059401',
+      modePaiement: (infoDto && infoDto.modePaiement) || 'Virement bancaire'
+    };
   }
 
   private computeGradeCode(emp: any): string {
@@ -139,19 +343,25 @@ export class GenererBulletinsComponent implements OnInit {
   }
 
   private buildBulletinFromEmployee(emp: Employee, famille?: Array<{ estCharge?: boolean }>): any {
-    const sBase = emp.salaireBase || 150000;
-    const pLog = emp.primeLogement || 0;
-    const pTrans = emp.primeTransport || 0;
-    const pResp = emp.primeResponsabilite || 0;
+    const sBase = emp.salaireBase || 95945;
+    let pLog = emp.primeLogement || 0;
+    let pTrans = emp.primeTransport || 0;
+    let pResp = emp.primeResponsabilite || 0;
 
-    const indemnitesList: Array<{ libelle: string; montant: number }> = [];
-    if (pLog > 0) indemnitesList.push({ libelle: 'Indemnité de Logement', montant: pLog });
-    if (pTrans > 0) indemnitesList.push({ libelle: 'Indemnité de Transport', montant: pTrans });
-    if (pResp > 0) indemnitesList.push({ libelle: 'Indemnité de Responsabilité', montant: pResp });
+    const indemnitesList: Array<{ libelle: string; code: string; montant: number }> = [];
+    if (pLog > 0) {
+      indemnitesList.push({ libelle: 'INDEMNITE DE LOGEMENT', code: 'x_indem_loge', montant: pLog });
+    }
+    if (pTrans > 0) {
+      indemnitesList.push({ libelle: 'INDEMNITE DE TRANSPORT / ASTREINTE', code: 'x_indem_astr', montant: pTrans });
+    }
+    if (pResp > 0) {
+      indemnitesList.push({ libelle: 'INDEMNITE DE RESPONSABILITE', code: 'x_indem_finance', montant: pResp });
+    }
 
     if (emp.autresIndemnites && emp.autresIndemnites.length > 0) {
-      emp.autresIndemnites.forEach(ai => {
-        if (ai.montant > 0) indemnitesList.push({ libelle: ai.libelle, montant: ai.montant });
+      emp.autresIndemnites.forEach((ai, idx) => {
+        if (ai.montant > 0) indemnitesList.push({ libelle: (ai.libelle || 'INDEMNITE').toUpperCase(), code: `x_indem_${idx + 1}`, montant: ai.montant });
       });
     }
 
@@ -173,7 +383,7 @@ export class GenererBulletinsComponent implements OnInit {
     return {
       employeeId: emp.id,
       employeeName: `${emp.nom || ''} ${emp.prenom || ''}`.trim().toUpperCase() || 'COLLABORATEUR',
-      matricule: emp.matricule,
+      matricule: emp.matricule || 'EMP-001',
       fonction: emp.fonction || emp.poste || emp.service || 'Agent',
       grade: computedGrade,
       categorie: emp.categoriePro || 'CLASSE I',
@@ -189,7 +399,7 @@ export class GenererBulletinsComponent implements OnInit {
       autresRetenues,
       totalRetenues: calc.totalRetenues,
       salaireNet: calc.salaireNet,
-      indemnitesDetails: indemnitesList.map(i => ({ typeIndemnite: i.libelle, montant: i.montant }))
+      indemnitesDetails: indemnitesList.map(i => ({ typeIndemnite: i.libelle, code: i.code, montant: i.montant }))
     };
   }
 

@@ -171,11 +171,11 @@
           </mat-form-field>
         </div>
 
-        <p class="form-section-label">Classification & Grille salariale</p>
+        <p class="form-section-label">Grille salariale</p>
         <div class="form-grid-3">
 
           <mat-form-field appearance="outline">
-            <mat-label>Groupe/Grade</mat-label>
+            <mat-label>Groupe</mat-label>
 
             <mat-select
               formControlName="gradeId"
@@ -230,12 +230,23 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Salaire de base</mat-label>
+            <mat-label>Grade associé</mat-label>
+            <input
+              matInput
+              [value]="associatedGrade"
+              readonly
+              style="font-weight: 700; color: #0060B3;">
+            <mat-icon matSuffix style="color: #0060B3;">verified</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Salaire de base (FCFA)</mat-label>
 
             <input
               matInput
-              [value]="selectedSalaryGrid?.montant || 0"
-              readonly>
+              [value]="(selectedSalaryGrid?.montant != null ? formatMontant(selectedSalaryGrid!.montant!) : (form.get('salaireBase')?.value ? formatMontant(form.get('salaireBase')?.value) : '0')) + ' FCFA'"
+              readonly
+              style="font-weight: 700; color: #0060B3;">
             @if (form.get('grilleSalarialeId')?.hasError('required')) {
               <mat-error>Aucune grille ne correspond à cette classification</mat-error>
             }
@@ -246,7 +257,7 @@
         <p class="form-section-label">Paramétrage retraite</p>
         <div class="form-grid-2" style="margin-bottom:16px;">
           <mat-form-field appearance="outline">
-            <mat-label>Date de retraite prévisionnelle</mat-label>
+            <mat-label>Date de départ à la retraite</mat-label>
             <input matInput [value]="calculatedRetirementDateStr" readonly style="font-weight: 700; color: #0060B3;">
             <mat-icon matSuffix style="color:#0060B3;">event</mat-icon>
           </mat-form-field>

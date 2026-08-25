@@ -79,46 +79,48 @@ export class InfosProComponent implements OnInit {
     this.grillesSalariales$ = this.dbRefService.getItems('grille-salariale');
     this.regimesSecuriteSocial$ = this.dbRefService.getItems('regime-securite-social');
     this.banques$ = this.dbRefService.getItems('banque');
-    this.banques$.subscribe(items => this.banques = items || []);
 
-    // this.fonctions$.subscribe(list => {
-    //   if (list && list.length > 0) {
-    //     this.fonctionsList = list;
-    //   }
-    // });
+    forkJoin({
+      emplois: this.emplois$,
+      services: this.services$,
+      directions: this.directions$,
+      departements: this.departements$,
+      agences: this.agences$,
+      fonctions: this.fonctions$,
+      grades: this.grades$,
+      categories: this.categories$,
+      echelons: this.echelons$,
+      grillesSalariales: this.grillesSalariales$,
+      regimes: this.regimesSecuriteSocial$,
+      banques: this.banques$,
+      paramsRetraite: this.dbRefService.getItems('param-retraite'),
+      employee: this.employeeService.getById(this.empId)
+    }).subscribe({
+      next: (res) => {
+        this.emplois = res.emplois || [];
+        this.services = res.services || [];
+        this.directions = res.directions || [];
+        this.departements = res.departements || [];
+        this.agences = res.agences || [];
+        this.fonctions = res.fonctions || [];
+        this.fonctionsList = res.fonctions || [];
+        this.grades = res.grades || [];
+        this.categories = res.categories || [];
+        this.echelons = res.echelons || [];
+        this.grillesSalariales = res.grillesSalariales || [];
+        this.regimesSecuriteSocial = (res.regimes || []).filter(item => item.actif !== false);
+        this.banques = res.banques || [];
+        this.parametragesRetraite = (res.paramsRetraite || []).filter(item => item.actif !== false);
 
-    this.emplois$.subscribe(items => this.emplois = items);
-    this.fonctions$.subscribe(items => {
-      this.fonctions = items;
-      this.fonctionsList = items;
-    });
-    this.directions$.subscribe(items => this.directions = items);
-    this.departements$.subscribe(items => this.departements = items);
-    this.services$.subscribe(items => this.services = items);
-    this.agences$.subscribe(items => this.agences = items);
-
-    this.grades$.subscribe(items => this.grades = items);
-    this.categories$.subscribe(items => this.categories = items);
-    this.echelons$.subscribe(items => this.echelons = items);
-    this.grillesSalariales$.subscribe(items => {
-      this.grillesSalariales = items;
-    });
-
-    this.regimesSecuriteSocial$.subscribe(items => this.regimesSecuriteSocial = items.filter( item => item.actif !== false ));
-
-    this.dbRefService.getItems('param-retraite').subscribe(items => {
-      this.parametragesRetraite = items.filter(item => item.actif !== false);
-    });
-
-    this.employeeService.getById(this.empId).subscribe({
-      next: e => {
-        this.employee = e;
+        this.employee = res.employee;
         this.buildForm();
-        this.patch(e);
+        this.patch(res.employee);
+
         this.employeeService.getSalaryInformation(this.empId).subscribe({
           next: information => this.patchSalaryInformation(information),
           error: () => {}
         });
+
         if (!this.isCreationMode) this.form.disable();
       },
       error: err => {
@@ -299,6 +301,34 @@ export class InfosProComponent implements OnInit {
       }
     }
 
+    let resolvedGradeId = e.gradeId || null;
+    let resolvedCatId = e.categorieId || null;
+    let resolvedEchId = e.echelonId || null;
+    let resolvedGridId = e.grilleSalarialeId || null;
+
+    // Auto-détection si les identifiants ne sont pas renseignés
+    if (!resolvedCatId && (e.categoriePro || cat)) {
+      const catCode = this.getCatCodeDisplay(e.categoriePro || cat);
+      const foundCat = this.categories.find(c => this.getCatCodeDisplay(c.code || c.libelle || '') === catCode);
+      if (foundCat) resolvedCatId = foundCat.id || null;
+    }
+
+    if (!resolvedEchId && (e.echelon || ech)) {
+      const echCode = this.getEchelonCodeDisplay(e.echelon || ech);
+      const foundEch = this.echelons.find(ec => this.getEchelonCodeDisplay(ec.code || ec.libelle || '') === echCode);
+      if (foundEch) resolvedEchId = foundEch.id || null;
+    }
+
+    if (resolvedCatId && resolvedEchId && (!resolvedGradeId || !resolvedGridId)) {
+      const foundGrid = this.grillesSalariales.find(g =>
+        String(g.categorieId) === String(resolvedCatId) && String(g.echelonId) === String(resolvedEchId)
+      );
+      if (foundGrid) {
+        if (!resolvedGridId) resolvedGridId = foundGrid.id || null;
+        if (!resolvedGradeId && foundGrid.gradeId) resolvedGradeId = foundGrid.gradeId || null;
+      }
+    }
+
     this.form.patchValue({
       poste:            e.poste || '',
       fonction:         fctValue,
@@ -325,10 +355,10 @@ export class InfosProComponent implements OnInit {
       departmentId: e.departmentId || null,
       regimeSecuriteSocialId: e.regimeSecuriteSocialId || null,
 
-      gradeId: e.gradeId || null,
-      categorieId: e.categorieId || null,
-      echelonId: e.echelonId || null,
-      grilleSalarialeId: e.grilleSalarialeId || null,
+      gradeId: resolvedGradeId,
+      categorieId: resolvedCatId,
+      echelonId: resolvedEchId,
+      grilleSalarialeId: resolvedGridId,
     });
   }
 
@@ -415,6 +445,58 @@ export class InfosProComponent implements OnInit {
     );
   }
 
+  getCatCodeDisplay(str: string): string {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+    if (upper.includes('1ERE') || upper.includes('1ÈRE') || upper.includes('1RE') || upper.includes('CATEGORIE 1') || upper.includes('CAT 1')) return 'C1';
+    if (upper.includes('2EME') || upper.includes('2ÈME') || upper.includes('2E') || upper.includes('CATEGORIE 2') || upper.includes('CAT 2')) return 'C2';
+    if (upper.includes('3EME') || upper.includes('3ÈME') || upper.includes('3E') || upper.includes('CATEGORIE 3') || upper.includes('CAT 3')) return 'C3';
+    if (upper.includes('4EME') || upper.includes('4ÈME') || upper.includes('4E') || upper.includes('CATEGORIE 4') || upper.includes('CAT 4')) return 'C4';
+    if (upper.includes('5EME') || upper.includes('5ÈME') || upper.includes('5E') || upper.includes('CATEGORIE 5') || upper.includes('CAT 5')) return 'C5';
+    if (upper.includes('6EME') || upper.includes('6ÈME') || upper.includes('6E') || upper.includes('CATEGORIE 6') || upper.includes('CAT 6')) return 'C6';
+    if (upper.includes('7EME') || upper.includes('7ÈME') || upper.includes('7E') || upper.includes('CATEGORIE 7') || upper.includes('CAT 7')) return 'C7';
+    if (upper.includes('CLASSE 1') || upper.includes('CL1') || upper.includes('CLASSE I') || upper.includes('CL I')) return 'CL1';
+    if (upper.includes('CLASSE 2') || upper.includes('CL2') || upper.includes('CLASSE II') || upper.includes('CL II')) return 'CL2';
+    if (upper.includes('CLASSE 3') || upper.includes('CL3') || upper.includes('CLASSE III') || upper.includes('CL III')) return 'CL3';
+    if (upper.includes('CLASSE 4') || upper.includes('CL4') || upper.includes('CLASSE IV') || upper.includes('CL IV')) return 'CL4';
+    if (upper.includes('CLASSE 5') || upper.includes('CL5') || upper.includes('CLASSE V') || upper.includes('CL V')) return 'CL5';
+    if (upper.includes('CLASSE 6') || upper.includes('CL6') || upper.includes('CLASSE VI') || upper.includes('CL VI')) return 'CL6';
+    if (upper.includes('CLASSE 7') || upper.includes('CL7') || upper.includes('CLASSE VII') || upper.includes('CL VII')) return 'CL7';
+    if (upper.includes('CLASSE 8') || upper.includes('CL8') || upper.includes('CLASSE VIII') || upper.includes('CL VIII')) return 'CL8';
+    return str;
+  }
+
+  getEchelonCodeDisplay(str: string): string {
+    if (!str) return '';
+    const numStr = str.replace(/[^0-9]/g, '');
+    if (numStr) {
+      const num = parseInt(numStr, 10);
+      return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    return str;
+  }
+
+  get associatedGrade(): string {
+    const catId = this.form?.get('categorieId')?.value;
+    const echId = this.form?.get('echelonId')?.value;
+    const catObj = this.categories.find(c => String(c.id) === String(catId));
+    const echObj = this.echelons.find(e => String(e.id) === String(echId));
+    const catStr = catObj?.libelle || catObj?.code || this.form?.get('categoriePro')?.value || this.employee?.categoriePro || '';
+    const echStr = echObj?.libelle || echObj?.code || this.form?.get('echelon')?.value || this.employee?.echelon || '';
+
+    if (catStr && echStr) {
+      const catCode = this.getCatCodeDisplay(catStr);
+      const echCode = this.getEchelonCodeDisplay(echStr);
+      return `${catCode}${echCode}`;
+    }
+    return this.form?.get('grade')?.value || this.employee?.grade || '—';
+  }
+
+  formatMontant(value: number): string {
+    if (!value && value !== 0) return '0';
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value).replace(/\s/g, ' ');
+  }
+
   onClassificationChange(): void {
     const gradeId = this.form.get('gradeId')?.value;
     const categorieId = this.form.get('categorieId')?.value;
@@ -427,7 +509,8 @@ export class InfosProComponent implements OnInit {
     );
 
     this.form.patchValue({
-      grilleSalarialeId: grid?.id || null
+      grilleSalarialeId: grid?.id || null,
+      grade: this.associatedGrade !== '—' ? this.associatedGrade : ''
     });
   }
 
@@ -435,14 +518,16 @@ export class InfosProComponent implements OnInit {
     this.form.patchValue({
       categorieId: null,
       echelonId: null,
-      grilleSalarialeId: null
+      grilleSalarialeId: null,
+      grade: ''
     });
   }
 
   onCategoryChange(): void {
     this.form.patchValue({
       echelonId: null,
-      grilleSalarialeId: null
+      grilleSalarialeId: null,
+      grade: ''
     });
   }
 

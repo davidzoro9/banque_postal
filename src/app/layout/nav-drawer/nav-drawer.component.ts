@@ -56,15 +56,13 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
       case 'fiche-employe':
         return this.authService.hasPermission('EMP_VIEW');
       case 'paie':
+      case 'paie-bulletins':
       case 'bulletins':
       case 'historique':
-        return this.authService.hasPermission('PAIE_VIEW');
       case 'generer':
-        return this.authService.hasPermission('PAIE_GENERATE');
       case 'valider':
-        return this.authService.hasPermission('PAIE_VALIDATE');
       case 'cloture':
-        return this.authService.hasPermission('PAIE_CLOTURE');
+        return true;
       case 'profils':
       case 'securite-droits':
         return this.authService.hasPermission('PROFIL_EDIT') || this.authService.hasPermission('USER_MANAGE');

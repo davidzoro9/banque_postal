@@ -41,14 +41,6 @@ export class DbOverviewComponent {
       color: '#00897b',
       description: 'Configuration des âges légaux de départ à la retraite (Non-cadres 60 ans, Cadres 65 ans).',
       route: '/donnees-base/admin/param-retraite'
-    },
-    {
-      title: 'Rubriques de Paie & Barèmes',
-      badge: 'Paie & Fiscalité',
-      icon: 'calculate',
-      color: '#7b1fa2',
-      description: 'Paramétrage des rubriques de paie, barèmes IUTS, retenues et modes de paiement.',
-      route: '/donnees-base/paie/rubrique'
     }
   ];
 
