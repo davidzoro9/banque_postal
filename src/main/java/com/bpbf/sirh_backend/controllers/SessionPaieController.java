@@ -14,9 +14,12 @@ import java.util.List;
 public class SessionPaieController {
 
     private final SessionPaieRepository sessionPaieRepository;
+    private final com.bpbf.sirh_backend.services.BulletinService bulletinService;
 
-    public SessionPaieController(SessionPaieRepository sessionPaieRepository) {
+    public SessionPaieController(SessionPaieRepository sessionPaieRepository,
+                                 com.bpbf.sirh_backend.services.BulletinService bulletinService) {
         this.sessionPaieRepository = sessionPaieRepository;
+        this.bulletinService = bulletinService;
     }
 
     @GetMapping
@@ -41,13 +44,23 @@ public class SessionPaieController {
         return ResponseEntity.ok(saved);
     }
 
+    @PostMapping("/{id}/generer")
+    public ResponseEntity<List<com.bpbf.sirh_backend.dtos.BulletinDto>> genererBulletinsSession(@PathVariable Long id) {
+        List<com.bpbf.sirh_backend.dtos.BulletinDto> bulletins = bulletinService.generateBulletinsForSession(id);
+        return ResponseEntity.ok(bulletins);
+    }
+
+    @GetMapping("/{id}/bulletins")
+    public ResponseEntity<List<com.bpbf.sirh_backend.dtos.BulletinDto>> getBulletinsSession(@PathVariable Long id) {
+        return ResponseEntity.ok(bulletinService.getBulletinsBySession(id));
+    }
+
     @PutMapping("/{id}/valider")
     public ResponseEntity<SessionPaie> validerSession(@PathVariable Long id) {
-        return sessionPaieRepository.findById(id).map(session -> {
-            session.setStatut("VALIDE");
-            session.setDateValidation(LocalDateTime.now());
-            return ResponseEntity.ok(sessionPaieRepository.save(session));
-        }).orElse(ResponseEntity.notFound().build());
+        bulletinService.validateSession(id);
+        return sessionPaieRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/cloturer")
