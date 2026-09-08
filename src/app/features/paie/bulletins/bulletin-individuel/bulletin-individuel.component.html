@@ -1,0 +1,436 @@
+<div class="bulletin-page">
+  <!-- En-tête de page standard BPBF -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <div>
+        <h1>Bulletins Individuels de Paie</h1>
+        <p>Génération, consultation et impression des fiches de paie conformes BPBF</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-flat-button class="btn-new" (click)="openCreateModal()">
+        <mat-icon>add</mat-icon> Nouveau Bulletin Individuel
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres de recherche -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Rechercher par Matricule, Nom ou Réf Bulletin...">
+        @if (searchQuery) {
+          <button class="clear-btn" (click)="searchQuery = ''; applyFilter()"><mat-icon>close</mat-icon></button>
+        }
+      </div>
+
+      <div class="select-box">
+        <mat-icon class="filter-icon">filter_list</mat-icon>
+        <select [(ngModel)]="statutFilter" (change)="applyFilter()">
+          <option value="">Tous les statuts</option>
+          <option value="VALIDE">Validé</option>
+          <option value="CLOTURE">Clôturé</option>
+          <option value="BROUILLON">Brouillon</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Principale des Bulletins -->
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width: 170px;">RÉFÉRENCE</th>
+            <th style="width: 110px;">MATRICULE</th>
+            <th style="min-width: 240px;">EMPLOYÉ</th>
+            <th style="width: 200px;">PÉRIODE</th>
+            <th style="width: 130px; text-align: right;">SALAIRE BRUT</th>
+            <th style="width: 140px; text-align: right;">TOTAL RETENUES</th>
+            <th style="width: 150px; text-align: right;">NET À PAYER</th>
+            <th style="width: 110px; text-align: center;">STATUT</th>
+            <th style="width: 130px; text-align: center;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of filteredList; track b.code) {
+            <tr>
+              <td class="cell-nowrap">
+                <span class="ref-code">{{ b.code }}</span>
+              </td>
+              <td class="cell-nowrap">
+                <span class="mat-badge">{{ b.matricule }}</span>
+              </td>
+              <td>
+                <div class="emp-cell">
+                  <div class="emp-avatar">{{ b.employeeName.charAt(0) }}</div>
+                  <div>
+                    <div class="emp-name">{{ b.employeeName }}</div>
+                    <div class="emp-sub">{{ b.fonction }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="cell-nowrap">
+                <span class="period-text">{{ b.dateFrom }} au {{ b.dateTo }}</span>
+              </td>
+              <td style="text-align: right;" class="cell-nowrap">
+                <span class="amount-brut">{{ b.salaireBrut | number:'1.0-0' }}</span>
+              </td>
+              <td style="text-align: right;" class="cell-nowrap">
+                <span class="amount-ret">-{{ b.totalRetenues | number:'1.0-0' }}</span>
+              </td>
+              <td style="text-align: right;" class="cell-nowrap">
+                <span class="amount-net">{{ b.salaireNet | number:'1.0-0' }}</span>
+              </td>
+              <td style="text-align: center;" class="cell-nowrap">
+                <span class="badge-status {{ b.statut.toLowerCase() }}">
+                  {{ b.statut }}
+                </span>
+              </td>
+              <td style="text-align: center;" class="cell-nowrap">
+                <div class="actions-cell">
+                  <button mat-icon-button class="action-btn edit" title="Ajuster les variables (Jours, Primes, Heures Sup, Précomptes)" (click)="ouvrirModalModifierVariables(b)">
+                    <mat-icon>tune</mat-icon>
+                  </button>
+                  <button mat-icon-button class="action-btn view" title="Aperçu officiel de la fiche de paie" (click)="voirBulletin(b)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button class="action-btn print" title="Imprimer le Bulletin Officiel" (click)="imprimerBulletin(b)">
+                    <mat-icon>print</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="empty-row">
+                <mat-icon>search_off</mat-icon>
+                <p>Aucun bulletin de paie ne correspond à votre recherche.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL 1 : Création / Calcul Individuel -->
+  @if (showModal) {
+    <div class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="header-title">
+            <mat-icon>calculate</mat-icon>
+            <h2>Calculer un Bulletin Individuel</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <mat-form-field appearance="outline" class="col-span-2">
+              <mat-label>Sélectionner l'Employé</mat-label>
+              <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="onEmployeeSelect($event.value)" required>
+                <div class="search-inside-select">
+                  <input matInput [(ngModel)]="agentSearchText" (click)="$event.stopPropagation()" placeholder="Filtrer matricule, nom...">
+                </div>
+                @for (emp of filteredEmployeesForSelect; track emp.id) {
+                  <mat-option [value]="emp.id">
+                    {{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction }})
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Type de Session</mat-label>
+              <mat-select [(ngModel)]="formModel.typeSession" (selectionChange)="onFormChange()">
+                <mat-option value="PAIE_NORMALE">Paie normale</mat-option>
+                <mat-option value="GRATIFICATION">Gratification annuelle</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Jours Travaillés / Ouvrables</mat-label>
+              <input matInput type="number" [(ngModel)]="formModel.workedDays" (ngModelChange)="onFormChange()" min="1" max="30">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date Début Période</mat-label>
+              <input matInput type="date" [(ngModel)]="formModel.dateFrom" (ngModelChange)="onFormChange()">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date Fin Période</mat-label>
+              <input matInput type="date" [(ngModel)]="formModel.dateTo" (ngModelChange)="onFormChange()">
+            </mat-form-field>
+          </div>
+
+          <!-- Aperçu du calcul dynamique -->
+          @if (previewCalcul) {
+            <div class="preview-box">
+              <div class="preview-header">
+                <div>
+                  <h3 style="margin: 0; color: #0060B3; font-weight: 800;">{{ previewCalcul.employeeName }}</h3>
+                  <div style="font-size: 12px; color: #64748b;">{{ previewCalcul.matricule }} | {{ previewCalcul.fonction }} | Compte : {{ previewCalcul.numeroCompteBancaire }}</div>
+                </div>
+                <div class="preview-net-badge">
+                  <span>NET À PAYER</span>
+                  <strong>{{ previewCalcul.salaireNet | number:'1.0-0' }}</strong>
+                </div>
+              </div>
+
+              <!-- Tableau officiel unifié 4 colonnes : ÉLÉMENTS DE PAIE, AVOIRS, RETENUES + RECAP -->
+              <div class="table-lines-box">
+                <table class="bulletin-official-table">
+                  <colgroup>
+                    <col style="width: 32%;">
+                    <col style="width: 26%;">
+                    <col style="width: 21%;">
+                    <col style="width: 21%;">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th colspan="2" class="col-libelle">ÉLÉMENTS DE PAIE</th>
+                      <th class="col-avoirs">AVOIRS</th>
+                      <th class="col-retenues">RETENUES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of previewCalcul.lines; track line.code) {
+                      <tr class="line-row">
+                        <td colspan="2" class="col-libelle">{{ line.name }}</td>
+                        <td class="col-avoirs">{{ line.gain ? (line.gain | number:'1.0-0') : '' }}</td>
+                        <td class="col-retenues">{{ line.retenue ? (line.retenue | number:'1.0-0') : '' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <!-- Cartouche Récapitulatif Officiel (Photo) -->
+                    <tr class="recap-hdr-row">
+                      <th>MODE DE PAIEMENT</th>
+                      <th>BASE IMPOSABLE</th>
+                      <th>TOTAL DES AVOIRS</th>
+                      <th>TOTAL DES RETENUES</th>
+                    </tr>
+                    <tr class="recap-data-row">
+                      <td>{{ previewCalcul.modeReglement || 'Virement' }}</td>
+                      <td class="text-right">{{ (previewCalcul.baseImposable || previewCalcul.netImposable || 0) | number:'1.0-0' }}</td>
+                      <td class="text-right bold-txt">{{ previewCalcul.salaireBrut | number:'1.0-0' }}</td>
+                      <td class="text-right bold-txt">{{ previewCalcul.totalRetenues | number:'1.0-0' }}</td>
+                    </tr>
+                    <tr class="recap-hdr-row">
+                      <td class="cell-blank"></td>
+                      <th>RAP PART PATRONAL</th>
+                      <th>PART PATRONALE</th>
+                      <th class="net-hdr">NET A PAYER</th>
+                    </tr>
+                    <tr class="recap-data-row">
+                      <td class="cell-blank"></td>
+                      <td class="text-right"></td>
+                      <td class="text-right bold-txt">{{ (previewCalcul.totalCotisationsPatronales || previewCalcul.totalRetenuesPatronales || 0) | number:'1.0-0' }}</td>
+                      <td class="text-right net-amount">{{ previewCalcul.salaireNet | number:'1.0-0' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div class="in-words-preview">
+                <strong>En toutes lettres :</strong> {{ previewCalcul.montantEnLettres }}
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!previewCalcul" (click)="enregistrerBulletin()" class="btn-save">
+            <mat-icon>check</mat-icon> Valider & Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL 2 : Visualisation Officielle de la Fiche de Paie BPBF -->
+  @if (selectedBulletin) {
+    <div class="modal-backdrop">
+      <div class="payslip-modal-card">
+        <!-- Header officiel Banque Postale -->
+        <div class="payslip-header">
+          <div class="bank-identity">
+            <div class="bank-badge">BPBF</div>
+            <div class="bank-text">
+              <h2>BANQUE POSTALE DU BURKINA FASO</h2>
+              <p>BULLETIN OFFICIEL DE PAIE • RÉF : {{ selectedBulletin.code }}</p>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button mat-raised-button color="primary" class="btn-print-payslip" (click)="imprimerBulletin(selectedBulletin)">
+              <mat-icon>print</mat-icon> Imprimer / PDF
+            </button>
+            <button mat-icon-button (click)="fermerApercu()" class="btn-close-payslip">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Fiche Agent & Mode de règlement -->
+        <div class="emp-summary-box">
+          <div class="avatar-large">{{ selectedBulletin.employeeName.charAt(0) }}</div>
+          <div class="emp-details">
+            <h3 class="emp-name-title">{{ selectedBulletin.employeeName }}</h3>
+            <div class="emp-meta">
+              Matricule : <strong>{{ selectedBulletin.matricule }}</strong> | 
+              Fonction : <strong>{{ selectedBulletin.fonction }}</strong> | 
+              Grade : <strong>{{ selectedBulletin.grade }}</strong>
+            </div>
+          </div>
+          <div class="payment-method-box">
+            <div class="pm-lbl">Mode de règlement</div>
+            <div class="pm-val">{{ selectedBulletin.modeReglement }}</div>
+            <div class="pm-rib">{{ selectedBulletin.numeroCompteBancaire }}</div>
+          </div>
+        </div>
+
+        <div class="cartouche-clean">
+          <div class="info-block">
+            <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ selectedBulletin.dateFrom }} au {{ selectedBulletin.dateTo }}</strong></div>
+            <div class="info-row"><span class="lbl">Session :</span> <span>{{ selectedBulletin.typeSession }}</span></div>
+            <div class="info-row"><span class="lbl">Jours Travaillés :</span> <strong>{{ selectedBulletin.workedDays }} / {{ selectedBulletin.scheduledWorkingDays }} Jours</strong></div>
+          </div>
+          <div class="info-block">
+            <div class="info-row"><span class="lbl">Siège Social :</span> <span>01 BP 600 Ouagadougou 01</span></div>
+            <div class="info-row"><span class="lbl">N° IFU / N° CNSS :</span> <span>00012345Z / 45892-A</span></div>
+            <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ selectedBulletin.nombreCharges }} charge(s)</strong></div>
+          </div>
+        </div>
+
+        <!-- Tableau officiel unifié 4 colonnes : ÉLÉMENTS DE PAIE, AVOIRS, RETENUES + RECAP -->
+        <div class="table-lines-box">
+          <table class="bulletin-official-table">
+            <colgroup>
+              <col style="width: 32%;">
+              <col style="width: 26%;">
+              <col style="width: 21%;">
+              <col style="width: 21%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th colspan="2" class="col-libelle">ÉLÉMENTS DE PAIE</th>
+                <th class="col-avoirs">AVOIRS</th>
+                <th class="col-retenues">RETENUES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of selectedBulletin.lines; track l.code) {
+                <tr class="line-row">
+                  <td colspan="2" class="col-libelle">{{ l.name }}</td>
+                  <td class="col-avoirs">{{ l.gain ? (l.gain | number:'1.0-0') : '' }}</td>
+                  <td class="col-retenues">{{ l.retenue ? (l.retenue | number:'1.0-0') : '' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <!-- Cartouche Récapitulatif Officiel (Photo) -->
+              <tr class="recap-hdr-row">
+                <th>MODE DE PAIEMENT</th>
+                <th>BASE IMPOSABLE</th>
+                <th>TOTAL DES AVOIRS</th>
+                <th>TOTAL DES RETENUES</th>
+              </tr>
+              <tr class="recap-data-row">
+                <td>{{ selectedBulletin.modeReglement || 'Virement' }}</td>
+                <td class="text-right">{{ (selectedBulletin.baseImposable || selectedBulletin.netImposable || 0) | number:'1.0-0' }}</td>
+                <td class="text-right bold-txt">{{ selectedBulletin.salaireBrut | number:'1.0-0' }}</td>
+                <td class="text-right bold-txt">{{ selectedBulletin.totalRetenues | number:'1.0-0' }}</td>
+              </tr>
+              <tr class="recap-hdr-row">
+                <td class="cell-blank"></td>
+                <th>RAP PART PATRONAL</th>
+                <th>PART PATRONALE</th>
+                <th class="net-hdr">NET A PAYER</th>
+              </tr>
+              <tr class="recap-data-row">
+                <td class="cell-blank"></td>
+                <td class="text-right"></td>
+                <td class="text-right bold-txt">{{ (selectedBulletin.totalCotisationsPatronales || selectedBulletin.totalRetenuesPatronales || selectedBulletin.partPatronaleCnss || 0) | number:'1.0-0' }}</td>
+                <td class="text-right net-amount">{{ selectedBulletin.salaireNet | number:'1.0-0' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Montant en Toutes Lettres -->
+        <div class="in-words-box">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">verified</mat-icon>
+          <span><strong>Montant Net à Payer en toutes lettres :</strong> {{ selectedBulletin.montantEnLettres }}</span>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="popup-footer-bar">
+          <button mat-flat-button style="background: #0284c7; color: white;" (click)="ouvrirModalModifierVariables(selectedBulletin); fermerApercu()">
+            <mat-icon>tune</mat-icon> Ajuster les Variables
+          </button>
+          <button mat-flat-button color="accent" (click)="imprimerBulletin(selectedBulletin)">
+            <mat-icon>print</mat-icon> Imprimer
+          </button>
+          <button mat-stroked-button (click)="fermerApercu()" class="btn-close-modal">
+            <mat-icon>close</mat-icon> Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL 3 : Ajustement des Variables de Paie (Jours, Primes, Heures Sup, Précomptes) -->
+  <!-- Modal Ajuster le Temps Travaillé de l'Agent -->
+  @if (showEditVariablesModal && selectedBulletinForEdit) {
+    <div class="modal-backdrop">
+      <div class="modal-card" style="max-width: 550px;">
+        <div class="modal-header">
+          <div class="header-title">
+            <mat-icon style="color: #0284c7;">schedule</mat-icon>
+            <div>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Ajuster le Temps Travaillé</h2>
+              <div style="font-size: 11px; color: #94a3b8;">
+                {{ selectedBulletinForEdit.employeeName }} ({{ selectedBulletinForEdit.matricule }})
+              </div>
+            </div>
+          </div>
+          <button mat-icon-button (click)="fermerModalModifierVariables()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- Jours Travaillés -->
+            <mat-form-field appearance="outline">
+              <mat-label>Jours Travaillés (Présence) *</mat-label>
+              <input matInput type="number" [(ngModel)]="editVariablesForm.workedDays" min="0" max="31">
+              <mat-hint>Jours réels de présence dans le mois</mat-hint>
+            </mat-form-field>
+
+            <!-- Jours Ouvrables -->
+            <mat-form-field appearance="outline">
+              <mat-label>Jours Prévus du Mois</mat-label>
+              <input matInput type="number" [(ngModel)]="editVariablesForm.scheduledWorkingDays" min="1" max="31">
+              <mat-hint>Base standard 30 jours</mat-hint>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="fermerModalModifierVariables()">Annuler</button>
+          <button mat-flat-button color="primary" (click)="sauvegarderVariablesEtRecalculer()">
+            <mat-icon>calculate</mat-icon> Recalculer & Mettre à Jour
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

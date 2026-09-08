@@ -1,21 +1,28 @@
-﻿.list-page { padding: 0; }
+.list-page { padding: 0; }
 
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 24px 32px; color: #fff;
-  .ph-content { display: flex; align-items: center; gap: 16px; }
-  .ph-icon { width: 48px; height: 48px; background: rgba(255,255,255,.2); border-radius: 12px;
-    display: flex; align-items: center; justify-content: center; mat-icon { font-size: 28px; width: 28px; height: 28px; } }
-  h1 { margin: 0; font-size: 22px; font-weight: 600; }
-  p  { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  padding: 18px 24px; color: var(--on-surface);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; margin: 16px 24px;
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap; gap: 14px;
+  .ph-content { display: flex; align-items: center; gap: 16px; flex: 1; }
+  .ph-icon { width: 48px; height: 48px; background: rgba(2, 132, 199, 0.12); border-radius: 12px;
+    border: 1px solid rgba(2, 132, 199, 0.25);
+    display: flex; align-items: center; justify-content: center; mat-icon { font-size: 28px; width: 28px; height: 28px; color: #0284c7; } }
+  h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--on-surface); }
+  p  { margin: 2px 0 0; font-size: 12px; color: var(--on-surface-3); }
 }
 
 .kpi-row {
-  display: flex; gap: 12px; padding: 16px 24px;
-  .kpi-chip { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 10px;
-    padding: 10px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); flex: 1; }
-  .kpi-val { font-size: 20px; font-weight: 700; color: #0060B3; }
-  .kpi-lbl { font-size: 12px; color: #757575; }
+  display: flex; gap: 12px; padding: 16px 24px; flex-wrap: wrap;
+  .kpi-chip { display: flex; align-items: center; gap: 8px; background: var(--surface); border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 10px 18px; box-shadow: var(--shadow-card); flex: 1; }
+  .kpi-val { font-size: 20px; font-weight: 700; color: #0284c7; }
+  .kpi-lbl { font-size: 12px; color: var(--on-surface-3); }
 }
 
 .filter-card { margin: 0 24px 16px; }

@@ -1,19 +1,59 @@
-﻿.spin-icon { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.section-page {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-.info-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #e3f2fd;
-  border-left: 4px solid #0060B3;
-  border-radius: 4px;
-  padding: 10px 16px;
-  margin: 0 0 20px;
-  color: #0060B3;
+.sec-breadcrumb {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #64748b;
+
+  .link {
+    color: #0060B3;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .sep {
+    margin: 0 8px;
+    color: #94a3b8;
+  }
+
+  .current {
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.section-card {
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  padding: 12px 16px 20px;
+}
+
+.form-section-label {
   font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 16px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
 
-  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  .span-2 {
+    grid-column: span 2;
+  }
 }
 
 .form-grid-1 {
@@ -22,3 +62,62 @@
   gap: 16px;
 }
 
+.solde-preview-box {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 8px 0 16px;
+
+  .sp-col {
+    display: flex;
+    flex-direction: column;
+
+    .sp-label {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .sp-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    &.highlight {
+      background: #ffffff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #d1fae5;
+    }
+  }
+}
+
+.simulation-banner {
+  background: #ecfdf5;
+  border-left: 4px solid #059669;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0 16px;
+
+  &.warning {
+    background: #fff1f2;
+    border-left-color: #dc2626;
+  }
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

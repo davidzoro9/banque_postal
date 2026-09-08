@@ -1,0 +1,120 @@
+<div class="cat-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>category</mat-icon></div>
+      <div>
+        <h1>Catégories des Éléments de Salaire</h1>
+      </div>
+    </div>
+    <div class="ph-actions" style="display: flex; gap: 10px; align-items: center;">
+      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Générer les catégories bancaires BPBF" style="border-radius: 8px;">
+        <mat-icon>auto_awesome</mat-icon> Données Banque BPBF
+      </button>
+      <button mat-raised-button class="btn-new" (click)="openAddModal()">
+        <mat-icon>add</mat-icon> Nouvelle Catégorie
+      </button>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher une catégorie...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: Base, Indemnité, Retenue...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table des Catégories (Strictement Code et Nom) -->
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width: 250px;">Code</th>
+            <th>Nom</th>
+            <th style="text-align: center; width: 120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filteredList; track c.id) {
+            <tr>
+              <td>
+                <span class="code-badge">{{ c.code }}</span>
+              </td>
+              <td>
+                <strong class="cat-name">{{ c.name }}</strong>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(c)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteCategory(c)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (filteredList.length === 0) {
+            <tr>
+              <td colspan="3" style="text-align: center; padding: 36px; color: #94a3b8;">
+                <mat-icon style="font-size: 36px; width: 36px; height: 36px;">category</mat-icon>
+                <div>Aucune catégorie enregistrée</div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- MODAL : Création / Modification (Strictement Code et Nom) -->
+  @if (showDialog) {
+    <div class="modal-backdrop custom-modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>category</mat-icon>
+            <h2>{{ editingCategory ? 'Modifier la Catégorie' : 'Nouvelle Catégorie d\'Éléments de Salaire' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Code *</mat-label>
+                <input matInput [(ngModel)]="formModel.code" placeholder="Ex: CAT_BASE" style="text-transform: uppercase;">
+              </mat-form-field>
+            </div>
+
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Nom *</mat-label>
+                <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Salaire de Base">
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.code || !formModel.name" (click)="saveCategory()" class="btn-save">
+            <mat-icon>check</mat-icon> {{ editingCategory ? 'Mettre à jour' : 'Créer la Catégorie' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

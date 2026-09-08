@@ -4,15 +4,16 @@
   margin: 0 auto;
 
   .page-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 20px 24px;
-    color: white;
+    padding: 18px 24px;
+    color: var(--on-surface);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0, 96, 179, 0.2);
+    box-shadow: var(--shadow-card);
 
     .ph-content {
       display: flex;
@@ -20,7 +21,8 @@
       gap: 16px;
 
       .ph-icon {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(2, 132, 199, 0.12);
+        color: #0284c7;
         padding: 10px;
         border-radius: 10px;
         display: flex;
@@ -36,18 +38,19 @@
         margin: 0;
         font-size: 20px;
         font-weight: 700;
+        color: var(--on-surface);
       }
 
       p {
         margin: 2px 0 0 0;
         font-size: 13px;
-        opacity: 0.9;
+        color: var(--on-surface-3);
       }
     }
 
     .btn-download {
-      background: #ffffff;
-      color: #0060B3;
+      background: #0284c7 !important;
+      color: #ffffff !important;
       font-weight: 700;
       border-radius: 8px;
     }

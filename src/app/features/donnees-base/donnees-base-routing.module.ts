@@ -16,7 +16,7 @@ const routes: Routes = [
   { path: 'admin/agence',          component: DbRefListComponent, data: { title: 'Agence',              icon: 'store',              type: 'agence'          } },
   { path: 'admin/banque',          component: DbRefListComponent, data: { title: 'Banque',              icon: 'money_on',           type: 'banque'          } },
   { path: 'admin/type-indemnite',  component: DbRefListComponent, data: { title: 'Liste des indemnités',icon: 'paid',               type: 'type-indemnite'  } },
-  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: 'Indemnités',          icon: 'settings_suggest',   type: 'param-indemnite' } },
+  { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: 'Grille indemnitaire',     icon: 'settings_suggest',   type: 'param-indemnite' } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
   { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Liste des retenues', icon: 'money_off', type: 'type-retenue-employe' } },

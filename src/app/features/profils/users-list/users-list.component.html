@@ -52,18 +52,19 @@
 
   <!-- Tableau des Utilisateurs -->
   <mat-card class="table-card">
-    <table class="custom-table">
-      <thead>
-        <tr>
-          <th>Utilisateur</th>
-          <th>Identifiant</th>
-          <th>Adresse Email</th>
-          <th>Rôle / Profil</th>
-          <th style="text-align: center;">Dernier Accès</th>
-          <th style="text-align: center;">Statut</th>
-          <th style="text-align: center;">Actions</th>
-        </tr>
-      </thead>
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Identifiant</th>
+            <th>Adresse Email</th>
+            <th>Rôle / Profil</th>
+            <th style="text-align: center;">Dernier Accès</th>
+            <th style="text-align: center;">Statut</th>
+            <th style="text-align: center; min-width: 140px;">Actions</th>
+          </tr>
+        </thead>
       <tbody>
         @for (u of filteredUsers; track u.id) {
           <tr>
@@ -113,6 +114,7 @@
         }
       </tbody>
     </table>
+    </div>
   </mat-card>
 
   <!-- Modal Formulaire Utilisateur -->

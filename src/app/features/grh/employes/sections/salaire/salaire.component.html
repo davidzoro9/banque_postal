@@ -27,14 +27,14 @@
 
       @if (information) {
         <div class="totals-grid">
-          <div class="total-card"><span>Salaire de base</span><strong>{{ information.salaireBase | number:'1.2-2' }} FCFA</strong></div>
-          <!-- <div class="total-card"><span>Total indemnités</span><strong class="positive">{{ information.totalIndemnites | number:'1.2-2' }} FCFA</strong></div> -->
-          <div class="total-card"><span>Rémunération brute</span><strong>{{ information.remunerationBrute | number:'1.2-2' }} FCFA</strong></div>
+          <div class="total-card"><span>Salaire de base</span><strong>{{ information.salaireBase | number:'1.2-2' }}</strong></div>
+          <!-- <div class="total-card"><span>Total indemnités</span><strong class="positive">{{ information.totalIndemnites | number:'1.2-2' }}</strong></div> -->
+          <div class="total-card"><span>Rémunération brute</span><strong>{{ information.remunerationBrute | number:'1.2-2' }}</strong></div>
           <div class="total-card">
             <span>Abattement forfaitaire</span>
-            <strong>{{ information.abattementForfaitaire | number:'1.2-2' }} FCFA</strong>
+            <strong>{{ information.abattementForfaitaire | number:'1.2-2' }}</strong>
           </div>
-          <div class="total-card"><span>Base imposable</span><strong>{{ information.baseImposable | number:'1.2-2' }} FCFA</strong></div>
+          <div class="total-card"><span>Base imposable</span><strong>{{ information.baseImposable | number:'1.2-2' }}</strong></div>
         </div>
 
         <div class="salary-columns">
@@ -42,18 +42,18 @@
             <h3><mat-icon>add_circle_outline</mat-icon>Indemnités</h3>
             @if (!information.indemnites.length) { <div class="empty">Aucune indemnité.</div> }
             @for (item of information.indemnites || []; track item.id) {
-              <div class="salary-row"><span>{{ item.libelle }}</span><strong>+ {{ item.montant | number:'1.2-2' }} FCFA</strong></div>
+              <div class="salary-row"><span>{{ item.libelle }}</span><strong>+ {{ item.montant | number:'1.2-2' }}</strong></div>
             }
-            <div class="panel-total"><span>Total</span><strong>{{ information.totalIndemnites | number:'1.2-2' }} FCFA</strong></div>
+            <div class="panel-total"><span>Total</span><strong>{{ information.totalIndemnites | number:'1.2-2' }}</strong></div>
           </section>
 
           <section class="salary-panel deductions">
             <h3><mat-icon>remove_circle_outline</mat-icon>Retenues part agent</h3>
             @if (!information.retenuesAgent.length) { <div class="empty">Aucune retenue part agent.</div> }
             @for (item of information.retenuesAgent || []; track item.id) {
-              <div class="deduction-row"><div><strong>{{ item.libelle }}</strong><small>{{ baseLabel(item.baseCalcul) }} : {{ item.montantBase | number:'1.2-2' }} FCFA · {{ item.taux | number:'1.2-2' }} %</small></div><span>- {{ item.montantCalcule | number:'1.2-2' }} FCFA</span></div>
+              <div class="deduction-row"><div><strong>{{ item.libelle }}</strong><small>{{ baseLabel(item.baseCalcul) }} : {{ item.montantBase | number:'1.2-2' }} · {{ item.taux | number:'1.2-2' }} %</small></div><span>- {{ item.montantCalcule | number:'1.2-2' }}</span></div>
             }
-            <div class="panel-total"><span>Total agent</span><strong>{{ information.totalRetenuesAgent | number:'1.2-2' }} FCFA</strong></div>
+            <div class="panel-total"><span>Total agent</span><strong>{{ information.totalRetenuesAgent | number:'1.2-2' }}</strong></div>
           </section>
         </div>
 
@@ -61,19 +61,19 @@
           <h3><mat-icon>business</mat-icon>Retenues part employeur</h3>
           @if (!information.retenuesEmployeur.length) { <div class="empty">Aucune retenue part employeur.</div> }
           @for (item of information.retenuesEmployeur || []; track item.id) {
-            <div class="deduction-row"><div><strong>{{ item.libelle }}</strong><small>{{ baseLabel(item.baseCalcul) }} : {{ item.montantBase | number:'1.2-2' }} FCFA · {{ item.taux | number:'1.2-2' }} %</small></div><span>{{ item.montantCalcule | number:'1.2-2' }} FCFA</span></div>
+            <div class="deduction-row"><div><strong>{{ item.libelle }}</strong><small>{{ baseLabel(item.baseCalcul) }} : {{ item.montantBase | number:'1.2-2' }} · {{ item.taux | number:'1.2-2' }} %</small></div><span>{{ item.montantCalcule | number:'1.2-2' }}</span></div>
           }
-          <div class="panel-total"><span>Total employeur</span><strong>{{ information.totalRetenuesEmployeur | number:'1.2-2' }} FCFA</strong></div>
+          <div class="panel-total"><span>Total employeur</span><strong>{{ information.totalRetenuesEmployeur | number:'1.2-2' }}</strong></div>
         </section>
 
         <div class="iuts-grid">
           <div><span>Personnes à charge</span><strong>{{ information.nombrePersonnesCharge }}</strong></div>
-          <div><span>IUTS sans charge</span><strong>{{ information.iutsSansCharge | number:'1.2-2' }} FCFA</strong></div>
-          <div><span>Réduction ({{ information.tauxReductionCharge | number:'1.2-2' }} %)</span><strong>- {{ information.reductionIutsCharge | number:'1.2-2' }} FCFA</strong></div>
-          <div><span>IUTS avec charge</span><strong>{{ information.iutsAvecCharge | number:'1.2-2' }} FCFA</strong></div>
+          <div><span>IUTS sans charge</span><strong>{{ information.iutsSansCharge | number:'1.2-2' }}</strong></div>
+          <div><span>Réduction ({{ information.tauxReductionCharge | number:'1.2-2' }} %)</span><strong>- {{ information.reductionIutsCharge | number:'1.2-2' }}</strong></div>
+          <div><span>IUTS avec charge</span><strong>{{ information.iutsAvecCharge | number:'1.2-2' }}</strong></div>
         </div>
 
-        <div class="net-box"><div><span>Total déduit à l’employé</span><strong>{{ information.totalDeduitEmploye | number:'1.2-2' }} FCFA</strong></div><div><span>Net à payer</span><strong>{{ information.salaireNet | number:'1.2-2' }} FCFA</strong></div></div>
+        <div class="net-box"><div><span>Total déduit à l’employé</span><strong>{{ information.totalDeduitEmploye | number:'1.2-2' }}</strong></div><div><span>Net à payer</span><strong>{{ information.salaireNet | number:'1.2-2' }}</strong></div></div>
 
         <div class="bank-box"><h3>Informations de paiement</h3><span>{{ information.modePaiement || 'Non renseigné' }}</span><span>{{ information.banque || 'Banque non renseignée' }}</span><span>{{ information.iban || 'IBAN non renseigné' }}</span><span>{{ information.intituleCompte || 'Intitulé non renseigné' }}</span></div>
       }

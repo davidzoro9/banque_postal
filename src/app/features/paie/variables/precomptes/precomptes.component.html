@@ -1,0 +1,236 @@
+<div class="precomptes-page">
+
+  <!-- En-tête Adaptatif (Clair & Sombre) -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon">
+        <mat-icon>credit_card_off</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Précomptes</h1>
+        <p>Prêts bancaires internes, avances et retenues échelonnées à échéances</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-new" (click)="openAddModal()">
+        <mat-icon>add</mat-icon>
+        <span>Nouveau Précompte</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Flash -->
+  @if (successMessage) {
+    <div class="alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-danger">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Barre de Recherche & Filtres Responsives -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher par agent, matricule, élément...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: Zongo, EMP-002, prêt...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous les statuts —</mat-option>
+            <mat-option value="EN_COURS">EN_COURS</mat-option>
+            <mat-option value="SOLDE">SOLDE</mat-option>
+            <mat-option value="SUSPENDU">SUSPENDU</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table des Précomptes -->
+  <mat-card class="table-card">
+    @if (loading) {
+      <div class="loading-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Chargement des précomptes depuis PostgreSQL...</span>
+      </div>
+    } @else if (filteredList.length === 0) {
+      <div class="empty-state">
+        <mat-icon>credit_card_off</mat-icon>
+        <h3>Aucun précompte enregistré</h3>
+        <p>Utilisez le bouton "Nouveau Précompte" pour créer un prêt ou une avance échelonnée.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Élément de Salaire</th>
+              <th style="text-align: right;">Montant Total</th>
+              <th style="text-align: right;">Montant Restant</th>
+              <th style="text-align: center;">Échéances (Mois)</th>
+              <th style="text-align: center;">Statut</th>
+              <th style="text-align: center; min-width: 100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of filteredList; track p.id) {
+              <tr class="data-row">
+                <!-- Agent -->
+                <td>
+                  <div class="agent-cell">
+                    <div class="agent-avatar">{{ (p.employeeName || 'A').charAt(0).toUpperCase() }}</div>
+                    <div>
+                      <div class="agent-name">{{ p.employeeName }}</div>
+                      <div class="agent-matricule">{{ p.matricule }}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Élément de Salaire -->
+                <td>
+                  <span class="badge-element">{{ p.elementSalaryName }}</span>
+                </td>
+
+                <!-- Montant Total -->
+                <td style="text-align: right; font-weight: 700;">
+                  {{ p.amount | number:'1.0-0' }} FCFA
+                </td>
+
+                <!-- Montant Restant -->
+                <td style="text-align: right; font-weight: 800; color: #d97706;">
+                  {{ p.montantRestant | number:'1.0-0' }} FCFA
+                </td>
+
+                <!-- Échéance -->
+                <td style="text-align: center;">
+                  <span class="badge-echeance">{{ p.echeance }} mois</span>
+                </td>
+
+                <!-- Statut -->
+                <td style="text-align: center;">
+                  <span class="status-badge" [ngClass]="p.statut ? p.statut.toLowerCase() : 'en_cours'">
+                    {{ p.statut }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(p)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" title="Supprimer" (click)="deletePrecompte(p)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </mat-card>
+
+  <!-- Modal Formulaire Précompte Responsive -->
+  @if (showDialog) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>credit_card_off</mat-icon>
+            <h2>{{ editingPrecompte ? 'Modifier le Précompte' : 'Nouveau Précompte / Prêt' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- Sélection Agent -->
+            <div class="form-group full-width">
+              <label>Agent concerné <span class="required">*</span></label>
+              <input type="text" class="custom-input" placeholder="Filtrer par nom ou matricule..."
+                     [(ngModel)]="agentSearchText" (ngModelChange)="agentSearchText = $event">
+              <select class="custom-select" [(ngModel)]="formModel.employeeId" (ngModelChange)="onEmployeeSelect()">
+                <option value="" disabled>— Sélectionner un agent ({{ filteredEmployeesForSelect.length }} disponibles) —</option>
+                @for (emp of filteredEmployeesForSelect; track emp.id) {
+                  <option [value]="emp.id">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Élément de Salaire -->
+            <div class="form-group full-width">
+              <label>Élément de salaire (Rubrique de retenue) <span class="required">*</span></label>
+              <select class="custom-select" [(ngModel)]="formModel.elementSalaryId">
+                <option [value]="0" disabled>— Sélectionner un élément —</option>
+                @for (el of elementsList; track el.id) {
+                  <option [value]="el.id">{{ el.name }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Montant Total -->
+            <div class="form-group">
+              <label>Montant total (FCFA) <span class="required">*</span></label>
+              <input type="number" class="custom-input" placeholder="Ex: 150000"
+                     [(ngModel)]="formModel.amount" (ngModelChange)="onAmountChange()" min="1">
+            </div>
+
+            <!-- Montant Restant -->
+            <div class="form-group">
+              <label>Montant restant dû (FCFA)</label>
+              <input type="number" class="custom-input" placeholder="Ex: 150000"
+                     [(ngModel)]="formModel.montantRestant" min="0">
+            </div>
+
+            <!-- Nombre d'échéances -->
+            <div class="form-group">
+              <label>Échéance (Nombre de mois) <span class="required">*</span></label>
+              <input type="number" class="custom-input" placeholder="Ex: 12"
+                     [(ngModel)]="formModel.echeance" min="1" max="120">
+            </div>
+
+            <!-- Statut -->
+            <div class="form-group">
+              <label>Statut du précompte</label>
+              <select class="custom-select" [(ngModel)]="formModel.statut">
+                <option value="EN_COURS">EN_COURS</option>
+                <option value="SOLDE">SOLDE</option>
+                <option value="SUSPENDU">SUSPENDU</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()" class="btn-cancel">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.employeeId || !formModel.elementSalaryId || !formModel.amount || isSaving"
+                  (click)="savePrecompte()" class="btn-save">
+            <mat-icon>check</mat-icon>
+            <span>{{ editingPrecompte ? 'Mettre à jour' : 'Enregistrer' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

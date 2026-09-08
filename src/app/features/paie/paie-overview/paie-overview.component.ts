@@ -1,5 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-paie-overview',
@@ -7,7 +11,11 @@ import { Router } from '@angular/router';
   styleUrls: ['./paie-overview.component.scss'],
   standalone: false
 })
-export class PaieOverviewComponent {
+export class PaieOverviewComponent implements OnInit {
+  bulletinsTraites = 0;
+  bulletinsATraiter = 0;
+  totalAgents = 0;
+  loadingStats = true;
 
   sections = [
     {
@@ -39,12 +47,49 @@ export class PaieOverviewComponent {
       badge: 'Retenues & Avances',
       icon: 'money_off',
       color: '#7b1fa2',
-      description: 'Gestion des avances, acomptes, remboursements et retenues attribués aux collaborateurs.',
+      description: 'Gestion des avances, acomptes, remboursements et retenues attribués aux agents.',
       route: '/donnees-base/admin/type-retenue-employe'
     }
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient
+  ) {}
+
+  ngOnInit(): void {
+    this.loadStats();
+  }
+
+  loadStats(): void {
+    this.loadingStats = true;
+    forkJoin({
+      bulletins: this.http.get<any[]>(`${environment.apiUrl}/bulletins`).pipe(catchError(() => of([]))),
+      employees: this.http.get<any[]>(`${environment.apiUrl}/employees`).pipe(catchError(() => of([]))),
+      sessions: this.http.get<any[]>(`${environment.apiUrl}/paie/sessions`).pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ bulletins, employees, sessions }) => {
+        const activeEmployees = (employees || []).filter((e: any) => e.statut !== 'Inactif' && e.statut !== 'Détaché');
+        this.totalAgents = activeEmployees.length || (employees || []).length || 0;
+
+        const activeSession = sessions && sessions.length > 0 ? sessions[0] : null;
+        
+        let processed = 0;
+        if (activeSession) {
+          processed = (bulletins || []).filter((b: any) => String(b.sessionPaieId) === String(activeSession.id)).length;
+        } else {
+          processed = (bulletins || []).length;
+        }
+
+        this.bulletinsTraites = processed;
+        this.bulletinsATraiter = Math.max(0, this.totalAgents - this.bulletinsTraites);
+        this.loadingStats = false;
+      },
+      error: () => {
+        this.loadingStats = false;
+      }
+    });
+  }
 
   navigateTo(route: string): void {
     this.router.navigate([route]);

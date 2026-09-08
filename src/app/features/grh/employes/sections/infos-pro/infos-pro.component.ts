@@ -150,17 +150,57 @@ export class InfosProComponent implements OnInit {
     return upper;
   }
 
-  // private updateComputedGrade(): void {
-  //   if (!this.form) return;
-  //   const cat = this.parseCat(this.form.get('categoriePro')?.value || '');
-  //   let ech = (this.form.get('echelon')?.value || '').trim();
-  //   if (ech) {
-  //     const num = parseInt(ech.replace(/[^0-9]/g, ''), 10);
-  //     if (!isNaN(num)) ech = num < 10 ? `E0${num}` : `E${num}`;
-  //   }
-  //   const computedGrade = (cat && ech) ? `${cat}${ech}` : (cat || ech || '');
-  //   this.form.get('grade')?.setValue(computedGrade, { emitEvent: false });
-  // }
+  formatGradeCode(rawGrade?: string, rawCat?: string, rawEch?: string): string {
+    if (rawGrade && /^(C|CL|HC)\d*(E\d+|EX)$/i.test(rawGrade.trim())) {
+      return rawGrade.trim().toUpperCase();
+    }
+
+    let g = (rawGrade || '').trim();
+    let c = (rawCat || '').trim();
+    let e = (rawEch || '').trim();
+
+    if (g.includes('Échelon') || g.includes('Echelon') || g.includes('ECHELON') || g.includes('echelon')) {
+      const parts = g.split(/(?=Échelon|Echelon|ECHELON|echelon)/i);
+      if (parts.length >= 2) {
+        if (!c) c = parts[0].trim();
+        if (!e) e = parts[1].trim();
+      }
+    }
+
+    let catCode = '';
+    const cUpper = (c || g).toUpperCase();
+    if (cUpper.includes('HORS') || cUpper.startsWith('HC')) {
+      catCode = 'HC';
+    } else if (cUpper.includes('CLASSE') || cUpper.startsWith('CL')) {
+      const m = cUpper.match(/\d+|I{1,3}|IV|V|VI{1,3}|VIII/);
+      if (m) {
+        const romanToNum: Record<string, string> = { 'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8' };
+        const num = romanToNum[m[0]] || m[0];
+        catCode = `CL${num}`;
+      } else {
+        catCode = 'CL1';
+      }
+    } else {
+      const num = cUpper.replace(/[^0-9]/g, '');
+      catCode = num ? `C${num}` : 'C1';
+    }
+
+    let echCode = '';
+    const eUpper = (e || g).toUpperCase();
+    if (eUpper.includes('EXCEPT') || eUpper.endsWith('EX')) {
+      echCode = 'EX';
+    } else {
+      const m = eUpper.replace(/[^0-9]/g, '');
+      if (m) {
+        const num = parseInt(m, 10);
+        echCode = num < 10 ? `E0${num}` : `E${num}`;
+      } else {
+        echCode = 'E01';
+      }
+    }
+
+    return `${catCode}${echCode}`;
+  }
 
   enableEdit(): void {
     this.isEditing = true;
@@ -329,6 +369,27 @@ export class InfosProComponent implements OnInit {
       }
     }
 
+    let resolvedAgenceId = e.agenceId || null;
+    if (!resolvedAgenceId && e.agence) {
+      const targetAg = (e.agence || '').trim().toLowerCase();
+      const foundAg = this.agences.find(a => (a.libelle || a.code || '').trim().toLowerCase() === targetAg);
+      if (foundAg) resolvedAgenceId = foundAg.id || null;
+    }
+
+    let resolvedDirId = e.directionId || null;
+    if (!resolvedDirId && (e.direction || e.departement)) {
+      const dirName = (e.direction || e.departement || '').trim().toLowerCase();
+      const foundDir = this.directions.find(d => (d.libelle || d.code || '').trim().toLowerCase() === dirName);
+      if (foundDir) resolvedDirId = foundDir.id || null;
+    }
+
+    let resolvedSrvId = e.serviceId || null;
+    if (!resolvedSrvId && e.service) {
+      const targetSrv = (e.service || '').trim().toLowerCase();
+      const foundSrv = this.services.find(s => (s.libelle || s.code || '').trim().toLowerCase() === targetSrv);
+      if (foundSrv) resolvedSrvId = foundSrv.id || null;
+    }
+
     this.form.patchValue({
       poste:            e.poste || '',
       fonction:         fctValue,
@@ -349,9 +410,9 @@ export class InfosProComponent implements OnInit {
 
       fonctionId: e.fonctionId || null,
       emploiId: e.emploiId || null,
-      serviceId: e.serviceId || null,
-      agenceId: e.agenceId || null,
-      directionId: e.directionId || null,
+      serviceId: resolvedSrvId,
+      agenceId: resolvedAgenceId,
+      directionId: resolvedDirId,
       departmentId: e.departmentId || null,
       regimeSecuriteSocialId: e.regimeSecuriteSocialId || null,
 
@@ -401,6 +462,78 @@ export class InfosProComponent implements OnInit {
       this.selectedFonctionName.includes('DIRECTEUR DE DEPARTEMENT') ||
       this.selectedFonctionName.includes('RESPONSABLE DE DEPARTEMENT')
     );
+  }
+
+  get filteredDirections(): RefItem[] {
+    const agenceId = this.form?.get('agenceId')?.value;
+    if (!agenceId) {
+      return this.directions;
+    }
+
+    const selectedAgence = this.agences.find(a => String(a.id) === String(agenceId));
+
+    return this.directions.filter(dir => {
+      if (dir.agenceId && String(dir.agenceId) === String(agenceId)) {
+        return true;
+      }
+      if (selectedAgence && dir.agenceLibelle && dir.agenceLibelle.trim().toLowerCase() === selectedAgence.libelle?.trim().toLowerCase()) {
+        return true;
+      }
+      // Si la direction n'a pas d'agence assignée, on ne l'affiche que si aucune agence spécifique n'est filtrée
+      return false;
+    });
+  }
+
+  onAgenceChange(): void {
+    const currentDirId = this.form.get('directionId')?.value;
+    if (currentDirId) {
+      const valid = this.filteredDirections.some(d => String(d.id) === String(currentDirId));
+      if (!valid) {
+        this.form.get('directionId')?.setValue(null);
+        this.form.get('serviceId')?.setValue(null);
+      }
+    }
+  }
+
+  get filteredServices(): RefItem[] {
+    const dirId = this.form?.get('directionId')?.value;
+    const depId = this.form?.get('departmentId')?.value;
+
+    if (!dirId && !depId) {
+      return this.services;
+    }
+
+    const selectedDir = this.directions.find(d => String(d.id) === String(dirId));
+    const selectedDep = this.departements.find(d => String(d.id) === String(depId));
+
+    return this.services.filter(srv => {
+      let matchDir = false;
+      if (dirId) {
+        matchDir = (srv.directionId != null && String(srv.directionId) === String(dirId)) ||
+                   (!!selectedDir && !!srv.directionLibelle && srv.directionLibelle.trim().toLowerCase() === selectedDir.libelle?.trim().toLowerCase());
+      }
+
+      let matchDep = false;
+      if (depId) {
+        matchDep = (srv.departementId != null && String(srv.departementId) === String(depId)) ||
+                   (!!selectedDep && !!srv.departementLibelle && srv.departementLibelle.trim().toLowerCase() === selectedDep.libelle?.trim().toLowerCase());
+      }
+
+      if (dirId && depId) return matchDir || matchDep;
+      if (dirId) return matchDir;
+      if (depId) return matchDep;
+      return true;
+    });
+  }
+
+  onDirectionChange(): void {
+    const currentServiceId = this.form.get('serviceId')?.value;
+    if (currentServiceId) {
+      const valid = this.filteredServices.some(s => String(s.id) === String(currentServiceId));
+      if (!valid) {
+        this.form.get('serviceId')?.setValue(null);
+      }
+    }
   }
 
   get availableSalaryCategories(): RefItem[] {
@@ -604,7 +737,7 @@ export class InfosProComponent implements OnInit {
       agence:           selectedAgence?.libelle || selectedAgence?.code || '',
       categoriePro:     selectedCategory?.libelle || selectedCategory?.code || '',
       echelon:          selectedEchelon?.libelle || selectedEchelon?.code || '',
-      grade:            this.selectedSalaryGrid?.code || selectedGrade?.libelle || selectedGrade?.code || '',
+      grade:            this.formatGradeCode(this.selectedSalaryGrid?.code || selectedGrade?.libelle || selectedGrade?.code, selectedCategory?.libelle || selectedCategory?.code, selectedEchelon?.libelle || selectedEchelon?.code),
       salaireBase:      this.selectedSalaryGrid?.montant || 0,
       statut:           v.statut,
       dateEmbauche:     v.dateEmbauche,

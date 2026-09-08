@@ -427,28 +427,48 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       } else if (this.type === 'param-indemnite') {
         this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-retraite') {
-        this.displayedColumns = ['code', 'grade', 'taux', 'actif', 'actions'];
+        this.displayedColumns = ['grade', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-prise-en-charge') {
         this.displayedColumns = ['code', 'libelle', 'taux', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {
-        this.displayedColumns = ['code', 'libelle', 'tauxExoneration', 'plafondExoneration', 'actif', 'actions'];
+        this.displayedColumns = ['libelle', 'tauxExoneration', 'plafondExoneration', 'actif', 'actions'];
       } else if (this.type === 'type-retenue-emploi') {
-        this.displayedColumns = ['code', 'libelle', 'typeRetenue', 'regimeSecuriteSocial', 'baseCalcul', 'taux', 'actif', 'actions'];
+        this.displayedColumns = ['libelle', 'typeRetenue', 'regimeSecuriteSocial', 'baseCalcul', 'taux', 'actif', 'actions'];
       } else if (this.type === 'grade') {
         this.displayedColumns = ['code', 'libelle', 'actif', 'actions'];
       } else if (this.type === 'param-groupe') {
-        this.displayedColumns = ['code', 'grade', 'categorie', 'actif', 'actions'];
+        this.displayedColumns = ['grade', 'categorie', 'actif', 'actions'];
       } else if (this.type === 'categorie') {
         this.displayedColumns = ['code', 'libelle', 'tauxAbattement', 'actif', 'actions'];
       } else if (this.type === 'fonction' || this.type?.includes('fonction')) {
-        this.displayedColumns = ['code', 'libelle', 'typeNomination', 'actif', 'actions'];
+        this.displayedColumns = ['libelle', 'actif', 'actions'];
       } else {
-        this.displayedColumns = ['code', 'libelle', 'actif', 'actions'];
+        this.displayedColumns = this.shouldHideCode
+          ? ['libelle', 'actif', 'actions']
+          : ['code', 'libelle', 'actif', 'actions'];
       }
       this.searchQuery = '';
       this.loadHierarchyData();
       this.loadData();
     });
+  }
+
+  get shouldHideCode(): boolean {
+    const hiddenTypes = [
+      'emploi',
+      'fonction',
+      'direction',
+      'service',
+      'type-indemnite',
+      'type-retenue-employe',
+      'type-retenue-emploi',
+      'type-contrat',
+      'type-conge',
+      'param-groupe',
+      'retenue',
+      'param-retraite'
+    ];
+    return hiddenTypes.includes(this.type) || (this.type ? this.type.includes('fonction') : false);
   }
 
   ngAfterViewInit(): void {
@@ -907,7 +927,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       'type-retenue-emploi': 'RET',
       'type-retenue-employe': 'TRE',
       'param-retraite': 'RET',
-      'param-prise-en-charge': 'PEC'
+      'param-prise-en-charge': 'PEC',
+      'type-conge': 'TAC'
     };
 
     const prefix = pfxMap[type] || 'REF';
@@ -970,31 +991,27 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     let item: RefItem;
 
     if (this.type === 'grille-salariale') {
-
-      const gradeLabel =
-        selectedGrade?.libelle || selectedGrade?.code || '';
-
-      const categorieLabel =
-        selectedCategorie?.libelle || selectedCategorie?.code || '';
-
-      const echelonLabel =
-        selectedEchelon?.libelle || selectedEchelon?.code || '';
+      const gradeCode = selectedGrade?.code || selectedGrade?.libelle || '';
+      const categorieCode = selectedCategorie?.code || selectedCategorie?.libelle || '';
+      const echelonCode = selectedEchelon?.code || selectedEchelon?.libelle || '';
+      const gradeLabel = selectedGrade?.libelle || selectedGrade?.code || '';
+      const categorieLabel = selectedCategorie?.libelle || selectedCategorie?.code || '';
+      const echelonLabel = selectedEchelon?.libelle || selectedEchelon?.code || '';
 
       item = {
         id:            this.editingItem?.id,
-        code:          categorieLabel,
+        code:          `${categorieCode}${echelonCode}`,
         libelle:       gradeLabel,
-        description:   `${gradeLabel} (${categorieLabel}) - Échelon ${echelonLabel}`,
+        description:   `${gradeLabel} (${categorieCode}) - Échelon ${echelonCode}`,
         actif:         v.actif ?? true,
         montant:       Number(v.montant ?? v.taux ?? 0),
         gradeId:       String(v.gradeId),
         categorieId:   String(v.categorieId),
         echelonId:     String(v.echelonId),
         echelle:       gradeLabel,
-        echellon:      echelonLabel,
-        /*echellon:      v.echellon ? String(v.echellon) : (this.editingItem?.echellon ? String(this.editingItem.echellon) : '1'),*/
-        grade:         gradeLabel,
-        categorie:     categorieLabel
+        echellon:      echelonCode,
+        grade:         gradeCode,
+        categorie:     categorieCode
       };
     } else if (this.type === 'param-indemnite') {
       const typeIndemniteLabel = selectedTypeIndemnite?.libelle || selectedTypeIndemnite?.code || '';

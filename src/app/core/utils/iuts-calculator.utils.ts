@@ -175,16 +175,16 @@ export function calculateOfficialIUTS(
     const m = ind.montant;
 
     if (upper.includes('LOGEMENT')) {
-      // 20% du salaire brut, max 75 000 FCFA par mois
+      // 20% du salaire brut, max 75 000 par mois
       const limit20 = Math.round(salaireBrut * 0.20);
       exoLogement = Math.min(m, limit20, 75000);
     } else if (upper.includes('TRANSPORT') || upper.includes('DEPLACEMENT')) {
-      // 5% du salaire brut, max 30 000 FCFA par mois
+      // 5% du salaire brut, max 30 000 par mois
       const limit5 = Math.round(salaireBrut * 0.05);
       exoTransport = Math.min(m, limit5, 30000);
     } else if (m > 0) {
       // Indemnités de fonction / spécifiques (Astreinte, Technicité, Responsabilité, Caisse, Sujétion, etc.)
-      // 5% du salaire brut, max 50 000 FCFA par mois par indemnité (sans cumul)
+      // 5% du salaire brut, max 50 000 par mois par indemnité (sans cumul)
       const limit5 = Math.round(salaireBrut * 0.05);
       const exoReelle = Math.min(m, limit5, 50000);
       exoFonctionsDetails.push({

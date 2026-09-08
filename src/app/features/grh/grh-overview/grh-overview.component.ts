@@ -11,7 +11,7 @@ export class GrhOverviewComponent {
 
   sections = [
     {
-      title: 'Gestion des Collaborateurs',
+      title: 'Gestion des Agents',
       badge: '148 actifs',
       icon: 'group',
       color: '#0288d1',

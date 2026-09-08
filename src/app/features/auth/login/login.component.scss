@@ -1,4 +1,4 @@
-﻿// ─── Wrapper plein écran ──────────────────────────────────
+// ─── Wrapper plein écran ──────────────────────────────────
 .login-wrapper {
   min-height: 100vh;
   background: #004080;
@@ -47,17 +47,25 @@
   align-items: center;
 }
 
-// ─── Badge logo ───────────────────────────────────────────
-.logo-badge {
-  background: #FFC700;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  padding: 6px 20px;
-  border-radius: 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(212, 160, 23, 0.35);
+// ─── Logo BPBF ─────────────────────────────────────────────
+.login-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.login-brand-logo {
+  height: 65px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.06));
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.03);
+  }
 }
 
 // ─── En-tête de la carte ─────────────────────────────────

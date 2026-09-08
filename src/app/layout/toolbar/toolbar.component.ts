@@ -33,6 +33,10 @@ export class ToolbarComponent {
     this.router.navigate(['/dashboard']);
   }
 
+  goToMonEspace(): void {
+    this.router.navigate(['/mon-espace']);
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/auth/login']);

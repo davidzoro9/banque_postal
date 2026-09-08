@@ -19,11 +19,10 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
       { id: 'banque',           label: 'Banque',                   icon: 'money_on',            route: '/donnees-base/admin/banque'            },
       { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
-      // { id: 'departement',      label: 'Département',              icon: 'domain',              route: '/donnees-base/admin/departement'      },
-      { id: 'direction',        label: 'Département / Direction',                icon: 'business',            route: '/donnees-base/admin/direction'        },
+      { id: 'direction',        label: 'Département / Direction',  icon: 'business',            route: '/donnees-base/admin/direction'        },
       { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
-       { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
-      { id: 'categorie',        label: 'Catégorie / Classe',                icon: 'category',           route: '/donnees-base/carriere/categorie'     },
+      { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
+      { id: 'categorie',        label: 'Catégorie / Classe',       icon: 'category',           route: '/donnees-base/carriere/categorie'     },
       { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
       { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
@@ -32,14 +31,18 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
       { id: 'type-conge',       label: 'Type congé/absence',       icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
       { id: 'param-groupe',     label: 'Paramétrage Groupe',       icon: 'tune',                route: '/donnees-base/carriere/param-groupe'   },
-      { id: 'param-indemnite',  label: 'Paramétrage Indemnités',               icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
-      /*{ id: 'param-prise-en-charge', label: 'Prise en charge famille', icon: 'family_restroom', route: '/donnees-base/admin/param-prise-en-charge' },*/
-      { id: 'param-paie-taux',  label: 'Paramétrage Retenues',                 icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
+      { id: 'param-indemnite',  label: 'Grille indemnitaire',      icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
+      { id: 'param-paie-taux',  label: 'Paramétrage Retenues',     icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
-      /*{ id: 'ville',            label: 'Villes',                   icon: 'location_city',       route: '/donnees-base/admin/ville'            },
-      { id: 'competences',      label: 'Référentiel compétences',  icon: 'psychology',          route: '/donnees-base/carriere/competences'   },
-      { id: 'type-formation',   label: 'Type de formation',        icon: 'school',              route: '/donnees-base/carriere/type-formation'},
-      { id: 'type-evaluation',  label: "Type d'évaluation",        icon: 'star_rate',           route: '/donnees-base/carriere/type-evaluation'}*/
+    ]
+  },
+  {
+    id: 'donnees-base-param-paie',
+    label: 'Paramétrage de la Paie',
+    icon: 'tune',
+    children: [
+      { id: 'categories-elements', label: "Catégories d'Éléments de Salaire", icon: 'category', route: '/paie/parametrage/categories' },
+      { id: 'elements-salaire', label: 'Éléments de Salaire', icon: 'format_list_numbered', route: '/paie/parametrage/elements' }
     ]
   }
 ];
@@ -89,12 +92,35 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       route: '/paie'
     },
     {
-      id: 'paie-bulletins',
+      id: 'paie-gestion',
       label: 'Gestion de la Paie',
       icon: 'payments',
       children: [
-        { id: 'generer',   label: 'Génération & Bulletins', icon: 'autorenew', route: '/paie/bulletins/generer' },
-        { id: 'historique',label: 'Historique des Paies',  icon: 'history',  route: '/paie/bulletins/historique' }
+        { id: 'bulletin-lot', label: 'Lots de Bulletins', icon: 'layers', route: '/paie/lots' },
+        { id: 'bulletin-individuel', label: 'Bulletins de Paie', icon: 'receipt_long', route: '/paie/bulletins' },
+        { id: 'avoirs', label: 'Avoirs', icon: 'add_card', route: '/paie/variables/avoirs' },
+        { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' },
+        { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' }
+      ]
+    }
+  ],
+  conges: [
+    {
+      id: 'conges-dashboard',
+      label: 'Tableau de bord Congés',
+      icon: 'dashboard',
+      route: '/grh/conges'
+    },
+    {
+      id: 'conges-gestion',
+      label: 'Gestion des Congés & Absences',
+      icon: 'beach_access',
+      children: [
+        { id: 'liste-demandes', label: 'Demandes de Congés', icon: 'list_alt', route: '/grh/conges' },
+        { id: 'nouvelle-demande', label: 'Nouvelle Demande', icon: 'add_circle', route: '/grh/conges/nouveau' },
+        { id: 'soldes-agents', label: 'Soldes des Agents', icon: 'account_balance_wallet', route: '/grh/conges/soldes' },
+        { id: 'planning-departs', label: 'Planning des Départs', icon: 'calendar_month', route: '/grh/conges/planning' },
+        { id: 'jours-feries', label: 'Jours Fériés Légaux', icon: 'event_available', route: '/grh/conges/feries' }
       ]
     }
   ],

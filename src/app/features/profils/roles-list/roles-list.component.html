@@ -15,66 +15,68 @@
 
   <!-- Table des rôles -->
   <mat-card class="table-card">
-    <table class="custom-table">
-      <thead>
-        <tr>
-          <th>Code Profil</th>
-          <th>Libellé du Rôle</th>
-          <th>Description & Étendue</th>
-          <th style="text-align: center;">Utilisateurs</th>
-          <th style="text-align: center;">Statut</th>
-          <th style="text-align: center;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (r of rolesList; track r.id) {
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
           <tr>
-            <td>
-              <span class="role-chip" [style.background]="r.badgeColor + '18'" [style.color]="r.badgeColor" [style.border-color]="r.badgeColor + '40'">
-                {{ r.code }}
-              </span>
-            </td>
-            <td>
-              <strong style="color: #1e293b; font-size: 14px;">{{ r.libelle }}</strong>
-            </td>
-            <td style="color: #475569; max-width: 380px;">
-              {{ r.description }}
-              <div class="perm-tags">
-                @for (p of r.permissions; track p) {
-                  <span class="tag">{{ p }}</span>
-                }
-              </div>
-            </td>
-            <td style="text-align: center;">
-              <span class="users-count-chip">
-                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
-                {{ r.nbUsers }} utilisateur(s)
-              </span>
-            </td>
-            <td style="text-align: center;">
-              @if (r.actif) {
-                <span class="status-chip active">Actif</span>
-              } @else {
-                <span class="status-chip inactive">Inactif</span>
-              }
-            </td>
-            <td style="text-align: center;">
-              <div class="action-btns">
-                <button mat-icon-button color="primary" title="Modifier le profil" (click)="openEditModal(r)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button [title]="r.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(r)">
-                  <mat-icon>{{ r.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" title="Supprimer" (click)="deleteRole(r)">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
-            </td>
+            <th>Code Profil</th>
+            <th>Libellé du Rôle</th>
+            <th>Description & Étendue</th>
+            <th style="text-align: center;">Utilisateurs</th>
+            <th style="text-align: center;">Statut</th>
+            <th style="text-align: center; min-width: 120px;">Actions</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (r of rolesList; track r.id) {
+            <tr>
+              <td>
+                <span class="role-chip" [style.background]="r.badgeColor + '18'" [style.color]="r.badgeColor" [style.border-color]="r.badgeColor + '40'">
+                  {{ r.code }}
+                </span>
+              </td>
+              <td>
+                <strong style="color: #1e293b; font-size: 14px;">{{ r.libelle }}</strong>
+              </td>
+              <td style="color: #475569; max-width: 380px;">
+                {{ r.description }}
+                <div class="perm-tags">
+                  @for (p of r.permissions; track p) {
+                    <span class="tag">{{ p }}</span>
+                  }
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <span class="users-count-chip">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
+                  {{ r.nbUsers }} utilisateur(s)
+                </span>
+              </td>
+              <td style="text-align: center;">
+                @if (r.actif) {
+                  <span class="status-chip active">Actif</span>
+                } @else {
+                  <span class="status-chip inactive">Inactif</span>
+                }
+              </td>
+              <td style="text-align: center;">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary" title="Modifier le profil" (click)="openEditModal(r)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button [title]="r.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(r)">
+                    <mat-icon>{{ r.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteRole(r)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </mat-card>
 
   <!-- Modal Édition / Ajout -->

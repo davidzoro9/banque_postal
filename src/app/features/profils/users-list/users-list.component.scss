@@ -4,15 +4,16 @@
   margin: 0 auto;
 
   .page-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 20px 24px;
-    color: white;
+    padding: 18px 24px;
+    color: var(--on-surface);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0, 96, 179, 0.2);
+    box-shadow: var(--shadow-card);
 
     .ph-content {
       display: flex;
@@ -20,7 +21,8 @@
       gap: 16px;
 
       .ph-icon {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(2, 132, 199, 0.12);
+        color: #0284c7;
         padding: 10px;
         border-radius: 10px;
         display: flex;
@@ -36,18 +38,19 @@
         margin: 0;
         font-size: 20px;
         font-weight: 700;
+        color: var(--on-surface);
       }
 
       p {
         margin: 2px 0 0 0;
         font-size: 13px;
-        opacity: 0.9;
+        color: var(--on-surface-3);
       }
     }
 
     .btn-new {
-      background: #ffffff;
-      color: #0060B3;
+      background: #0284c7 !important;
+      color: #ffffff !important;
       font-weight: 700;
       border-radius: 8px;
     }
@@ -77,13 +80,19 @@
 
   .table-card {
     border-radius: 12px;
-    overflow: hidden;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .custom-table {
     width: 100%;
+    min-width: 850px;
     border-collapse: collapse;
     font-size: 13px;
 
@@ -96,9 +105,10 @@
         text-transform: uppercase;
 
         th {
-          padding: 14px 16px;
+          padding: 12px 14px;
           text-align: left;
           font-weight: 700;
+          white-space: nowrap;
         }
       }
     }
@@ -113,8 +123,9 @@
         }
 
         td {
-          padding: 12px 16px;
+          padding: 10px 14px;
           vertical-align: middle;
+          white-space: nowrap;
         }
       }
     }
@@ -163,9 +174,24 @@
   }
 
   .action-btns {
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
     gap: 2px;
+    white-space: nowrap;
+
+    button {
+      width: 32px !important;
+      height: 32px !important;
+      line-height: 32px !important;
+      padding: 0 !important;
+
+      mat-icon {
+        font-size: 18px !important;
+        width: 18px !important;
+        height: 18px !important;
+      }
+    }
   }
 
   .modal-backdrop {

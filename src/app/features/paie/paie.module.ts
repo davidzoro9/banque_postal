@@ -7,7 +7,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { PaieRoutingModule } from './paie-routing.module';
 import { PaieOverviewComponent } from './paie-overview/paie-overview.component';
 import { GenererBulletinsComponent } from './bulletins/generer-bulletins/generer-bulletins.component';
+import { BulletinIndividuelComponent } from './bulletins/bulletin-individuel/bulletin-individuel.component';
 import { HistoriqueBulletinsComponent } from './bulletins/historique-bulletins/historique-bulletins.component';
+import { CategoriesElementsComponent } from './parametrage/categories-elements/categories-elements.component';
+import { ElementsSalaireComponent } from './parametrage/elements-salaire/elements-salaire.component';
+import { AvoirsComponent } from './variables/avoirs/avoirs.component';
+import { PrecomptesComponent } from './variables/precomptes/precomptes.component';
+import { TropPercusComponent } from './variables/trop-percus/trop-percus.component';
 import { RubriquesPaieComponent } from './elements/rubriques-paie/rubriques-paie.component';
 import { CotisationsPaieComponent } from './elements/cotisations-paie/cotisations-paie.component';
 import { DsnComponent } from './declarations/dsn/dsn.component';
@@ -24,7 +30,13 @@ import { MatSelectModule } from '@angular/material/select';
   declarations: [
     PaieOverviewComponent,
     GenererBulletinsComponent,
+    BulletinIndividuelComponent,
     HistoriqueBulletinsComponent,
+    CategoriesElementsComponent,
+    ElementsSalaireComponent,
+    AvoirsComponent,
+    PrecomptesComponent,
+    TropPercusComponent,
     RubriquesPaieComponent,
     CotisationsPaieComponent,
     DsnComponent,

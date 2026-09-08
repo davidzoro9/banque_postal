@@ -55,14 +55,14 @@ export class RetenuesComponent implements OnInit {
       return {
         libelle: 'Retenue CARFO (Caisse Autonome de Retraite des Fonctionnaires)',
         montant: Math.round(this.montantBase * 0.08),
-        baseStr: `${new Intl.NumberFormat('fr-FR').format(this.montantBase)} FCFA (Salaire de base)`,
+        baseStr: `${new Intl.NumberFormat('fr-FR').format(this.montantBase)} (Salaire de base)`,
         tauxStr: '8.00 %'
       };
     } else {
       return {
         libelle: 'Cotisation Sociale CNSS (Part Agent - Caisse Nationale)',
         montant: Math.round(this.montantBrut * 0.055),
-        baseStr: `${new Intl.NumberFormat('fr-FR').format(this.montantBrut)} FCFA (Salaire Brut)`,
+        baseStr: `${new Intl.NumberFormat('fr-FR').format(this.montantBrut)} (Salaire Brut)`,
         tauxStr: '5.50 %'
       };
     }

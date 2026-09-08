@@ -27,7 +27,7 @@ export class DbOverviewComponent {
       route: '/donnees-base/admin/grille-salariale'
     },
     {
-      title: 'Paramétrage des Indemnités',
+      title: 'Grille Indemnitaire',
       badge: 'Types & Règles',
       icon: 'paid',
       color: '#2e7d32',

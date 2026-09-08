@@ -224,30 +224,30 @@
 
 :host-context(html.dark-theme) {
   .app-toolbar {
-    background: #091322 !important;
-    color: #f1f5f9 !important;
-    border-bottom-color: #162842 !important;
+    background: #030712 !important;
+    color: #f8fafc !important;
+    border-bottom-color: #1f293d !important;
   }
   .menu-btn {
-    color: #cbd5e1 !important;
-    &:hover { color: #FFC700 !important; background: rgba(255, 199, 0, 0.12) !important; }
+    color: #e2e8f0 !important;
+    &:hover { color: #38bdf8 !important; background: rgba(56, 189, 248, 0.12) !important; }
   }
   .brand:hover {
-    background: #0f1f36 !important;
+    background: #0b1120 !important;
   }
   .module-badge {
-    background: #060e1a !important;
-    border-color: #162842 !important;
+    background: #0b0f19 !important;
+    border-color: #1f293d !important;
   }
   .mod-name {
-    color: #f1f5f9 !important;
+    color: #f8fafc !important;
   }
   .action-btn {
     color: #cbd5e1 !important;
-    &:hover { color: #FFC700 !important; background: #0f1f36 !important; }
+    &:hover { color: #38bdf8 !important; background: #0b1120 !important; }
   }
   .user-btn {
-    color: #f1f5f9 !important;
+    color: #f8fafc !important;
     &:hover { background: #0f1f36 !important; }
   }
   .user-name {

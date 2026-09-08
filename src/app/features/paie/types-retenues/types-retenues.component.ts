@@ -1,12 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-
-export interface TypeRetenue {
-  id?: number;
-  code: string;
-  libelle: string;
-  description: string;
-  actif: boolean;
-}
+import { TypeRetenue, TypeRetenueService } from '../services/type-retenue.service';
 
 @Component({
   selector: 'app-types-retenues',
@@ -20,12 +13,22 @@ export interface TypeRetenue {
             Types de Retenues sur Salaire
           </h2>
           <p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">
-            Référentiel des types de retenues (Part Employeur, Part Agent, Prélèvements sociaux, fiscaux, assurances...)
+            Référentiel officiel connecté à la base PostgreSQL (Part Employeur, Part Agent, Prélèvements sociaux, fiscaux, assurances...)
           </p>
         </div>
         <button mat-raised-button (click)="ouvrirFormulaire()" style="background: #0060B3; color: #ffffff; border-radius: 8px; font-weight: 600; padding: 0 22px; height: 42px;">
           <mat-icon style="margin-right: 6px; color: #ffffff;">add</mat-icon> Nouveau Type de Retenue
         </button>
+      </div>
+
+      <!-- Notification Message -->
+      <div *ngIf="notificationMsg" style="margin-bottom: 16px; padding: 12px 18px; border-radius: 8px; background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">check_circle</mat-icon>
+        {{ notificationMsg }}
+      </div>
+      <div *ngIf="errorMsg" style="margin-bottom: 16px; padding: 12px 18px; border-radius: 8px; background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">error</mat-icon>
+        {{ errorMsg }}
       </div>
 
       <!-- Filters & Search -->
@@ -42,9 +45,14 @@ export interface TypeRetenue {
         </div>
       </mat-card>
 
-      <!-- Table -->
+      <!-- Table Card -->
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%;">
-        <div style="overflow-x: auto; width: 100%;">
+        <div *ngIf="loading" style="padding: 40px; text-align: center; color: #0060B3;">
+          <mat-spinner diameter="40" style="margin: 0 auto 12px;"></mat-spinner>
+          <div>Chargement des types de retenue depuis PostgreSQL...</div>
+        </div>
+
+        <div *ngIf="!loading" style="overflow-x: auto; width: 100%;">
           <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 700px;">
             <thead>
               <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -56,7 +64,7 @@ export interface TypeRetenue {
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of getFilteredTypes()" class="data-row" style="border-bottom: 1px solid var(--border); font-size: 14px; transition: background 0.2s;">
+              <tr *ngFor="let item of getFilteredTypes()" class="data-row" style="border-bottom: 1px solid #e2e8f0; font-size: 14px; transition: background 0.2s;">
                 <td style="padding: 14px 18px;">
                   <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 13px; display: inline-block; white-space: nowrap;">
                     {{ item.code }}
@@ -87,7 +95,7 @@ export interface TypeRetenue {
               <tr *ngIf="getFilteredTypes().length === 0">
                 <td colspan="5" style="padding: 32px; text-align: center; color: #94a3b8;">
                   <mat-icon style="font-size: 40px; width: 40px; height: 40px; margin-bottom: 8px;">search_off</mat-icon>
-                  <div>Aucun type de retenue trouvé.</div>
+                  <div>Aucun type de retenue trouvé dans la base de données.</div>
                 </td>
               </tr>
             </tbody>
@@ -96,7 +104,7 @@ export interface TypeRetenue {
       </mat-card>
 
       <!-- Modal Form Overlay -->
-      <div *ngIf="afficherFormulaire" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+      <div *ngIf="afficherFormulaire" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
         <div style="background: #fff; width: 100%; max-width: 500px; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
             <h3 style="margin: 0; color: #0060B3; font-size: 18px; font-weight: 700;">
@@ -108,42 +116,41 @@ export interface TypeRetenue {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Code : Masqué à la création, affiché à l'édition -->
             <div *ngIf="modeEdition" style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 12px; font-weight: 600; color: #64748b;">Code de référence généré :</span>
+              <span style="font-size: 12px; font-weight: 600; color: #64748b;">Code de référence :</span>
               <span style="font-weight: 800; color: #0060B3; font-family: monospace; font-size: 14px; background: #e0f2fe; padding: 3px 10px; border-radius: 4px;">
                 {{ formType.code }}
               </span>
             </div>
 
-            <div *ngIf="!modeEdition" style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 10px 14px; border-radius: 8px; font-size: 12px; color: #0369a1; display: flex; align-items: center; gap: 8px;">
-              <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">auto_awesome</mat-icon>
-              <span>Le code sera <strong>généré automatiquement</strong> lors de la création.</span>
-            </div>
-
-            <div>
-              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Libellé *</label>
+            <div *ngIf="!modeEdition">
+              <label style="font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Code</label>
               <input
                 type="text"
-                [(ngModel)]="formType.libelle"
-                placeholder="Ex: Part Agent, Part Employeur, Cotisation Sociale..."
-                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;"
+                [(ngModel)]="formType.code"
+                placeholder="Ex: PART_AGENT, RET_FISCALE..."
+                style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;"
               >
             </div>
 
             <div>
-              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Description</label>
+              <label style="font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Libellé du Type *</label>
+              <input
+                type="text"
+                [(ngModel)]="formType.libelle"
+                placeholder="Ex: Part Agent (Salariale)"
+                style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;"
+              >
+            </div>
+
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Description détaillée</label>
               <textarea
                 [(ngModel)]="formType.description"
                 rows="3"
-                placeholder="Description détaillée du type de retenue..."
-                style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit;"
+                placeholder="Préciser l'usage et les conditions réglementaires..."
+                style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"
               ></textarea>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-              <input type="checkbox" id="chkActif" [(ngModel)]="formType.actif" style="width: 18px; height: 18px; cursor: pointer;">
-              <label for="chkActif" style="font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer;">Actif</label>
             </div>
           </div>
 
@@ -162,50 +169,41 @@ export interface TypeRetenue {
 export class TypesRetenuesComponent implements OnInit {
   typesRetenues: TypeRetenue[] = [];
   searchTerm: string = '';
+  loading: boolean = false;
+  notificationMsg: string = '';
+  errorMsg: string = '';
 
   afficherFormulaire: boolean = false;
   modeEdition: boolean = false;
-
   formType: TypeRetenue = this.getEmptyForm();
+
+  constructor(private typeRetenueService: TypeRetenueService) {}
 
   ngOnInit(): void {
     this.chargerTypesRetenues();
   }
 
   chargerTypesRetenues(): void {
-    const saved = localStorage.getItem('sigrh_types_retenues_v4');
-    if (saved) {
-      try {
-        this.typesRetenues = JSON.parse(saved);
-        return;
-      } catch (e) {}
-    }
-
-    // Reference Types de Retenues sur Salaire
-    this.typesRetenues = [
-      { id: 1, code: 'TR-001', libelle: 'Part Agent (Salariale)',               description: 'Part de cotisation salariale prélevée à la source sur la paie de l\'agent', actif: true },
-      { id: 2, code: 'TR-002', libelle: 'Part Employeur (Patronale)',           description: 'Part de cotisation patronale prise en charge directement par l\'employeur', actif: true },
-      { id: 3, code: 'TR-003', libelle: 'Cotisation Sociale (CNSS/CARFO)', description: 'Sécurité sociale obligatoire et régimes de retraite de base légaux', actif: true },
-      { id: 4, code: 'TR-004', libelle: 'Retraite Complémentaire (CRRAE)', description: 'Caisse de retraite complémentaire bancaire UMOA et fonds de pension', actif: true },
-      { id: 5, code: 'TR-005', libelle: 'Retenue Fiscale (IUTS/TPA)', description: 'Impôt Unique sur Traitements & Salaires et Taxes patronales', actif: true },
-      { id: 6, code: 'TR-006', libelle: 'Assurance Groupe & Santé', description: 'Prélèvements pour assurance maladie complémentaire groupe entreprise', actif: true },
-      { id: 7, code: 'TR-007', libelle: 'Mutuelle Interne (MUPER)',  description: 'Cotisation mensuelle d\'entraide et de solidarité du personnel', actif: true },
-      { id: 8, code: 'TR-008', libelle: 'Remboursement Prêt & Avance',description: 'Remboursement des prêts équipements, avances et acomptes sur salaire', actif: true },
-      { id: 9, code: 'TR-009', libelle: 'Cotisation Syndicale',      description: 'Cotisation mensuelle d\'adhésion syndicale du personnel', actif: true }
-    ];
-
-    this.sauvegarderLocal();
-  }
-
-  sauvegarderLocal(): void {
-    localStorage.setItem('sigrh_types_retenues_v4', JSON.stringify(this.typesRetenues));
+    this.loading = true;
+    this.errorMsg = '';
+    this.typeRetenueService.getAll().subscribe({
+      next: (data) => {
+        this.typesRetenues = data || [];
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erreur API type-retenue:', err);
+        this.errorMsg = 'Impossible de charger les types de retenue depuis le serveur.';
+        this.loading = false;
+      }
+    });
   }
 
   getFilteredTypes(): TypeRetenue[] {
     return this.typesRetenues.filter(item => {
       return !this.searchTerm ||
-        item.code.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        item.libelle.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        (item.code && item.code.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
+        (item.libelle && item.libelle.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
         (item.description && item.description.toLowerCase().includes(this.searchTerm.toLowerCase()));
     });
   }
@@ -213,6 +211,8 @@ export class TypesRetenuesComponent implements OnInit {
   ouvrirFormulaire(): void {
     this.modeEdition = false;
     this.formType = this.getEmptyForm();
+    const nextNum = this.typesRetenues.length + 1;
+    this.formType.code = `TR-${String(nextNum).padStart(3, '0')}`;
     this.afficherFormulaire = true;
   }
 
@@ -227,38 +227,64 @@ export class TypesRetenuesComponent implements OnInit {
   }
 
   sauvegarderType(): void {
-    if (!this.formType.libelle) {
-      alert('Veuillez remplir le libellé du type de retenue.');
+    if (!this.formType.libelle || !this.formType.libelle.trim()) {
+      alert('Veuillez renseigner le libellé du type de retenue.');
       return;
     }
 
-    if (this.modeEdition) {
-      const idx = this.typesRetenues.findIndex(t => t.id === this.formType.id);
-      if (idx !== -1) {
-        this.typesRetenues[idx] = { ...this.formType };
-      }
+    if (this.modeEdition && this.formType.id) {
+      this.typeRetenueService.update(Number(this.formType.id), this.formType).subscribe({
+        next: () => {
+          this.notify('Type de retenue mis à jour avec succès');
+          this.chargerTypesRetenues();
+          this.fermerFormulaire();
+        },
+        error: (err) => {
+          console.error('Erreur update type-retenue:', err);
+          alert('Erreur lors de la mise à jour.');
+        }
+      });
     } else {
-      // Génération automatique du code lors de la création
-      const nextNum = this.typesRetenues.length + 1;
-      this.formType.code = `TR-${String(nextNum).padStart(3, '0')}`;
-      this.formType.id = Date.now();
-      this.typesRetenues.unshift({ ...this.formType });
+      this.typeRetenueService.create(this.formType).subscribe({
+        next: () => {
+          this.notify('Nouveau type de retenue enregistré avec succès');
+          this.chargerTypesRetenues();
+          this.fermerFormulaire();
+        },
+        error: (err) => {
+          console.error('Erreur create type-retenue:', err);
+          alert('Erreur lors de la création.');
+        }
+      });
     }
-
-    this.sauvegarderLocal();
-    this.fermerFormulaire();
   }
 
   supprimerType(item: TypeRetenue): void {
     if (confirm(`Voulez-vous vraiment supprimer le type de retenue "${item.libelle}" (${item.code}) ?`)) {
-      this.typesRetenues = this.typesRetenues.filter(t => t.id !== item.id);
-      this.sauvegarderLocal();
+      this.typeRetenueService.delete(Number(item.id)).subscribe({
+        next: () => {
+          this.notify('Type de retenue supprimé');
+          this.chargerTypesRetenues();
+        },
+        error: (err) => {
+          console.error('Erreur delete type-retenue:', err);
+          alert('Erreur lors de la suppression.');
+        }
+      });
     }
   }
 
   toggleStatut(item: TypeRetenue): void {
-    item.actif = !item.actif;
-    this.sauvegarderLocal();
+    const updated = { ...item, actif: !item.actif };
+    this.typeRetenueService.update(Number(item.id), updated).subscribe({
+      next: () => this.chargerTypesRetenues(),
+      error: (err) => console.error('Erreur toggle statut:', err)
+    });
+  }
+
+  private notify(msg: string): void {
+    this.notificationMsg = msg;
+    setTimeout(() => this.notificationMsg = '', 4000);
   }
 
   private getEmptyForm(): TypeRetenue {

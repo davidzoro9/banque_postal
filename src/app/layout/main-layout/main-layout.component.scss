@@ -130,10 +130,14 @@
   }
 }
 
-// ─── Sidenav container ────────────────────────────────────
 .sidenav-container {
   flex: 1;
   min-height: 0;
+
+  ::ng-deep .mat-drawer-content,
+  ::ng-deep .mat-sidenav-content {
+    z-index: auto !important;
+  }
 }
 
 .left-sidenav {
@@ -141,16 +145,19 @@
   border-right: none;
   overflow: visible;
   box-shadow: var(--shadow-sidenav);
+  z-index: 50 !important;
 }
 
 .right-sidenav {
   width: 280px;
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.12);
+  z-index: 50 !important;
 }
 
 .main-content {
   background: var(--app-bg);
   overflow-y: auto;
+  z-index: auto !important;
 }
 
 .page-wrapper {

@@ -11,6 +11,8 @@ export class AuthService {
 
   currentUser$: Observable<User | null> = this.userSubject.asObservable();
 
+  private permissionsMatrix: any[] = [];
+
   constructor(private http: HttpClient) {
     const saved = localStorage.getItem('currentUser');
     if (saved) {
@@ -18,6 +20,19 @@ export class AuthService {
         this.userSubject.next(JSON.parse(saved));
       } catch (e) {}
     }
+    this.loadHabilitations();
+  }
+
+  public loadHabilitations(): void {
+    this.http.get<any[]>(`${environment.apiUrl}/habilitations`).subscribe({
+      next: (matrix) => {
+        if (matrix && matrix.length > 0) {
+          this.permissionsMatrix = matrix;
+          this.refreshUserPermissions();
+        }
+      },
+      error: () => {}
+    });
   }
 
   get currentUser(): User | null {
@@ -29,37 +44,35 @@ export class AuthService {
   }
 
   getPermissionsForRole(role: string): string[] {
-    const saved = localStorage.getItem('bpbf_habilitations_matrix');
-    if (saved) {
-      try {
-        const matrix = JSON.parse(saved);
-        if (Array.isArray(matrix) && matrix.length > 0) {
-          const perms = new Set<string>();
-          matrix.forEach((item: any) => {
-            if (item.rolesAccess && item.rolesAccess[role] === true && item.actionCode) {
-              perms.add(item.actionCode);
-              // Transposer les codes d'actions vers les autorisations de vues de modules
-              if (item.actionCode === 'DB_VIEW') perms.add('donnees-base.view');
-              if (item.actionCode === 'EMP_VIEW') { perms.add('grh.view'); perms.add('carrieres.view'); }
-              if (item.actionCode === 'PAIE_VIEW') perms.add('paie.view');
-              if (item.actionCode === 'PROFIL_EDIT' || item.actionCode === 'USER_MANAGE') perms.add('profils.view');
-            }
-          });
-          return Array.from(perms);
+    const matrix = this.permissionsMatrix;
+    if (Array.isArray(matrix) && matrix.length > 0) {
+      const perms = new Set<string>();
+      matrix.forEach((item: any) => {
+        if (item.rolesAccess && item.rolesAccess[role] === true && item.actionCode) {
+          perms.add(item.actionCode);
+          if (item.actionCode === 'DB_VIEW') perms.add('donnees-base.view');
+          if (item.actionCode === 'EMP_VIEW') { perms.add('grh.view'); perms.add('carrieres.view'); }
+          if (item.actionCode === 'PAIE_VIEW') perms.add('paie.view');
+          if (item.actionCode === 'CONGE_VIEW') perms.add('conges.view');
+          if (item.actionCode === 'MON_ESPACE_VIEW') perms.add('mon-espace.view');
+          if (item.actionCode === 'PROFIL_EDIT' || item.actionCode === 'USER_MANAGE') perms.add('profils.view');
         }
-      } catch (e) {}
+      });
+      return Array.from(perms);
     }
 
     // Fallback par défaut si la matrice n'a pas encore été sauvegardée dans localStorage
     const perms = new Set<string>();
     if (role === 'ADMIN' || role === 'RH' || role === 'DRH') {
-      ['DB_VIEW', 'DB_GRILLE_EDIT', 'DB_INDEMNITE_EDIT', 'DB_REF_EDIT', 'EMP_VIEW', 'EMP_CREATE', 'EMP_EDIT', 'EMP_DELETE', 'PAIE_VIEW', 'PAIE_GENERATE', 'PAIE_VALIDATE', 'PAIE_CLOTURE', 'PAIE_EXPORT', 'PROFIL_EDIT', 'USER_MANAGE', 'MANUAL_VIEW', 'donnees-base.view', 'grh.view', 'carrieres.view', 'paie.view', 'profils.view'].forEach(p => perms.add(p));
+      ['DB_VIEW', 'DB_GRILLE_EDIT', 'DB_INDEMNITE_EDIT', 'DB_REF_EDIT', 'EMP_VIEW', 'EMP_CREATE', 'EMP_EDIT', 'EMP_DELETE', 'PAIE_VIEW', 'PAIE_VARIABLES', 'PAIE_GENERATE', 'PAIE_VALIDATE', 'PAIE_CLOTURE', 'PAIE_EXPORT', 'CONGE_VIEW', 'CONGE_DEMANDE', 'CONGE_VALIDATE', 'MON_ESPACE_VIEW', 'MON_ESPACE_BULLETINS', 'PROFIL_EDIT', 'USER_MANAGE', 'MANUAL_VIEW', 'donnees-base.view', 'grh.view', 'carrieres.view', 'paie.view', 'conges.view', 'mon-espace.view', 'profils.view'].forEach(p => perms.add(p));
     } else if (role === 'GESTIONNAIRE_PAIE') {
-      ['DB_VIEW', 'DB_INDEMNITE_EDIT', 'EMP_VIEW', 'EMP_EDIT', 'PAIE_VIEW', 'PAIE_GENERATE', 'PAIE_EXPORT', 'MANUAL_VIEW', 'donnees-base.view', 'grh.view', 'paie.view'].forEach(p => perms.add(p));
+      ['DB_VIEW', 'DB_INDEMNITE_EDIT', 'EMP_VIEW', 'EMP_EDIT', 'PAIE_VIEW', 'PAIE_VARIABLES', 'PAIE_GENERATE', 'PAIE_EXPORT', 'CONGE_VIEW', 'CONGE_DEMANDE', 'MON_ESPACE_VIEW', 'MON_ESPACE_BULLETINS', 'MANUAL_VIEW', 'donnees-base.view', 'grh.view', 'paie.view', 'conges.view', 'mon-espace.view'].forEach(p => perms.add(p));
     } else if (role === 'VALIDATEUR') {
-      ['DB_VIEW', 'EMP_VIEW', 'PAIE_VIEW', 'PAIE_VALIDATE', 'PAIE_EXPORT', 'MANUAL_VIEW', 'paie.view'].forEach(p => perms.add(p));
+      ['DB_VIEW', 'EMP_VIEW', 'PAIE_VIEW', 'PAIE_VALIDATE', 'PAIE_EXPORT', 'CONGE_VIEW', 'CONGE_DEMANDE', 'CONGE_VALIDATE', 'MON_ESPACE_VIEW', 'MON_ESPACE_BULLETINS', 'MANUAL_VIEW', 'paie.view', 'conges.view', 'mon-espace.view'].forEach(p => perms.add(p));
+    } else if (role === 'CONSULTANT') {
+      ['DB_VIEW', 'EMP_VIEW', 'PAIE_VIEW', 'PAIE_EXPORT', 'CONGE_VIEW', 'MON_ESPACE_VIEW', 'MANUAL_VIEW', 'paie.view', 'conges.view'].forEach(p => perms.add(p));
     } else {
-      ['mon-espace.view', 'EMP_VIEW', 'PAIE_VIEW', 'MANUAL_VIEW'].forEach(p => perms.add(p));
+      ['mon-espace.view', 'MON_ESPACE_VIEW', 'MON_ESPACE_BULLETINS', 'CONGE_VIEW', 'CONGE_DEMANDE', 'MANUAL_VIEW'].forEach(p => perms.add(p));
     }
     return Array.from(perms);
   }

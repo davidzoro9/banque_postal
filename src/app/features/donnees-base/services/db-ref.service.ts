@@ -120,22 +120,31 @@ const BACKEND_MAP: Record<string, {
   'grille-salariale': {
     segment: 'grillesalariale',
     getAllPath: '',
-    toFront: dto => ({
-      id: String(dto.id),
-      code: `${dto.categorieLibelle || ''}${dto.echelonLibelle || ''}`,
-      libelle: dto.gradeLibelle || '',
-      categorie: dto.categorieLibelle || '',
-      echellon: dto.echelonLibelle || '',
-      grade: dto.gradeLibelle || '',
-      categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
-      categorieLibelle: dto.categorieLibelle || '',
-      echelonId: dto.echelonId ? String(dto.echelonId) : undefined,
-      gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
-      gradeLibelle: dto.gradeLibelle || '',
-      montant: dto.basicSalary != null ? Number(dto.basicSalary) : (dto.salaireBase != null ? Number(dto.salaireBase) : 0),
-      description: `Base: ${dto.basicSalary || dto.salaireBase || 0} FCFA`,
-      actif: true
-    }),
+    toFront: dto => {
+      const catCode = dto.categorieCode || dto.categorieLibelle || '';
+      const echCode = dto.echelonCode || dto.echelonLibelle || '';
+      const gradeCode = dto.gradeCode || (catCode && echCode ? `${catCode}${echCode}` : dto.gradeLibelle || '');
+      return {
+        id: String(dto.id),
+        code: gradeCode,
+        libelle: dto.gradeLibelle || gradeCode,
+        categorie: catCode,
+        echellon: echCode,
+        grade: gradeCode,
+        categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
+        categorieCode: dto.categorieCode || '',
+        categorieLibelle: dto.categorieLibelle || '',
+        echelonId: dto.echelonId ? String(dto.echelonId) : undefined,
+        echelonCode: dto.echelonCode || '',
+        echelonLibelle: dto.echelonLibelle || '',
+        gradeId: dto.gradeId ? String(dto.gradeId) : undefined,
+        gradeCode: dto.gradeCode || '',
+        gradeLibelle: dto.gradeLibelle || '',
+        montant: dto.basicSalary != null ? Number(dto.basicSalary) : (dto.salaireBase != null ? Number(dto.salaireBase) : 0),
+        description: `Base: ${dto.basicSalary || dto.salaireBase || 0}`,
+        actif: true
+      };
+    },
     toBack: item => ({
       categorieId: item.categorieId ? Number(item.categorieId) : null,
       echelonId: item.echelonId ? Number(item.echelonId) : null,

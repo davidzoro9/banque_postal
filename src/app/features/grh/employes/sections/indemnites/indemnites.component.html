@@ -45,14 +45,14 @@
             <div class="simple-row">
               <span class="code-badge">{{ item.typeIndemniteCode || 'IND' }}</span>
               <span class="row-label">{{ item.libelle }}</span>
-              <span class="row-amount">{{ item.montant | number:'1.0-0' }} FCFA</span>
+              <span class="row-amount">{{ item.montant | number:'1.0-0' }}</span>
             </div>
           }
         </div>
 
         <div class="total-box">
           <span class="total-lbl">Total indemnités</span>
-          <span class="total-val">{{ totalIndemnites | number:'1.0-0' }} FCFA</span>
+          <span class="total-val">{{ totalIndemnites | number:'1.0-0' }}</span>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════

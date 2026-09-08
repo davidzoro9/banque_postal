@@ -18,9 +18,9 @@
 .deduction-row small { color: var(--on-surface-3); }
 .deduction-row > span { white-space: nowrap; font-weight: 700; }
 .panel-total { border: 0; padding-bottom: 0; font-weight: 800; }
-.net-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; margin-top: 20px; border-radius: 10px; background: #334155; color: white; }
-.net-box > div { display: flex; justify-content: space-between; padding: 18px; background: #0f172a; }
-.net-box > div:last-child strong { color: #ffc700; font-size: 20px; }
+.net-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; margin-top: 20px; border-radius: 10px; background: var(--border); color: var(--on-surface); border: 1px solid var(--border); }
+.net-box > div { display: flex; justify-content: space-between; padding: 18px; background: var(--surface); color: var(--on-surface); }
+.net-box > div:last-child strong { color: #0284c7; font-size: 20px; }
 .bank-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; padding: 16px; border-radius: 10px; background: var(--surface-variant); font-size: 13px; }
 .bank-box h3 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 14px; }
 @media (max-width: 900px) { .totals-grid, .iuts-grid, .bank-box { grid-template-columns: 1fr 1fr; } .salary-columns { grid-template-columns: 1fr; } }

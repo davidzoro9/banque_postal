@@ -45,12 +45,12 @@
             <div class="simple-row">
               <div class="indemnite-cell"><span class="code-badge">{{ item.typeIndemniteCode || 'IND' }}</span><span class="row-label">{{ item.libelle }}</span></div>
               <span>{{ item.tauxExonere | number:'1.0-2' }} %</span>
-              <span>{{ item.plafondExonere > 0 ? (item.plafondExonere | number:'1.0-0') + ' FCFA' : 'Sans plafond' }}</span>
-              <span class="row-amount">{{ item.montant | number:'1.0-0' }} FCFA</span>
+              <span>{{ item.plafondExonere > 0 ? (item.plafondExonere | number:'1.0-0') : 'Sans plafond' }}</span>
+              <span class="row-amount">{{ item.montant | number:'1.0-0' }}</span>
             </div>
           }
         </div>
-        <div class="total-box"><span class="total-lbl">Total des exonérations</span><span class="total-val">{{ totalExonerations | number:'1.0-0' }} FCFA</span></div>
+        <div class="total-box"><span class="total-lbl">Total des exonérations</span><span class="total-val">{{ totalExonerations | number:'1.0-0' }}</span></div>
       }
     </mat-card-content>
 

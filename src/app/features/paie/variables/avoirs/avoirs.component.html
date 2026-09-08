@@ -1,0 +1,199 @@
+<div class="avoirs-page">
+  <!-- En-tête Adaptatif (Clair & Sombre) -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>add_card</mat-icon></div>
+      <div>
+        <h1>Gestion des Avoirs</h1>
+        <p>Primes ponctuelles, gratifications et rappels de salaire sur bulletin</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-new" (click)="openAddModal()">
+        <mat-icon>add</mat-icon> Nouvel Avoir
+      </button>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche & Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher par agent, matricule, élément...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: Mariam, EMP-001...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous les statuts —</mat-option>
+            <mat-option value="ACTIF">ACTIF</mat-option>
+            <mat-option value="SOLDE">SOLDE</mat-option>
+            <mat-option value="SUSPENDU">SUSPENDU</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table des Avoirs -->
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>Élément de Salaire</th>
+            <th style="text-align: right;">Montant</th>
+            <th style="text-align: center;">Statut</th>
+            <th style="text-align: center; min-width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of filteredList; track a.id) {
+            <tr>
+              <td>
+                <div class="emp-cell">
+                  <div class="avatar">{{ (a.employeeName || 'A').charAt(0) }}</div>
+                  <div>
+                    <strong>{{ a.employeeName }}</strong>
+                    <div class="sub-text">{{ a.matricule }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="element-tag">
+                  {{ a.salaryElementName }}
+                </span>
+              </td>
+              <td style="text-align: right; font-family: monospace; font-weight: 700; color: #16a34a; font-size: 14px;">
+                +{{ a.amount | number:'1.0-0' }}
+              </td>
+              <td style="text-align: center;">
+                <span class="status-chip" [class.actif]="a.statut === 'ACTIF'" [class.solde]="a.statut === 'SOLDE'">
+                  {{ a.statut }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(a)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteAvoir(a)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (filteredList.length === 0) {
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 36px; color: #94a3b8;">
+                <mat-icon style="font-size: 36px; width: 36px; height: 36px;">add_card</mat-icon>
+                <div>Aucun avoir enregistré</div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- MODAL : Création / Modification (Champs stricts du MCD) -->
+  @if (showDialog) {
+    <div class="modal-backdrop custom-modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>add_card</mat-icon>
+            <h2>{{ editingAvoir ? 'Modifier l\'Avoir' : 'Nouvel Avoir' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- 1. employee_id -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Rechercher par Matricule ou Nom d'Agent *</mat-label>
+                <mat-select [(ngModel)]="formModel.employeeId" placeholder="Sélectionner ou chercher un agent">
+                  <div style="padding: 8px 12px; position: sticky; top: 0; background: var(--surface); z-index: 100; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;" (click)="$event.stopPropagation()">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0284c7;">search</mat-icon>
+                    <input matInput [(ngModel)]="agentSearchText" (keydown)="$event.stopPropagation()"
+                           placeholder="Taper un matricule (ex: EMP-001) ou un nom..."
+                           style="width: 100%; border: none; outline: none; background: transparent; font-size: 13px; color: var(--on-surface);">
+                    @if (agentSearchText) {
+                      <button mat-icon-button (click)="agentSearchText=''" style="width: 24px; height: 24px; line-height: 24px;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
+                      </button>
+                    }
+                  </div>
+
+                  @for (emp of filteredEmployeesForSelect; track emp.id) {
+                    <mat-option [value]="emp.id">
+                      <strong style="color: #0284c7; font-family: monospace; margin-right: 6px;">{{ emp.matricule }}</strong>
+                      <span>{{ emp.nom }} {{ emp.prenom }}</span>
+                      <span style="opacity: 0.6; font-size: 12px; margin-left: 6px;">— {{ emp.fonction || 'Agent' }}</span>
+                    </mat-option>
+                  }
+                  @if (filteredEmployeesForSelect.length === 0) {
+                    <div style="padding: 12px; text-align: center; color: #94a3b8; font-size: 13px;">
+                      Aucun agent trouvé pour "{{ agentSearchText }}"
+                    </div>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- 2. salary_element_id -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Élément de Salaire *</mat-label>
+                <mat-select [(ngModel)]="formModel.salaryElementId">
+                  @for (el of elementsList; track el.id) {
+                    <mat-option [value]="el.id">
+                      {{ el.name }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- 3. amount -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Montant *</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.amount" placeholder="Ex: 150000">
+              </mat-form-field>
+            </div>
+
+            <!-- 4. statut -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Statut *</mat-label>
+                <mat-select [(ngModel)]="formModel.statut">
+                  <mat-option value="ACTIF">ACTIF</mat-option>
+                  <mat-option value="SOLDE">SOLDE</mat-option>
+                  <mat-option value="SUSPENDU">SUSPENDU</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.employeeId || !formModel.salaryElementId || !formModel.amount" (click)="saveAvoir()" class="btn-save">
+            <mat-icon>check</mat-icon> {{ editingAvoir ? 'Mettre à jour' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

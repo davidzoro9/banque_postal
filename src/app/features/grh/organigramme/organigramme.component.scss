@@ -13,15 +13,16 @@
         width: 52px;
         height: 52px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: white;
+        background: rgba(2, 132, 199, 0.12);
+        border: 1px solid rgba(2, 132, 199, 0.25);
+        color: #0284c7;
         display: flex;
         align-items: center;
         justify-content: center;
         mat-icon { font-size: 28px; width: 28px; height: 28px; }
       }
-      h1 { margin: 0; font-size: 24px; font-weight: 700; color: #1e293b; }
-      p { margin: 4px 0 0 0; color: #64748b; font-size: 13px; }
+      h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--on-surface); }
+      p { margin: 4px 0 0 0; color: var(--on-surface-3); font-size: 13px; }
     }
   }
 

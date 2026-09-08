@@ -27,12 +27,12 @@
           <div style="font-weight:600; font-size:13px;">{{ retenueRetraite.libelle }}</div>
           <div style="font-size:11px; color:#666;">Base : {{ retenueRetraite.baseStr }} • Taux : {{ retenueRetraite.tauxStr }}</div>
         </div>
-        <div style="font-weight:700; font-size:15px; color:#c62828;">- {{ retenueRetraite.montant | number:'1.0-0' }} FCFA</div>
+        <div style="font-weight:700; font-size:15px; color:#c62828;">- {{ retenueRetraite.montant | number:'1.0-0' }}</div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; padding:14px; background:#ffebee; border-radius:6px; border:1px solid #ffcdd2;">
         <span style="font-size:14px; font-weight:800; color:#c62828;">= TOTAL RETENUES SALARIALES</span>
-        <span style="font-size:16px; font-weight:800; color:#c62828;">- {{ totalRetenues | number:'1.0-0' }} FCFA</span>
+        <span style="font-size:16px; font-weight:800; color:#c62828;">- {{ totalRetenues | number:'1.0-0' }}</span>
       </div>
 
     </div>

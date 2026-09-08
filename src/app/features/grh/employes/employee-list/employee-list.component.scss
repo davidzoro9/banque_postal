@@ -1,9 +1,12 @@
-﻿.emp-list-page { max-width: 1300px; margin: 0 auto; }
+.emp-list-page { max-width: 1300px; margin: 0 auto; }
 
 .page-header {
-  border-radius: 16px;
-  padding: 20px 24px;
-  color: #fff;
+  border-radius: 12px;
+  padding: 18px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--on-surface);
+  box-shadow: var(--shadow-card);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -14,24 +17,26 @@
 .ph-content { display: flex; align-items: center; gap: 14px; }
 .ph-icon {
   width: 52px; height: 52px;
-  background: rgba(255,255,255,0.2); border-radius: 14px;
+  background: rgba(2, 132, 199, 0.12); border-radius: 14px;
+  border: 1px solid rgba(2, 132, 199, 0.25);
   display: flex; align-items: center; justify-content: center;
-  mat-icon { font-size: 26px; width: 26px; height: 26px; color: #fff; }
+  mat-icon { font-size: 26px; width: 26px; height: 26px; color: #0284c7; }
 }
-h1 { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
-p { font-size: 12px; color: rgba(255,255,255,0.8); margin: 0; }
+h1 { font-size: 20px; font-weight: 800; margin: 0 0 2px; color: var(--on-surface); }
+p { font-size: 12px; color: var(--on-surface-3); margin: 0; }
 .ph-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-new {
-  background: #fff !important; color: #0060B3 !important;
+  background: #0284c7 !important; color: #ffffff !important;
   border-radius: 10px !important; font-weight: 600 !important;
   display: flex; align-items: center; gap: 6px;
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
 .btn-export, .btn-import {
-  background: rgba(255,255,255,0.15) !important; color: #fff !important;
+  background: var(--surface-variant) !important; color: var(--on-surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 10px !important; font-weight: 500 !important;
   display: flex; align-items: center; gap: 6px;
-  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--on-surface-3); }
 }
 
 .kpi-row {

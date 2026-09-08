@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { BaremeIutsService, BaremeIuts } from '../../services/bareme-iuts.service';
+import { RetenueService, RetenueDto } from '../../services/retenue.service';
 
 export interface CotisationItem {
   id: number;
@@ -83,7 +85,7 @@ export interface TrancheIuts {
                     <option value="Salaire brut imposable">Salaire brut imposable</option>
                     <option value="Salaire de base">Salaire de base</option>
                     <option value="Masse salariale brute">Masse salariale brute</option>
-                    <option value="Plafond CNSS">Plafond CNSS (600 000 FCFA)</option>
+                    <option value="Plafond CNSS">Plafond CNSS (600 000)</option>
                   </select>
                 </td>
                 <td>
@@ -120,9 +122,9 @@ export interface TrancheIuts {
           </p>
           <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:12px; color:#92400e;">
             <strong>⚖️ Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
-            • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000 FCFA</strong>)<br>
-            • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000 FCFA</strong>)<br>
-            • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000 FCFA</strong>) — sans cumul
+            • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000</strong>)<br>
+            • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000</strong>)<br>
+            • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000</strong>) — sans cumul
           </div>
 
           <div class="iuts-settings-row">
@@ -152,7 +154,7 @@ export interface TrancheIuts {
           <table class="iuts-table">
             <thead>
               <tr>
-                <th>Tranche de Base Imposable (FCFA)</th>
+                <th>Tranche de Base Imposable</th>
                 <th>Taux marginal (%)</th>
                 <th>Cumul Impôt sur tranche (indicatif)</th>
               </tr>
@@ -160,19 +162,19 @@ export interface TrancheIuts {
             <tbody>
               <tr *ngFor="let t of tranchesIuts; let i = index">
                 <td>
-                  <span *ngIf="t.max !== null">De {{ t.min | number }} FCFA à {{ t.max | number }} FCFA</span>
-                  <span *ngIf="t.max === null">Plus de {{ t.min | number }} FCFA</span>
+                  <span *ngIf="t.max !== null">De {{ t.min | number }} à {{ t.max | number }}</span>
+                  <span *ngIf="t.max === null">Plus de {{ t.min | number }}</span>
                 </td>
                 <td>
                   <input type="number" [(ngModel)]="t.taux" class="rate-input"> %
                 </td>
                 <td style="font-size:12px; color:#64748b;">
                   <span *ngIf="i===0">0</span>
-                  <span *ngIf="i===1">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
-                  <span *ngIf="i===2">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
-                  <span *ngIf="i===3">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
-                  <span *ngIf="i===4">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
-                  <span *ngIf="i===5">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }} FCFA</span>
+                  <span *ngIf="i===1">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===2">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===3">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===4">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===5">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
                   <span *ngIf="i===6">illimité</span>
                 </td>
               </tr>
@@ -461,48 +463,77 @@ export class CotisationsPaieComponent implements OnInit {
   reductionCharge3 = 12;      // -12% IUTS pour 3 personnes à charge
   maxReductionCharge = 14;    // -14% IUTS pour 4+ personnes à charge (plafond)
 
-  defaultCotisations: CotisationItem[] = [
-    { id: 1, code: 'CNSS-01', nom: 'CNSS (Régime Général)', typeOrganisme: 'Caisse Nationale de Sécurité Sociale', partEmploye: 5.5, partEmployeur: 16.0, assiette: 'Salaire brut imposable', actif: true },
-    { id: 2, code: 'CRRAE-01', nom: 'CRRAE-UMOA (Retraite Complémentaire Bancaire)', typeOrganisme: 'Caisse Régionale de Retraite UMOA', partEmploye: 6.0, partEmployeur: 10.0, assiette: 'Salaire brut imposable', actif: true },
-    { id: 3, code: 'CARFO-01', nom: 'CARFO (Fonction Publique)', typeOrganisme: 'Caisse Autonome de Retraite des Fonctionnaires', partEmploye: 8.0, partEmployeur: 14.0, assiette: 'Salaire de base', actif: false },
-    { id: 4, code: 'IUTS-01', nom: 'IUTS (Impôt sur Salaires)', typeOrganisme: 'Direction Générale des Impôts', partEmploye: 10.0, partEmployeur: 0.0, assiette: 'Salaire brut imposable', actif: true },
-    { id: 5, code: 'TPA-01', nom: 'TPA (Taxe Patronale d\'Apprentissage)', typeOrganisme: 'Trésor Public', partEmploye: 0.0, partEmployeur: 3.0, assiette: 'Masse salariale brute', actif: true },
-    { id: 6, code: 'MUT-01', nom: 'Mutuelle Santé Entreprise', typeOrganisme: 'Organisme Complémentaire', partEmploye: 2.0, partEmployeur: 2.0, assiette: 'Salaire de base', actif: true }
-  ];
-
   cotisations: CotisationItem[] = [];
-
-  // Barème IUTS officiel Burkina Faso - Circulaire MINEFID N°2020-0432/MINEFID/SG/DGI
-  tranchesIuts: TrancheIuts[] = [
-    { min: 0,      max: 30000,  taux: 0  },
-    { min: 30001,  max: 50000,  taux: 10 },
-    { min: 50001,  max: 80000,  taux: 15 },
-    { min: 80001,  max: 120000, taux: 18 },
-    { min: 120001, max: 170000, taux: 21 },
-    { min: 170001, max: 250000, taux: 23 },
-    { min: 250001, max: null,   taux: 25 }
-  ];
+  tranchesIuts: TrancheIuts[] = [];
+  loading = false;
 
   newCotisation: Partial<CotisationItem> = {
     code: '', nom: '', typeOrganisme: '', partEmploye: 0, partEmployeur: 0, assiette: 'Salaire brut imposable', actif: true
   };
 
+  constructor(
+    private baremeIutsService: BaremeIutsService,
+    private retenueService: RetenueService
+  ) {}
+
   ngOnInit(): void {
-    const saved = localStorage.getItem('cotisations_paie');
-    if (saved) {
-      try {
-        const list = JSON.parse(saved);
-        if (list && list.length > 0) {
-          this.cotisations = list;
-          return;
+    this.chargerDonnees();
+  }
+
+  chargerDonnees(): void {
+    this.loading = true;
+
+    // 1. Chargement des tranches IUTS depuis PostgreSQL
+    this.baremeIutsService.getAll().subscribe({
+      next: (baremes) => {
+        if (baremes && baremes.length > 0) {
+          this.tranchesIuts = baremes.map(b => ({
+            min: b.trancheMin,
+            max: b.trancheMax >= 999999999 ? null : b.trancheMax,
+            taux: b.tauxPercent
+          }));
+        } else {
+          this.tranchesIuts = [];
         }
-      } catch (e) {}
-    }
-    this.cotisations = [...this.defaultCotisations];
+      },
+      error: (err) => console.error('Erreur chargement baremes IUTS:', err)
+    });
+
+    // 2. Chargement des cotisations / retenues depuis PostgreSQL
+    this.retenueService.getAll().subscribe({
+      next: (retList) => {
+        if (retList && retList.length > 0) {
+          this.cotisations = retList.map(r => ({
+            id: r.id || 0,
+            code: r.code,
+            nom: r.libelle,
+            typeOrganisme: r.typeRetenueLibelle || 'Organisme de Sécurité Sociale',
+            partEmploye: (r.typeRetenueLibelle?.includes('Employeur') || r.typeRetenueLibelle?.includes('Patronale')) ? 0 : (r.taux || 0),
+            partEmployeur: (r.typeRetenueLibelle?.includes('Employeur') || r.typeRetenueLibelle?.includes('Patronale')) ? (r.taux || 0) : 0,
+            assiette: r.baseCalcul || 'Salaire brut imposable',
+            actif: r.actif !== false,
+            isEditing: false
+          }));
+        } else {
+          this.cotisations = [];
+        }
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement cotisations:', err);
+        this.loading = false;
+      }
+    });
   }
 
   toggleStatus(item: CotisationItem): void {
     item.actif = !item.actif;
+    if (item.id) {
+      this.retenueService.update(item.id, { actif: item.actif }).subscribe({
+        next: () => this.showNotification('Statut mis à jour.'),
+        error: (err) => console.error('Erreur update statut:', err)
+      });
+    }
   }
 
   openAddModal(): void {
@@ -519,31 +550,65 @@ export class CotisationsPaieComponent implements OnInit {
       alert('Veuillez renseigner le nom et le code de la cotisation.');
       return;
     }
-    const item: CotisationItem = {
-      id: Date.now(),
+
+    const payload: Partial<RetenueDto> = {
       code: this.newCotisation.code.toUpperCase(),
-      nom: this.newCotisation.nom,
-      typeOrganisme: this.newCotisation.typeOrganisme || 'Organisme de paie',
-      partEmploye: this.newCotisation.partEmploye || 0,
-      partEmployeur: this.newCotisation.partEmployeur || 0,
-      assiette: this.newCotisation.assiette || 'Salaire brut imposable',
-      actif: true
+      libelle: this.newCotisation.nom,
+      taux: (this.newCotisation.partEmploye || 0) + (this.newCotisation.partEmployeur || 0),
+      actif: true,
+      description: this.newCotisation.typeOrganisme || 'Cotisation sociale'
     };
-    this.cotisations.push(item);
-    this.closeAddModal();
-    this.showNotification('Nouvelle cotisation ajoutée avec succès !');
+
+    this.retenueService.create(payload).subscribe({
+      next: () => {
+        this.closeAddModal();
+        this.chargerDonnees();
+        this.showNotification('Nouvelle cotisation enregistrée avec succès dans PostgreSQL !');
+      },
+      error: (err) => {
+        console.error('Erreur création cotisation:', err);
+        alert('Erreur lors de la création de la cotisation.');
+      }
+    });
   }
 
   supprimer(id: number): void {
     if (confirm('Voulez-vous vraiment supprimer cette cotisation ?')) {
-      this.cotisations = this.cotisations.filter(c => c.id !== id);
-      this.showNotification('Cotisation supprimée.');
+      this.retenueService.delete(id).subscribe({
+        next: () => {
+          this.chargerDonnees();
+          this.showNotification('Cotisation supprimée avec succès.');
+        },
+        error: (err) => {
+          console.error('Erreur suppression cotisation:', err);
+          alert('Erreur lors de la suppression.');
+        }
+      });
     }
   }
 
   sauvegarderTout(): void {
-    localStorage.setItem('cotisations_paie', JSON.stringify(this.cotisations));
-    this.showNotification('Taux de cotisations et barèmes d\'imposition enregistrés avec succès !');
+    const editables = this.cotisations.filter(c => c.isEditing);
+    if (editables.length === 0) {
+      this.showNotification('Tous les taux sont déjà synchronisés avec PostgreSQL.');
+      return;
+    }
+
+    let completed = 0;
+    editables.forEach(c => {
+      const taux = (c.partEmploye || 0) + (c.partEmployeur || 0);
+      this.retenueService.update(c.id, { libelle: c.nom, taux: taux, actif: c.actif }).subscribe({
+        next: () => {
+          c.isEditing = false;
+          completed++;
+          if (completed === editables.length) {
+            this.chargerDonnees();
+            this.showNotification('Taux de cotisations enregistrés avec succès dans PostgreSQL !');
+          }
+        },
+        error: (err) => console.error('Erreur save cotisation:', err)
+      });
+    });
   }
 
   private showNotification(msg: string): void {

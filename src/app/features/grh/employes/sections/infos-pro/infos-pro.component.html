@@ -56,37 +56,39 @@
 
         <p class="form-section-label">Affectation Professionnelle</p>
         <div class="form-grid-2">
+
+          <!-- 1. Agence en premier -->
           <mat-form-field appearance="outline">
-            <mat-label>Fonction</mat-label>
-            <mat-select formControlName="fonctionId">
-            <mat-option [value]="null">
-              Agent simple, sans nomination
-            </mat-option>
-
-            @for (fonction of fonctions$ | async; track fonction.id) {
-              <mat-option [value]="fonction.id">
-                {{ fonction.libelle || fonction.code }}
-              </mat-option>
-            }
-          </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Emploi</mat-label>
-            <mat-select formControlName="emploiId">
-              <mat-option [value]="null">Aucun emploi</mat-option>
-
-              @for (emploi of emplois$ | async; track emploi.id) {
-                <mat-option [value]="emploi.id">
-                  {{ emploi.libelle || emploi.code }}
+            <mat-label>Agence</mat-label>
+            <mat-select formControlName="agenceId" (selectionChange)="onAgenceChange()">
+              <mat-option [value]="null">— Aucune agence —</mat-option>
+              @for (ag of agences; track ag.id) {
+                <mat-option [value]="ag.id">
+                  {{ ag.libelle || ag.code }}
                 </mat-option>
               }
             </mat-select>
           </mat-form-field>
 
+          <!-- 2. Direction / Département en second (filtrée selon l'Agence) -->
+          @if (!isDirecteurDepartement) {
+            <mat-form-field appearance="outline">
+              <mat-label>Direction / Département</mat-label>
+              <mat-select formControlName="directionId" (selectionChange)="onDirectionChange()">
+                <mat-option [value]="null">— Aucune direction —</mat-option>
+                @if (filteredDirections.length === 0 && form.get('agenceId')?.value) {
+                  <mat-option [value]="null" [disabled]="true">Aucune direction rattachée à cette agence</mat-option>
+                }
+                @for (item of filteredDirections; track item.id) {
+                  <mat-option [value]="item.id">{{ item.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
           <!-- Si DIRECTEUR DE DEPARTEMENT ou RESPONSABLE DE DEPARTEMENT -> Sélection dynamique du Département -->
           @if (isDirecteurDepartement) {
-            <mat-form-field appearance="outline" class="span-2">
+            <mat-form-field appearance="outline">
               <mat-label>Département de nomination*</mat-label>
               <mat-select formControlName="departmentId">
                 <mat-option [value]="null">— Choisir le département —</mat-option>
@@ -97,72 +99,74 @@
             </mat-form-field>
           }
 
-          <!-- Si CHEF DE SERVICE -> Sélection dynamique du Service -->
-          @if (isChefService) {
-            <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Service de nomination*</mat-label>
-              <mat-select formControlName="serviceId">
-                <mat-option value="">— Choisir le service —</mat-option>
-                @for (srv of services$ | async; track srv.id) {
-                  <mat-option [value]="srv.id">{{ srv.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          }
-
-          <!-- Si CHEF D'AGENCE -> Sélection dynamique de l'Agence -->
-          @if (selectedFonctionName.includes("CHEF D'AGENCE")) {
-            <mat-form-field appearance="outline" class="span-2">
-              <mat-label>Agence de nomination*</mat-label>
-              <mat-select formControlName="agenceId">
-                <mat-option [value]="null">— Choisir l'agence —</mat-option>
-                @for (ag of agences$ | async; track ag.id) {
-                  <mat-option [value]="ag.id">{{ ag.libelle }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          }
-
-          <!-- Champs généraux de rattachement structurel -->
+          <!-- 3. Service en troisième (filtré selon la Direction) -->
           @if (!isChefService) {
             <mat-form-field appearance="outline">
-              <mat-label>Service (Optionnel)</mat-label>
+              <mat-label>Service</mat-label>
               <mat-select formControlName="serviceId">
-                <mat-option value="">— Aucun service —</mat-option>
-                @for (srv of services$ | async; track srv.id) {
+                <mat-option [value]="null">— Aucun service —</mat-option>
+                @if (filteredServices.length === 0 && form.get('directionId')?.value) {
+                  <mat-option [value]="null" [disabled]="true">Aucun service rattaché à cette direction</mat-option>
+                }
+                @for (srv of filteredServices; track srv.id) {
                   <mat-option [value]="srv.id">{{ srv.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
-          @if (!isDirecteurDepartement) {
+          <!-- Si CHEF DE SERVICE -> Sélection dynamique du Service -->
+          @if (isChefService) {
             <mat-form-field appearance="outline">
-              <mat-label>Direction / Département</mat-label>
-              <mat-select formControlName="directionId">
-                <mat-option [value]="null">— Aucune direction —</mat-option>
-                @for (item of directions$ | async; track item.id) {
-                  <mat-option [value]="item.id">{{ item.libelle }}</mat-option>
+              <mat-label>Service de nomination*</mat-label>
+              <mat-select formControlName="serviceId">
+                <mat-option [value]="null">— Choisir le service —</mat-option>
+                @if (filteredServices.length === 0 && form.get('directionId')?.value) {
+                  <mat-option [value]="null" [disabled]="true">Aucun service rattaché à cette direction</mat-option>
+                }
+                @for (srv of filteredServices; track srv.id) {
+                  <mat-option [value]="srv.id">{{ srv.libelle }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
           }
 
+          <!-- 4. Fonction -->
+          <mat-form-field appearance="outline">
+            <mat-label>Fonction</mat-label>
+            <mat-select formControlName="fonctionId">
+              <mat-option [value]="null">
+                Agent simple, sans nomination
+              </mat-option>
+              @for (fonction of fonctions$ | async; track fonction.id) {
+                <mat-option [value]="fonction.id">
+                  {{ fonction.libelle || fonction.code }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
+          <!-- 5. Emploi -->
+          <mat-form-field appearance="outline">
+            <mat-label>Emploi</mat-label>
+            <mat-select formControlName="emploiId">
+              <mat-option [value]="null">Aucun emploi</mat-option>
+              @for (emploi of emplois$ | async; track emploi.id) {
+                <mat-option [value]="emploi.id">
+                  {{ emploi.libelle || emploi.code }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <!-- 6. Régime de sécurité sociale -->
           <mat-form-field appearance="outline">
             <mat-label>Régime de sécurité sociale</mat-label>
-
-            <mat-select
-              formControlName="regimeSecuriteSocialId">
-
+            <mat-select formControlName="regimeSecuriteSocialId">
               <mat-option [value]="null">
                 Aucun régime
               </mat-option>
-
-              @for (
-                regime of regimesSecuriteSocial$ | async;
-                track regime.id
-              ) {
+              @for (regime of regimesSecuriteSocial$ | async; track regime.id) {
                 <mat-option [value]="regime.id">
                   {{ regime.code }} — {{ regime.libelle }}
                 </mat-option>
@@ -240,11 +244,11 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Salaire de base (FCFA)</mat-label>
+            <mat-label>Salaire de base</mat-label>
 
             <input
               matInput
-              [value]="(selectedSalaryGrid?.montant != null ? formatMontant(selectedSalaryGrid!.montant!) : (form.get('salaireBase')?.value ? formatMontant(form.get('salaireBase')?.value) : '0')) + ' FCFA'"
+              [value]="selectedSalaryGrid?.montant != null ? formatMontant(selectedSalaryGrid!.montant!) : (form.get('salaireBase')?.value ? formatMontant(form.get('salaireBase')?.value) : '0')"
               readonly
               style="font-weight: 700; color: #0060B3;">
             @if (form.get('grilleSalarialeId')?.hasError('required')) {

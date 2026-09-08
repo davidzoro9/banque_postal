@@ -2,20 +2,22 @@
 
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px; color: #ffffff;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 18px 24px; color: var(--on-surface);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px; margin: 16px 24px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap; gap: 14px;
   .ph-content { display: flex; align-items: center; gap: 14px; }
   .ph-icon {
-    width: 44px; height: 44px; background: rgba(255, 255, 255, 0.12);
+    width: 44px; height: 44px; background: rgba(2, 132, 199, 0.12);
     border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    mat-icon { font-size: 24px; width: 24px; height: 24px; color: #ffffff; }
+    border: 1px solid rgba(2, 132, 199, 0.25);
+    mat-icon { font-size: 24px; width: 24px; height: 24px; color: #0284c7; }
   }
-  h1 { margin: 0; font-size: 19px; font-weight: 700; color: #ffffff; }
-  p  { margin: 2px 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.8); }
-  .btn-new { background: #ffffff !important; color: #0f172a !important; border: none; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
+  h1 { margin: 0; font-size: 19px; font-weight: 700; color: var(--on-surface); }
+  p  { margin: 2px 0 0; font-size: 12px; color: var(--on-surface-3); }
+  .btn-new { background: #0284c7 !important; color: #ffffff !important; border: none; font-weight: 700; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 }
 
 .kpi-row {
