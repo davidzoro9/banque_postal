@@ -18,8 +18,11 @@ public class GrilleSalarialeDto {
     private Long echelonId;
     private Long gradeId;
 
+    private String categorieCode;
     private String categorieLibelle;
+    private String echelonCode;
     private String echelonLibelle;
+    private String gradeCode;
     private String gradeLibelle;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)

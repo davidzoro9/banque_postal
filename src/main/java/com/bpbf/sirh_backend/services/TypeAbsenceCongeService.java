@@ -23,7 +23,24 @@ public class TypeAbsenceCongeService {
     }
 
     public TypeAbsenceCongeDto createTypeAbsenceConge(TypeAbsenceCongeDto typeAbsenceCongeDto){
+        String code = typeAbsenceCongeDto.getCode();
+        if (code == null || code.isBlank()) {
+            String baseCode = typeAbsenceCongeDto.getName() != null 
+                ? typeAbsenceCongeDto.getName().trim().toUpperCase().replaceAll("[^A-Z0-9]", "_") 
+                : "TAC";
+            if (baseCode.length() > 15) baseCode = baseCode.substring(0, 15);
+            code = baseCode + "_" + System.currentTimeMillis();
+            typeAbsenceCongeDto.setCode(code);
+        } else {
+            // Vérifier unicité du code
+            if (typeAbsenceCongeRepository.findByCode(code).isPresent()) {
+                code = code + "_" + (System.currentTimeMillis() % 10000);
+                typeAbsenceCongeDto.setCode(code);
+            }
+        }
+
         TypeAbsenceConge typeAbsenceConge = typeAbsenceCongeMapper.toEntity(typeAbsenceCongeDto);
+        typeAbsenceConge.setId(null);
         TypeAbsenceConge saved = typeAbsenceCongeRepository.save(typeAbsenceConge);
         return typeAbsenceCongeMapper.toDto(saved);
     }
@@ -32,8 +49,12 @@ public class TypeAbsenceCongeService {
         TypeAbsenceConge typeAbsenceConge = typeAbsenceCongeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ce type d'absence/congé n'existe pas"));
 
-        typeAbsenceConge.setCode(typeAbsenceCongeDto.getCode());
-        typeAbsenceConge.setName(typeAbsenceCongeDto.getName());
+        if (typeAbsenceCongeDto.getCode() != null && !typeAbsenceCongeDto.getCode().isBlank()) {
+            typeAbsenceConge.setCode(typeAbsenceCongeDto.getCode());
+        }
+        if (typeAbsenceCongeDto.getName() != null && !typeAbsenceCongeDto.getName().isBlank()) {
+            typeAbsenceConge.setName(typeAbsenceCongeDto.getName());
+        }
 
         TypeAbsenceConge saved = typeAbsenceCongeRepository.save(typeAbsenceConge);
 

@@ -10,4 +10,7 @@ public interface SessionPaieRepository extends JpaRepository<SessionPaie, Long> 
     Optional<SessionPaie> findByMoisAndAnnee(String mois, Integer annee);
     Optional<SessionPaie> findByCodeSession(String codeSession);
     List<SessionPaie> findAllByOrderByAnneeDescMoisDesc();
+    Optional<SessionPaie> findTopByOrderByAnneeDescMoisDesc();
+    Optional<SessionPaie> findTopByOrderByDateCreationDesc();
 }
+

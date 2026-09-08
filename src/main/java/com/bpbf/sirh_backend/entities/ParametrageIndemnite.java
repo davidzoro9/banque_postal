@@ -38,4 +38,29 @@ public class ParametrageIndemnite {
 
     private Double taux;
     private Boolean actif = true;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+
+    public TypeIndemnite getTypeIndemniteObj() { return typeIndemniteObj; }
+    public void setTypeIndemniteObj(TypeIndemnite typeIndemniteObj) { this.typeIndemniteObj = typeIndemniteObj; }
+
+    public Fonction getFonctionObj() { return fonctionObj; }
+    public void setFonctionObj(Fonction fonctionObj) { this.fonctionObj = fonctionObj; }
+
+    public Grade getGradeObj() { return gradeObj; }
+    public void setGradeObj(Grade gradeObj) { this.gradeObj = gradeObj; }
+
+    public Categorie getCategorieObj() { return categorieObj; }
+    public void setCategorieObj(Categorie categorieObj) { this.categorieObj = categorieObj; }
+
+    public Double getTaux() { return taux; }
+    public void setTaux(Double taux) { this.taux = taux; }
+
+    public Boolean getActif() { return actif; }
+    public void setActif(Boolean actif) { this.actif = actif; }
 }
+

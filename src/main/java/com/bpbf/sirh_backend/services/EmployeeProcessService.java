@@ -24,6 +24,9 @@ public class EmployeeProcessService {
     private final ParametrageIndemniteRepository parametrageRepository;
     private final InformationSalarialeRetenueRepository informationRetenueRepository;
     private final InformationSalarialeCalculService informationCalculService;
+    private final BulletinRepository bulletinRepository;
+    private final AvoirRepository avoirRepository;
+    private final PrecompteRepository precompteRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
@@ -247,6 +250,12 @@ public class EmployeeProcessService {
 
     @Transactional
     public void deleteForEmployee(Long employeeId) {
+        bulletinRepository.deleteByEmployeeId(employeeId);
+        bulletinRepository.flush();
+        avoirRepository.deleteByEmployeeId(employeeId);
+        avoirRepository.flush();
+        precompteRepository.deleteByEmployeeId(employeeId);
+        precompteRepository.flush();
         exonerationRepository.deleteByEmployeeId(employeeId);
         exonerationRepository.flush();
         indemniteRepository.deleteByEmployeeId(employeeId);

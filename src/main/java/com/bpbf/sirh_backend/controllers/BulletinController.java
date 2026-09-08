@@ -15,6 +15,21 @@ public class BulletinController {
 
     private final BulletinService bulletinService;
 
+    @GetMapping
+    public ResponseEntity<List<BulletinDto>> getAll() {
+        return ResponseEntity.ok(bulletinService.getAllBulletins());
+    }
+
+    @PostMapping
+    public ResponseEntity<BulletinDto> createOrSave(@RequestBody BulletinDto dto) {
+        return ResponseEntity.ok(bulletinService.saveIndividualBulletin(dto));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BulletinDto> update(@PathVariable Long id, @RequestBody BulletinDto dto) {
+        return ResponseEntity.ok(bulletinService.updateBulletin(id, dto));
+    }
+
     @PostMapping("/generer/session/{sessionPaieId}")
     public ResponseEntity<List<BulletinDto>> generateForSession(@PathVariable Long sessionPaieId) {
         return ResponseEntity.ok(bulletinService.generateBulletinsForSession(sessionPaieId));
@@ -39,5 +54,11 @@ public class BulletinController {
     @GetMapping("/{id}")
     public ResponseEntity<BulletinDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(bulletinService.getBulletinById(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        bulletinService.deleteBulletin(id);
+        return ResponseEntity.noContent().build();
     }
 }

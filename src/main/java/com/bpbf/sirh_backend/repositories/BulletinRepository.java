@@ -26,4 +26,6 @@ public interface BulletinRepository extends JpaRepository<Bulletin, Long> {
 
     @Query("SELECT b FROM Bulletin b LEFT JOIN FETCH b.lines WHERE b.id = :id")
     Optional<Bulletin> findByIdWithLines(@Param("id") Long id);
+
+    void deleteByEmployeeId(Long employeeId);
 }

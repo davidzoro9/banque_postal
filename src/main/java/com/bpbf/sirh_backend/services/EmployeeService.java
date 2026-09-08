@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class EmployeeService {
     private final ObjectMapper objectMapper;
     private final RegimeSecuriteSocialRepository regimeSecuriteSocialRepository;
     private final EmployeeProcessService employeeProcessService;
+    private final UtilisateurRepository utilisateurRepository;
 
     public List<EmployeeDto> getAllEmployees() {
         List<Employee> employees = employeeRepository.findAll();
@@ -65,6 +67,10 @@ public class EmployeeService {
         updateExtraDataFromEntity(saved, employeeDto);
         saved = employeeRepository.save(saved);
         employeeProcessService.sync(saved, employeeDto);
+        
+        // Création automatique du compte utilisateur de l'agent
+        syncUserAccountForEmployee(saved);
+
         EmployeeDto res = employeeMapper.toDto(saved);
         updateDtoFromEntity(saved, res);
         return res;
@@ -80,6 +86,10 @@ public class EmployeeService {
         updateExtraDataFromEntity(existing, employeeDto);
         Employee saved = employeeRepository.save(existing);
         employeeProcessService.sync(saved, employeeDto);
+        
+        // Synchronisation du compte utilisateur
+        syncUserAccountForEmployee(saved);
+
         EmployeeDto res = employeeMapper.toDto(saved);
         updateDtoFromEntity(saved, res);
         return res;
@@ -87,11 +97,78 @@ public class EmployeeService {
 
     @Transactional
     public void deleteEmployee(Long id) {
-        if (!employeeRepository.existsById(id)) {
+        Employee existing = employeeRepository.findById(id).orElse(null);
+        if (existing == null) {
             throw new ResourceNotFoundException("Employé non trouvé avec l'id: " + id);
         }
+        
+        // Désactiver ou supprimer le compte utilisateur associé
+        if (utilisateurRepository != null) {
+            String email = existing.getEmail();
+            String mat = existing.getMatricule();
+            utilisateurRepository.findAll().stream()
+                .filter(u -> (email != null && u.getEmail() != null && u.getEmail().equalsIgnoreCase(email))
+                          || (mat != null && u.getUsername() != null && u.getUsername().equalsIgnoreCase(mat)))
+                .findFirst()
+                .ifPresent(u -> utilisateurRepository.deleteById(u.getId()));
+        }
+
         employeeProcessService.deleteForEmployee(id);
         employeeRepository.deleteById(id);
+    }
+
+    public void syncUserAccountForEmployee(Employee emp) {
+        if (emp == null || utilisateurRepository == null) return;
+        try {
+            String email = (emp.getEmail() != null && !emp.getEmail().trim().isEmpty())
+                    ? emp.getEmail().trim().toLowerCase()
+                    : ((emp.getMatricule() != null ? emp.getMatricule().trim().toLowerCase() : "agent" + emp.getId()) + "@bpbf.bf");
+
+            String matricule = emp.getMatricule() != null ? emp.getMatricule().trim() : "";
+
+            List<Utilisateur> allUsers = utilisateurRepository.findAll();
+            Optional<Utilisateur> existingUser = allUsers.stream()
+                    .filter(u -> (u.getEmail() != null && u.getEmail().equalsIgnoreCase(email))
+                            || (!matricule.isEmpty() && u.getUsername() != null && u.getUsername().equalsIgnoreCase(matricule)))
+                    .findFirst();
+
+            boolean isActif = !"Inactif".equalsIgnoreCase(emp.getStatut()) && !"Suspendu".equalsIgnoreCase(emp.getStatut());
+
+            if (existingUser.isEmpty()) {
+                Utilisateur newUser = new Utilisateur();
+                newUser.setNom(emp.getNom() != null ? emp.getNom() : "");
+                newUser.setPrenom(emp.getPrenom() != null ? emp.getPrenom() : "");
+                newUser.setEmail(email);
+                newUser.setUsername(!matricule.isEmpty() ? matricule : email);
+                newUser.setPassword("1234"); // Mot de passe initial par défaut
+                
+                // Rôle adapté selon le poste et les attributions
+                String role = "EMPLOYE";
+                String foncLib = (emp.getFonction() != null && emp.getFonction().getName() != null ? emp.getFonction().getName() : "").toUpperCase();
+                String empLib = (emp.getEmploi() != null && emp.getEmploi().getName() != null ? emp.getEmploi().getName() : "").toUpperCase();
+                if (foncLib.contains("DIRECTEUR GENERAL") || empLib.contains("DIRECTEUR GENERAL") || foncLib.contains("ADMINISTRATEUR") || empLib.contains("ADMINISTRATEUR")) {
+                    role = "ADMIN";
+                } else if (foncLib.contains("DRH") || empLib.contains("DRH") || foncLib.contains("RESSOURCES HUMAINES") || empLib.contains("RESSOURCES HUMAINES")) {
+                    role = "DRH";
+                } else if (foncLib.contains("PAIE") || empLib.contains("PAIE") || foncLib.contains("COMPTABLE") || empLib.contains("COMPTABLE")) {
+                    role = "GESTIONNAIRE_PAIE";
+                } else if (foncLib.contains("DIRECTEUR") || empLib.contains("DIRECTEUR") || foncLib.contains("CHEF") || empLib.contains("CHEF")) {
+                    role = "VALIDATEUR";
+                }
+                newUser.setRole(role);
+                newUser.setActif(isActif);
+                utilisateurRepository.save(newUser);
+            } else {
+                Utilisateur u = existingUser.get();
+                if (emp.getNom() != null && !emp.getNom().isEmpty()) u.setNom(emp.getNom());
+                if (emp.getPrenom() != null && !emp.getPrenom().isEmpty()) u.setPrenom(emp.getPrenom());
+                u.setEmail(email);
+                u.setActif(isActif);
+                utilisateurRepository.save(u);
+            }
+        } catch (Exception e) {
+            System.err.println("[EmployeeService] Notice syncUserAccount: " + e.getMessage());
+        }
     }
 
     private void updateDtoFromEntity(Employee entity, EmployeeDto dto) {

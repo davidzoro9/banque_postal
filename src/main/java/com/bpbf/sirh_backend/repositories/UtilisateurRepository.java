@@ -16,7 +16,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     Optional<Utilisateur> findByEmail(String email);
 
-    @Query("SELECT u FROM Utilisateur u WHERE u.email = :email")
-    Optional<Utilisateur> findByEmailIgnoreCase(@Param("email") String email);
+    long countByRole(String role);
 }
 

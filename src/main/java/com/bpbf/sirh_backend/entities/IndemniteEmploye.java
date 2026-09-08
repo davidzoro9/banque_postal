@@ -29,4 +29,26 @@ public class IndemniteEmploye {
     private String libelle;
     private Double montant;
     private Boolean actif;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Employee getEmployee() { return employee; }
+    public void setEmployee(Employee employee) { this.employee = employee; }
+
+    public TypeIndemnite getTypeIndemnite() { return typeIndemnite; }
+    public void setTypeIndemnite(TypeIndemnite typeIndemnite) { this.typeIndemnite = typeIndemnite; }
+
+    public ParametrageIndemnite getParametrageIndemnite() { return parametrageIndemnite; }
+    public void setParametrageIndemnite(ParametrageIndemnite parametrageIndemnite) { this.parametrageIndemnite = parametrageIndemnite; }
+
+    public String getLibelle() { return libelle; }
+    public void setLibelle(String libelle) { this.libelle = libelle; }
+
+    public Double getMontant() { return montant; }
+    public void setMontant(Double montant) { this.montant = montant; }
+
+    public Boolean getActif() { return actif; }
+    public void setActif(Boolean actif) { this.actif = actif; }
 }
+

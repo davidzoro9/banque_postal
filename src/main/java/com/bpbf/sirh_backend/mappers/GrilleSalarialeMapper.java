@@ -10,10 +10,13 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface GrilleSalarialeMapper {
     @Mapping(source = "categorieObj.id", target = "categorieId")
+    @Mapping(source = "categorieObj.code", target = "categorieCode")
     @Mapping(source = "categorieObj.libelle", target = "categorieLibelle")
     @Mapping(source = "echelonObj.id", target = "echelonId")
+    @Mapping(source = "echelonObj.code", target = "echelonCode")
     @Mapping(source = "echelonObj.libelle", target = "echelonLibelle")
     @Mapping(source = "gradeObj.id", target = "gradeId")
+    @Mapping(source = "gradeObj.code", target = "gradeCode")
     @Mapping(source = "gradeObj.libelle", target = "gradeLibelle")
     GrilleSalarialeDto toDto(GrilleSalariale grilleSalariale);
 
@@ -24,4 +27,3 @@ public interface GrilleSalarialeMapper {
 
     List<GrilleSalarialeDto> toDtos(List<GrilleSalariale> grilleSalariales);
 }
-

@@ -1,7 +1,8 @@
 package com.bpbf.sirh_backend.controllers;
 
-import com.bpbf.sirh_backend.dtos.PrecompteEmployeDto;
-import com.bpbf.sirh_backend.services.PrecompteService;
+import com.bpbf.sirh_backend.dtos.paie.PrecompteRequestDto;
+import com.bpbf.sirh_backend.dtos.paie.PrecompteResponseDto;
+import com.bpbf.sirh_backend.services.VariablesPaieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,43 +12,34 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/precomptes")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class PrecompteController {
 
-    private final PrecompteService precompteService;
+    private final VariablesPaieService variablesPaieService;
 
     @GetMapping
-    public ResponseEntity<List<PrecompteEmployeDto>> getAll() {
-        return ResponseEntity.ok(precompteService.getAll());
+    public ResponseEntity<List<PrecompteResponseDto>> getAll() {
+        return ResponseEntity.ok(variablesPaieService.getAllPrecomptes());
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<PrecompteEmployeDto>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(precompteService.getByEmployee(employeeId));
-    }
-
-    @GetMapping("/employee/{employeeId}/actifs")
-    public ResponseEntity<List<PrecompteEmployeDto>> getActiveByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(precompteService.getActiveByEmployee(employeeId));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<PrecompteEmployeDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(precompteService.getById(id));
+    public ResponseEntity<List<PrecompteResponseDto>> getByEmployee(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(variablesPaieService.getPrecomptesByEmployee(employeeId));
     }
 
     @PostMapping
-    public ResponseEntity<PrecompteEmployeDto> create(@RequestBody PrecompteEmployeDto dto) {
-        return ResponseEntity.ok(precompteService.create(dto));
+    public ResponseEntity<PrecompteResponseDto> create(@RequestBody PrecompteRequestDto dto) {
+        return ResponseEntity.ok(variablesPaieService.createPrecompte(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PrecompteEmployeDto> update(@PathVariable Long id, @RequestBody PrecompteEmployeDto dto) {
-        return ResponseEntity.ok(precompteService.update(id, dto));
+    public ResponseEntity<PrecompteResponseDto> update(@PathVariable Long id, @RequestBody PrecompteRequestDto dto) {
+        return ResponseEntity.ok(variablesPaieService.updatePrecompte(id, dto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        precompteService.delete(id);
+        variablesPaieService.deletePrecompte(id);
         return ResponseEntity.noContent().build();
     }
 }

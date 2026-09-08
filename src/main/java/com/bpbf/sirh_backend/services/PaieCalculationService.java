@@ -2,20 +2,22 @@ package com.bpbf.sirh_backend.services;
 
 import com.bpbf.sirh_backend.dtos.PaieBulletinDto;
 import com.bpbf.sirh_backend.entities.Employee;
-import com.bpbf.sirh_backend.entities.GrilleSalariale;
-import com.bpbf.sirh_backend.entities.ParametrageIndemnite;
-import com.bpbf.sirh_backend.entities.TypeIndemnite;
 import com.bpbf.sirh_backend.entities.Fonction;
-import com.bpbf.sirh_backend.repositories.FonctionRepository;
+import com.bpbf.sirh_backend.entities.IndemniteEmploye;
+import com.bpbf.sirh_backend.entities.SituationSalariale;
 import com.bpbf.sirh_backend.repositories.EmployeeRepository;
-import com.bpbf.sirh_backend.repositories.GrilleSalarialeRepository;
-import com.bpbf.sirh_backend.repositories.ParametrageIndemniteRepository;
-import com.bpbf.sirh_backend.repositories.TypeIndemniteRepository;
+import com.bpbf.sirh_backend.repositories.FonctionRepository;
+import com.bpbf.sirh_backend.repositories.IndemniteEmployeRepository;
+import com.bpbf.sirh_backend.repositories.SituationSalarialeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,106 +25,80 @@ import java.util.stream.Collectors;
 public class PaieCalculationService {
 
     private final EmployeeRepository employeeRepository;
-    private final ParametrageIndemniteRepository parametrageIndemniteRepository;
-    private final GrilleSalarialeRepository grilleSalarialeRepository;
-    private final TypeIndemniteRepository typeIndemniteRepository;
+    private final SituationSalarialeRepository situationRepository;
+    private final IndemniteEmployeRepository indemniteEmployeRepository;
     private final FonctionRepository fonctionRepository;
 
     public PaieBulletinDto calculatePayslipForEmployee(Long employeeId) {
         Employee emp = employeeRepository.findById(employeeId).orElse(null);
-        String name = emp != null ? (emp.getPrenom() != null ? emp.getPrenom() + " " + emp.getNom() : emp.getName()) : "Employé #" + employeeId;
-        String matricule = emp != null ? emp.getMatricule() : "EMP-" + employeeId;
-        String fonctionStr = (emp != null && emp.getFonction() != null) ? emp.getFonction().getName() : "Fonctionnaire";
+        if (emp == null) {
+            throw new RuntimeException("Employé introuvable avec l'identifiant: #" + employeeId);
+        }
+        String name = emp.getPrenom() != null ? emp.getPrenom() + " " + emp.getNom() : (emp.getName() != null ? emp.getName() : "Employé #" + employeeId);
+        String matricule = emp.getMatricule() != null ? emp.getMatricule() : "EMP-" + employeeId;
+        String fonctionStr = (emp.getFonction() != null) ? emp.getFonction().getName() : "Collaborateur";
+        String gradeStr = (emp.getGradeObj() != null) ? (emp.getGradeObj().getLibelle() != null ? emp.getGradeObj().getLibelle() : emp.getGradeObj().getCode()) : "—";
+        String catStr = (emp.getCategorieObj() != null) ? (emp.getCategorieObj().getLibelle() != null ? emp.getCategorieObj().getLibelle() : emp.getCategorieObj().getCode()) : "—";
 
-        return computePayslip(employeeId, name, matricule, fonctionStr, "Grade I", "Catégorie IX");
+        return computePayslip(employeeId, name, matricule, fonctionStr, gradeStr, catStr);
     }
 
     public List<PaieBulletinDto> calculateAllPayslips() {
         List<Employee> employees = employeeRepository.findAll();
         if (employees.isEmpty()) {
-            // Sample calculations for real BPBF staff if DB has no employees yet
-            List<PaieBulletinDto> list = new ArrayList<>();
-            list.add(computePayslip(1L, "SAWADOGO Abdoulaye", "EMP-001", "Directeur Général", "GRADE III", "CLASSE VIII"));
-            list.add(computePayslip(2L, "ZOROM David Faïcal", "EMP-002", "Directeur Monétique & SI", "GRADE III", "CLASSE VII"));
-            list.add(computePayslip(3L, "OUEDRAOGO Mariam", "EMP-003", "Responsable Monétique & Cash Point", "GRADE III", "CLASSE VI"));
-            list.add(computePayslip(4L, "KABORE Yacouba", "EMP-004", "Chef d'Agence Centrale", "GRADE II", "CLASSE IV"));
-            list.add(computePayslip(5L, "TRAORE Aminata", "EMP-005", "Chef de Service Paie & RH", "GRADE III", "CLASSE V"));
-            list.add(computePayslip(6L, "COMPAORE Boureima", "EMP-006", "Caissier Principal", "GRADE I", "7ÈME CATEGORIE"));
-            list.add(computePayslip(7L, "SANOGO Fatoumata", "EMP-007", "Assistante de Direction", "GRADE I", "6ÈME CATEGORIE"));
-            return list;
+            return Collections.emptyList();
         }
 
         return employees.stream()
                 .map(emp -> {
-                    String name = (emp.getPrenom() != null) ? emp.getPrenom() + " " + emp.getNom() : emp.getName();
+                    String name = (emp.getPrenom() != null) ? emp.getPrenom() + " " + emp.getNom() : (emp.getName() != null ? emp.getName() : "Employé #" + emp.getId());
                     String matricule = emp.getMatricule() != null ? emp.getMatricule() : "EMP-" + emp.getId();
-                    String fonctionStr = (emp.getFonction() != null) ? emp.getFonction().getName() : "Cadre";
-                    return computePayslip(emp.getId(), name, matricule, fonctionStr, "Grade I", "Catégorie IX");
+                    String fonctionStr = (emp.getFonction() != null) ? emp.getFonction().getName() : "Collaborateur";
+                    String gradeStr = (emp.getGradeObj() != null) ? (emp.getGradeObj().getLibelle() != null ? emp.getGradeObj().getLibelle() : emp.getGradeObj().getCode()) : "—";
+                    String catStr = (emp.getCategorieObj() != null) ? (emp.getCategorieObj().getLibelle() != null ? emp.getCategorieObj().getLibelle() : emp.getCategorieObj().getCode()) : "—";
+                    return computePayslip(emp.getId(), name, matricule, fonctionStr, gradeStr, catStr);
                 })
                 .collect(Collectors.toList());
     }
 
     public PaieBulletinDto computePayslip(Long empId, String name, String matricule, String fonction, String grade, String categorie) {
-        // Base Salary lookup from Grille Salariale or default
-        Double salaireBase = 350000.0;
-        List<GrilleSalariale> grilles = grilleSalarialeRepository.findAll();
-        for (GrilleSalariale g : grilles) {
-            if (g.getBasicSalary() != null && g.getBasicSalary().doubleValue() > 0) {
-                salaireBase = g.getBasicSalary().doubleValue();
-                break;
+        // Lecture stricte du salaire de base depuis la base de données (Situation ou Grille salariale)
+        Double salaireBase = 0.0;
+        SituationSalariale situation = situationRepository.findByEmployeeId(empId).orElse(null);
+        if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+            salaireBase = situation.getSalaireBase();
+        } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = situation.getGrilleSalariale().getBasicSalary().doubleValue();
+        } else {
+            Employee emp = employeeRepository.findById(empId).orElse(null);
+            if (emp != null && emp.getGrilleSalariale() != null && emp.getGrilleSalariale().getBasicSalary() != null) {
+                salaireBase = emp.getGrilleSalariale().getBasicSalary().doubleValue();
             }
         }
 
-        // Automatic Allowance Extraction from ParametrageIndemnite
-        List<ParametrageIndemnite> allParams = parametrageIndemniteRepository.findAll();
-        List<TypeIndemnite> typeIndemnites = typeIndemniteRepository.findAll();
+        // Lecture stricte des indemnités de l'employé depuis la base de données
+        List<IndemniteEmploye> empIndemnites = indemniteEmployeRepository.findByEmployeeId(empId);
         List<PaieBulletinDto.IndemniteItemDto> indemnites = new ArrayList<>();
         Double totalIndemnites = 0.0;
         Double totalExonere = 0.0;
 
-        if (allParams.isEmpty()) {
-            // Default active allowances fallback if table empty
-            indemnites.add(new PaieBulletinDto.IndemniteItemDto("PI-001", "Indemnité de Logement", 150000.0));
-            indemnites.add(new PaieBulletinDto.IndemniteItemDto("PI-002", "Indemnité de Transport", 50000.0));
-            indemnites.add(new PaieBulletinDto.IndemniteItemDto("PI-003", "Indemnité de Responsabilité", 100000.0));
-            totalIndemnites = 300000.0;
-            totalExonere = 30000.0; // 20% sur logement
-        } else {
-            String typeNominationEmp = "NON_NOMMEE";
-            if (fonction != null && !fonction.isEmpty()) {
-                List<Fonction> fonctions = fonctionRepository.findAll();
-                for (Fonction f : fonctions) {
-                    if ((f.getName() != null && f.getName().equalsIgnoreCase(fonction)) || (f.getCode() != null && f.getCode().equalsIgnoreCase(fonction))) {
-                        if (f.getTypeNomination() != null) {
-                            typeNominationEmp = f.getTypeNomination();
-                        }
-                        break;
+        for (IndemniteEmploye ind : empIndemnites) {
+            if (Boolean.FALSE.equals(ind.getActif())) continue;
+            Double m = ind.getMontant() != null ? ind.getMontant().doubleValue() : 0.0;
+            String code = (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getCode() != null) ? ind.getTypeIndemnite().getCode() : "IND";
+            String libelle = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
+            indemnites.add(new PaieBulletinDto.IndemniteItemDto(code, libelle, m));
+            totalIndemnites += m;
+
+            if (ind.getTypeIndemnite() != null) {
+                Double tauxExo = ind.getTypeIndemnite().getTauxExoneration();
+                Double plafondExo = ind.getTypeIndemnite().getPlafondExoneration();
+                if (tauxExo != null && tauxExo > 0) {
+                    double exoCalc = m * (tauxExo / 100.0);
+                    if (plafondExo != null && plafondExo > 0 && exoCalc > plafondExo) {
+                        exoCalc = plafondExo;
                     }
-                }
-            }
-
-            for (ParametrageIndemnite param : allParams) {
-                if (Boolean.TRUE.equals(param.getActif())) {
-                    Double m = param.getTaux() != null ? param.getTaux() : 0.0;
-                    String typeIndStr = param.getTypeIndemniteObj() != null ? (param.getTypeIndemniteObj().getName() != null ? param.getTypeIndemniteObj().getName() : param.getTypeIndemniteObj().getCode()) : "Indemnité";
-                    indemnites.add(new PaieBulletinDto.IndemniteItemDto(param.getCode(), typeIndStr, m));
-                    totalIndemnites += m;
-
-                    Double tauxExo = null;
-                    Double plafondExo = null;
-
-                    if (param.getTypeIndemniteObj() != null) {
-                        tauxExo = param.getTypeIndemniteObj().getTauxExoneration();
-                        plafondExo = param.getTypeIndemniteObj().getPlafondExoneration();
-                    }
-
-                    if (tauxExo != null && tauxExo > 0) {
-                        double exoCalc = m * (tauxExo / 100.0);
-                        if (plafondExo != null && plafondExo > 0 && exoCalc > plafondExo) {
-                            exoCalc = plafondExo;
-                        }
-                        totalExonere += exoCalc;
-                    }
+                    totalExonere += exoCalc;
                 }
             }
         }
@@ -134,11 +110,13 @@ public class PaieCalculationService {
         Double totalRetenues = cotisationCNSS + impotIUTS;
         Double salaireNet = salaireBrut - totalRetenues;
 
+        String moisCourant = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH));
+
         return new PaieBulletinDto(
                 empId, name, matricule, fonction, grade, categorie,
                 salaireBase, indemnites, totalIndemnites,
                 salaireBrut, cotisationCNSS, impotIUTS, totalRetenues,
-                salaireNet, "Juillet 2026", "Généré"
+                salaireNet, moisCourant, "Généré"
         );
     }
 }

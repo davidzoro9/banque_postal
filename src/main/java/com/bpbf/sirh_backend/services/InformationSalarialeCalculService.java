@@ -34,9 +34,14 @@ public class InformationSalarialeCalculService {
         information.setEmployee(employee);
 
         SituationSalariale situation = situationRepository.findByEmployeeId(employee.getId()).orElse(null);
-        BigDecimal salaireBase = (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0)
-                ? money(new BigDecimal(situation.getSalaireBase()))
-                : money(new BigDecimal("95945"));
+        BigDecimal salaireBase = BigDecimal.ZERO;
+        if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+            salaireBase = money(new BigDecimal(situation.getSalaireBase()));
+        } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(situation.getGrilleSalariale().getBasicSalary());
+        } else if (employee.getGrilleSalariale() != null && employee.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(employee.getGrilleSalariale().getBasicSalary());
+        }
 
         BigDecimal totalIndemnites = indemniteRepository.findByEmployeeId(employee.getId()).stream()
                 .filter(row -> !Boolean.FALSE.equals(row.getActif()))

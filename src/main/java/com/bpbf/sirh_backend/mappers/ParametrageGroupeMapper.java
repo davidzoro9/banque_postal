@@ -10,8 +10,10 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ParametrageGroupeMapper {
     @Mapping(target = "gradeId", source = "gradeObj.id")
+    @Mapping(target = "gradeCode", source = "gradeObj.code")
     @Mapping(target = "gradeLibelle", source = "gradeObj.libelle")
     @Mapping(target = "categorieId", source = "categorieObj.id")
+    @Mapping(target = "categorieCode", source = "categorieObj.code")
     @Mapping(target = "categorieLibelle", source = "categorieObj.libelle")
     ParametrageGroupeDto toDto(ParametrageGroupe entity);
 

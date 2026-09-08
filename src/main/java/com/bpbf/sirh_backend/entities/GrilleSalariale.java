@@ -126,4 +126,20 @@ public class GrilleSalariale {
     public String getCode() {
         return getGrade();
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Categorie getCategorieObj() { return categorieObj; }
+    public void setCategorieObj(Categorie categorieObj) { this.categorieObj = categorieObj; }
+
+    public Echelon getEchelonObj() { return echelonObj; }
+    public void setEchelonObj(Echelon echelonObj) { this.echelonObj = echelonObj; }
+
+    public Grade getGradeObj() { return gradeObj; }
+    public void setGradeObj(Grade gradeObj) { this.gradeObj = gradeObj; }
+
+    public BigDecimal getBasicSalary() { return basicSalary; }
+    public void setBasicSalary(BigDecimal basicSalary) { this.basicSalary = basicSalary; }
 }
+

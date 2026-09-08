@@ -1,7 +1,8 @@
 package com.bpbf.sirh_backend.controllers;
 
-import com.bpbf.sirh_backend.dtos.AvoirEmployeDto;
-import com.bpbf.sirh_backend.services.AvoirService;
+import com.bpbf.sirh_backend.dtos.paie.AvoirRequestDto;
+import com.bpbf.sirh_backend.dtos.paie.AvoirResponseDto;
+import com.bpbf.sirh_backend.services.VariablesPaieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,43 +12,34 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/avoirs")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AvoirController {
 
-    private final AvoirService avoirService;
+    private final VariablesPaieService variablesPaieService;
 
     @GetMapping
-    public ResponseEntity<List<AvoirEmployeDto>> getAll() {
-        return ResponseEntity.ok(avoirService.getAll());
+    public ResponseEntity<List<AvoirResponseDto>> getAll() {
+        return ResponseEntity.ok(variablesPaieService.getAllAvoirs());
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<AvoirEmployeDto>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(avoirService.getByEmployee(employeeId));
-    }
-
-    @GetMapping("/employee/{employeeId}/actifs")
-    public ResponseEntity<List<AvoirEmployeDto>> getActiveByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(avoirService.getActiveByEmployee(employeeId));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<AvoirEmployeDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(avoirService.getById(id));
+    public ResponseEntity<List<AvoirResponseDto>> getByEmployee(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(variablesPaieService.getAvoirsByEmployee(employeeId));
     }
 
     @PostMapping
-    public ResponseEntity<AvoirEmployeDto> create(@RequestBody AvoirEmployeDto dto) {
-        return ResponseEntity.ok(avoirService.create(dto));
+    public ResponseEntity<AvoirResponseDto> create(@RequestBody AvoirRequestDto dto) {
+        return ResponseEntity.ok(variablesPaieService.createAvoir(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AvoirEmployeDto> update(@PathVariable Long id, @RequestBody AvoirEmployeDto dto) {
-        return ResponseEntity.ok(avoirService.update(id, dto));
+    public ResponseEntity<AvoirResponseDto> update(@PathVariable Long id, @RequestBody AvoirRequestDto dto) {
+        return ResponseEntity.ok(variablesPaieService.updateAvoir(id, dto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        avoirService.delete(id);
+        variablesPaieService.deleteAvoir(id);
         return ResponseEntity.noContent().build();
     }
 }

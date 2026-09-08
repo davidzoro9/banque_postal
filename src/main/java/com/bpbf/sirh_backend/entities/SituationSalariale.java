@@ -37,4 +37,32 @@ public class SituationSalariale {
     private Double salaireBase;
     private Double totalIndemnites;
     private Double salaireBrut;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Employee getEmployee() { return employee; }
+    public void setEmployee(Employee employee) { this.employee = employee; }
+
+    public GrilleSalariale getGrilleSalariale() { return grilleSalariale; }
+    public void setGrilleSalariale(GrilleSalariale grilleSalariale) { this.grilleSalariale = grilleSalariale; }
+
+    public Categorie getCategorie() { return categorie; }
+    public void setCategorie(Categorie categorie) { this.categorie = categorie; }
+
+    public Echelon getEchelon() { return echelon; }
+    public void setEchelon(Echelon echelon) { this.echelon = echelon; }
+
+    public Grade getGrade() { return grade; }
+    public void setGrade(Grade grade) { this.grade = grade; }
+
+    public Double getSalaireBase() { return salaireBase; }
+    public void setSalaireBase(Double salaireBase) { this.salaireBase = salaireBase; }
+
+    public Double getTotalIndemnites() { return totalIndemnites; }
+    public void setTotalIndemnites(Double totalIndemnites) { this.totalIndemnites = totalIndemnites; }
+
+    public Double getSalaireBrut() { return salaireBrut; }
+    public void setSalaireBrut(Double salaireBrut) { this.salaireBrut = salaireBrut; }
 }
+

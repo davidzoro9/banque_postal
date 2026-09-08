@@ -28,4 +28,29 @@ public class RubriquePaie {
     private Boolean cotisable = true;
     private String formuleCalcul;
     private Boolean actif = true;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getCodeRubrique() { return codeRubrique; }
+    public void setCodeRubrique(String codeRubrique) { this.codeRubrique = codeRubrique; }
+
+    public String getLibelle() { return libelle; }
+    public void setLibelle(String libelle) { this.libelle = libelle; }
+
+    public String getTypeRubrique() { return typeRubrique; }
+    public void setTypeRubrique(String typeRubrique) { this.typeRubrique = typeRubrique; }
+
+    public Boolean getImposable() { return imposable; }
+    public void setImposable(Boolean imposable) { this.imposable = imposable; }
+
+    public Boolean getCotisable() { return cotisable; }
+    public void setCotisable(Boolean cotisable) { this.cotisable = cotisable; }
+
+    public String getFormuleCalcul() { return formuleCalcul; }
+    public void setFormuleCalcul(String formuleCalcul) { this.formuleCalcul = formuleCalcul; }
+
+    public Boolean getActif() { return actif; }
+    public void setActif(Boolean actif) { this.actif = actif; }
 }
+
