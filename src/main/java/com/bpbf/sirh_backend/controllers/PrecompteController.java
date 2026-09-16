@@ -22,6 +22,17 @@ public class PrecompteController {
         return ResponseEntity.ok(variablesPaieService.getAllPrecomptes());
     }
 
+    @GetMapping("/next-reference")
+    public ResponseEntity<java.util.Map<String, String>> getNextReference() {
+        String ref = variablesPaieService.generateNextReference();
+        return ResponseEntity.ok(java.util.Map.of("reference", ref));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PrecompteResponseDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(variablesPaieService.getPrecompteById(id));
+    }
+
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<PrecompteResponseDto>> getByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(variablesPaieService.getPrecomptesByEmployee(employeeId));

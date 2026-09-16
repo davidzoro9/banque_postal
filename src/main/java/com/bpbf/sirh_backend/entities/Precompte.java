@@ -26,41 +26,39 @@ public class Precompte {
     @JoinColumn(name = "element_salary_id")
     private SalaryElement salaryElement;
 
+    @Column(length = 50)
+    private String reference;
+
+    @Column(length = 255)
+    private String motif;
+
+    @Column(name = "motif_annulation", length = 255)
+    private String motifAnnulation;
+
+    @Column(name = "date_debut")
+    private LocalDate dateDebut;
+
     @Column(precision = 15, scale = 2)
     private BigDecimal amount;
 
     @Column(precision = 15, scale = 2)
     private BigDecimal montantRestant;
 
+    @Column(name = "retenue_mensuelle", precision = 15, scale = 2)
+    private BigDecimal retenueMensuelle;
+
     private Integer echeance; // Nombre d'échéances ou mois
 
     private LocalDate dateEcheance;
 
+    public BigDecimal getMontantMensuel() {
+        return this.retenueMensuelle;
+    }
+
+    public void setMontantMensuel(BigDecimal m) {
+        this.retenueMensuelle = m;
+    }
+
     @Builder.Default
     private String statut = "EN_COURS"; // EN_COURS, SOLDE, SUSPENDU
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public Long getEmployeeId() { return employeeId; }
-    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
-
-    public SalaryElement getSalaryElement() { return salaryElement; }
-    public void setSalaryElement(SalaryElement salaryElement) { this.salaryElement = salaryElement; }
-
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-
-    public BigDecimal getMontantRestant() { return montantRestant; }
-    public void setMontantRestant(BigDecimal montantRestant) { this.montantRestant = montantRestant; }
-
-    public Integer getEcheance() { return echeance; }
-    public void setEcheance(Integer echeance) { this.echeance = echeance; }
-
-    public LocalDate getDateEcheance() { return dateEcheance; }
-    public void setDateEcheance(LocalDate dateEcheance) { this.dateEcheance = dateEcheance; }
-
-    public String getStatut() { return statut; }
-    public void setStatut(String statut) { this.statut = statut; }
 }
-

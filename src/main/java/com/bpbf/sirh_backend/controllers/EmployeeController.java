@@ -73,9 +73,33 @@ public class EmployeeController {
         return employeeProcessService.recalculateInformation(id);
     }
 
+    @GetMapping("/{id}/informations-salariales/simulation")
+    public InformationSalarialeDto simulateInformationsSalariales(
+            @PathVariable String id,
+            @RequestParam(required = false) Double salaireBase,
+            @RequestParam(required = false) Double surSalaire) {
+        return employeeProcessService.simulateSalary(id, salaireBase, surSalaire);
+    }
+
     @GetMapping("/{id}/indemnites")
     public List<IndemniteEmployeDto> getIndemnites(@PathVariable String id) {
         return employeeProcessService.getIndemnites(id);
+    }
+
+    @PutMapping("/{id}/indemnites/{indemniteId}/toggle")
+    public IndemniteEmployeDto toggleIndemnite(@PathVariable String id, @PathVariable Long indemniteId) {
+        return employeeProcessService.toggleIndemnite(id, indemniteId);
+    }
+
+    @DeleteMapping("/{id}/indemnites/{indemniteId}")
+    public org.springframework.http.ResponseEntity<Void> deleteIndemnite(@PathVariable String id, @PathVariable Long indemniteId) {
+        employeeProcessService.deleteIndemnite(id, indemniteId);
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/avantages")
+    public EmployeeDto updateAvantages(@PathVariable String id, @RequestBody java.util.Map<String, Boolean> avantages) {
+        return employeeService.updateAvantages(id, avantages);
     }
 
     @GetMapping("/{id}/exonerations")

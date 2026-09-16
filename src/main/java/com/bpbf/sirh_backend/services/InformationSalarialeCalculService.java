@@ -43,12 +43,48 @@ public class InformationSalarialeCalculService {
             salaireBase = money(employee.getGrilleSalariale().getBasicSalary());
         }
 
+        BigDecimal surSalaire = BigDecimal.ZERO;
+        if (situation != null && situation.getSurSalaire() != null && situation.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(situation.getSurSalaire()));
+        } else if (employee.getSurSalaire() != null && employee.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(employee.getSurSalaire()));
+        }
+        information.setSurSalaire(surSalaire);
+
+        // Retrait des indemnités si l'agent a déjà un avantage (véhicule, maison/logement)
         BigDecimal totalIndemnites = indemniteRepository.findByEmployeeId(employee.getId()).stream()
                 .filter(row -> !Boolean.FALSE.equals(row.getActif()))
+                .filter(row -> {
+                    String code = (row.getTypeIndemnite() != null && row.getTypeIndemnite().getCode() != null)
+                            ? row.getTypeIndemnite().getCode().toUpperCase() : "";
+                    String lib = row.getLibelle() != null ? row.getLibelle().toUpperCase() : "";
+                    if (Boolean.TRUE.equals(employee.getVehiculeFourni()) && (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT") || lib.contains("DEPLACEMENT"))) {
+                        return false;
+                    }
+                    if (Boolean.TRUE.equals(employee.getLogementFourni()) && (code.contains("LOG") || code.contains("MAISON") || lib.contains("LOGEMENT"))) {
+                        return false;
+                    }
+                    return true;
+                })
                 .map(row -> money(row.getMontant()))
                 .reduce(zero(), BigDecimal::add);
 
-        BigDecimal remunerationBrute = money(salaireBase.add(totalIndemnites));
+        // Prime d'ancienneté : 5% sur le SB à 3 ans, puis +1% par année supplémentaire
+        BigDecimal tauxAnciennete = BigDecimal.ZERO;
+        if (employee.getDateEmbauche() != null && !employee.getDateEmbauche().isBlank()) {
+            try {
+                java.time.LocalDate dateEmb = java.time.LocalDate.parse(employee.getDateEmbauche().trim());
+                int anneesAnciennete = java.time.Period.between(dateEmb, java.time.LocalDate.now()).getYears();
+                if (anneesAnciennete == 3) {
+                    tauxAnciennete = new BigDecimal("5.00");
+                } else if (anneesAnciennete > 3) {
+                    tauxAnciennete = new BigDecimal(5 + (anneesAnciennete - 3)).setScale(2, RoundingMode.HALF_UP);
+                }
+            } catch (Exception ignored) {}
+        }
+        BigDecimal primeAnciennete = calculatePercentage(salaireBase, tauxAnciennete);
+
+        BigDecimal remunerationBrute = money(salaireBase.add(surSalaire).add(totalIndemnites).add(primeAnciennete));
         BigDecimal totalExonerations = exonerationRepository.findByEmployeeId(employee.getId()).stream()
                 .map(row -> money(row.getMontant()))
                 .reduce(zero(), BigDecimal::add);
@@ -73,12 +109,23 @@ public class InformationSalarialeCalculService {
         informationRetenueRepository.deleteByInformationSalarialeId(information.getId());
         informationRetenueRepository.flush();
 
+        // Base CRRAE = SB + SS + Prime Ancienneté
+        BigDecimal baseCrrae = money(salaireBase.add(surSalaire).add(primeAnciennete));
+
         BigDecimal totalAgent = zero();
         BigDecimal totalEmployeur = zero();
         for (Retenue retenue : findApplicableRetenues(employee)) {
             if (retenue == null || isIuts(retenue)) continue;
 
-            BigDecimal montantBase = resolveBase(retenue.getBaseCalcul(), salaireBase, remunerationBrute, baseImposable);
+            String retCode = retenue.getCode() != null ? retenue.getCode().toUpperCase() : "";
+            String retLib = retenue.getLibelle() != null ? retenue.getLibelle().toUpperCase() : "";
+            BigDecimal montantBase;
+            if (retCode.contains("CRRAE") || retLib.contains("CRRAE")) {
+                montantBase = baseCrrae;
+            } else {
+                montantBase = resolveBase(retenue.getBaseCalcul(), salaireBase, remunerationBrute, baseImposable);
+            }
+
             BigDecimal taux = money(retenue.getTaux());
             BigDecimal montant = calculatePercentage(montantBase, taux);
             boolean employeur = isEmployeur(retenue);
@@ -143,6 +190,7 @@ public class InformationSalarialeCalculService {
         dto.setIban(information.getIban());
         dto.setIntituleCompte(information.getIntituleCompte());
         dto.setSalaireBase(information.getSalaireBase());
+        dto.setSurSalaire(information.getSurSalaire());
         dto.setIndemnites(indemniteRepository.findByEmployeeId(information.getEmployee().getId()).stream()
                 .filter(row -> !Boolean.FALSE.equals(row.getActif()))
                 .map(row -> new com.bpbf.sirh_backend.dtos.IndemniteEmployeDto(
@@ -167,6 +215,144 @@ public class InformationSalarialeCalculService {
         dto.setIutsAvecCharge(information.getIutsAvecCharge());
         dto.setTotalDeduitEmploye(information.getTotalDeduitEmploye());
         dto.setSalaireNet(information.getSalaireNet());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public InformationSalarialeDto simulate(Employee employee, Double customSalaireBase, Double customSurSalaire) {
+        SituationSalariale situation = situationRepository.findByEmployeeId(employee.getId()).orElse(null);
+        BigDecimal salaireBase = BigDecimal.ZERO;
+        if (customSalaireBase != null && customSalaireBase > 0) {
+            salaireBase = money(new BigDecimal(customSalaireBase));
+        } else if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+            salaireBase = money(new BigDecimal(situation.getSalaireBase()));
+        } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(situation.getGrilleSalariale().getBasicSalary());
+        } else if (employee.getGrilleSalariale() != null && employee.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(employee.getGrilleSalariale().getBasicSalary());
+        }
+
+        BigDecimal surSalaire = BigDecimal.ZERO;
+        if (customSurSalaire != null) {
+            surSalaire = money(new BigDecimal(Math.max(0.0, customSurSalaire)));
+        } else if (situation != null && situation.getSurSalaire() != null && situation.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(situation.getSurSalaire()));
+        } else if (employee.getSurSalaire() != null && employee.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(employee.getSurSalaire()));
+        }
+
+        BigDecimal totalIndemnites = indemniteRepository.findByEmployeeId(employee.getId()).stream()
+                .filter(row -> !Boolean.FALSE.equals(row.getActif()))
+                .filter(row -> {
+                    String code = (row.getTypeIndemnite() != null && row.getTypeIndemnite().getCode() != null)
+                            ? row.getTypeIndemnite().getCode().toUpperCase() : "";
+                    String lib = row.getLibelle() != null ? row.getLibelle().toUpperCase() : "";
+                    if (Boolean.TRUE.equals(employee.getVehiculeFourni()) && (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT") || lib.contains("DEPLACEMENT"))) {
+                        return false;
+                    }
+                    if (Boolean.TRUE.equals(employee.getLogementFourni()) && (code.contains("LOG") || code.contains("MAISON") || lib.contains("LOGEMENT"))) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(row -> money(row.getMontant()))
+                .reduce(zero(), BigDecimal::add);
+
+        BigDecimal tauxAnciennete = BigDecimal.ZERO;
+        if (employee.getDateEmbauche() != null && !employee.getDateEmbauche().isBlank()) {
+            try {
+                java.time.LocalDate dateEmb = java.time.LocalDate.parse(employee.getDateEmbauche().trim());
+                int anneesAnciennete = java.time.Period.between(dateEmb, java.time.LocalDate.now()).getYears();
+                if (anneesAnciennete == 3) {
+                    tauxAnciennete = new BigDecimal("5.00");
+                } else if (anneesAnciennete > 3) {
+                    tauxAnciennete = new BigDecimal(5 + (anneesAnciennete - 3)).setScale(2, RoundingMode.HALF_UP);
+                }
+            } catch (Exception ignored) {}
+        }
+        BigDecimal primeAnciennete = calculatePercentage(salaireBase, tauxAnciennete);
+
+        BigDecimal remunerationBrute = money(salaireBase.add(surSalaire).add(totalIndemnites).add(primeAnciennete));
+        BigDecimal totalExonerations = exonerationRepository.findByEmployeeId(employee.getId()).stream()
+                .map(row -> money(row.getMontant()))
+                .reduce(zero(), BigDecimal::add);
+        Categorie cat = situation != null ? situation.getCategorie() : null;
+        if (cat == null && situation != null && situation.getGrilleSalariale() != null) {
+            cat = situation.getGrilleSalariale().getCategorieObj();
+        }
+        BigDecimal tauxAbattement = (cat == null || cat.getTauxAbattement() == null)
+            ? zero()
+            : money(cat.getTauxAbattement());
+        BigDecimal abattementForfaitaire = calculatePercentage(salaireBase, tauxAbattement);
+        BigDecimal baseImposable = money(remunerationBrute.subtract(totalExonerations).subtract(abattementForfaitaire).max(BigDecimal.ZERO));
+
+        BigDecimal baseCrrae = money(salaireBase.add(surSalaire).add(primeAnciennete));
+
+        BigDecimal totalAgent = zero();
+        BigDecimal totalEmployeur = zero();
+        List<InformationSalarialeRetenueDto> agentRetenues = new ArrayList<>();
+        List<InformationSalarialeRetenueDto> employeurRetenues = new ArrayList<>();
+
+        for (Retenue retenue : findApplicableRetenues(employee)) {
+            if (retenue == null || isIuts(retenue)) continue;
+
+            String retCode = retenue.getCode() != null ? retenue.getCode().toUpperCase() : "";
+            String retLib = retenue.getLibelle() != null ? retenue.getLibelle().toUpperCase() : "";
+            BigDecimal montantBase;
+            if (retCode.contains("CRRAE") || retLib.contains("CRRAE")) {
+                montantBase = baseCrrae;
+            } else {
+                montantBase = resolveBase(retenue.getBaseCalcul(), salaireBase, remunerationBrute, baseImposable);
+            }
+
+            BigDecimal taux = money(retenue.getTaux());
+            BigDecimal montant = calculatePercentage(montantBase, taux);
+            boolean employeur = isEmployeur(retenue);
+
+            InformationSalarialeRetenueDto lineDto = new InformationSalarialeRetenueDto(
+                    null, retenue.getId(), retenue.getCode(), retenue.getLibelle(),
+                    retenue.getTypeRetenue() != null && retenue.getTypeRetenue().getCode() != null
+                            ? retenue.getTypeRetenue().getCode() : (employeur ? "EMPLOYEUR" : "AGENT"),
+                    retenue.getBaseCalcul() == null ? BaseCalculRetenue.REMUNERATION_BRUTE : retenue.getBaseCalcul(),
+                    montantBase, taux, montant);
+
+            if (employeur) {
+                totalEmployeur = totalEmployeur.add(montant);
+                employeurRetenues.add(lineDto);
+            } else {
+                totalAgent = totalAgent.add(montant);
+                agentRetenues.add(lineDto);
+            }
+        }
+
+        int nombreCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(employee.getId()));
+        BigDecimal iutsSansCharge = calculateIuts(baseImposable);
+        BigDecimal tauxReduction = reductionRate(nombreCharges);
+        BigDecimal reduction = money(iutsSansCharge.multiply(tauxReduction).divide(CENT, 8, RoundingMode.HALF_UP));
+        BigDecimal iutsAvecCharge = money(iutsSansCharge.subtract(reduction).max(BigDecimal.ZERO));
+        BigDecimal totalDeduit = money(totalAgent.add(iutsAvecCharge));
+        BigDecimal salaireNet = money(remunerationBrute.subtract(totalDeduit).max(BigDecimal.ZERO));
+
+        InformationSalarialeDto dto = new InformationSalarialeDto();
+        dto.setEmployeeId(employee.getId());
+        dto.setSalaireBase(salaireBase);
+        dto.setSurSalaire(surSalaire);
+        dto.setTotalIndemnites(totalIndemnites);
+        dto.setRemunerationBrute(remunerationBrute);
+        dto.setTotalExonerations(totalExonerations);
+        dto.setAbattementForfaitaire(abattementForfaitaire);
+        dto.setBaseImposable(baseImposable);
+        dto.setRetenuesAgent(agentRetenues);
+        dto.setTotalRetenuesAgent(money(totalAgent));
+        dto.setRetenuesEmployeur(employeurRetenues);
+        dto.setTotalRetenuesEmployeur(money(totalEmployeur));
+        dto.setNombrePersonnesCharge(nombreCharges);
+        dto.setIutsSansCharge(iutsSansCharge);
+        dto.setTauxReductionCharge(tauxReduction);
+        dto.setReductionIutsCharge(reduction);
+        dto.setIutsAvecCharge(iutsAvecCharge);
+        dto.setTotalDeduitEmploye(totalDeduit);
+        dto.setSalaireNet(salaireNet);
         return dto;
     }
 

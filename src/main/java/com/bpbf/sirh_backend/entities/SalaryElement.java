@@ -42,11 +42,11 @@ public class SalaryElement {
     @JoinColumn(name = "salary_category_id")
     private SalaryCategory salaryCategory;
 
-    @OneToMany(mappedBy = "salaryElement", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "salaryElement")
     @JsonIgnore
     private List<Avoir> avoirs = new ArrayList<>();
 
-    @OneToMany(mappedBy = "salaryElement", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "salaryElement")
     @JsonIgnore
     private List<Precompte> precomptes = new ArrayList<>();
 

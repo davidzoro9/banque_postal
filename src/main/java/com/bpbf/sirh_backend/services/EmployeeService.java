@@ -96,6 +96,35 @@ public class EmployeeService {
     }
 
     @Transactional
+    public EmployeeDto updateAvantages(String idOrMatricule, java.util.Map<String, Boolean> avantages) {
+        Employee existing;
+        try {
+            Long numericId = Long.parseLong(idOrMatricule);
+            existing = employeeRepository.findById(numericId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'id: " + idOrMatricule));
+        } catch (NumberFormatException e) {
+            existing = employeeRepository.findByMatricule(idOrMatricule)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + idOrMatricule));
+        }
+
+        if (avantages != null) {
+            if (avantages.containsKey("vehiculeFourni")) {
+                existing.setVehiculeFourni(avantages.get("vehiculeFourni"));
+            }
+            if (avantages.containsKey("logementFourni")) {
+                existing.setLogementFourni(avantages.get("logementFourni"));
+            }
+        }
+
+        Employee saved = employeeRepository.save(existing);
+        employeeProcessService.sync(saved, null);
+
+        EmployeeDto res = employeeMapper.toDto(saved);
+        updateDtoFromEntity(saved, res);
+        return res;
+    }
+
+    @Transactional
     public void deleteEmployee(Long id) {
         Employee existing = employeeRepository.findById(id).orElse(null);
         if (existing == null) {
@@ -162,6 +191,7 @@ public class EmployeeService {
                 Utilisateur u = existingUser.get();
                 if (emp.getNom() != null && !emp.getNom().isEmpty()) u.setNom(emp.getNom());
                 if (emp.getPrenom() != null && !emp.getPrenom().isEmpty()) u.setPrenom(emp.getPrenom());
+                if (!matricule.isEmpty()) u.setUsername(matricule);
                 u.setEmail(email);
                 u.setActif(isActif);
                 utilisateurRepository.save(u);
@@ -185,8 +215,14 @@ public class EmployeeService {
         if (entity.getGrilleSalariale() != null && entity.getGrilleSalariale().getSalaireBase() != null) {
             dto.setSalaireBase(entity.getGrilleSalariale().getSalaireBase());
         }
+        dto.setSurSalaire(entity.getSurSalaire());
+        dto.setVehiculeFourni(entity.getVehiculeFourni());
+        dto.setLogementFourni(entity.getLogementFourni());
         dto.setDateEmbauche(entity.getDateEmbauche());
         dto.setStatut(entity.getStatut());
+        dto.setNumeroCnss(entity.getNumeroCnss());
+        dto.setSituationFamiliale(entity.getSituationFamiliale());
+        dto.setSituationMatrimoniale(entity.getSituationFamiliale());
 
         if (entity.getCategorieObj() != null)
             dto.setCategorieId(entity.getCategorieObj().getId());
@@ -289,6 +325,9 @@ public class EmployeeService {
                 }
                 if (map.containsKey("enfants")) {
                     dto.setEnfants(map.get("enfants"));
+                }
+                if (map.containsKey("grade") && map.get("grade") != null) {
+                    dto.setGrade(map.get("grade").toString());
                 }
             } catch (Exception ignored) {
             }
@@ -457,8 +496,10 @@ public class EmployeeService {
                             ? entity.getEchelonObj().getLibelle()
                             : entity.getEchelonObj().getCode())
                     : (String) existingMap.getOrDefault("echelon", "E01");
-            String rawGrade = (cat != null && ech != null) ? (cat + ech)
-                    : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : "");
+            String rawGrade = (dto != null && dto.getGrade() != null && !dto.getGrade().trim().isEmpty())
+                    ? dto.getGrade().trim()
+                    : ((cat != null && ech != null) ? (cat + ech)
+                    : (entity.getGradeObj() != null ? entity.getGradeObj().getCode() : ""));
 
             existingMap.put("categorie", cat);
             existingMap.put("categoriePro", cat);
@@ -469,6 +510,20 @@ public class EmployeeService {
                 existingMap.put("salaireBase", entity.getGrilleSalariale().getSalaireBase());
             } else if (dto != null && dto.getSalaireBase() != null) {
                 existingMap.put("salaireBase", dto.getSalaireBase());
+            }
+
+            if (dto != null) {
+                if (dto.getNumeroCnss() != null && !dto.getNumeroCnss().trim().isEmpty()) {
+                    entity.setNumeroCnss(dto.getNumeroCnss().trim());
+                    existingMap.put("numeroCnss", dto.getNumeroCnss().trim());
+                }
+                if (dto.getSituationFamiliale() != null && !dto.getSituationFamiliale().trim().isEmpty()) {
+                    entity.setSituationFamiliale(dto.getSituationFamiliale().trim());
+                    existingMap.put("situationFamiliale", dto.getSituationFamiliale().trim());
+                } else if (dto.getSituationMatrimoniale() != null && !dto.getSituationMatrimoniale().trim().isEmpty()) {
+                    entity.setSituationFamiliale(dto.getSituationMatrimoniale().trim());
+                    existingMap.put("situationFamiliale", dto.getSituationMatrimoniale().trim());
+                }
             }
 
             String finalFonction = entity.getFonction() != null ? entity.getFonction().getName() : "Agent simple";

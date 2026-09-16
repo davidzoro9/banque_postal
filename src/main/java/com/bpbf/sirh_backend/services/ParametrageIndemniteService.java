@@ -20,6 +20,7 @@ public class ParametrageIndemniteService {
     private final FonctionRepository fonctionRepository;
     private final GradeRepository gradeRepository;
     private final CategorieRepository categorieRepository;
+    private final EmploiRepository emploiRepository;
 
     public List<ParametrageIndemniteDto> getAll() {
         List<ParametrageIndemnite> list = repository.findAll();
@@ -28,6 +29,34 @@ public class ParametrageIndemniteService {
 
     public ParametrageIndemniteDto create(ParametrageIndemniteDto dto) {
         ParametrageIndemnite entity = mapper.toEntity(dto);
+        if (dto.getRegleType() != null) {
+            entity.setRegleType(dto.getRegleType());
+        }
+
+        // Sécurisation anti-collision : si le code envoyé existe déjà ou est vide, générer le code suivant
+        String code = entity.getCode();
+        if (code == null || code.trim().isEmpty() || repository.existsByCode(code.trim())) {
+            long max = repository.findAll().stream().mapToLong(p -> {
+                if (p.getCode() != null && p.getCode().contains("-")) {
+                    try {
+                        String[] parts = p.getCode().split("-");
+                        return Long.parseLong(parts[parts.length - 1]);
+                    } catch (Exception e) {
+                        return 0L;
+                    }
+                }
+                return 0L;
+            }).max().orElse(repository.count());
+            String generated = "PAR-" + String.format("%03d", max + 1);
+            int attempt = 1;
+            while (repository.existsByCode(generated)) {
+                generated = "PAR-" + String.format("%03d", max + 1 + attempt++);
+            }
+            entity.setCode(generated);
+        } else {
+            entity.setCode(code.trim());
+        }
+
         resolveRelationships(entity, dto);
         ParametrageIndemnite saved = repository.save(entity);
         return mapper.toDto(saved);
@@ -41,6 +70,9 @@ public class ParametrageIndemniteService {
         entity.setTaux(dto.getTaux());
         if (dto.getActif() != null) {
             entity.setActif(dto.getActif());
+        }
+        if (dto.getRegleType() != null) {
+            entity.setRegleType(dto.getRegleType());
         }
 
         resolveRelationships(entity, dto);
@@ -76,6 +108,13 @@ public class ParametrageIndemniteService {
                     .orElseThrow(() -> new ResourceNotFoundException("Cette catégorie n'existe pas")));
         } else {
             entity.setCategorieObj(null);
+        }
+
+        if (dto.getEmploiId() != null) {
+            entity.setEmploiObj(emploiRepository.findById(dto.getEmploiId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cet emploi n'existe pas")));
+        } else {
+            entity.setEmploiObj(null);
         }
     }
 

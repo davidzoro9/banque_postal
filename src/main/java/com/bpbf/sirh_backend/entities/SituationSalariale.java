@@ -35,6 +35,7 @@ public class SituationSalariale {
     private Grade grade;
 
     private Double salaireBase;
+    private Double surSalaire;
     private Double totalIndemnites;
     private Double salaireBrut;
 
@@ -58,6 +59,9 @@ public class SituationSalariale {
 
     public Double getSalaireBase() { return salaireBase; }
     public void setSalaireBase(Double salaireBase) { this.salaireBase = salaireBase; }
+
+    public Double getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(Double surSalaire) { this.surSalaire = (surSalaire != null && surSalaire < 0.0) ? 0.0 : surSalaire; }
 
     public Double getTotalIndemnites() { return totalIndemnites; }
     public void setTotalIndemnites(Double totalIndemnites) { this.totalIndemnites = totalIndemnites; }

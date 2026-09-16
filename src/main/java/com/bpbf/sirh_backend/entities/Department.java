@@ -26,6 +26,10 @@ public class Department {
     @JoinColumn(name = "directeur_id")
     private Employee directeurObj;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "direction_id", nullable = true)
+    private Direction direction;
+
     @JsonProperty("directeur")
     public String getDirecteur() {
         if (directeurObj != null) return directeurObj.getName() != null ? directeurObj.getName() : (directeurObj.getPrenom() + " " + directeurObj.getNom());

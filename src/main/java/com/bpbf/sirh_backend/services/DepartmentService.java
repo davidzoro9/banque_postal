@@ -5,6 +5,7 @@ import com.bpbf.sirh_backend.entities.Department;
 import com.bpbf.sirh_backend.exceptions.ResourceNotFoundException;
 import com.bpbf.sirh_backend.mappers.DepartmentMapper;
 import com.bpbf.sirh_backend.repositories.DepartmentRepository;
+import com.bpbf.sirh_backend.repositories.DirectionRepository;
 import com.bpbf.sirh_backend.repositories.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class DepartmentService {
     private final DepartmentMapper departmentMapper;
     private final DepartmentRepository departmentRepository;
     private final EmployeeRepository employeeRepository;
+    private final DirectionRepository directionRepository;
 
     public List<DepartmentDto> getAllDepartment(){
         List<Department> departments = departmentRepository.findAll();
@@ -49,6 +51,12 @@ public class DepartmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Ce directeur n'existe pas")));
         } else {
             entity.setDirecteurObj(null);
+        }
+
+        if (dto.getDirectionId() != null) {
+            entity.setDirection(directionRepository.findById(dto.getDirectionId()).orElse(null));
+        } else {
+            entity.setDirection(null);
         }
     }
 

@@ -38,11 +38,22 @@ public class DirectionService {
         if (directionDto.getDepartmentId() != null) {
             Department department = departmentRepository.findById(directionDto.getDepartmentId()).orElse(null);
             direction.setDepartment(department);
+        } else {
+            direction.setDepartment(null);
+        }
+
+        if (directionDto.getParentDirectionId() != null) {
+            Direction parent = directionRepository.findById(directionDto.getParentDirectionId()).orElse(null);
+            direction.setParentDirection(parent);
+        } else {
+            direction.setParentDirection(null);
         }
 
         if (directionDto.getAgenceId() != null) {
             Agence agence = agenceRepository.findById(directionDto.getAgenceId()).orElseThrow(() -> new ResourceNotFoundException("Cette agence n'existe pas"));
             direction.setAgence(agence);
+        } else {
+            direction.setAgence(null);
         }
     
         Direction saved = directionRepository.save(direction);
@@ -60,11 +71,22 @@ public class DirectionService {
         if (directionDto.getDepartmentId() != null) {
             Department department = departmentRepository.findById(directionDto.getDepartmentId()).orElse(null);
             direction.setDepartment(department);
+        } else {
+            direction.setDepartment(null);
+        }
+
+        if (directionDto.getParentDirectionId() != null) {
+            Direction parent = directionRepository.findById(directionDto.getParentDirectionId()).orElse(null);
+            direction.setParentDirection(parent);
+        } else {
+            direction.setParentDirection(null);
         }
 
         if (directionDto.getAgenceId() != null) {
             Agence agence = agenceRepository.findById(directionDto.getAgenceId()).orElseThrow(() -> new ResourceNotFoundException("Cette agence n'existe pas"));
             direction.setAgence(agence);
+        } else {
+            direction.setAgence(null);
         }
 
         Direction saved = directionRepository.save(direction);

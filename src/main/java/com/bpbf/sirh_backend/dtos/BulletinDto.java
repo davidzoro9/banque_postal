@@ -33,6 +33,7 @@ public class BulletinDto {
     private BigDecimal scheduledWorkingDays;
     private BigDecimal workedDays;
     private BigDecimal salaireBase;
+    private BigDecimal surSalaire;
     private BigDecimal totalIndemnites;
     private BigDecimal totalAvoirs;
     private BigDecimal salaireBrut;
@@ -51,7 +52,38 @@ public class BulletinDto {
     private String statut;
     private LocalDateTime dateCalcul;
     private LocalDateTime dateValidation;
+    private String justificationEcart;
+    private BigDecimal salaireNetPrecedent;
+    private BigDecimal ecartNet;
     private List<BulletinLineDto> lines;
+
+    private String employeeNom;
+    private String employeePrenom;
+    private String dateEmbauche;
+    private String departement;
+    private String numeroCnss;
+    private String situationFamiliale;
+    private Integer nombreCharges;
+    private Integer ancienneteAnnees;
+    private String modeReglement;
+    private String numeroCompteBancaire;
+    private BigDecimal cotisationCrrae;
+    private BigDecimal cotisationSolidarite;
+    private BigDecimal cumulBrutExercice;
+    private BigDecimal cumulBaseImposableExercice;
+    private BigDecimal cumulCnssExercice;
+    private BigDecimal cumulIutsExercice;
+    private BigDecimal cumulCrraeExercice;
+    private String emploi;
+    private String service;
+    private String situationMatrimoniale;
+    private Integer partsFiscales;
+    private Integer anciennete;
+    private String classification;
+    private String banque;
+    private String periode;
+    private String sessionType;
+    private String montantEnLettres;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -107,6 +139,9 @@ public class BulletinDto {
     public BigDecimal getSalaireBase() { return salaireBase; }
     public void setSalaireBase(BigDecimal salaireBase) { this.salaireBase = salaireBase; }
 
+    public BigDecimal getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(BigDecimal surSalaire) { this.surSalaire = surSalaire; }
+
     public BigDecimal getTotalIndemnites() { return totalIndemnites; }
     public void setTotalIndemnites(BigDecimal totalIndemnites) { this.totalIndemnites = totalIndemnites; }
 
@@ -161,7 +196,70 @@ public class BulletinDto {
     public LocalDateTime getDateValidation() { return dateValidation; }
     public void setDateValidation(LocalDateTime dateValidation) { this.dateValidation = dateValidation; }
 
+    public String getJustificationEcart() { return justificationEcart; }
+    public void setJustificationEcart(String justificationEcart) { this.justificationEcart = justificationEcart; }
+
+    public BigDecimal getSalaireNetPrecedent() { return salaireNetPrecedent; }
+    public void setSalaireNetPrecedent(BigDecimal salaireNetPrecedent) { this.salaireNetPrecedent = salaireNetPrecedent; }
+
+    public BigDecimal getEcartNet() { return ecartNet; }
+    public void setEcartNet(BigDecimal ecartNet) { this.ecartNet = ecartNet; }
+
     public List<BulletinLineDto> getLines() { return lines; }
     public void setLines(List<BulletinLineDto> lines) { this.lines = lines; }
+
+    public String getEmployeeNom() { return employeeNom; }
+    public void setEmployeeNom(String employeeNom) { this.employeeNom = employeeNom; }
+
+    public String getEmployeePrenom() { return employeePrenom; }
+    public void setEmployeePrenom(String employeePrenom) { this.employeePrenom = employeePrenom; }
+
+    public String getDateEmbauche() { return dateEmbauche; }
+    public void setDateEmbauche(String dateEmbauche) { this.dateEmbauche = dateEmbauche; }
+
+    public String getDepartement() { return departement; }
+    public void setDepartement(String departement) { this.departement = departement; }
+
+    public String getNumeroCnss() { return numeroCnss; }
+    public void setNumeroCnss(String numeroCnss) { this.numeroCnss = numeroCnss; }
+
+    public String getSituationFamiliale() { return situationFamiliale; }
+    public void setSituationFamiliale(String situationFamiliale) { this.situationFamiliale = situationFamiliale; }
+
+    public Integer getNombreCharges() { return nombreCharges; }
+    public void setNombreCharges(Integer nombreCharges) { this.nombreCharges = nombreCharges; }
+
+    public Integer getAncienneteAnnees() { return ancienneteAnnees; }
+    public void setAncienneteAnnees(Integer ancienneteAnnees) { this.ancienneteAnnees = ancienneteAnnees; }
+
+    public String getModeReglement() { return modeReglement; }
+    public void setModeReglement(String modeReglement) { this.modeReglement = modeReglement; }
+
+    public String getNumeroCompteBancaire() { return numeroCompteBancaire; }
+    public void setNumeroCompteBancaire(String numeroCompteBancaire) { this.numeroCompteBancaire = numeroCompteBancaire; }
+
+    public BigDecimal getCotisationCrrae() { return cotisationCrrae; }
+    public void setCotisationCrrae(BigDecimal cotisationCrrae) { this.cotisationCrrae = cotisationCrrae; }
+
+    public BigDecimal getCotisationSolidarite() { return cotisationSolidarite; }
+    public void setCotisationSolidarite(BigDecimal cotisationSolidarite) { this.cotisationSolidarite = cotisationSolidarite; }
+
+    public BigDecimal getCumulBrutExercice() { return cumulBrutExercice; }
+    public void setCumulBrutExercice(BigDecimal cumulBrutExercice) { this.cumulBrutExercice = cumulBrutExercice; }
+
+    public BigDecimal getCumulBaseImposableExercice() { return cumulBaseImposableExercice; }
+    public void setCumulBaseImposableExercice(BigDecimal cumulBaseImposableExercice) { this.cumulBaseImposableExercice = cumulBaseImposableExercice; }
+
+    public BigDecimal getCumulCnssExercice() { return cumulCnssExercice; }
+    public void setCumulCnssExercice(BigDecimal cumulCnssExercice) { this.cumulCnssExercice = cumulCnssExercice; }
+
+    public BigDecimal getCumulIutsExercice() { return cumulIutsExercice; }
+    public void setCumulIutsExercice(BigDecimal cumulIutsExercice) { this.cumulIutsExercice = cumulIutsExercice; }
+
+    public BigDecimal getCumulCrraeExercice() { return cumulCrraeExercice; }
+    public void setCumulCrraeExercice(BigDecimal cumulCrraeExercice) { this.cumulCrraeExercice = cumulCrraeExercice; }
+
+    public String getMontantEnLettres() { return montantEnLettres; }
+    public void setMontantEnLettres(String montantEnLettres) { this.montantEnLettres = montantEnLettres; }
 }
 

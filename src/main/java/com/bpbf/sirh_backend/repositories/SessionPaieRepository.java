@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SessionPaieRepository extends JpaRepository<SessionPaie, Long> {
-    Optional<SessionPaie> findByMoisAndAnnee(String mois, Integer annee);
+    List<SessionPaie> findByMoisAndAnnee(String mois, Integer annee);
+    Optional<SessionPaie> findFirstByMoisAndAnneeOrderByIdDesc(String mois, Integer annee);
     Optional<SessionPaie> findByCodeSession(String codeSession);
     List<SessionPaie> findAllByOrderByAnneeDescMoisDesc();
     Optional<SessionPaie> findTopByOrderByAnneeDescMoisDesc();

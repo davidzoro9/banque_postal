@@ -15,6 +15,7 @@ public class SituationSalarialeDto {
     private Long gradeId;
     private String gradeLibelle;
     private Double salaireBase;
+    private Double surSalaire;
     private Double totalIndemnites;
     private Double salaireBrut;
 }

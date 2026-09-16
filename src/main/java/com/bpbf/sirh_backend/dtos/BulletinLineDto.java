@@ -29,6 +29,8 @@ public class BulletinLineDto {
     private String category;
     private Double rate;
     private Double amount;
+    private BigDecimal gain;
+    private BigDecimal retenue;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -74,5 +76,11 @@ public class BulletinLineDto {
 
     public Double getAmount() { return amount; }
     public void setAmount(Double amount) { this.amount = amount; }
+
+    public BigDecimal getGain() { return gain; }
+    public void setGain(BigDecimal gain) { this.gain = gain; }
+
+    public BigDecimal getRetenue() { return retenue; }
+    public void setRetenue(BigDecimal retenue) { this.retenue = retenue; }
 }
 

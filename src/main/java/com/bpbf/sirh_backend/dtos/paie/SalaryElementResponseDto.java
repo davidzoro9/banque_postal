@@ -8,6 +8,7 @@ public class SalaryElementResponseDto {
     private String name;
     private Long categoryId;
     private String categoryName;
+    private String type;
     private BigDecimal rate;
     private Boolean isCotisable;
     private Boolean isImposable;
@@ -28,6 +29,7 @@ public class SalaryElementResponseDto {
         private String name;
         private Long categoryId;
         private String categoryName;
+        private String type;
         private BigDecimal rate;
         private Boolean isCotisable;
         private Boolean isImposable;
@@ -41,6 +43,7 @@ public class SalaryElementResponseDto {
         public Builder name(String name) { this.name = name; return this; }
         public Builder categoryId(Long categoryId) { this.categoryId = categoryId; return this; }
         public Builder categoryName(String categoryName) { this.categoryName = categoryName; return this; }
+        public Builder type(String type) { this.type = type; return this; }
         public Builder rate(BigDecimal rate) { this.rate = rate; return this; }
         public Builder isCotisable(Boolean isCotisable) { this.isCotisable = isCotisable; return this; }
         public Builder isImposable(Boolean isImposable) { this.isImposable = isImposable; return this; }
@@ -56,6 +59,7 @@ public class SalaryElementResponseDto {
             dto.name = this.name;
             dto.categoryId = this.categoryId;
             dto.categoryName = this.categoryName;
+            dto.type = this.type != null ? this.type : "GAIN";
             dto.rate = this.rate;
             dto.isCotisable = this.isCotisable;
             dto.isImposable = this.isImposable;
@@ -81,6 +85,9 @@ public class SalaryElementResponseDto {
 
     public String getCategoryName() { return categoryName; }
     public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
     public BigDecimal getRate() { return rate; }
     public void setRate(BigDecimal rate) { this.rate = rate; }

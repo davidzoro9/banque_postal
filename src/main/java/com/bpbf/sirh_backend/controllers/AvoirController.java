@@ -22,6 +22,17 @@ public class AvoirController {
         return ResponseEntity.ok(variablesPaieService.getAllAvoirs());
     }
 
+    @GetMapping("/next-reference")
+    public ResponseEntity<java.util.Map<String, String>> getNextReference() {
+        String ref = variablesPaieService.generateNextAvoirReference();
+        return ResponseEntity.ok(java.util.Map.of("reference", ref));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AvoirResponseDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(variablesPaieService.getAvoirById(id));
+    }
+
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<AvoirResponseDto>> getByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(variablesPaieService.getAvoirsByEmployee(employeeId));

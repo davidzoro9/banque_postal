@@ -44,27 +44,42 @@ public class SecurityDataInitializer implements CommandLineRunner {
 
         seedRoleIfMissing("DRH", "Directeur des Ressources Humaines",
                 "Supervision de la gestion du personnel, validation de la paie, accès aux bilans et rapports analytiques.",
-                "#1565c0",
+                "#0060B3",
                 Arrays.asList("GRH_FULL", "PAIE_VALIDATION", "RAPPORTS_GLOBAL", "DOCUMENTATION_VIEW"));
+
+        seedRoleIfMissing("RESPONSABLE_RH", "Responsable Administration RH",
+                "Gestion administrative des dossiers collaborateurs, contrats, carrières et mouvements du personnel.",
+                "#0060B3",
+                Arrays.asList("GRH_VIEW", "EMP_CREATE", "EMP_EDIT", "CONTRAT_MANAGE"));
 
         seedRoleIfMissing("GESTIONNAIRE_PAIE", "Gestionnaire de Paie",
                 "Calcul des salaires, gestion des indemnités, saisie des variables et génération des bulletins.",
-                "#2e7d32",
+                "#0060B3",
                 Arrays.asList("PAIE_CALCUL", "PAIE_VARIABLES", "BULLETINS_GENERATE", "AVOIRS_PRECOMPTES"));
+
+        seedRoleIfMissing("COMPTABLE_PAIE", "Comptable Paie & Trésorerie",
+                "Contrôle comptable de la masse salariale, ordres de virement bancaires et déclarations sociales/fiscales.",
+                "#0060B3",
+                Arrays.asList("PAIE_VIEW", "PAIE_EXPORT", "DECLARATIONS_VIEW", "COMPTA_EXPORT"));
 
         seedRoleIfMissing("VALIDATEUR", "Validateur Hiérarchique",
                 "Validation des demandes de congés, des autorisations d'absence et contrôle intermédiaire des opérations.",
-                "#ef6c00",
+                "#0060B3",
                 Arrays.asList("CONGES_VALIDATION", "ABSENCES_VALIDATION", "ALERTES_VIEW"));
 
         seedRoleIfMissing("CONSULTANT", "Consultant & Auditeur",
                 "Accès en lecture seule sur les rapports, tableaux de bord de synthèse et conformité réglementaire.",
-                "#6a1b9a",
+                "#0060B3",
                 Arrays.asList("READ_ONLY_RAPPORTS", "DASHBOARD_VIEW", "AUDIT_VIEW"));
 
         seedRoleIfMissing("EMPLOYE", "Collaborateur Salarié",
                 "Espace personnel collaborateur : consultation des bulletins personnels et saisie de demandes d'absence.",
-                "#0d9488",
+                "#0060B3",
+                Arrays.asList("ESPACE_SALARIE", "MES_BULLETINS", "MES_CONGES"));
+
+        seedRoleIfMissing("AGENT", "Agent Salarié",
+                "Espace personnel agent : consultation des bulletins personnels et saisie de demandes d'absence.",
+                "#0060B3",
                 Arrays.asList("ESPACE_SALARIE", "MES_BULLETINS", "MES_CONGES"));
     }
 

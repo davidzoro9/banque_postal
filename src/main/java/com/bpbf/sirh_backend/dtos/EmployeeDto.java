@@ -22,6 +22,8 @@ public class EmployeeDto {
     private String lieuNaissance;
     private String nationalite;
     private String numeroCNI;
+    private String situationFamiliale;
+    private String situationMatrimoniale;
 
     // Contact
     private String adresse;
@@ -52,6 +54,7 @@ public class EmployeeDto {
 
     // Job / Position dates & status
     private String dateEmbauche;
+    private String numeroCnss;
     private String statut;
     private String niveau;
 
@@ -65,9 +68,12 @@ public class EmployeeDto {
     private String exonerationsFiscalesJson;
     private String exonerationsSocialesJson;
     private String avantagesParticuliersJson;
+    private Boolean vehiculeFourni;
+    private Boolean logementFourni;
 
     // Salary & Payment
     private Double salaireBase;
+    private Double surSalaire;
     private Double salaireBrut;
     private String modePaiement;
     private String banque;
@@ -108,6 +114,7 @@ public class EmployeeDto {
     private String regimeSecuriteSocialLibelle;
 
     private String gradeLibelle;
+    private String grade;
     private String categorieLibelle;
     private String echelonLibelle;
 
@@ -226,6 +233,15 @@ public class EmployeeDto {
     public String getAvantagesParticuliersJson() { return avantagesParticuliersJson; }
     public void setAvantagesParticuliersJson(String avantagesParticuliersJson) { this.avantagesParticuliersJson = avantagesParticuliersJson; }
 
+    public Boolean getVehiculeFourni() { return vehiculeFourni; }
+    public void setVehiculeFourni(Boolean vehiculeFourni) { this.vehiculeFourni = vehiculeFourni; }
+
+    public Boolean getLogementFourni() { return logementFourni; }
+    public void setLogementFourni(Boolean logementFourni) { this.logementFourni = logementFourni; }
+
+    public Double getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(Double surSalaire) { this.surSalaire = surSalaire; }
+
     public Double getSalaireBase() { return salaireBase; }
     public void setSalaireBase(Double salaireBase) { this.salaireBase = salaireBase; }
 
@@ -327,6 +343,9 @@ public class EmployeeDto {
 
     public String getGradeLibelle() { return gradeLibelle; }
     public void setGradeLibelle(String gradeLibelle) { this.gradeLibelle = gradeLibelle; }
+
+    public String getGrade() { return grade; }
+    public void setGrade(String grade) { this.grade = grade; }
 
     public String getCategorieLibelle() { return categorieLibelle; }
     public void setCategorieLibelle(String categorieLibelle) { this.categorieLibelle = categorieLibelle; }

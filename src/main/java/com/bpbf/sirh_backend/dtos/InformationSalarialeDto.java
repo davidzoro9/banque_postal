@@ -14,6 +14,7 @@ public class InformationSalarialeDto {
     private String iban;
     private String intituleCompte;
     private BigDecimal salaireBase;
+    private BigDecimal surSalaire;
     private List<IndemniteEmployeDto> indemnites;
     private BigDecimal totalIndemnites;
     private BigDecimal remunerationBrute;
@@ -52,6 +53,9 @@ public class InformationSalarialeDto {
 
     public BigDecimal getSalaireBase() { return salaireBase; }
     public void setSalaireBase(BigDecimal salaireBase) { this.salaireBase = salaireBase; }
+
+    public BigDecimal getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(BigDecimal surSalaire) { this.surSalaire = surSalaire; }
 
     public List<IndemniteEmployeDto> getIndemnites() { return indemnites; }
     public void setIndemnites(List<IndemniteEmployeDto> indemnites) { this.indemnites = indemnites; }

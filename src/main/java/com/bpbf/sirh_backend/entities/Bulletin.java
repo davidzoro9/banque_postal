@@ -16,8 +16,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "bulletin", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"session_paie_id", "employee_id"})
+@Table(name = "bulletin", indexes = {
+    @Index(name = "idx_bulletin_emp", columnList = "employee_id"),
+    @Index(name = "idx_bulletin_session", columnList = "session_paie_id"),
+    @Index(name = "idx_bulletin_lot", columnList = "bulletin_lot_id"),
+    @Index(name = "idx_bulletin_code", columnList = "code")
 })
 public class Bulletin {
 
@@ -25,7 +28,7 @@ public class Bulletin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
     private String code;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -65,6 +68,9 @@ public class Bulletin {
 
     @Column(precision = 19, scale = 2)
     private BigDecimal salaireBase;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal surSalaire;
 
     @Column(precision = 19, scale = 2)
     private BigDecimal totalIndemnites;
@@ -118,6 +124,9 @@ public class Bulletin {
     private LocalDateTime dateCalcul;
 
     private LocalDateTime dateValidation;
+
+    @Column(columnDefinition = "TEXT")
+    private String justificationEcart;
 
     @OneToMany(mappedBy = "bulletin", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
@@ -184,6 +193,9 @@ public class Bulletin {
     public BigDecimal getSalaireBase() { return salaireBase; }
     public void setSalaireBase(BigDecimal salaireBase) { this.salaireBase = salaireBase; }
 
+    public BigDecimal getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(BigDecimal surSalaire) { this.surSalaire = surSalaire; }
+
     public BigDecimal getTotalIndemnites() { return totalIndemnites; }
     public void setTotalIndemnites(BigDecimal totalIndemnites) { this.totalIndemnites = totalIndemnites; }
 
@@ -238,6 +250,9 @@ public class Bulletin {
     public LocalDateTime getDateValidation() { return dateValidation; }
     public void setDateValidation(LocalDateTime dateValidation) { this.dateValidation = dateValidation; }
 
+    public String getJustificationEcart() { return justificationEcart; }
+    public void setJustificationEcart(String justificationEcart) { this.justificationEcart = justificationEcart; }
+
     public List<BulletinLine> getLines() { return lines; }
     public void setLines(List<BulletinLine> lines) { this.lines = lines; }
 
@@ -259,6 +274,7 @@ public class Bulletin {
         private BigDecimal scheduledWorkingDays = new BigDecimal("30.00");
         private BigDecimal workedDays = new BigDecimal("30.00");
         private BigDecimal salaireBase;
+        private BigDecimal surSalaire;
         private BigDecimal totalIndemnites;
         private BigDecimal totalAvoirs;
         private BigDecimal salaireBrut;
@@ -277,6 +293,7 @@ public class Bulletin {
         private String statut = "GENERE";
         private LocalDateTime dateCalcul;
         private LocalDateTime dateValidation;
+        private String justificationEcart;
         private List<BulletinLine> lines = new ArrayList<>();
 
         public BulletinBuilder id(Long id) { this.id = id; return this; }
@@ -292,6 +309,7 @@ public class Bulletin {
         public BulletinBuilder scheduledWorkingDays(BigDecimal scheduledWorkingDays) { this.scheduledWorkingDays = scheduledWorkingDays; return this; }
         public BulletinBuilder workedDays(BigDecimal workedDays) { this.workedDays = workedDays; return this; }
         public BulletinBuilder salaireBase(BigDecimal salaireBase) { this.salaireBase = salaireBase; return this; }
+        public BulletinBuilder surSalaire(BigDecimal surSalaire) { this.surSalaire = surSalaire; return this; }
         public BulletinBuilder totalIndemnites(BigDecimal totalIndemnites) { this.totalIndemnites = totalIndemnites; return this; }
         public BulletinBuilder totalAvoirs(BigDecimal totalAvoirs) { this.totalAvoirs = totalAvoirs; return this; }
         public BulletinBuilder salaireBrut(BigDecimal salaireBrut) { this.salaireBrut = salaireBrut; return this; }
@@ -310,6 +328,7 @@ public class Bulletin {
         public BulletinBuilder statut(String statut) { this.statut = statut; return this; }
         public BulletinBuilder dateCalcul(LocalDateTime dateCalcul) { this.dateCalcul = dateCalcul; return this; }
         public BulletinBuilder dateValidation(LocalDateTime dateValidation) { this.dateValidation = dateValidation; return this; }
+        public BulletinBuilder justificationEcart(String justificationEcart) { this.justificationEcart = justificationEcart; return this; }
         public BulletinBuilder lines(List<BulletinLine> lines) { this.lines = lines; return this; }
 
         public Bulletin build() {
@@ -327,6 +346,7 @@ public class Bulletin {
             b.setScheduledWorkingDays(scheduledWorkingDays);
             b.setWorkedDays(workedDays);
             b.setSalaireBase(salaireBase);
+            b.setSurSalaire(surSalaire);
             b.setTotalIndemnites(totalIndemnites);
             b.setTotalAvoirs(totalAvoirs);
             b.setSalaireBrut(salaireBrut);
@@ -345,6 +365,7 @@ public class Bulletin {
             b.setStatut(statut != null ? statut : "GENERE");
             b.setDateCalcul(dateCalcul != null ? dateCalcul : LocalDateTime.now());
             b.setDateValidation(dateValidation);
+            b.setJustificationEcart(justificationEcart);
             b.setLines(lines != null ? lines : new ArrayList<>());
             return b;
         }

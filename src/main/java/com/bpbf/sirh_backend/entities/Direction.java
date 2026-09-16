@@ -27,6 +27,10 @@ public class Direction {
     private Department department;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_direction_id", nullable = true)
+    private Direction parentDirection;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "agence_id", nullable = true)
     private Agence agence;
 }

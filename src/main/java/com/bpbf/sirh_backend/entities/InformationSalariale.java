@@ -28,6 +28,9 @@ public class InformationSalariale {
     private BigDecimal salaireBase;
 
     @Column(precision = 19, scale = 2)
+    private BigDecimal surSalaire;
+
+    @Column(precision = 19, scale = 2)
     private BigDecimal totalIndemnites;
 
     @Column(precision = 19, scale = 2)
@@ -88,6 +91,9 @@ public class InformationSalariale {
 
     public BigDecimal getSalaireBase() { return salaireBase; }
     public void setSalaireBase(BigDecimal salaireBase) { this.salaireBase = salaireBase; }
+
+    public BigDecimal getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(BigDecimal surSalaire) { this.surSalaire = surSalaire; }
 
     public BigDecimal getTotalIndemnites() { return totalIndemnites; }
     public void setTotalIndemnites(BigDecimal totalIndemnites) { this.totalIndemnites = totalIndemnites; }

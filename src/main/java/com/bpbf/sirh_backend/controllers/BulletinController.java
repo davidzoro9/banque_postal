@@ -1,8 +1,11 @@
 package com.bpbf.sirh_backend.controllers;
 
 import com.bpbf.sirh_backend.dtos.BulletinDto;
+import com.bpbf.sirh_backend.services.BulletinPdfService;
 import com.bpbf.sirh_backend.services.BulletinService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +17,7 @@ import java.util.List;
 public class BulletinController {
 
     private final BulletinService bulletinService;
+    private final BulletinPdfService bulletinPdfService;
 
     @GetMapping
     public ResponseEntity<List<BulletinDto>> getAll() {
@@ -30,9 +34,17 @@ public class BulletinController {
         return ResponseEntity.ok(bulletinService.updateBulletin(id, dto));
     }
 
+    @PutMapping("/{id}/justification")
+    public ResponseEntity<BulletinDto> updateJustification(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
+        String justification = body != null ? body.get("justification") : null;
+        return ResponseEntity.ok(bulletinService.updateJustification(id, justification));
+    }
+
     @PostMapping("/generer/session/{sessionPaieId}")
-    public ResponseEntity<List<BulletinDto>> generateForSession(@PathVariable Long sessionPaieId) {
-        return ResponseEntity.ok(bulletinService.generateBulletinsForSession(sessionPaieId));
+    public ResponseEntity<List<BulletinDto>> generateForSession(
+            @PathVariable Long sessionPaieId,
+            @RequestBody(required = false) List<Long> employeeIds) {
+        return ResponseEntity.ok(bulletinService.generateBulletinsForSession(sessionPaieId, employeeIds));
     }
 
     @PostMapping("/valider/session/{sessionPaieId}")
@@ -54,6 +66,33 @@ public class BulletinController {
     @GetMapping("/{id}")
     public ResponseEntity<BulletinDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(bulletinService.getBulletinById(id));
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> getBulletinPdf(@PathVariable Long id) {
+        byte[] pdfBytes = bulletinPdfService.generateBulletinPdf(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"bulletin-" + id + ".pdf\"")
+                .body(pdfBytes);
+    }
+
+    @PostMapping("/pdf/preview")
+    public ResponseEntity<byte[]> previewBulletinPdf(@RequestBody BulletinDto dto) {
+        byte[] pdfBytes = bulletinPdfService.generateBulletinPreviewPdf(dto);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"bulletin-preview.pdf\"")
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/session/{sessionPaieId}/registre/pdf")
+    public ResponseEntity<byte[]> getRegistrePaiePdf(@PathVariable Long sessionPaieId) {
+        byte[] pdfBytes = bulletinPdfService.generateRegistrePaiePdf(sessionPaieId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"registre-paie-" + sessionPaieId + ".pdf\"")
+                .body(pdfBytes);
     }
 
     @DeleteMapping("/{id}")

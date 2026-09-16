@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "session_paie", uniqueConstraints = @UniqueConstraint(columnNames = {"mois", "annee"}))
+@Table(name = "session_paie", indexes = {
+    @Index(name = "idx_sess_code", columnList = "codeSession"),
+    @Index(name = "idx_sess_annee_mois", columnList = "annee, mois")
+})
 public class SessionPaie {
 
     @Id

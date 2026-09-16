@@ -32,6 +32,8 @@ public class Employee {
     private String lieuNaissance;
     private String nationalite;
     private String numeroCNI;
+    @Column(name = "situation_familiale", length = 50)
+    private String situationFamiliale;
 
     // ─── Coordonnées ────────────────────────────────────────────────
     private String adresse;
@@ -40,7 +42,14 @@ public class Employee {
     private String pays;
     private String telephone;
     private String dateEmbauche;
+    @Column(name = "numero_cnss", length = 50)
+    private String numeroCnss;
     private String statut;
+    private Double surSalaire;
+    @Column(name = "vehicule_fourni")
+    private Boolean vehiculeFourni = false;
+    @Column(name = "logement_fourni")
+    private Boolean logementFourni = false;
     // ─── Informations Bancaires & Paiement ──────────────────────────
     private String modePaiement;
     private String banque;
@@ -246,6 +255,23 @@ public class Employee {
 
     public GrilleSalariale getGrilleSalariale() { return grilleSalariale; }
     public void setGrilleSalariale(GrilleSalariale grilleSalariale) { this.grilleSalariale = grilleSalariale; }
+
+    public Double getSurSalaire() { return surSalaire; }
+    public void setSurSalaire(Double surSalaire) { this.surSalaire = (surSalaire != null && surSalaire < 0.0) ? 0.0 : surSalaire; }
+
+    public Boolean getVehiculeFourni() { return vehiculeFourni; }
+    public void setVehiculeFourni(Boolean vehiculeFourni) { this.vehiculeFourni = vehiculeFourni; }
+
+    public Boolean getLogementFourni() { return logementFourni; }
+    public void setLogementFourni(Boolean logementFourni) { this.logementFourni = logementFourni; }
+
+    public String getNumeroCnss() { return numeroCnss; }
+    public void setNumeroCnss(String numeroCnss) { this.numeroCnss = numeroCnss; }
+
+    public String getSituationFamiliale() { return situationFamiliale; }
+    public void setSituationFamiliale(String situationFamiliale) { this.situationFamiliale = situationFamiliale; }
+    public String getSituationMatrimoniale() { return situationFamiliale; }
+    public void setSituationMatrimoniale(String situationMatrimoniale) { this.situationFamiliale = situationMatrimoniale; }
 }
 
 

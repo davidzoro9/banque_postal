@@ -25,6 +25,8 @@ public class BulletinLotService {
     private final SalaryElementRepository salaryElementRepository;
     private final AvoirRepository avoirRepository;
     private final PrecompteRepository precompteRepository;
+    private final SituationSalarialeRepository situationRepository;
+    private final SessionPaieRepository sessionPaieRepository;
 
     // --- LOTS ---
     @Transactional(readOnly = true)
@@ -62,6 +64,12 @@ public class BulletinLotService {
                 .orElseThrow(() -> new RuntimeException("Lot non trouvé: " + lotId));
         lot.setStatut("VALIDE");
         lot.setNombreValide(lot.getNombreBulletin());
+        List<Bulletin> bulletins = bulletinRepository.findByBulletinLotId(lotId);
+        for (Bulletin b : bulletins) {
+            b.setStatut("VALIDE");
+            b.setDateValidation(java.time.LocalDateTime.now());
+            bulletinRepository.save(b);
+        }
         return mapLotToDto(bulletinLotRepository.save(lot));
     }
 
@@ -70,6 +78,11 @@ public class BulletinLotService {
         BulletinLot lot = bulletinLotRepository.findById(lotId)
                 .orElseThrow(() -> new RuntimeException("Lot non trouvé: " + lotId));
         lot.setStatut("CLOTURE");
+        List<Bulletin> bulletins = bulletinRepository.findByBulletinLotId(lotId);
+        for (Bulletin b : bulletins) {
+            b.setStatut("CLOTURE");
+            bulletinRepository.save(b);
+        }
         return mapLotToDto(bulletinLotRepository.save(lot));
     }
 
@@ -86,13 +99,53 @@ public class BulletinLotService {
             employees = employeeRepository.findAll();
         }
 
+        LocalDate dateRef = lot.getDateFrom() != null ? lot.getDateFrom() : LocalDate.now();
+        String mois = String.format("%02d", dateRef.getMonthValue());
+        int annee = dateRef.getYear();
+
+        SessionPaie sessionLot = sessionPaieRepository.findFirstByMoisAndAnneeOrderByIdDesc(mois, annee).orElse(null);
+        if (sessionLot == null) {
+            String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+            String nomMois = (dateRef.getMonthValue() >= 1 && dateRef.getMonthValue() <= 12) ? moisNoms[dateRef.getMonthValue() - 1] : "Mois " + mois;
+
+            SessionPaie newSession = SessionPaie.builder()
+                    .codeSession(String.format("SESS-%d-%s", annee, mois))
+                    .mois(mois)
+                    .annee(annee)
+                    .periode(nomMois + " " + annee)
+                    .typeSession(lot.getTypeSession() != null ? lot.getTypeSession() : "PAIE_NORMALE")
+                    .statut("GENERE")
+                    .nombreEmployes(employees.size())
+                    .nombreValide(0)
+                    .build();
+
+            int sessSuffix = 1;
+            String baseSessCode = newSession.getCodeSession();
+            while (sessionPaieRepository.findByCodeSession(newSession.getCodeSession()).isPresent()) {
+                newSession.setCodeSession(String.format("%s-%d", baseSessCode, sessSuffix++));
+            }
+            sessionLot = sessionPaieRepository.save(newSession);
+        }
+
         List<Bulletin> generatedBulletins = new ArrayList<>();
 
         for (Employee emp : employees) {
+            String baseLotCode = "BLT-" + (lot.getName() != null ? lot.getName().replaceAll("\\s+", "-") : "LOT") + "-" + (emp.getMatricule() != null ? emp.getMatricule() : "EMP");
+            if (baseLotCode.length() > 60) baseLotCode = baseLotCode.substring(0, 60);
+            String finalLotCode = baseLotCode;
+            if (bulletinRepository.findByCode(finalLotCode).isPresent()) {
+                long count = bulletinRepository.countByEmployeeId(emp.getId()) + 1;
+                finalLotCode = String.format("%s-%d", baseLotCode, count);
+                while (bulletinRepository.findByCode(finalLotCode).isPresent()) {
+                    finalLotCode = String.format("%s-%d", baseLotCode, ++count);
+                }
+            }
+
             Bulletin b = Bulletin.builder()
                     .bulletinLot(lot)
+                    .sessionPaie(sessionLot)
                     .employee(emp)
-                    .code("BLT-" + (lot.getName() != null ? lot.getName().replaceAll("\\s+", "-") : "LOT") + "-" + emp.getMatricule())
+                    .code(finalLotCode)
                     .typeSession(lot.getTypeSession())
                     .dateFrom(lot.getDateFrom())
                     .dateTo(lot.getDateTo())
@@ -103,8 +156,81 @@ public class BulletinLotService {
             // Lignes du bulletin
             List<BulletinLine> lines = new ArrayList<>();
 
-            // 1. Salaire de base (estimation 100 000 par défaut si non renseigné)
-            BigDecimal salaireBase = new BigDecimal("100000.00");
+            // 1. Salaire de base (résolu depuis PostgreSQL)
+            SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
+            BigDecimal salaireBase = BigDecimal.ZERO;
+            if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+                salaireBase = BigDecimal.valueOf(situation.getSalaireBase()).setScale(2, RoundingMode.HALF_UP);
+            } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
+                salaireBase = situation.getGrilleSalariale().getBasicSalary().setScale(2, RoundingMode.HALF_UP);
+            } else if (emp.getGrilleSalariale() != null && emp.getGrilleSalariale().getBasicSalary() != null) {
+                salaireBase = emp.getGrilleSalariale().getBasicSalary().setScale(2, RoundingMode.HALF_UP);
+            }
+
+            // Calcul automatique du nombre de jours travaillés selon dateEmbauche (prorata temporis)
+            BigDecimal scheduledDays = new BigDecimal("30.00");
+            BigDecimal workedDays = new BigDecimal("30.00");
+            LocalDate debutPeriode = lot.getDateFrom();
+            LocalDate finPeriode = lot.getDateTo();
+            if (emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank() && debutPeriode != null) {
+                try {
+                    LocalDate dEmbauche = LocalDate.parse(emp.getDateEmbauche().trim());
+                    if (dEmbauche.isAfter(debutPeriode)) {
+                        if (finPeriode != null && dEmbauche.isAfter(finPeriode)) {
+                            workedDays = BigDecimal.ZERO;
+                        } else {
+                            int jourArrivee = dEmbauche.getDayOfMonth();
+                            int joursPresents = Math.max(1, Math.min(30, 30 - jourArrivee + 1));
+                            workedDays = new BigDecimal(joursPresents).setScale(2, RoundingMode.HALF_UP);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            BigDecimal ratio = workedDays.divide(scheduledDays, 6, RoundingMode.HALF_UP);
+            if (ratio.compareTo(BigDecimal.ONE) > 0) ratio = BigDecimal.ONE;
+            if (ratio.compareTo(BigDecimal.ZERO) < 0) ratio = BigDecimal.ZERO;
+
+            salaireBase = salaireBase.multiply(ratio).setScale(2, RoundingMode.HALF_UP);
+
+            boolean isGratif = lot.getTypeSession() != null && lot.getTypeSession().toUpperCase().contains("GRATIF");
+            if (isGratif) {
+                // Pour un lot de GRATIFICATION (13ème mois) :
+                // Le Net = Brut = Salaire de Base (proratisé le cas échéant)
+                // Aucune retenue sociale salariale (CNSS = 0), ni fiscale (IUTS = 0), ni précompte
+                lines.add(BulletinLine.builder()
+                        .bulletin(b)
+                        .code("GRAT_ANN")
+                        .libelle("Gratification Annuelle (13ème Mois)")
+                        .typeLigne("GAIN")
+                        .baseCalcul(salaireBase)
+                        .taux(new BigDecimal("100.00"))
+                        .montant(salaireBase)
+                        .ordre(1)
+                        .build());
+
+                b.setScheduledWorkingDays(scheduledDays);
+                b.setWorkedDays(workedDays);
+                b.setSalaireBase(salaireBase);
+                b.setSalaireBrut(salaireBase);
+                b.setTotalIndemnites(BigDecimal.ZERO);
+                b.setTotalAvoirs(BigDecimal.ZERO);
+                b.setTotalPrecomptes(BigDecimal.ZERO);
+                b.setCotisationCnss(BigDecimal.ZERO);
+                b.setImpotIuts(BigDecimal.ZERO);
+                b.setTotalRetenues(BigDecimal.ZERO);
+                b.setTotalCotisationsPatronales(BigDecimal.ZERO);
+                b.setSalaireNet(salaireBase); // NET = BRUT !
+                b.setStatut("GENERE");
+                b.setDateCalcul(java.time.LocalDateTime.now());
+
+                for (BulletinLine l : lines) {
+                    b.addLine(l);
+                }
+                generatedBulletins.add(bulletinRepository.save(b));
+                continue;
+            }
+
             lines.add(BulletinLine.builder()
                     .bulletin(b)
                     .code("SAL_BASE")
@@ -145,7 +271,7 @@ public class BulletinLotService {
 
             BigDecimal brut = salaireBase.add(totalAvoirs);
 
-            // 3. Précomptes actifs
+            BigDecimal totalPrecomptesMontant = BigDecimal.ZERO;
             List<Precompte> precomptes = precompteRepository.findByEmployeeIdAndStatut(emp.getId(), "EN_COURS");
             if (precomptes.isEmpty()) {
                 precomptes = precompteRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
@@ -153,15 +279,17 @@ public class BulletinLotService {
             for (Precompte p : precomptes) {
                 if (p.getAmount() != null && p.getAmount().compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal retenue = p.getAmount();
-                    if (p.getEcheance() != null && p.getEcheance() > 1) {
+                    if (p.getRetenueMensuelle() != null && p.getRetenueMensuelle().compareTo(BigDecimal.ZERO) > 0) {
+                        retenue = p.getRetenueMensuelle();
+                    } else if (p.getEcheance() != null && p.getEcheance() > 1) {
                         retenue = p.getAmount().divide(new BigDecimal(p.getEcheance()), 0, RoundingMode.HALF_UP);
                     }
                     if (p.getMontantRestant() != null && p.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
                         retenue = retenue.min(p.getMontantRestant());
                     }
+                    totalPrecomptesMontant = totalPrecomptesMontant.add(retenue);
 
                     lines.add(BulletinLine.builder()
-                            .bulletin(b)
                             .code(p.getSalaryElement() != null ? p.getSalaryElement().getCode() : "PREC")
                             .libelle(p.getSalaryElement() != null ? p.getSalaryElement().getName() : "Précompte / Retenue")
                             .typeLigne("PRECOMPTE")
@@ -176,7 +304,6 @@ public class BulletinLotService {
             // 4. Cotisations CNSS Salariale 5.5% sur le Brut Réel
             BigDecimal cnss = brut.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
             lines.add(BulletinLine.builder()
-                    .bulletin(b)
                     .code("CNSS_SAL")
                     .libelle("Sécurité Sociale (CNSS 5.5%)")
                     .typeLigne("RETENUE_SOCIALE")
@@ -191,7 +318,6 @@ public class BulletinLotService {
             BigDecimal baseImp = brut.subtract(abattement).max(BigDecimal.ZERO);
             BigDecimal iuts = baseImp.multiply(new BigDecimal("0.0675")).setScale(0, RoundingMode.HALF_UP);
             lines.add(BulletinLine.builder()
-                    .bulletin(b)
                     .code("IUTS")
                     .libelle("Impôt Unique sur Traitements et Salaires")
                     .typeLigne("IMPOT")
@@ -201,7 +327,25 @@ public class BulletinLotService {
                     .ordre(25)
                     .build());
 
-            b.setLines(lines);
+            BigDecimal totalRetenues = cnss.add(iuts).add(totalPrecomptesMontant);
+            BigDecimal net = brut.subtract(totalRetenues).max(BigDecimal.ZERO);
+
+            b.setScheduledWorkingDays(scheduledDays);
+            b.setWorkedDays(workedDays);
+            b.setSalaireBase(salaireBase);
+            b.setSalaireBrut(brut);
+            b.setTotalAvoirs(totalAvoirs);
+            b.setTotalPrecomptes(totalPrecomptesMontant);
+            b.setCotisationCnss(cnss);
+            b.setImpotIuts(iuts);
+            b.setTotalRetenues(totalRetenues);
+            b.setSalaireNet(net);
+            b.setStatut("GENERE");
+            b.setDateCalcul(java.time.LocalDateTime.now());
+
+            for (BulletinLine l : lines) {
+                b.addLine(l);
+            }
             generatedBulletins.add(bulletinRepository.save(b));
         }
 

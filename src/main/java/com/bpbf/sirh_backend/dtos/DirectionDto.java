@@ -17,6 +17,9 @@ public class DirectionDto {
     private Long departmentId;
     private String departmentLibelle;
 
+    private Long parentDirectionId;
+    private String parentDirectionLibelle;
+
     private Long agenceId;
     private String agenceLibelle;
 }

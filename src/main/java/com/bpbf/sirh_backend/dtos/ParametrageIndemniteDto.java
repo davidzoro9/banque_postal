@@ -20,9 +20,12 @@ public class ParametrageIndemniteDto {
     private String gradeLibelle;
     private Long categorieId;
     private String categorieLibelle;
+    private Long emploiId;
+    private String emploiLibelle;
 
     private Double taux;
     private Boolean actif;
+    private String regleType;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -54,10 +57,19 @@ public class ParametrageIndemniteDto {
     public String getCategorieLibelle() { return categorieLibelle; }
     public void setCategorieLibelle(String categorieLibelle) { this.categorieLibelle = categorieLibelle; }
 
+    public Long getEmploiId() { return emploiId; }
+    public void setEmploiId(Long emploiId) { this.emploiId = emploiId; }
+
+    public String getEmploiLibelle() { return emploiLibelle; }
+    public void setEmploiLibelle(String emploiLibelle) { this.emploiLibelle = emploiLibelle; }
+
     public Double getTaux() { return taux; }
     public void setTaux(Double taux) { this.taux = taux; }
 
     public Boolean getActif() { return actif; }
     public void setActif(Boolean actif) { this.actif = actif; }
+
+    public String getRegleType() { return regleType; }
+    public void setRegleType(String regleType) { this.regleType = regleType; }
 }
 

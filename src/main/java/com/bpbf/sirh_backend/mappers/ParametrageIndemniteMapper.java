@@ -17,12 +17,15 @@ public interface ParametrageIndemniteMapper {
     @Mapping(target = "gradeLibelle", source = "gradeObj.libelle")
     @Mapping(target = "categorieId", source = "categorieObj.id")
     @Mapping(target = "categorieLibelle", source = "categorieObj.libelle")
+    @Mapping(target = "emploiId", source = "emploiObj.id")
+    @Mapping(target = "emploiLibelle", source = "emploiObj.name")
     ParametrageIndemniteDto toDto(ParametrageIndemnite entity);
 
     @Mapping(target = "typeIndemniteObj", ignore = true)
     @Mapping(target = "fonctionObj", ignore = true)
     @Mapping(target = "gradeObj", ignore = true)
     @Mapping(target = "categorieObj", ignore = true)
+    @Mapping(target = "emploiObj", ignore = true)
     ParametrageIndemnite toEntity(ParametrageIndemniteDto dto);
 
     List<ParametrageIndemniteDto> toDtos(List<ParametrageIndemnite> list);

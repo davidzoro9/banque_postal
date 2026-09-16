@@ -20,7 +20,10 @@ public class SalaryCategory {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @OneToMany(mappedBy = "salaryCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(length = 30)
+    private String type = "GAIN";
+
+    @OneToMany(mappedBy = "salaryCategory")
     @JsonIgnore
     private List<SalaryElement> salaryElements = new ArrayList<>();
 
@@ -30,6 +33,14 @@ public class SalaryCategory {
         this.id = id;
         this.code = code;
         this.name = name;
+        this.type = "GAIN";
+    }
+
+    public SalaryCategory(Long id, String code, String name, String type) {
+        this.id = id;
+        this.code = code;
+        this.name = name;
+        this.type = type != null ? type : "GAIN";
     }
 
     public Long getId() { return id; }
@@ -40,6 +51,9 @@ public class SalaryCategory {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
     public List<SalaryElement> getSalaryElements() { return salaryElements; }
     public void setSalaryElements(List<SalaryElement> salaryElements) { this.salaryElements = salaryElements; }

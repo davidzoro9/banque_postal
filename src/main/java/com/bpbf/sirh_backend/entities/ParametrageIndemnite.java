@@ -36,8 +36,15 @@ public class ParametrageIndemnite {
     @JoinColumn(name = "categorie_id")
     private Categorie categorieObj;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "emploi_id")
+    private Emploi emploiObj;
+
     private Double taux;
     private Boolean actif = true;
+
+    @Column(name = "regle_type")
+    private String regleType;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -57,10 +64,16 @@ public class ParametrageIndemnite {
     public Categorie getCategorieObj() { return categorieObj; }
     public void setCategorieObj(Categorie categorieObj) { this.categorieObj = categorieObj; }
 
+    public Emploi getEmploiObj() { return emploiObj; }
+    public void setEmploiObj(Emploi emploiObj) { this.emploiObj = emploiObj; }
+
     public Double getTaux() { return taux; }
     public void setTaux(Double taux) { this.taux = taux; }
 
     public Boolean getActif() { return actif; }
     public void setActif(Boolean actif) { this.actif = actif; }
+
+    public String getRegleType() { return regleType; }
+    public void setRegleType(String regleType) { this.regleType = regleType; }
 }
 

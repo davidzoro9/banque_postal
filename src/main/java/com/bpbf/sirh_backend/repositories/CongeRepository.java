@@ -16,4 +16,9 @@ public interface CongeRepository extends JpaRepository<Conge, Long> {
     List<Conge> findByEmployeeId(@Param("empId") Long empId);
 
     List<Conge> findByStatut(String statut);
+
+    long countByStatutIgnoreCase(String statut);
+
+    @Query("SELECT COUNT(c) FROM Conge c WHERE LOWER(TRIM(c.statut)) = 'en_attente' OR LOWER(TRIM(c.statut)) = 'en attente'")
+    long countPendingConges();
 }
