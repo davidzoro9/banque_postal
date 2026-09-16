@@ -19,8 +19,10 @@ export interface RefItem {
   departementId?: string;   // utilisé par Direction et Service
   departementLibelle?: string;
   departmentLibelle?: string;
-  directionId?:   string;   // utilisé par Service
+  directionId?:   string;   // utilisé par Service et Departement
   directionLibelle?: string;
+  parentDirectionId?: string; // pour Direction rattachée à DGA ou DG
+  parentDirectionLibelle?: string;
   directeurId?: string;
   directeurLibelle?: string;
   categorieId?:   string;   // utilisé par Grille salariale
@@ -42,6 +44,9 @@ export interface RefItem {
   fonction?:      string;   // pour Paramétrage indemnité
   fonctionId?: string;
   fonctionLibelle?: string;
+  emploi?:        string;   // pour Paramétrage indemnité (Primes Spécifiques)
+  emploiId?: string;
+  emploiLibelle?: string;
   grade?:         string;   // pour Paramétrage indemnité
   categorie?:     string;   // pour Paramétrage indemnité
   taux?:          number;   // pour Paramétrage indemnité / Retenue
@@ -170,6 +175,8 @@ const BACKEND_MAP: Record<string, {
     segment: 'directions',
     getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+                       parentDirectionId: dto.parentDirectionId ? String(dto.parentDirectionId) : undefined,
+                       parentDirectionLibelle: dto.parentDirectionLibelle || '',
                        departementId: dto.departmentId ? String(dto.departmentId) : undefined,
                        departementLibelle: dto.departmentLibelle || '',
                        departmentLibelle: dto.departmentLibelle || '' ,
@@ -177,8 +184,10 @@ const BACKEND_MAP: Record<string, {
                        agenceLibelle: dto.agenceLibelle || ''
                      }),
     toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                        parentDirectionId: item.parentDirectionId ? Number(item.parentDirectionId) : null,
                         departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
     toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                             parentDirectionId: item.parentDirectionId ? Number(item.parentDirectionId) : null,
                              departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
   },
   'service': {
@@ -321,6 +330,9 @@ const BACKEND_MAP: Record<string, {
       categorieId: dto.categorieId ? String(dto.categorieId) : undefined,
       categorieLibelle: dto.categorieLibelle || dto.categorie || '',
       categorie: dto.categorieLibelle || dto.categorie || '',
+      emploiId: dto.emploiId ? String(dto.emploiId) : undefined,
+      emploiLibelle: dto.emploiLibelle || dto.emploi || '',
+      emploi: dto.emploiLibelle || dto.emploi || '',
       taux: dto.taux ?? dto.montant ?? 0,
       tauxExoneration: dto.tauxExoneration ?? 0,
       plafondExoneration: dto.plafondExoneration ?? 0,
@@ -331,6 +343,7 @@ const BACKEND_MAP: Record<string, {
       code: item.code,
       typeIndemniteId: item.typeIndemniteId ? Number(item.typeIndemniteId) : null,
       fonctionId: item.fonctionId ? Number(item.fonctionId) : null,
+      emploiId: item.emploiId ? Number(item.emploiId) : null,
       gradeId: item.gradeId ? Number(item.gradeId) : null,
       categorieId: item.categorieId ? Number(item.categorieId) : null,
       taux: item.taux ?? item.montant ?? 0,
@@ -345,6 +358,7 @@ const BACKEND_MAP: Record<string, {
       code: item.code,
       typeIndemniteId: item.typeIndemniteId ? Number(item.typeIndemniteId) : null,
       fonctionId: item.fonctionId ? Number(item.fonctionId) : null,
+      emploiId: item.emploiId ? Number(item.emploiId) : null,
       gradeId: item.gradeId ? Number(item.gradeId) : null,
       categorieId: item.categorieId ? Number(item.categorieId) : null,
       taux: item.taux ?? item.montant ?? 0,
@@ -460,11 +474,15 @@ const BACKEND_MAP: Record<string, {
     segment: 'departments',
     getAllPath: '',
     toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+                       directionId: dto.directionId ? String(dto.directionId) : undefined,
+                       directionLibelle: dto.directionLibelle || '',
                        directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
                        directeurLibelle: dto.directeurLibelle || '' }),
     toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                        directionId: item.directionId ? Number(item.directionId) : null,
                         directeurId: item.directeurId ? Number(item.directeurId) : null }),
     toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                             directionId: item.directionId ? Number(item.directionId) : null,
                              directeurId: item.directeurId ? Number(item.directeurId) : null }),
   },
   'type-retenue-employe': {
@@ -590,8 +608,6 @@ function buildOfficialGridItems(): RefItem[] {
   }
   return items;
 }
-
-const MOCK_DATA: Record<string, RefItem[]> = {};
 
 @Injectable({
   providedIn: 'root'

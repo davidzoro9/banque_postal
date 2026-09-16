@@ -108,48 +108,105 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getGradeConcat(emp: Employee): string {
-    // 1. Si déjà au format concaténé (ex: C1E01, CL2E05)
-    if (emp.grade && /^(C|CL)\d+E\d+$/i.test(emp.grade.trim())) {
-      return emp.grade.trim().toUpperCase();
+    if (!emp) return '—';
+
+    // 1. Si déjà au format standardisé arabe (ex: CL2E02, C1E01, HCEX)
+    let directGrade = (emp.grade || '').trim().toUpperCase();
+    if (/^(C|CL|HC)\d*(E\d+|EX)$/i.test(directGrade)) {
+      return directGrade;
     }
 
-    // 2. Extraire la catégorie (ex: '1ère CATEGORIE' -> 'C1', 'CLASSE 2' -> 'CL2', 'C1' -> 'C1', 'CL3' -> 'CL3')
-    let rawCat = (emp.categoriePro || (emp as any).categorie || '').trim().toUpperCase();
-    let catCode = '';
-    if (rawCat.startsWith('CL') || rawCat.includes('CLASSE')) {
-      const match = rawCat.match(/\d+|I{1,3}|IV|V|VI{1,3}|VIII/);
-      if (match) {
-        catCode = `CL${match[0]}`;
-      } else {
-        catCode = rawCat;
+    // 2. Si le grade direct contient des chiffres romains (ex: CLIIE02 -> CL2E02)
+    const romanDirectMatch = directGrade.match(/^CL\s*(VIII|VII|VI|V|IV|III|II|I)\s*(E\d+|EX)?$/i);
+    if (romanDirectMatch) {
+      const romanMap: Record<string, string> = {
+        'VIII': '8', 'VII': '7', 'VI': '6', 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1'
+      };
+      const rNum = romanMap[romanDirectMatch[1].toUpperCase()] || romanDirectMatch[1];
+      const echPart = romanDirectMatch[2] ? romanDirectMatch[2].toUpperCase() : '';
+      if (echPart) {
+        return `CL${rNum}${echPart}`;
       }
-    } else if (rawCat.startsWith('C') && /^C\d+/.test(rawCat)) {
-      catCode = rawCat.match(/^C\d+/)?.[0] || rawCat;
-    } else {
-      const num = rawCat.replace(/[^0-9]/g, '');
-      if (num) {
-        catCode = `C${num}`;
-      } else {
-        catCode = rawCat;
-      }
+      directGrade = `CL${rNum}`;
     }
 
-    // 3. Extraire l'échelon (ex: 'ECHELON 1' -> 'E01', 'E01' -> 'E01', '1' -> 'E01')
-    let rawEch = (emp.echelon || '').trim().toUpperCase();
-    let echCode = '';
-    const echNumMatch = rawEch.replace(/[^0-9]/g, '');
-    if (echNumMatch) {
-      const num = parseInt(echNumMatch, 10);
-      echCode = num < 10 ? `E0${num}` : `E${num}`;
-    } else if (rawEch) {
-      echCode = rawEch.startsWith('E') ? rawEch : `E${rawEch}`;
-    }
+    // 3. Déterminer le code de la catégorie (ex: 'CLASSE II' -> 'CL2', '1ère CATEGORIE' -> 'C1')
+    const rawCat = (emp.categoriePro || (emp as any).categorie || '').trim().toUpperCase();
+    const catCode = this.getCatCodeDisplay(rawCat);
+
+    // 4. Déterminer le code de l'échelon (ex: 'Échelon 2' -> 'E02')
+    const rawEch = (emp.echelon || '').trim().toUpperCase();
+    const echCode = this.getEchelonCodeDisplay(rawEch);
 
     if (catCode && echCode) {
       return `${catCode}${echCode}`;
     }
 
-    return emp.grade || catCode || echCode || '—';
+    return directGrade || catCode || echCode || '—';
+  }
+
+  getCatCodeDisplay(str: string): string {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+
+    // Classes bancaires (CL1 à CL8) - Tester impérativement de VIII à I pour éviter les faux positifs
+    if (upper.includes('CLASSE VIII') || upper === 'VIII' || upper === 'CL8' || upper === 'CLASSE 8' || upper === 'CL VIII') return 'CL8';
+    if (upper.includes('CLASSE VII') || upper === 'VII' || upper === 'CL7' || upper === 'CLASSE 7' || upper === 'CL VII') return 'CL7';
+    if (upper.includes('CLASSE VI') || upper === 'VI' || upper === 'CL6' || upper === 'CLASSE 6' || upper === 'CL VI') return 'CL6';
+    if (upper.includes('CLASSE V') || upper === 'V' || upper === 'CL5' || upper === 'CLASSE 5' || upper === 'CL V') return 'CL5';
+    if (upper.includes('CLASSE IV') || upper === 'IV' || upper === 'CL4' || upper === 'CLASSE 4' || upper === 'CL IV') return 'CL4';
+    if (upper.includes('CLASSE III') || upper === 'III' || upper === 'CL3' || upper === 'CLASSE 3' || upper === 'CL III') return 'CL3';
+    if (upper.includes('CLASSE II') || upper === 'II' || upper === 'CL2' || upper === 'CLASSE 2' || upper === 'CL II') return 'CL2';
+    if (upper.includes('CLASSE I') || upper === 'I' || upper === 'CL1' || upper === 'CLASSE 1' || upper === 'CL I') return 'CL1';
+
+    // Catégories d'exécution et maîtrise (C1 à C7)
+    if (upper.includes('1ERE') || upper.includes('1ÈRE') || upper.includes('1RE') || upper.includes('CATEGORIE 1') || upper.includes('CAT 1') || upper === '1' || upper === 'C1') return 'C1';
+    if (upper.includes('2EME') || upper.includes('2ÈME') || upper.includes('2E') || upper.includes('CATEGORIE 2') || upper.includes('CAT 2') || upper === '2' || upper === 'C2') return 'C2';
+    if (upper.includes('3EME') || upper.includes('3ÈME') || upper.includes('3E') || upper.includes('CATEGORIE 3') || upper.includes('CAT 3') || upper === '3' || upper === 'C3') return 'C3';
+    if (upper.includes('4EME') || upper.includes('4ÈME') || upper.includes('4E') || upper.includes('CATEGORIE 4') || upper.includes('CAT 4') || upper === '4' || upper === 'C4') return 'C4';
+    if (upper.includes('5EME') || upper.includes('5ÈME') || upper.includes('5E') || upper.includes('CATEGORIE 5') || upper.includes('CAT 5') || upper === '5' || upper === 'C5') return 'C5';
+    if (upper.includes('6EME') || upper.includes('6ÈME') || upper.includes('6E') || upper.includes('CATEGORIE 6') || upper.includes('CAT 6') || upper === '6' || upper === 'C6') return 'C6';
+    if (upper.includes('7EME') || upper.includes('7ÈME') || upper.includes('7E') || upper.includes('CATEGORIE 7') || upper.includes('CAT 7') || upper === '7' || upper === 'C7') return 'C7';
+
+    // Hors Catégorie
+    if (upper.includes('HORS') || upper.startsWith('HC')) return 'HC';
+
+    // Regex générique pour attraper CL + chiffre ou chiffre romain
+    if (upper.startsWith('CL') || upper.includes('CLASSE')) {
+      const romanMap: Record<string, string> = {
+        'VIII': '8', 'VII': '7', 'VI': '6', 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1'
+      };
+      const match = upper.match(/VIII|VII|VI|IV|V|III|II|I|\d+/);
+      if (match) {
+        const val = romanMap[match[0]] || match[0];
+        return `CL${val}`;
+      }
+    }
+
+    if (upper.startsWith('C') && /^C\d+/.test(upper)) {
+      return upper.match(/^C\d+/)?.[0] || upper;
+    }
+
+    const num = upper.replace(/[^0-9]/g, '');
+    if (num) return `C${num}`;
+
+    return upper;
+  }
+
+  getEchelonCodeDisplay(str: string): string {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+    if (upper.includes('EXCEPT') || upper.endsWith('EX')) return 'EX';
+    if (upper.startsWith('E') && !upper.startsWith('ECH')) {
+      const num = parseInt(upper.substring(1), 10);
+      if (!isNaN(num)) return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    const numStr = upper.replace(/[^0-9]/g, '');
+    if (numStr) {
+      const num = parseInt(numStr, 10);
+      return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    return upper;
   }
 
   getDateRetraite(emp: Employee): { dateStr: string; yearsLeft: number | null } {

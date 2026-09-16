@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { UtilisateurService, Utilisateur } from '../../grh/services/utilisateur.service';
+import { RoleService, RoleItem } from '../services/role.service';
 
 export interface UserAccount {
   id: string;
@@ -24,6 +25,7 @@ export interface UserAccount {
 export class UsersListComponent implements OnInit {
   usersList: UserAccount[] = [];
   filteredUsers: UserAccount[] = [];
+  availableRoles: RoleItem[] = [];
   searchQuery = '';
   roleFilter = '';
   statusFilter = '';
@@ -40,10 +42,51 @@ export class UsersListComponent implements OnInit {
     actif: true
   };
 
-  constructor(private utilisateurService: UtilisateurService) {}
+  constructor(
+    private utilisateurService: UtilisateurService,
+    private roleService: RoleService
+  ) {}
 
   ngOnInit(): void {
+    this.loadRoles();
     this.loadUsers();
+  }
+
+  loadRoles(): void {
+    this.roleService.getAll().subscribe({
+      next: (roles) => {
+        if (roles && roles.length > 0) {
+          this.availableRoles = roles;
+        } else {
+          this.availableRoles = this.getDefaultRoles();
+        }
+      },
+      error: () => {
+        this.availableRoles = this.getDefaultRoles();
+      }
+    });
+  }
+
+  getDefaultRoles(): RoleItem[] {
+    return [
+      { code: 'ADMIN', libelle: 'Administrateur Système' },
+      { code: 'DRH', libelle: 'Directeur des Ressources Humaines' },
+      { code: 'RESPONSABLE_RH', libelle: 'Responsable Administration RH' },
+      { code: 'GESTIONNAIRE_PAIE', libelle: 'Gestionnaire de Paie' },
+      { code: 'COMPTABLE_PAIE', libelle: 'Comptable Paie & Trésorerie' },
+      { code: 'VALIDATEUR', libelle: 'Validateur Hiérarchique' },
+      { code: 'CONSULTANT', libelle: 'Consultant / Auditeur' },
+      { code: 'EMPLOYE', libelle: 'Collaborateur Salarié' },
+      { code: 'AGENT', libelle: 'Agent Salarié' }
+    ];
+  }
+
+  getRoleLabel(code: string): string {
+    if (!code) return '-';
+    const found = this.availableRoles.find(r => r.code === code);
+    if (found) return found.libelle;
+    const def = this.getDefaultRoles().find(r => r.code === code);
+    return def ? def.libelle : code;
   }
 
   loadUsers(): void {
@@ -65,59 +108,16 @@ export class UsersListComponent implements OnInit {
             avatarColor: colors[idx % colors.length]
           }));
         } else {
-          this.usersList = this.getFallbackUsers();
+          this.usersList = [];
         }
         this.applyFilter();
       },
-      error: () => {
-        this.usersList = this.getFallbackUsers();
+      error: (err) => {
+        console.error('Erreur lors du chargement des utilisateurs depuis PostgreSQL/Spring Boot:', err);
+        this.usersList = [];
         this.applyFilter();
       }
     });
-  }
-
-  private getFallbackUsers(): UserAccount[] {
-    return [
-      {
-        id: '1',
-        idNum: 1,
-        username: 'davidzorom',
-        nom: 'ZOROM',
-        prenom: 'David',
-        email: 'davidzorom9@gmail.com',
-        role: 'ADMIN',
-        actif: true,
-        dateCreation: '2026-01-10',
-        dernierAcces: 'Aujourd\'hui 09:25',
-        avatarColor: '#0060B3'
-      },
-      {
-        id: '2',
-        idNum: 2,
-        username: 'mariam.ouedraogo',
-        nom: 'OUEDRAOGO',
-        prenom: 'Mariam',
-        email: 'mariam.ouedraogo@bpbf.bf',
-        role: 'GESTIONNAIRE_PAIE',
-        actif: true,
-        dateCreation: '2026-02-01',
-        dernierAcces: 'Aujourd\'hui 08:40',
-        avatarColor: '#1565c0'
-      },
-      {
-        id: '3',
-        idNum: 3,
-        username: 'issouf.zongo',
-        nom: 'ZONGO',
-        prenom: 'Issouf',
-        email: 'issouf.zongo@bpbf.bf',
-        role: 'EMPLOYE',
-        actif: true,
-        dateCreation: '2026-02-15',
-        dernierAcces: 'Hier 16:15',
-        avatarColor: '#2e7d32'
-      }
-    ];
   }
 
   applyFilter(): void {
@@ -187,10 +187,13 @@ export class UsersListComponent implements OnInit {
       }
 
       this.utilisateurService.update(this.editingUser.idNum, payload).subscribe({
-        next: () => this.loadUsers(),
-        error: () => {
-          Object.assign(this.editingUser!, this.formModel);
-          this.applyFilter();
+        next: () => {
+          this.loadUsers();
+          this.closeModal();
+        },
+        error: (err) => {
+          console.error('Erreur lors de la modification de l utilisateur:', err);
+          alert("Erreur lors de l'enregistrement de l'utilisateur sur le serveur.");
         }
       });
     } else {
@@ -205,26 +208,16 @@ export class UsersListComponent implements OnInit {
       };
 
       this.utilisateurService.create(newUser).subscribe({
-        next: () => this.loadUsers(),
-        error: () => {
-          const fallback: UserAccount = {
-            id: String(Date.now()),
-            username: this.formModel.username,
-            nom: this.formModel.nom,
-            prenom: this.formModel.prenom,
-            email: this.formModel.email,
-            role: this.formModel.role,
-            actif: this.formModel.actif ?? true,
-            dateCreation: new Date().toISOString().split('T')[0],
-            dernierAcces: 'Jamais',
-            avatarColor: '#0060B3'
-          };
-          this.usersList.push(fallback);
-          this.applyFilter();
+        next: () => {
+          this.loadUsers();
+          this.closeModal();
+        },
+        error: (err) => {
+          console.error('Erreur lors de la création de l utilisateur:', err);
+          alert("Erreur lors de la création de l'utilisateur sur le serveur.");
         }
       });
     }
-    this.closeModal();
   }
 
   toggleStatus(user: UserAccount): void {
@@ -232,14 +225,11 @@ export class UsersListComponent implements OnInit {
     if (user.idNum) {
       this.utilisateurService.update(user.idNum, { actif: newStatus }).subscribe({
         next: () => this.loadUsers(),
-        error: () => {
-          user.actif = newStatus;
-          this.applyFilter();
+        error: (err) => {
+          console.error('Erreur lors de la modification du statut utilisateur:', err);
+          alert("Impossible de modifier le statut sur le serveur.");
         }
       });
-    } else {
-      user.actif = newStatus;
-      this.applyFilter();
     }
   }
 
@@ -248,10 +238,11 @@ export class UsersListComponent implements OnInit {
     if (newPwd && user.idNum) {
       this.utilisateurService.updatePassword(user.idNum, newPwd).subscribe({
         next: () => alert(`Le mot de passe de ${user.prenom} ${user.nom} a été mis à jour avec succès.`),
-        error: () => alert(`Mot de passe mis à jour en local pour ${user.prenom} ${user.nom}.`)
+        error: (err) => {
+          console.error('Erreur mise à jour mot de passe:', err);
+          alert(`Erreur lors de la mise à jour du mot de passe sur le serveur.`);
+        }
       });
-    } else if (newPwd) {
-      alert(`Mot de passe mis à jour pour ${user.prenom} ${user.nom}.`);
     }
   }
 
@@ -260,14 +251,11 @@ export class UsersListComponent implements OnInit {
       if (user.idNum) {
         this.utilisateurService.delete(user.idNum).subscribe({
           next: () => this.loadUsers(),
-          error: () => {
-            this.usersList = this.usersList.filter(u => u.id !== user.id);
-            this.applyFilter();
+          error: (err) => {
+            console.error('Erreur lors de la suppression de l utilisateur:', err);
+            alert("Erreur lors de la suppression de l'utilisateur sur le serveur.");
           }
         });
-      } else {
-        this.usersList = this.usersList.filter(u => u.id !== user.id);
-        this.applyFilter();
       }
     }
   }

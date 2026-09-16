@@ -3,9 +3,22 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+export interface AvoirVersementModel {
+  bulletinId?: number;
+  fichePaie: string;
+  periode: string;
+  datePaiement?: string;
+  montant: number;
+  soldeApres?: number;
+}
+
 export interface AvoirModel {
   id?: number;
   avoirId?: number;
+  numero?: string;
+  reference?: string;
+  motif?: string;
+  motifAnnulation?: string;
   employeeId: string | number;
   employeeName?: string;
   matricule?: string;
@@ -14,8 +27,13 @@ export interface AvoirModel {
   salaryElementCode?: string;
   amount: number;
   montantRestant?: number;
+  montantVerse?: number;
+  versementMensuel?: number;
   echeance?: number;
+  dateDebut?: string | Date;
+  dateEcheance?: string | Date;
   statut: string;
+  versements?: AvoirVersementModel[];
 }
 
 @Injectable({
@@ -26,20 +44,28 @@ export class AvoirService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+  getAll(): Observable<AvoirModel[]> {
+    return this.http.get<AvoirModel[]>(this.apiUrl);
   }
 
-  getByEmployee(employeeId: number | string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/employee/${employeeId}`);
+  getById(id: number | string): Observable<AvoirModel> {
+    return this.http.get<AvoirModel>(`${this.apiUrl}/${id}`);
   }
 
-  create(payload: any): Observable<any> {
-    return this.http.post<any>(this.apiUrl, payload);
+  getByEmployee(employeeId: number | string): Observable<AvoirModel[]> {
+    return this.http.get<AvoirModel[]>(`${this.apiUrl}/employee/${employeeId}`);
   }
 
-  update(id: number, payload: any): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/${id}`, payload);
+  getNextReference(): Observable<{ reference: string }> {
+    return this.http.get<{ reference: string }>(`${this.apiUrl}/next-reference`);
+  }
+
+  create(payload: any): Observable<AvoirModel> {
+    return this.http.post<AvoirModel>(this.apiUrl, payload);
+  }
+
+  update(id: number, payload: any): Observable<AvoirModel> {
+    return this.http.put<AvoirModel>(`${this.apiUrl}/${id}`, payload);
   }
 
   delete(id: number): Observable<void> {

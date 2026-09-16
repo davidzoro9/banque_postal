@@ -6,7 +6,7 @@
         <mat-icon>storage</mat-icon>
       </div>
       <div>
-        <h1>Données de Base & Référentiels (DB)</h1>
+        <h1>Paramètres Généraux & Référentiels</h1>
         <p>Paramétrage centralisé de la structure organisationnelle, grille salariale conventionnelle et référentiels du système SIGRH.</p>
       </div>
     </div>
@@ -20,7 +20,7 @@
           <mat-icon>work</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">12</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.emploisCount ?? 0) }}</span>
           <span class="stat-label">Postes & Emplois</span>
         </div>
       </mat-card-content>
@@ -32,7 +32,7 @@
           <mat-icon>domain</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">8</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.directionsEtDeptsCount ?? 0) }}</span>
           <span class="stat-label">Directions & Depts</span>
         </div>
       </mat-card-content>
@@ -44,7 +44,7 @@
           <mat-icon>table_chart</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">15</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.grillesCount ?? 0) }}</span>
           <span class="stat-label">Grilles & Échelons</span>
         </div>
       </mat-card-content>
@@ -56,7 +56,7 @@
           <mat-icon>paid</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">10</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.indemnitesCount ?? 0) }}</span>
           <span class="stat-label">Indemnités & Types</span>
         </div>
       </mat-card-content>

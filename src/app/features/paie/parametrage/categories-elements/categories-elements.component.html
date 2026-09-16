@@ -8,8 +8,8 @@
       </div>
     </div>
     <div class="ph-actions" style="display: flex; gap: 10px; align-items: center;">
-      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Générer les catégories bancaires BPBF" style="border-radius: 8px;">
-        <mat-icon>auto_awesome</mat-icon> Données Banque BPBF
+      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Actualiser depuis le serveur" style="border-radius: 8px;">
+        <mat-icon>refresh</mat-icon> Actualiser
       </button>
       <button mat-raised-button class="btn-new" (click)="openAddModal()">
         <mat-icon>add</mat-icon> Nouvelle Catégorie
@@ -33,20 +33,21 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Table des Catégories (Strictement Code et Nom) -->
+  <!-- Table des Catégories -->
   <mat-card class="table-card">
     <div class="table-wrapper">
       <table class="custom-table">
         <thead>
           <tr>
-            <th style="width: 250px;">Code</th>
-            <th>Nom</th>
-            <th style="text-align: center; width: 120px;">Actions</th>
+            <th style="width: 220px;">Code</th>
+            <th>Nom de la Catégorie</th>
+            <th style="width: 160px; text-align: center;">Type Associé</th>
+            <th class="col-actions" style="text-align: center; width: 120px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (c of filteredList; track c.id) {
-            <tr>
+            <tr (dblclick)="openEditModal(c)" title="Double-cliquez pour modifier" style="cursor: pointer;">
               <td>
                 <span class="code-badge">{{ c.code }}</span>
               </td>
@@ -54,11 +55,20 @@
                 <strong class="cat-name">{{ c.name }}</strong>
               </td>
               <td style="text-align: center;">
+                @if (c.type === 'GAIN') {
+                  <span class="badge-type badge-gain">GAIN</span>
+                } @else if (c.type === 'RETENUE') {
+                  <span class="badge-type badge-retenue">RETENUE</span>
+                } @else {
+                  <span class="badge-type badge-patronale">PATRONALE</span>
+                }
+              </td>
+              <td class="col-actions" style="text-align: center;">
                 <div class="action-btns">
-                  <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(c)">
+                  <button mat-icon-button color="primary" title="Modifier la catégorie" (click)="openEditModal(c); $event.stopPropagation()">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteCategory(c)">
+                  <button mat-icon-button color="warn" title="Supprimer la catégorie" (click)="deleteCategory(c); $event.stopPropagation()">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
@@ -67,7 +77,7 @@
           }
           @if (filteredList.length === 0) {
             <tr>
-              <td colspan="3" style="text-align: center; padding: 36px; color: #94a3b8;">
+              <td colspan="4" style="text-align: center; padding: 36px; color: #94a3b8;">
                 <mat-icon style="font-size: 36px; width: 36px; height: 36px;">category</mat-icon>
                 <div>Aucune catégorie enregistrée</div>
               </td>
@@ -78,7 +88,7 @@
     </div>
   </mat-card>
 
-  <!-- MODAL : Création / Modification (Strictement Code et Nom) -->
+  <!-- MODAL : Création / Modification -->
   @if (showDialog) {
     <div class="modal-backdrop custom-modal-overlay">
       <div class="modal-container">
@@ -101,8 +111,19 @@
 
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Nom *</mat-label>
+                <mat-label>Nom de la Catégorie *</mat-label>
                 <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Salaire de Base">
+              </mat-form-field>
+            </div>
+
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Type de Catégorie *</mat-label>
+                <mat-select [(ngModel)]="formModel.type">
+                  <mat-option value="GAIN">GAIN (Salaire, Primes, Indemnités, Rappels...)</mat-option>
+                  <mat-option value="RETENUE">RETENUE (Cotisations, IUTS, Précomptes, Prêts...)</mat-option>
+                  <mat-option value="PATRONALE">PATRONALE (Charges patronales, Cotisations patronales, TPA...)</mat-option>
+                </mat-select>
               </mat-form-field>
             </div>
           </div>

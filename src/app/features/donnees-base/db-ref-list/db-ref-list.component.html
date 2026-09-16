@@ -14,6 +14,56 @@
     </button>
   </div>
 
+  <!-- ── SOUS-ONGLETS OFFICIELS BPBF (Grille Indemnitaire - Annexe III) ── -->
+  @if (type === 'param-indemnite') {
+    <div class="indemnite-tabs-wrapper">
+      <button type="button" class="indemnite-tab-card"
+              [class.active]="indemniteTab === 'ORDINAIRE'"
+              (click)="setIndemniteTab('ORDINAIRE')">
+        <div class="itc-icon ordinaire">
+          <mat-icon>groups</mat-icon>
+        </div>
+        <div class="itc-content">
+          <div class="itc-header">
+            <span class="itc-title">1. Grille Statutaire</span>
+            <span class="itc-badge">{{ countIndemniteByTab('ORDINAIRE') }}</span>
+          </div>
+          <span class="itc-sub">Logement, Transport, Sujétion (selon Groupe & Catégorie)</span>
+        </div>
+      </button>
+
+      <button type="button" class="indemnite-tab-card"
+              [class.active]="indemniteTab === 'NOMINATION'"
+              (click)="setIndemniteTab('NOMINATION')">
+        <div class="itc-icon nomination">
+          <mat-icon>workspace_premium</mat-icon>
+        </div>
+        <div class="itc-content">
+          <div class="itc-header">
+            <span class="itc-title">2. Indemnités de Nomination</span>
+            <span class="itc-badge">{{ countIndemniteByTab('NOMINATION') }}</span>
+          </div>
+          <span class="itc-sub">Directeur, Responsable, Chef de Service, Chef d'Agence</span>
+        </div>
+      </button>
+
+      <button type="button" class="indemnite-tab-card"
+              [class.active]="indemniteTab === 'SPECIFIQUE'"
+              (click)="setIndemniteTab('SPECIFIQUE')">
+        <div class="itc-icon specifique">
+          <mat-icon>point_of_sale</mat-icon>
+        </div>
+        <div class="itc-content">
+          <div class="itc-header">
+            <span class="itc-title">3. Primes Spécifiques</span>
+            <span class="itc-badge">{{ countIndemniteByTab('SPECIFIQUE') }}</span>
+          </div>
+          <span class="itc-sub">Caisse, Cash Point, Astreinte (Chauffeur, Assistante...)</span>
+        </div>
+      </button>
+    </div>
+  }
+
   <!-- Filtre / Recherche -->
   <mat-card class="filter-card">
     <mat-card-content>
@@ -51,6 +101,53 @@
             <td mat-cell *matCellDef="let row"><strong>{{ row.libelle }}</strong></td>
           </ng-container>
 
+          <!-- Colonne Rattachement Parent (pour Service, Direction et Département) -->
+          <ng-container matColumnDef="parentRattachement">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Rattachement</th>
+            <td mat-cell *matCellDef="let row">
+              @if (type === 'service') {
+                @if (getParentServiceInfo(row).type === 'DIRECTION') {
+                  <span style="display: inline-flex; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #bae6fd;">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">domain</mat-icon>
+                    <span>Dir: {{ getParentServiceInfo(row).label }}</span>
+                  </span>
+                } @else {
+                  <span style="display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #b91c1c; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; border: 1px solid #fecaca;">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">warning</mat-icon>
+                    Non rattaché
+                  </span>
+                }
+              } @else if (type === 'direction') {
+                @if (getParentDirectionInfo(row).type === 'PARENT_DIR') {
+                  <span style="display: inline-flex; align-items: center; gap: 5px; background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #bfdbfe;">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">account_tree</mat-icon>
+                    <span>Rattachée à: {{ getParentDirectionInfo(row).label }}</span>
+                  </span>
+                } @else if (getParentDirectionInfo(row).type === 'DEPARTEMENT') {
+                  <span style="display: inline-flex; align-items: center; gap: 5px; background: #f3e8ff; color: #6b21a8; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #e9d5ff;">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">account_tree</mat-icon>
+                    <span>Dép: {{ getParentDirectionInfo(row).label }}</span>
+                  </span>
+                } @else if (getParentDirectionInfo(row).type === 'AGENCE') {
+                  <span style="display: inline-flex; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #bae6fd;">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">store</mat-icon>
+                    <span>Agence: {{ getParentDirectionInfo(row).label }}</span>
+                  </span>
+                } @else {
+                  <span style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; color: #166534; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; border: 1px solid #bbf7d0;">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">corporate_fare</mat-icon>
+                    DG (Sommet)
+                  </span>
+                }
+              } @else if (type === 'departement') {
+                <span style="display: inline-flex; align-items: center; gap: 5px; background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #bfdbfe;">
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">domain</mat-icon>
+                  <span>{{ getParentDepartmentInfo(row).label }}</span>
+                </span>
+              }
+            </td>
+          </ng-container>
+
           <!-- Colonne spécifique à Paramétrage Retenue -->
           <ng-container matColumnDef="typeRetenue">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Type de retenue</th>
@@ -77,13 +174,24 @@
 
           <!-- Colonnes spécifiques à Paramétrage Indemnité -->
           <ng-container matColumnDef="typeIndemnite">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type d'indemnité</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+              {{ indemniteTab === 'SPECIFIQUE' ? 'Type de Prime' : 'Type d\'indemnité' }}
+            </th>
             <td mat-cell *matCellDef="let row"><strong>{{ row.typeIndemnite || row.libelle }}</strong></td>
           </ng-container>
 
           <ng-container matColumnDef="fonction">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fonction</th>
-            <td mat-cell *matCellDef="let row">{{ row.fonction || '-' }}</td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fonction de Nomination</th>
+            <td mat-cell *matCellDef="let row">
+              <span style="font-weight: 600; color: #1e293b;">{{ row.fonctionLibelle || row.fonction || '-' }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="emploi">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Emploi / Poste Spécifique</th>
+            <td mat-cell *matCellDef="let row">
+              <span style="font-weight: 600; color: #1e293b;">{{ row.emploiLibelle || row.emploi || '-' }}</span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="grade">
@@ -276,7 +384,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Catégorie / Classe)</mat-label>
+        <mat-label>Catégorie / Classe</mat-label>
         <mat-select formControlName="categorieId" (selectionChange)="formGroup.patchValue({ code: $event.value })" placeholder="Sélectionner la catégorie/classe">
           @for (cat of categories; track cat.id) {
             <mat-option [value]="cat.id">
@@ -284,7 +392,6 @@
             </mat-option>
           }
         </mat-select>
-        <!-- <mat-hint>Chargée automatiquement selon le Groupe</mat-hint> -->
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
@@ -322,10 +429,9 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Pourcentage / Taux (%)</mat-label>
+        <mat-label>Pourcentage / Taux</mat-label>
         <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">percent</mat-icon> -->
         <input matInput type="number" formControlName="taux" placeholder="Ex: 5.5" min="0" max="100" step="0.1">
-        <mat-hint>0 si Barème ou Montant Variable</mat-hint>
       </mat-form-field>
 
       <mat-form-field appearance="outline" style="width: 100%;">
@@ -350,56 +456,43 @@
         }
       </mat-form-field>
     } @else if (type === 'param-indemnite') {
-      <!-- ─── REGLAGE DE L'INDEMNITE SELON LA GRILLE OFFICIELLE BPBF ──────────────── -->
+      <!-- ─── CONFIGURATION INDEMNITE (BARÈME OFFICIEL BPBF) ──────────────── -->
       
-      <!-- 1. Sélection du Type de Règle (Boutons / Cartes) -->
-      <!-- <div style="margin-bottom: 16px;">
-        <label style="font-size: 13px; font-weight: 700; color: #374151; display: block; margin-bottom: 8px;">
-          <mat-icon style="vertical-align: middle; font-size: 18px; color: #0060B3; margin-right: 4px;">tune</mat-icon>
-          Catégorie d'Indemnité (Barème Officiel BPBF) *
-        </label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-
-          <label (click)="onRegleTypeChange('ORDINAIRE')"
-                 style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; border: 2px solid; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s;"
-                 [style.borderColor]="regleType === 'ORDINAIRE' ? '#2e7d32' : '#e2e8f0'"
-                 [style.background]="regleType === 'ORDINAIRE' ? '#e8f5e9' : '#f8fafc'">
-            <mat-icon [style.color]="regleType === 'ORDINAIRE' ? '#2e7d32' : '#94a3b8'" style="font-size: 22px; width: 22px; height: 22px;">groups</mat-icon>
-            <span style="font-weight: 700; font-size: 12px;" [style.color]="regleType === 'ORDINAIRE' ? '#2e7d32' : '#374151'">Ordinaire</span>
-            <span style="font-size: 10px; color: #6b7280;">Groupe & Catégorie</span>
-          </label>
-
-          <label (click)="onRegleTypeChange('NOMINATION')"
-                 style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; border: 2px solid; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s;"
-                 [style.borderColor]="regleType === 'NOMINATION' ? '#e65100' : '#e2e8f0'"
-                 [style.background]="regleType === 'NOMINATION' ? '#fff3e0' : '#f8fafc'">
-            <mat-icon [style.color]="regleType === 'NOMINATION' ? '#e65100' : '#94a3b8'" style="font-size: 22px; width: 22px; height: 22px;">workspace_premium</mat-icon>
-            <span style="font-weight: 700; font-size: 12px;" [style.color]="regleType === 'NOMINATION' ? '#e65100' : '#374151'">Nomination</span>
-            <span style="font-size: 10px; color: #6b7280;">Directeur, Chef...</span>
-          </label>
-
-          <label (click)="onRegleTypeChange('SPECIFIQUE')"
-                 style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; border: 2px solid; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s;"
-                 [style.borderColor]="regleType === 'SPECIFIQUE' ? '#0284c7' : '#e2e8f0'"
-                 [style.background]="regleType === 'SPECIFIQUE' ? '#e0f2fe' : '#f8fafc'">
-            <mat-icon [style.color]="regleType === 'SPECIFIQUE' ? '#0284c7' : '#94a3b8'" style="font-size: 22px; width: 22px; height: 22px;">point_of_sale</mat-icon>
-            <span style="font-weight: 700; font-size: 12px;" [style.color]="regleType === 'SPECIFIQUE' ? '#0369a1' : '#374151'">Spécifique</span>
-            <span style="font-size: 10px; color: #6b7280;">Caissier, Astreinte...</span>
-          </label>
+      <!-- 1. Sélecteur de Catégorie / Règle -->
+      <div class="regle-type-selector">
+        <div class="regle-card" [class.active]="regleType === 'ORDINAIRE'" (click)="onRegleTypeChange('ORDINAIRE')">
+          <mat-icon>groups</mat-icon>
+          <span class="regle-title">1. Statutaire</span>
+          <span class="regle-desc">Groupe & Catégorie</span>
         </div>
-      </div> -->
+        <div class="regle-card" [class.active]="regleType === 'NOMINATION'" (click)="onRegleTypeChange('NOMINATION')">
+          <mat-icon>workspace_premium</mat-icon>
+          <span class="regle-title">2. Nomination</span>
+          <span class="regle-desc">Fonction Managériale</span>
+        </div>
+        <div class="regle-card" [class.active]="regleType === 'SPECIFIQUE'" (click)="onRegleTypeChange('SPECIFIQUE')">
+          <mat-icon>point_of_sale</mat-icon>
+          <span class="regle-title">3. Spécifique</span>
+          <span class="regle-desc">Poste Spécifique</span>
+        </div>
+      </div>
 
-      <!-- 2. Type d'Indemnité dynamique selon la catégorie choisie -->
+      <!-- 2. Type d'Indemnité ou Prime -->
       <mat-form-field appearance="outline" style="width: 100%; margin-top: 5px;">
-        <mat-label>Type d'indemnité *</mat-label>
+        <mat-label>{{ regleType === 'SPECIFIQUE' ? 'Type de prime / indemnité *' : 'Type d\'indemnité *' }}</mat-label>
         <mat-select formControlName="typeIndemniteId" placeholder="Sélectionner le type d'indemnité">
           @for (t of typesIndemnite; track t.id) {
             <mat-option [value]="t.id">{{ t.libelle || t.code }}</mat-option>
           }
         </mat-select>
+        @if (formGroup.get('typeIndemniteId')?.hasError('required')) {
+          <mat-error>Le type d'indemnité est obligatoire</mat-error>
+        }
       </mat-form-field>
 
-        <div style="width: 100%; margin-top: 5px;">
+      <!-- 3. CAS ORDINAIRE / STATUTAIRE : Groupe et Catégorie -->
+      @if (regleType === 'ORDINAIRE') {
+        <div class="form-row-2">
           <mat-form-field appearance="outline" style="width: 100%;">
             <mat-label>Groupe *</mat-label>
             <mat-select formControlName="gradeId" (selectionChange)="onIndemniteGradeChange()" placeholder="Sélectionner un groupe">
@@ -407,6 +500,9 @@
                 <mat-option [value]="g.id">{{ g.libelle || g.code }}</mat-option>
               }
             </mat-select>
+            @if (formGroup.get('gradeId')?.hasError('required')) {
+              <mat-error>Le groupe est obligatoire</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline" style="width: 100%;">
@@ -416,46 +512,51 @@
                 <mat-option [value]="c.id">{{ c.libelle || c.code }}</mat-option>
               }
             </mat-select>
-            <mat-hint>Filtré selon Paramétrage Groupe</mat-hint>
+            @if (formGroup.get('categorieId')?.hasError('required')) {
+              <mat-error>La catégorie est obligatoire</mat-error>
+            }
           </mat-form-field>
         </div>
+      }
 
-        <!-- CAS NOMINATION : Fonction -->
+      <!-- 4. CAS NOMINATION : Fonction Managériale -->
+      @if (regleType === 'NOMINATION') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Fonction *</mat-label>
+          <mat-label>Fonction de Nomination (Direction/Service/Agence) *</mat-label>
           <mat-select formControlName="fonctionId" placeholder="Sélectionner la fonction de nomination">
-            @for (f of fonctions; track f.id || f.code) {
+            @for (f of fonctionsNomination; track f.id || f.code) {
               <mat-option [value]="f.id || f.code">{{ f.libelle || f.name || f.code }}</mat-option>
             }
           </mat-select>
+          @if (formGroup.get('fonctionId')?.hasError('required')) {
+            <mat-error>La fonction de nomination est obligatoire</mat-error>
+          }
         </mat-form-field>
+      }
 
-        <!-- <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Poste / Métier Spécifique *</mat-label>
-          <mat-select formControlName="fonctionId" placeholder="Sélectionner le poste spécifique">
-            @for (f of fonctions; track f.id || f.code) {
-              <mat-option [value]="f.id || f.code">{{ f.libelle || f.name || f.code }}</mat-option>
+      <!-- 5. CAS SPÉCIFIQUE : Emploi / Poste Spécifique -->
+      @if (regleType === 'SPECIFIQUE') {
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Emploi / Poste Spécifique (Guichetier / Caissier, Comptable...) *</mat-label>
+          <mat-select formControlName="emploiId" placeholder="Sélectionner l'emploi spécifique">
+            @for (emp of emplois; track emp.id || emp.code) {
+              <mat-option [value]="emp.id || emp.code">{{ emp.libelle || emp.name || emp.code }}</mat-option>
             }
           </mat-select>
-        </mat-form-field> -->
+          @if (formGroup.get('emploiId')?.hasError('required')) {
+            <mat-error>L'emploi spécifique est obligatoire</mat-error>
+          }
+        </mat-form-field>
+      }
 
-      <!-- 4. Taux / Montant -->
+      <!-- 6. Montant (FCFA) -->
       <mat-form-field appearance="outline" style="width: 100%;">
-        <mat-label>Taux / Montant *</mat-label>
-        <!-- <mat-icon matPrefix style="color: #2e7d32; margin-right: 4px;">payments</mat-icon> -->
+        <mat-label>Montant (FCFA) *</mat-label>
         <input matInput type="number" formControlName="taux" placeholder="0" min="0">
+        @if (formGroup.get('taux')?.hasError('required')) {
+          <mat-error>Le montant est obligatoire</mat-error>
+        }
       </mat-form-field>
-
-      <!-- <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Taux exonéré (%)</mat-label>
-          <input matInput type="number" formControlName="tauxExoneration" min="0" max="100">
-        </mat-form-field>
-        <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Plafond exonéré</mat-label>
-          <input matInput type="number" formControlName="plafondExoneration" min="0">
-        </mat-form-field>
-      </div> -->
 
     } @else if (type === 'fonction') {
       <!-- ─── FORMULAIRE SPÉCIFIQUE POUR LES FONCTIONS ──────────────────────── -->
@@ -651,7 +752,6 @@
             <mat-option [value]="cat.id">{{ cat.libelle || cat.code }}</mat-option>
           }
         </mat-select>
-        <!-- <mat-hint>Une ligne correspond à une association groupe/catégorie</mat-hint> -->
       </mat-form-field>
 
     } @else if (type === 'param-retraite') {
@@ -769,33 +869,40 @@
 
       @if (type === 'categorie') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Taux d'abattement IUTS (%)</mat-label>
+          <mat-label>Taux d'abattement IUTS</mat-label>
           <input matInput type="number" formControlName="tauxAbattement" placeholder="Ex: 20" min="0" max="100">
-          <mat-hint>Taux d'abattement sur le salaire brut servant à calculer l'IUTS</mat-hint>
         </mat-form-field>
       }
 
       @if (type === 'departement') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Directeur de ce {{ type === 'departement' ? 'département' : 'cette direction' }}</mat-label>
-          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">person</mat-icon> -->
-          <mat-select formControlName="directeurId" placeholder="Sélectionner le directeur">
-            <mat-option [value]="null">Aucun responsable désigné</mat-option>
-            @for (emp of directeursList; track emp.id) {
-              <mat-option [value]="emp.id">
-                {{ emp.libelle }} @if (emp.description) { ({{ emp.description }}) }
-              </mat-option>
+          <mat-label>Direction de rattachement</mat-label>
+          <mat-select formControlName="directionId" placeholder="Sélectionner la direction de rattachement">
+            <mat-option [value]="null">Direction Générale Adjointe (DGA) [Par défaut]</mat-option>
+            @for (dir of directions; track dir.id) {
+              <mat-option [value]="dir.id">{{ dir.libelle }}</mat-option>
             }
           </mat-select>
+          <mat-hint>Ex: Rattaché à la Direction Générale Adjointe (DGA)</mat-hint>
         </mat-form-field>
       }
 
       @if (type === 'direction') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Agence</mat-label>
-          <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">account_tree</mat-icon> -->
-          <mat-select formControlName="agenceId" placeholder="Sélectionner une agence">
-            <mat-option [value]="null">Aucune agence</mat-option>
+          <mat-label>Direction parente / Rattachement hiérarchique</mat-label>
+          <mat-select formControlName="parentDirectionId" placeholder="Sélectionner la direction parente (optionnel)">
+            <mat-option [value]="null">Aucune (Direction Générale / Sommet hiérarchique)</mat-option>
+            @for (pDir of availableParentDirections; track pDir.id) {
+              <mat-option [value]="pDir.id">{{ pDir.libelle }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Ex: La DGA est rattachée à la DG ; les Directions opérationnelles sont rattachées à la DGA</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%; margin-top: 10px;">
+          <mat-label>Agence associée (Optionnel)</mat-label>
+          <mat-select formControlName="agenceId" placeholder="Sélectionner une agence (optionnel)">
+            <mat-option [value]="null">Aucune agence (Siège / Direction centrale)</mat-option>
             @for (agence of agences; track agence.id) {
               <mat-option [value]="agence.id">{{ agence.libelle }}</mat-option>
             }
@@ -805,10 +912,9 @@
 
       @if (type === 'param-prise-en-charge') {
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Valeur / Limite (Âge max ou nombre de charges)</mat-label>
+          <mat-label>Valeur / Limite</mat-label>
           <!-- <mat-icon matPrefix style="color: #0060B3; margin-right: 4px;">tune</mat-icon> -->
           <input matInput type="number" formControlName="taux" placeholder="Ex: 18, 20 ou 4" min="0" max="100">
-          <mat-hint>Entrer l'âge maximum pour les enfants ou le nombre max de charges admises</mat-hint>
         </mat-form-field>
       }
     } @else {
@@ -851,27 +957,31 @@
       </div>
     }
 
-    <!-- Rattachements explicites pour éviter de confondre les identités des deux référentiels. -->
+    <!-- Rattachement hiérarchique du Service : Direction exclusivement -->
     @if (type === 'service') {
-      <div appearance="outline" style="width: 100%;">
+      <div class="service-rattachement-block" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 8px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #0f172a; font-weight: 600; font-size: 13px;">
+          <mat-icon style="color: #0060B3; font-size: 18px; width: 18px; height: 18px;">domain</mat-icon>
+          <span>Direction de Tutelle *</span>
+        </div>
+        <p style="font-size: 12px; color: #64748b; margin-top: 0; margin-bottom: 12px; line-height: 1.4;">
+          Conformément à l'organigramme de la BPBF, chaque service est obligatoirement et exclusivement rattaché à sa Direction de tutelle.
+        </p>
+
         <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Département / Direction</mat-label>
-          <mat-select formControlName="directionId" (selectionChange)="onServiceDirectionChange($event.value)">
-            <mat-option [value]="null">Aucune</mat-option>
+          <mat-label>Direction de rattachement *</mat-label>
+          <mat-select formControlName="directionId" placeholder="Sélectionner la Direction">
             @for (dir of directions; track dir.id) {
               <mat-option [value]="dir.id">{{ dir.libelle }}</mat-option>
             }
           </mat-select>
+          @if (formGroup.get('directionId')?.hasError('required')) {
+            <mat-error>La Direction de rattachement est obligatoire</mat-error>
+          }
+          @if (formGroup.get('directionId')?.value) {
+            <mat-hint style="color: #0060B3; font-weight: 500;">✓ Rattaché à la direction sélectionnée</mat-hint>
+          }
         </mat-form-field>
-        <!-- <mat-form-field appearance="outline" style="width: 100%;">
-          <mat-label>Département de rattachement</mat-label>
-          <mat-select formControlName="departementId" (selectionChange)="onServiceDepartmentChange($event.value)">
-            <mat-option [value]="null">Aucun</mat-option>
-            @for (dep of departements; track dep.id) {
-              <mat-option [value]="dep.id">{{ dep.libelle }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field> -->
       </div>
     }
 

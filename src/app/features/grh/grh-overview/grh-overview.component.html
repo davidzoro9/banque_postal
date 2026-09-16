@@ -6,7 +6,7 @@
         <mat-icon>people</mat-icon>
       </div>
       <div>
-        <h1>Gestion Administrative (GA)</h1>
+        <h1>Gestion Administrative</h1>
         <p>Administration centralisée des agents, fiches individuelles, suivi des présences, congés et contrats.</p>
       </div>
     </div>
@@ -20,7 +20,7 @@
           <mat-icon>badge</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">148</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.agentsActifs ?? 0) }}</span>
           <span class="stat-label">Agents Actifs</span>
         </div>
       </mat-card-content>
@@ -32,7 +32,7 @@
           <mat-icon>beach_access</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">12</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.demandesCongeEnAttente ?? 0) }}</span>
           <span class="stat-label">Demandes de Congé</span>
         </div>
       </mat-card-content>
@@ -44,7 +44,7 @@
           <mat-icon>event_busy</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">5</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.absencesSignalees ?? 0) }}</span>
           <span class="stat-label">Absences Signalées</span>
         </div>
       </mat-card-content>
@@ -56,7 +56,7 @@
           <mat-icon>article</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">8</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.contratsARenouveler ?? 0) }}</span>
           <span class="stat-label">Contrats à Renouveler</span>
         </div>
       </mat-card-content>

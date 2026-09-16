@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../../environments/environment';
+import { SalaryParametrageService, SalaryCategoryDto } from '../../services/salary-parametrage.service';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -8,11 +7,8 @@ export interface SalaryCategoryModel {
   id: number;
   code: string;
   name: string;
+  type: 'GAIN' | 'RETENUE' | 'PATRONALE';
 }
-
-const STORAGE_KEY = 'bpbf_salary_categories_storage';
-
-export const DEFAULT_BANK_CATEGORIES: SalaryCategoryModel[] = [];
 
 @Component({
   selector: 'app-categories-elements',
@@ -30,23 +26,26 @@ export class CategoriesElementsComponent implements OnInit {
   formModel: SalaryCategoryModel = this.getEmptyForm();
   isSaving: boolean = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private parametrageService: SalaryParametrageService) {}
 
   ngOnInit(): void {
     this.loadCategories();
   }
 
   loadCategories(): void {
-    this.http.get<any[]>(`${environment.apiUrl}/salary-categories`).pipe(
-      catchError(() => of(null))
+    this.parametrageService.getAllCategories().pipe(
+      catchError(err => {
+        console.error('Erreur chargement catégories:', err);
+        return of([]);
+      })
     ).subscribe(data => {
       if (data && data.length > 0) {
         this.categoriesList = data.map(item => ({
-          id: item.id,
+          id: Number(item.id),
           code: item.code || '',
-          name: item.name || item.libelle || ''
+          name: item.name || '',
+          type: (item.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
         }));
-        this.saveToStorage();
       } else {
         this.categoriesList = [];
       }
@@ -88,50 +87,47 @@ export class CategoriesElementsComponent implements OnInit {
     if (!this.formModel.code || !this.formModel.name) return;
 
     this.isSaving = true;
-    const payload = {
+    const payload: SalaryCategoryDto = {
       code: this.formModel.code.trim().toUpperCase(),
-      name: this.formModel.name.trim()
+      name: this.formModel.name.trim(),
+      type: this.formModel.type || 'GAIN'
     };
 
     if (this.editingCategory && this.editingCategory.id) {
-      const idx = this.categoriesList.findIndex(c => c.id === this.editingCategory!.id);
-      if (idx !== -1) {
-        this.categoriesList[idx] = { ...this.editingCategory, ...payload };
-        this.saveToStorage();
-      }
-
-      this.http.put(`${environment.apiUrl}/salary-categories/${this.editingCategory.id}`, payload).pipe(
-        catchError(() => of(null))
+      this.parametrageService.updateCategory(this.editingCategory.id, payload).pipe(
+        catchError(err => {
+          console.error('Erreur mise à jour catégorie:', err);
+          return of(null);
+        })
       ).subscribe(() => {
         this.isSaving = false;
-        this.applyFilter();
         this.closeModal();
+        this.loadCategories();
       });
     } else {
-      const newId = Date.now();
-      const newItem: SalaryCategoryModel = { id: newId, ...payload };
-      this.categoriesList.unshift(newItem);
-      this.saveToStorage();
-
-      this.http.post(`${environment.apiUrl}/salary-categories`, payload).pipe(
-        catchError(() => of(null))
+      this.parametrageService.createCategory(payload).pipe(
+        catchError(err => {
+          console.error('Erreur création catégorie:', err);
+          return of(null);
+        })
       ).subscribe(() => {
         this.isSaving = false;
-        this.applyFilter();
         this.closeModal();
+        this.loadCategories();
       });
     }
   }
 
   deleteCategory(cat: SalaryCategoryModel): void {
-    if (confirm(`Supprimer la catégorie "${cat.name}" ?`)) {
-      this.categoriesList = this.categoriesList.filter(c => c.id !== cat.id);
-      this.saveToStorage();
-      this.applyFilter();
-
-      this.http.delete(`${environment.apiUrl}/salary-categories/${cat.id}`).pipe(
-        catchError(() => of(null))
-      ).subscribe();
+    if (confirm(`Confirmez-vous la suppression de la catégorie "${cat.name}" (${cat.code}) ?`)) {
+      this.parametrageService.deleteCategory(cat.id).pipe(
+        catchError(err => {
+          console.error('Erreur suppression catégorie:', err);
+          return of(null);
+        })
+      ).subscribe(() => {
+        this.loadCategories();
+      });
     }
   }
 
@@ -139,26 +135,12 @@ export class CategoriesElementsComponent implements OnInit {
     this.loadCategories();
   }
 
-  private saveToStorage(): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.categoriesList));
-    } catch (e) {}
-  }
-
-  private getFromStorage(): SalaryCategoryModel[] | null {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   private getEmptyForm(): SalaryCategoryModel {
     return {
       id: 0,
       code: '',
-      name: ''
+      name: '',
+      type: 'GAIN'
     };
   }
 }

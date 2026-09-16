@@ -1,124 +1,995 @@
-<div class="organigramme-page">
+<div class="organigramme-page" [class.fullscreen-mode]="isFullScreen">
 
-  <div class="page-header">
-    <div class="header-content">
+  <!-- =============================== -->
+  <!-- BARRE D'EN-TÊTE ET OUTILS RH -->
+  <!-- =============================== -->
+  <div class="page-header no-print">
+    <div class="header-left">
       <div class="header-icon-box">
         <mat-icon>account_tree</mat-icon>
       </div>
       <div>
-        <h1>Organigramme Institutionnel BPBF</h1>
-        <p>Structure hiérarchique : Agence (Sommet) ➔ Directions & Départements (Même niveau 2) ➔ Services (Niveau 3)</p>
+        <h1 class="page-title">Organigramme Institutionnel — Banque Postale du Burkina Faso</h1>
+        <p class="page-subtitle">Cartographie officielle des Directions, Départements, Services et Effectifs en temps réel</p>
       </div>
+    </div>
+
+    <!-- Actions & Contrôles -->
+    <div class="header-actions">
+      <!-- Recherche rapide -->
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Rechercher une unité ou un agent..."
+          class="search-input"
+        />
+        @if (searchTerm) {
+          <button class="clear-btn" (click)="searchTerm = ''">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <!-- Bascule de vue -->
+      <div class="view-toggle">
+        <button
+          type="button"
+          class="toggle-btn"
+          [class.active]="activeView === 'chart'"
+          (click)="activeView = 'chart'"
+          matTooltip="Vue Graphique Arbre"
+        >
+          <mat-icon>schema</mat-icon>
+          <span>Arbre</span>
+        </button>
+        <button
+          type="button"
+          class="toggle-btn"
+          [class.active]="activeView === 'table'"
+          (click)="activeView = 'table'"
+          matTooltip="Vue Tableau Synthétique"
+        >
+          <mat-icon>table_chart</mat-icon>
+          <span>Tableau</span>
+        </button>
+      </div>
+
+      <!-- Contrôles de Zoom -->
+      <div class="zoom-controls">
+        <button type="button" class="ctrl-btn" (click)="zoomOut()" matTooltip="Zoom arrière">
+          <mat-icon>remove</mat-icon>
+        </button>
+        <span class="zoom-indicator">{{ (zoomLevel * 100).toFixed(0) }}%</span>
+        <button type="button" class="ctrl-btn" (click)="zoomIn()" matTooltip="Zoom avant">
+          <mat-icon>add</mat-icon>
+        </button>
+        <button type="button" class="ctrl-btn" (click)="resetZoom()" matTooltip="Réinitialiser le zoom">
+          <mat-icon>restart_alt</mat-icon>
+        </button>
+      </div>
+
+      <!-- Plein écran -->
+      <button
+        type="button"
+        class="action-btn"
+        (click)="toggleFullScreen()"
+        [matTooltip]="isFullScreen ? 'Quitter le plein écran' : 'Mode Plein Écran'"
+      >
+        <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+
+      <!-- Impression -->
+      <button
+        type="button"
+        class="action-btn print-btn"
+        (click)="printChart()"
+        matTooltip="Imprimer au format paysage officiel"
+      >
+        <mat-icon>print</mat-icon>
+        <span>Imprimer</span>
+      </button>
     </div>
   </div>
 
-  <!-- Sélecteur d'Agence -->
-  <mat-card class="agence-card">
-    <mat-card-content style="display:flex;align-items:center;gap:16px">
-      <mat-icon style="color:#0060B3;font-size:28px;width:28px;height:28px">store</mat-icon>
-      <div style="flex:1">
-        <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700">Sommet de la Structure — Niveau 1</div>
-        <div style="font-size:18px;font-weight:800;color:#0060B3">
-          {{ selectedAgence }}
-        </div>
-      </div>
-      <mat-form-field appearance="outline" style="width:260px;margin-bottom:-1.25em">
-        <mat-label>Changer d'agence</mat-label>
-        <mat-select [(ngModel)]="selectedAgence">
-          @for (a of agences; track a.code) {
-            <mat-option [value]="a.libelle">{{ a.libelle }}</mat-option>
-          }
-          @if (agences.length === 0) {
-            <mat-option value="Agence Centrale">Agence Centrale (Siège)</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Arbre Hiérarchique Visualisation -->
-  <div class="org-tree">
-    
-    <!-- Ligne verticale venant de l'Agence -->
-    <div class="tree-line-main"></div>
-
-    <!-- NIVEAU 2 : DIRECTIONS ET DÉPARTEMENTS AU MÊME NIVEAU HIÉRARCHIQUE -->
-    <div class="level-2-header">
-      <span class="level-badge">Niveau 2 : Directions & Départements (Au même niveau d'équivalence)</span>
+  <!-- Indicateur de chargement -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement des structures organisationnelles et effectifs depuis PostgreSQL...</p>
     </div>
+  }
 
-    <div class="level-2-grid">
+  <!-- =============================== -->
+  <!-- VUE 1 : GRAPHIQUE ARBRE OFFICIEL -->
+  <!-- =============================== -->
+  @if (!isLoading && activeView === 'chart') {
+    <div class="chart-viewport" #chartContainer>
+      <div
+        class="chart-canvas"
+        [style.transform]="'scale(' + zoomLevel + ')'"
+        [style.transform-origin]="'top center'"
+      >
+
+        <!-- Titre Institutionnel Centré comme sur le document officiel -->
+        <div class="official-title-banner">
+          <h2 class="bpbf-title">Organigramme de la Banque Postale du Burkina Faso (BPBF)</h2>
+          <div class="title-underline"></div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- NIVEAU HAUT : CA + COMITÉS + LÉGENDE           -->
+        <!-- ============================================== -->
+        <div class="top-governance-section">
+
+          <!-- 3 COMITÉS DU CONSEIL D'ADMINISTRATION (JAUNE / AMBRE) -->
+          <div class="comites-row">
+            <!-- Comité Risques -->
+            <div
+              class="org-card card-comite"
+              [class.highlight]="isSearchMatch('Comité Risques')"
+              (click)="openNodeDetails({
+                title: 'Comité Risques',
+                type: 'COMITE',
+                categoryLabel: 'Comité du Conseil d\'Administration',
+                icon: 'gavel',
+                description: 'Comité spécialisé chargé de la surveillance globale des risques bancaires et opérationnels',
+                functionalLink: 'Direction Risque et conformité',
+                hierarchicalLink: 'Conseil d\'Administration (CA)'
+              })"
+            >
+              <div class="card-inner">
+                <span class="card-name">Comité Risques</span>
+                <span class="badge-count" matTooltip="Effectif ou membres">{{ getEmployeesForUnit('COMITE', 'Comité Risques').length }}</span>
+              </div>
+            </div>
+
+            <!-- Comité Audit -->
+            <div
+              class="org-card card-comite"
+              [class.highlight]="isSearchMatch('Comité Audit')"
+              (click)="openNodeDetails({
+                title: 'Comité Audit',
+                type: 'COMITE',
+                categoryLabel: 'Comité du Conseil d\'Administration',
+                icon: 'fact_check',
+                description: 'Comité spécialisé veillant à l\'exactitude des états financiers et à l\'efficacité du contrôle interne',
+                functionalLink: 'Direction Audit Interne',
+                hierarchicalLink: 'Conseil d\'Administration (CA)'
+              })"
+            >
+              <div class="card-inner">
+                <span class="card-name">Comité Audit</span>
+                <span class="badge-count" matTooltip="Effectif ou membres">{{ getEmployeesForUnit('COMITE', 'Comité Audit').length }}</span>
+              </div>
+            </div>
+
+            <!-- Comité supérieur de crédit -->
+            <div
+              class="org-card card-comite"
+              [class.highlight]="isSearchMatch('Comité supérieur de crédit')"
+              (click)="openNodeDetails({
+                title: 'Comité supérieur de crédit',
+                type: 'COMITE',
+                categoryLabel: 'Comité du Conseil d\'Administration',
+                icon: 'price_check',
+                description: 'Comité décisionnel supérieur pour l\'octroi et la validation des engagements de crédit stratégiques',
+                hierarchicalLink: 'Conseil d\'Administration (CA)'
+              })"
+            >
+              <div class="card-inner">
+                <span class="card-name">Comité supérieur de crédit</span>
+                <span class="badge-count" matTooltip="Effectif ou membres">{{ getEmployeesForUnit('COMITE', 'Comité supérieur de crédit').length }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- LIGNE CONNECTEUR HORIZONTALE DU CA VERS LES COMITÉS -->
+          <div class="ca-to-comites-connector"></div>
+
+          <!-- CONSEIL D'ADMINISTRATION (CA) -->
+          <div class="ca-center-wrapper">
+            <div
+              class="org-card card-navy card-ca"
+              [class.highlight]="isSearchMatch('Conseil d\'Administration')"
+              (click)="openNodeDetails({
+                title: 'Conseil d\'Administration (CA)',
+                type: 'CA',
+                categoryLabel: 'Organe de Gouvernance Suprême',
+                icon: 'account_balance',
+                description: 'Organe suprême d\'orientation stratégique et de gouvernance de la Banque Postale du Burkina Faso'
+              })"
+            >
+              <div class="card-inner">
+                <span class="card-name">Conseil d'Administration (CA)</span>
+                <span class="badge-count">{{ getEmployeesForUnit('CA', 'Conseil d\'Administration').length }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENCADRÉ LÉGENDE OFFICIELLE (EN HAUT À DROITE) -->
+          <div class="official-legend-box">
+            <div class="legend-header">Légende :</div>
+            <div class="legend-item">
+              <span class="line-sample solid-sample"></span>
+              <span class="legend-label">Lien hiérarchique</span>
+            </div>
+            <div class="legend-item">
+              <span class="line-sample dashed-sample"></span>
+              <span class="legend-label">Lien fonctionnel</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- NIVEAU MOYEN : DIRECTIONS DE CONTRÔLE + DG/DGA -->
+        <!-- ============================================== -->
+        <div class="executive-middle-section">
+
+          <!-- BLOC GAUCHE : DIRECTIONS DE CONTRÔLE (Rattachées au DG + Lien fonctionnel aux Comités) -->
+          <div class="control-directions-column">
+            
+            <!-- Lien fonctionnel pointillé depuis Comité Audit -->
+            <div class="functional-line-v dashed-audit"></div>
+
+            <!-- Direction Audit Interne -->
+            <div class="control-box-row">
+              <div
+                class="org-card card-grey card-control"
+                [class.highlight]="isSearchMatch('Direction Audit Interne')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Audit').id,
+                  code: getDirectionByPattern('Audit').code,
+                  title: 'Direction Audit Interne',
+                  type: 'DIR_CONTROLE',
+                  categoryLabel: 'Direction de Contrôle & Supervision',
+                  icon: 'security',
+                  description: 'Évaluation indépendante et objective des processus de management des risques et de contrôle interne',
+                  functionalLink: 'Comité Audit (Pointillé)',
+                  hierarchicalLink: 'Directeur Général (Ligne continue)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Audit Interne</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIR_CONTROLE', 'Direction Audit Interne').length }}</span>
+                </div>
+              </div>
+              <!-- Lien hiérarchique horizontal plein vers la tige du DG -->
+              <div class="control-to-dg-line"></div>
+            </div>
+
+            <!-- Lien fonctionnel pointillé depuis Comité Risques -->
+            <div class="functional-line-v dashed-risques"></div>
+
+            <!-- Direction Risque et conformité -->
+            <div class="control-box-row">
+              <div
+                class="org-card card-grey card-control"
+                [class.highlight]="isSearchMatch('Direction Risque')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Risque').id,
+                  code: getDirectionByPattern('Risque').code,
+                  title: 'Direction Risque et conformité',
+                  type: 'DIR_CONTROLE',
+                  categoryLabel: 'Direction de Contrôle & Conformité',
+                  icon: 'verified_user',
+                  description: 'Identification, mesure et pilotage de l\'ensemble des risques bancaires et garantie de conformité réglementaire',
+                  functionalLink: 'Comité Risques (Pointillé)',
+                  hierarchicalLink: 'Directeur Général (Ligne continue)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Risque et conformité</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIR_CONTROLE', 'Direction Risque et conformité').length }}</span>
+                </div>
+              </div>
+              <!-- Lien hiérarchique horizontal plein vers la tige du DG -->
+              <div class="control-to-dg-line"></div>
+            </div>
+
+          </div>
+
+          <!-- BLOC CENTRE : DIRECTEUR GÉNÉRAL (DG) & SECRÉTARIAT & DIRECTEUR GÉNÉRAL ADJOINT (DGA) -->
+          <div class="dg-dga-column">
+            
+            <!-- Tige verticale entre CA et DG -->
+            <div class="stem-vertical-ca-dg"></div>
+
+            <!-- RANGÉE DG + SECRÉTARIAT DE DIRECTION -->
+            <div class="dg-row">
+              <div
+                class="org-card card-navy card-dg"
+                [class.highlight]="isSearchMatch('Directeur Général') && !isSearchMatch('Adjoint')"
+                (click)="openNodeDetails({
+                  title: 'Directeur Général (DG)',
+                  type: 'DG',
+                  categoryLabel: 'Direction Générale Exécutive',
+                  icon: 'badge',
+                  description: 'Dirigeant exécutif principal assurant la conduite générale et opérationnelle de la Banque'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Directeur Général (DG)</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DG', 'Directeur Général').length }}</span>
+                </div>
+              </div>
+
+              <!-- Lien hiérarchique horizontal vers le secrétariat -->
+              <div class="dg-to-secretariat-line"></div>
+
+              <!-- Secrétariat de Direction (Vert) -->
+              <div
+                class="org-card card-green card-secretariat"
+                [class.highlight]="isSearchMatch('Secrétariat')"
+                (click)="openNodeDetails({
+                  title: 'Secrétariat de Direction',
+                  type: 'SECRETARIAT',
+                  categoryLabel: 'Rattachement Direction Générale',
+                  icon: 'support_agent',
+                  description: 'Assistance administrative, organisationnelle et protocolaire auprès de la Direction Générale',
+                  hierarchicalLink: 'Directeur Général (DG)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Secrétariat de Direction</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('SECRETARIAT', 'Secrétariat de Direction').length }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tige verticale entre DG et DGA -->
+            <div class="stem-vertical-dg-dga"></div>
+
+            <!-- DIRECTEUR GÉNÉRAL ADJOINT (DGA) -->
+            <div class="dga-wrapper">
+              <div
+                class="org-card card-navy card-dga"
+                [class.highlight]="isSearchMatch('Directeur Général Adjoint') || isSearchMatch('DGA')"
+                (click)="openNodeDetails({
+                  title: 'Directeur Général Adjoint (DGA)',
+                  type: 'DGA',
+                  categoryLabel: 'Direction Générale Adjointe',
+                  icon: 'supervised_user_circle',
+                  description: 'Coordination et supervision directe des 10 directions et départements opérationnels de la Banque'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Directeur Général Adjoint (DGA)</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DGA', 'Directeur Général Adjoint').length }}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- NIVEAU BAS : LES 10 UNITÉS OPÉRATIONNELLES     -->
+        <!-- ============================================== -->
+        <div class="operational-level-section">
+
+          <!-- TIGE VERTICALE DESCENDANTE DU DGA VERS LA BARRE HORIZONTALE -->
+          <div class="stem-vertical-dga-ops"></div>
+
+          <!-- GRANDE LIGNE DE DISTRIBUTION HORIZONTALE -->
+          <div class="horizontal-distribution-bar"></div>
+
+          <!-- GRILLE DES 10 COLONNES INSTITUTIONNELLES -->
+          <div class="operational-grid-10">
+
+            <!-- COLONNE 1 : Direction des Entreprises et institutionnels -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Entreprises')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Entreprises').id,
+                  code: getDirectionByPattern('Entreprises').code,
+                  title: 'Direction des Entreprises et institutionnels',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'business_center',
+                  description: 'Développement commercial des segments PME/PMI, grandes entreprises et institutionnels',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction des Entreprises et institutionnels</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction des Entreprises et institutionnels').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service PME/PMI', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'storefront', hierarchicalLink: 'Direction des Entreprises et institutionnels' })">
+                    <span class="srv-text">Service PME/PMI</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service PME/PMI').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Grandes entreprises', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'domain', hierarchicalLink: 'Direction des Entreprises et institutionnels' })">
+                    <span class="srv-text">Service Grandes entreprises</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Grandes entreprises').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Institutionnels', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'account_balance', hierarchicalLink: 'Direction des Entreprises et institutionnels' })">
+                    <span class="srv-text">Service Institutionnels</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Institutionnels').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 2 : Département Marketing, commercial et communication -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-grey dep-header-card"
+                [class.highlight]="isSearchMatch('Marketing')"
+                (click)="openNodeDetails({
+                  id: getDepartmentByPattern('Marketing').id,
+                  code: getDepartmentByPattern('Marketing').code,
+                  title: 'Département Marketing, commercial et communication',
+                  type: 'DEPARTEMENT',
+                  categoryLabel: 'Département Opérationnel',
+                  icon: 'campaign',
+                  description: 'Stratégie marketing, communication institutionnelle et animation commerciale globale',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Département Marketing, commercial et communication</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DEPARTEMENT', 'Département Marketing, commercial et communication').length }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 3 : Direction Réseau -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Réseau')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Réseau').id,
+                  code: getDirectionByPattern('Réseau').code,
+                  title: 'Direction Réseau',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'share',
+                  description: 'Exploitation et développement du réseau physique et digital de la banque',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Réseau</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction Réseau').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Agence', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'store', hierarchicalLink: 'Direction Réseau' })">
+                    <span class="srv-text">Service Agence</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Agence').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Cash Point', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'payments', hierarchicalLink: 'Direction Réseau' })">
+                    <span class="srv-text">Service Cash Point</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Cash Point').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Monétique et digital', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'credit_card', hierarchicalLink: 'Direction Réseau' })">
+                    <span class="srv-text">Service Monétique et digital</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Monétique et digital').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 4 : Direction des Engagements -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Engagements')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Engagements').id,
+                  code: getDirectionByPattern('Engagements').code,
+                  title: 'Direction des Engagements',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'assignment_turned_in',
+                  description: 'Gestion et suivi de la politique de crédit, administration et précontentieux',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction des Engagements</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction des Engagements').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Suivi des Engagements', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'timeline', hierarchicalLink: 'Direction des Engagements' })">
+                    <span class="srv-text">Service Suivi des Engagements</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Suivi des Engagements').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Analyse et administration de crédits', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'analytics', hierarchicalLink: 'Direction des Engagements' })">
+                    <span class="srv-text">Service Analyse et administration de crédits</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Analyse et administration de crédits').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Précontentieux', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'warning', hierarchicalLink: 'Direction des Engagements' })">
+                    <span class="srv-text">Service Précontentieux</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Précontentieux').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 5 : Direction des Opérations bancaires -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Opérations')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Opérations').id,
+                  code: getDirectionByPattern('Opérations').code,
+                  title: 'Direction des Opérations bancaires',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'sync_alt',
+                  description: 'Exécution des transactions, compensation et virements domestiques et internationaux',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction des Opérations bancaires</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction des Opérations bancaires').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service des Opérations domestiques', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'home', hierarchicalLink: 'Direction des Opérations bancaires' })">
+                    <span class="srv-text">Service des Opérations domestiques</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service des Opérations domestiques').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service des Opérations à l\'international', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'public', hierarchicalLink: 'Direction des Opérations bancaires' })">
+                    <span class="srv-text">Service des Opérations à l'international</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service des Opérations à l\'international').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 6 : Direction Affaires juridiques & contentieux -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Juridiques')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Juridique').id,
+                  code: getDirectionByPattern('Juridique').code,
+                  title: 'Direction Affaires juridiques & contentieux',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'gavel',
+                  description: 'Gouvernance contractuelle, conseil juridique et gestion des dossiers de recouvrement',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Affaires juridiques & contentieux</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction Affaires juridiques & contentieux').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Affaires juridiques & Gouvernance', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'policy', hierarchicalLink: 'Direction Affaires juridiques & contentieux' })">
+                    <span class="srv-text">Service Affaires juridiques & Gouvernance</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Affaires juridiques & Gouvernance').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Recouvrement', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'monetization_on', hierarchicalLink: 'Direction Affaires juridiques & contentieux' })">
+                    <span class="srv-text">Service Recouvrement</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Recouvrement').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 7 : Département Trésorerie -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-grey dep-header-card"
+                [class.highlight]="isSearchMatch('Trésorerie')"
+                (click)="openNodeDetails({
+                  id: getDepartmentByPattern('Trésorerie').id,
+                  code: getDepartmentByPattern('Trésorerie').code,
+                  title: 'Département Trésorerie',
+                  type: 'DEPARTEMENT',
+                  categoryLabel: 'Département Opérationnel',
+                  icon: 'account_balance_wallet',
+                  description: 'Gestion de la liquidité bancaire, refinancement et placements sur le marché monétaire',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Département Trésorerie</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DEPARTEMENT', 'Département Trésorerie').length }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 8 : Direction des Systèmes d'informations -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Systèmes') || isSearchMatch('DSI')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('DSI').id,
+                  code: getDirectionByPattern('DSI').code,
+                  title: 'Direction des Systèmes d\'informations',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'devices',
+                  description: 'Pilotage du système d\'information, sécurité des données, progiciels et infrastructures',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction des Systèmes d'informations</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction des Systèmes d\'informations').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Base de données et applications', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'storage', hierarchicalLink: 'Direction des Systèmes d\'informations' })">
+                    <span class="srv-text">Service Base de données et applications</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Base de données et applications').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Systèmes et réseaux', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'router', hierarchicalLink: 'Direction des Systèmes d\'informations' })">
+                    <span class="srv-text">Service Systèmes et réseaux</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Systèmes et réseaux').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Supports', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'contact_support', hierarchicalLink: 'Direction des Systèmes d\'informations' })">
+                    <span class="srv-text">Service Supports</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Supports').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 9 : Direction Administration et Moyens Généraux -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Administration') || isSearchMatch('Moyens')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Administration').id,
+                  code: getDirectionByPattern('Administration').code,
+                  title: 'Direction Administration et Moyens Généraux',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'engineering',
+                  description: 'Gestion du patrimoine, sécurité, logistique et développement du capital humain',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Administration et Moyens Généraux</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction Administration et Moyens Généraux').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Moyens généraux et Sécurité', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'local_shipping', hierarchicalLink: 'Direction Administration et Moyens Généraux' })">
+                    <span class="srv-text">Service Moyens généraux et Sécurité</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Moyens généraux et Sécurité').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Capital Humain', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'people', hierarchicalLink: 'Direction Administration et Moyens Généraux' })">
+                    <span class="srv-text">Service Capital Humain</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Capital Humain').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNE 10 : Direction Financière et comptable -->
+            <div class="op-column">
+              <div class="stem-top-col"></div>
+              <div
+                class="org-card card-steel-blue dir-header-card"
+                [class.highlight]="isSearchMatch('Financière') || isSearchMatch('Comptable')"
+                (click)="openNodeDetails({
+                  id: getDirectionByPattern('Financière').id,
+                  code: getDirectionByPattern('Financière').code,
+                  title: 'Direction Financière et comptable',
+                  type: 'DIRECTION',
+                  categoryLabel: 'Direction Opérationnelle',
+                  icon: 'account_balance',
+                  description: 'Arrêté des comptes, fiscalité, contrôle de gestion et reporting financier réglementaire',
+                  hierarchicalLink: 'Directeur Général Adjoint (DGA)'
+                })"
+              >
+                <div class="card-inner">
+                  <span class="card-name">Direction Financière et comptable</span>
+                  <span class="badge-count">{{ getEmployeesForUnit('DIRECTION', 'Direction Financière et comptable').length }}</span>
+                </div>
+              </div>
+              <div class="stem-dir-services"></div>
+              <div class="services-column">
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Comptabilité et fiscalité', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'receipt_long', hierarchicalLink: 'Direction Financière et comptable' })">
+                    <span class="srv-text">Service Comptabilité et fiscalité</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Comptabilité et fiscalité').length }}</span>
+                  </div>
+                </div>
+                <div class="service-stem-item">
+                  <div class="service-h-line"></div>
+                  <div class="org-card card-service" (click)="openNodeDetails({ title: 'Service Contrôle de gestion', type: 'SERVICE', categoryLabel: 'Service Rattaché', icon: 'insights', hierarchicalLink: 'Direction Financière et comptable' })">
+                    <span class="srv-text">Service Contrôle de gestion</span>
+                    <span class="srv-count">{{ getEmployeesForUnit('SERVICE', 'Service Contrôle de gestion').length }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- =============================== -->
+  <!-- VUE 2 : TABLEAU SYNTHÉTIQUE RH  -->
+  <!-- =============================== -->
+  @if (!isLoading && activeView === 'table') {
+    <div class="table-view-container">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Récapitulatif des Effectifs par Direction & Département (BPBF)</h3>
+          <span class="total-badge">Total Effectif : {{ employees.length }} collaborateurs</span>
+        </div>
+
+        <table class="bpbf-data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Code</th>
+              <th>Entité Organisationnelle</th>
+              <th>Rattachement</th>
+              <th>Services Associés</th>
+              <th style="text-align:center">Effectif Réel</th>
+              <th style="text-align:right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- DG & Comités -->
+            <tr class="highlight-row">
+              <td><span class="type-pill pill-exec">Gouvernance</span></td>
+              <td><strong>BPBF-DG</strong></td>
+              <td>Direction Générale (DG)</td>
+              <td>Conseil d'Administration (CA)</td>
+              <td>Secrétariat de Direction</td>
+              <td style="text-align:center"><strong>{{ getEmployeesForUnit('DG', 'Directeur Général').length }}</strong></td>
+              <td style="text-align:right">
+                <button class="view-unit-btn" (click)="openNodeDetails({ title: 'Directeur Général (DG)', type: 'DG', categoryLabel: 'Direction Générale', icon: 'badge' })">
+                  Détails
+                </button>
+              </td>
+            </tr>
+
+            <!-- Directions de Contrôle -->
+            <tr>
+              <td><span class="type-pill pill-control">Contrôle</span></td>
+              <td>DIR_AUDIT</td>
+              <td>Direction Audit Interne</td>
+              <td>DG (Hiérarchique) & Comité Audit (Fonctionnel)</td>
+              <td>1 pôle d'audit</td>
+              <td style="text-align:center"><strong>{{ getEmployeesForUnit('DIR_CONTROLE', 'Direction Audit Interne').length }}</strong></td>
+              <td style="text-align:right">
+                <button class="view-unit-btn" (click)="openNodeDetails({ title: 'Direction Audit Interne', type: 'DIR_CONTROLE', categoryLabel: 'Direction de Contrôle', icon: 'security' })">
+                  Détails
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="type-pill pill-control">Contrôle</span></td>
+              <td>DIR_RISQUES</td>
+              <td>Direction Risque et conformité</td>
+              <td>DG (Hiérarchique) & Comité Risques (Fonctionnel)</td>
+              <td>1 pôle de conformité</td>
+              <td style="text-align:center"><strong>{{ getEmployeesForUnit('DIR_CONTROLE', 'Direction Risque et conformité').length }}</strong></td>
+              <td style="text-align:right">
+                <button class="view-unit-btn" (click)="openNodeDetails({ title: 'Direction Risque et conformité', type: 'DIR_CONTROLE', categoryLabel: 'Direction de Contrôle', icon: 'verified_user' })">
+                  Détails
+                </button>
+              </td>
+            </tr>
+
+            <!-- 8 Directions Opérationnelles -->
+            @for (dir of directions; track dir.code) {
+              @if (dir.code !== 'DIR_AUDIT' && dir.code !== 'DIR_RISQUES') {
+                <tr>
+                  <td><span class="type-pill pill-dir">Direction</span></td>
+                  <td><code>{{ dir.code }}</code></td>
+                  <td><strong>{{ dir.libelle }}</strong></td>
+                  <td>Directeur Général Adjoint (DGA)</td>
+                  <td>{{ getServicesForDirection(dir).length }} service(s)</td>
+                  <td style="text-align:center"><strong>{{ getEmployeesForUnit('DIRECTION', dir.libelle, dir.code, dir.id).length }}</strong></td>
+                  <td style="text-align:right">
+                    <button class="view-unit-btn" (click)="openNodeDetails({ id: dir.id, code: dir.code, title: dir.libelle, type: 'DIRECTION', categoryLabel: 'Direction Opérationnelle', icon: 'business' })">
+                      Détails
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+
+            <!-- 2 Départements -->
+            @for (dep of departements; track dep.code) {
+              <tr>
+                <td><span class="type-pill pill-dep">Département</span></td>
+                <td><code>{{ dep.code }}</code></td>
+                <td><strong>{{ dep.libelle }}</strong></td>
+                <td>Directeur Général Adjoint (DGA)</td>
+                <td>Direct</td>
+                <td style="text-align:center"><strong>{{ getEmployeesForUnit('DEPARTEMENT', dep.libelle, dep.code, dep.id).length }}</strong></td>
+                <td style="text-align:right">
+                  <button class="view-unit-btn" (click)="openNodeDetails({ id: dep.id, code: dep.code, title: dep.libelle, type: 'DEPARTEMENT', categoryLabel: 'Département Opérationnel', icon: 'domain' })">
+                    Détails
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================== -->
+  <!-- VOLET LATÉRAL DE DÉTAIL D'UNE ENTITÉ (DRAWER) -->
+  <!-- ============================================== -->
+  @if (selectedNode) {
+    <div class="drawer-overlay" (click)="closeDrawer()"></div>
+    <aside class="node-details-drawer">
       
-      <!-- BLOC DIRECTIONS -->
-      <div class="unit-group-box directions-box">
-        <div class="group-title">
-          <mat-icon>corporate_fare</mat-icon>
-          <span>DIRECTIONS (BPBF)</span>
+      <!-- En-tête du volet -->
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <div class="drawer-icon-wrap">
+            <mat-icon>{{ selectedNode.icon || 'business' }}</mat-icon>
+          </div>
+          <div>
+            <span class="category-tag">{{ selectedNode.categoryLabel }}</span>
+            <h2 class="unit-title">{{ selectedNode.title }}</h2>
+          </div>
         </div>
-        <div class="units-list">
-          @for (dir of directions; track dir.code) {
-            <div class="unit-card">
-              <div class="unit-card-header">
-                <mat-icon class="unit-icon">business</mat-icon>
-                <div class="unit-info">
-                  <span class="unit-code">{{ dir.code }}</span>
-                  <span class="unit-name">{{ dir.libelle }}</span>
-                </div>
-              </div>
-              <p class="unit-desc">{{ dir.description || 'Direction opérationnelle' }}</p>
-
-              <!-- Services rattachés à cette Direction -->
-              <div class="services-sub-list">
-                <div class="sub-label"><mat-icon>subdirectory_arrow_right</mat-icon> Services rattachés</div>
-                @for (srv of services; track srv.code) {
-                  <div class="service-chip">
-                    <mat-icon>home_repair_service</mat-icon>
-                    <span>{{ srv.libelle }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
+        <button type="button" class="drawer-close-btn" (click)="closeDrawer()">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
 
-      <!-- BLOC DÉPARTEMENTS -->
-      <div class="unit-group-box departements-box">
-        <div class="group-title">
-          <mat-icon>account_balance</mat-icon>
-          <span>DÉPARTEMENTS (BPBF — Même niveau que les Directions)</span>
+      <!-- Corps du volet -->
+      <div class="drawer-body">
+        
+        <!-- Missions & Rattachements -->
+        <div class="info-section">
+          @if (selectedNode.description) {
+            <p class="unit-description">{{ selectedNode.description }}</p>
+          }
+          <div class="relations-grid">
+            @if (selectedNode.hierarchicalLink) {
+              <div class="relation-item">
+                <span class="relation-label">Lien Hiérarchique :</span>
+                <span class="relation-value solid-badge">{{ selectedNode.hierarchicalLink }}</span>
+              </div>
+            }
+            @if (selectedNode.functionalLink) {
+              <div class="relation-item">
+                <span class="relation-label">Lien Fonctionnel :</span>
+                <span class="relation-value dashed-badge">{{ selectedNode.functionalLink }}</span>
+              </div>
+            }
+          </div>
         </div>
-        <div class="units-list">
-          @for (dep of departements; track dep.code) {
-            <div class="unit-card">
-              <div class="unit-card-header">
-                <mat-icon class="unit-icon" style="color:#2e7d32">domain</mat-icon>
-                <div class="unit-info">
-                  <span class="unit-code">{{ dep.code }}</span>
-                  <span class="unit-name">{{ dep.libelle }}</span>
-                </div>
-              </div>
-              <p class="unit-desc">
-                {{ dep.description ? 'Directeur : ' + dep.description : 'Département de supervision' }}
-              </p>
 
-              <!-- Services rattachés à ce Département -->
-              <div class="services-sub-list">
-                <div class="sub-label"><mat-icon>subdirectory_arrow_right</mat-icon> Services & Pôles de rattachement</div>
-                @for (srv of services; track srv.code) {
-                  <div class="service-chip">
-                    <mat-icon>home_repair_service</mat-icon>
-                    <span>{{ srv.libelle }}</span>
-                  </div>
-                }
-              </div>
+        <!-- Effectif et liste des collaborateurs -->
+        <div class="employees-section">
+          <div class="section-title-row">
+            <h3 class="section-title">Collaborateurs affectés</h3>
+            <span class="headcount-badge">{{ selectedNodeEmployees.length }} agent(s)</span>
+          </div>
+
+          @if (selectedNodeEmployees.length === 0) {
+            <div class="empty-employees-box">
+              <mat-icon>person_off</mat-icon>
+              <p>Aucun collaborateur n'est actuellement affecté à cette unité dans PostgreSQL.</p>
             </div>
           }
+
+          <div class="employees-list">
+            @for (emp of selectedNodeEmployees; track emp.id) {
+              <div class="employee-item-card" (click)="navigateToEmployee(emp)">
+                <div class="emp-avatar">
+                  {{ (emp.prenom ? emp.prenom.charAt(0) : '') + (emp.nom ? emp.nom.charAt(0) : 'E') }}
+                </div>
+                <div class="emp-info">
+                  <div class="emp-name">{{ emp.prenom }} {{ emp.nom }}</div>
+                  <div class="emp-role">
+                    {{ getEmployeeRole(emp) }}
+                  </div>
+                  <div class="emp-meta">
+                    <span class="matricule-tag">{{ emp.matricule || 'N/A' }}</span>
+                    @if (emp.telephone) {
+                      <span class="meta-item"><mat-icon>phone</mat-icon> {{ emp.telephone }}</span>
+                    }
+                  </div>
+                </div>
+                <button type="button" class="emp-link-btn" matTooltip="Voir la fiche employé">
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
         </div>
+
       </div>
 
-    </div>
-
-  </div>
+    </aside>
+  }
 
 </div>

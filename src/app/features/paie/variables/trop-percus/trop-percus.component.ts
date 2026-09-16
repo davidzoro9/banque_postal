@@ -113,29 +113,75 @@ export class TropPercusComponent implements OnInit {
     this.http.get<any[]>(`${environment.apiUrl}/salary-elements`).pipe(
       catchError(() => of([]))
     ).subscribe(data => {
-      // Filtrer STRICTEMENT les rubriques dédiées au trop-perçu (exclure CNSS, prêts, etc.)
-      const allowed = (data || []).filter(el => {
-        const code = (el.code || '').toUpperCase();
-        const name = (el.name || el.libelle || '').toLowerCase();
-        return code.includes('TROP_PERCU') || name.includes('trop-perçu') || name.includes('trop perçu');
-      }).map(el => ({
+      const list = data || [];
+
+      const isRetenue = (d: any): boolean => {
+        const code = (d.code || d.codeRubrique || '').toUpperCase().trim();
+        const name = (d.name || d.libelle || '').toLowerCase().trim();
+        const catName = (d.categoryName || d.salaryCategory?.name || d.salaryCategory?.libelle || '').toLowerCase().trim();
+        const type = (d.type || '').toUpperCase().trim();
+
+        // Exclusion des cotisations patronales ou des rubriques de gain
+        if (type === 'PATRONALE' || type === 'GAIN') return false;
+        if (code.includes('PAT') || code.startsWith('CHG_') || code.startsWith('COT_PAT')) return false;
+        if (catName.includes('patronal') || catName.includes('gain') || catName.includes('base') || catName.includes('prime') || catName.includes('indemnit')) return false;
+
+        // Identification explicite des retenues, trop-perçus, prêts et précomptes
+        if (type === 'RETENUE') return true;
+        if (catName.includes('retenue') || catName.includes('cotis') || catName.includes('iuts')) return true;
+        if (code.startsWith('RET_') || code.startsWith('PRET_') || code.startsWith('AVANCE_') || code.startsWith('SAISIE_') || code.startsWith('COTIS_') || code.startsWith('REGUL_')) return true;
+        if (name.includes('trop-perçu') || name.includes('trop perçu') || name.includes('retenue') || name.includes('prêt') || name.includes('pret') || name.includes('avance') || name.includes('saisie') || name.includes('mutuelle') || name.includes('assurance')) return true;
+
+        return false;
+      };
+
+      const retenues = list.filter(isRetenue).map((el: any) => ({
         id: el.id,
-        name: el.name || el.libelle,
-        code: el.code
+        name: el.name || el.libelle || el.code,
+        code: el.code || el.codeRubrique || ''
       }));
 
-      if (allowed.length === 0) {
-        this.elementsList = [
-          { id: 1, name: 'Trop-perçu sur salaire de base', code: 'RET_TROP_PERCU_SAL' },
-          { id: 2, name: 'Trop-perçu sur primes & indemnités', code: 'RET_TROP_PERCU_PRIME' },
-          { id: 3, name: 'Trop-perçu & Régularisation diverse', code: 'RET_TROP_PERCU' }
-        ];
+      // Ordonner : Trop-perçus en premier pour faciliter la sélection, puis les autres retenues
+      retenues.sort((a: any, b: any) => {
+        const getIdx = (item: any) => {
+          const c = (item.code || '').toUpperCase();
+          const n = (item.name || '').toLowerCase();
+          if (c.includes('TROP_PERCU') || n.includes('trop-perçu') || n.includes('trop perçu')) return 0;
+          if (c.startsWith('RET_') || n.includes('retenue')) return 1;
+          if (c.startsWith('PRET_') || n.includes('prêt')) return 2;
+          if (c.startsWith('AVANCE_') || n.includes('avance')) return 3;
+          return 5;
+        };
+        const diff = getIdx(a) - getIdx(b);
+        if (diff !== 0) return diff;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      if (retenues.length > 0) {
+        this.elementsList = retenues;
       } else {
-        this.elementsList = allowed;
+        this.elementsList = [
+          { id: 34, name: 'Trop-perçu sur salaire de base', code: 'RET_TROP_PERCU_SAL' },
+          { id: 35, name: 'Trop-perçu sur primes & indemnités', code: 'RET_TROP_PERCU_PRIME' },
+          { id: 36, name: 'Trop-perçu & Régularisation diverse', code: 'RET_TROP_PERCU' },
+          { id: 25, name: 'Prêt Équipement & Personnel BPBF', code: 'PRET_EQUIP' },
+          { id: 26, name: 'Avance sur Salaire (Quinzaine / Acompte)', code: 'AVANCE_SAL' },
+          { id: 27, name: 'Prêt Scolarité / Fêtes / Tabaski', code: 'PRET_SCOLAIRE' },
+          { id: 28, name: 'Prêt Véhicule / Immobilier', code: 'PRET_VEHICULE' },
+          { id: 29, name: 'Cotisation Mutuelle de Santé des Banques', code: 'RET_MUTUELLE' },
+          { id: 30, name: 'Assurance Groupe / Prévoyance', code: 'RET_ASSURANCE' },
+          { id: 31, name: 'Saisie-arrêt sur salaire', code: 'SAISIE_ARRET' },
+          { id: 32, name: 'Remboursement Vivres & Achats groupés', code: 'RET_VIVRES' },
+          { id: 33, name: 'Autre retenue sur salaire net', code: 'RET_DIVERS' },
+          { id: 19, name: 'Cotisation CNSS (Salariale)', code: 'COTIS_CNSS' },
+          { id: 20, name: 'Cotisation CARFO (Salariale)', code: 'COTIS_CARFO' },
+          { id: 23, name: 'Retenue IUTS', code: 'RETENUE_IUTS' }
+        ];
       }
 
       if (!this.formModel.salaryElementId && this.elementsList.length > 0) {
-        this.formModel.salaryElementId = this.elementsList[0].id;
+        const defaultElem = this.elementsList.find(e => e.code?.includes('TROP_PERCU')) || this.elementsList[0];
+        this.formModel.salaryElementId = defaultElem.id;
       }
     });
   }

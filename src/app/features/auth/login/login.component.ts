@@ -28,8 +28,8 @@ export class LoginComponent {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      email: ['davidzorom9@gmail.com', [Validators.required]],
-      password: ['5621', Validators.required]
+      email: ['', [Validators.required]],
+      password: ['', Validators.required]
     });
   }
 
@@ -42,7 +42,7 @@ export class LoginComponent {
     this.authService.login(email, password).subscribe({
       next: (user) => {
         this.loading = false;
-        if (user.role === 'EMPLOYE') {
+        if (this.authService.isAgentRole(user.role)) {
           this.router.navigate(['/mon-espace']);
         } else {
           this.router.navigate(['/dashboard']);

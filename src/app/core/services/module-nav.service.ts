@@ -6,28 +6,29 @@ import { MenuItem } from '../models/menu-item.model';
 export const DONNEES_BASE_MENUS: MenuItem[] = [
   {
     id: 'donnees-base-dashboard',
-    label: 'Tableau de bord DB',
+    label: 'Tableau de bord Paramètres Généraux',
     icon: 'dashboard',
     route: '/donnees-base'
   },
   {
     id: 'donnees-base',
-    label: 'Données de base',
+    label: 'Paramètres généraux',
     icon: 'storage',
     children: [
       { id: 'emploi',           label: 'Poste / Emploi',           icon: 'work',                route: '/donnees-base/admin/emploi'           },
       { id: 'fonction',         label: 'Fonction',                 icon: 'badge',               route: '/donnees-base/admin/fonction'         },
       { id: 'banque',           label: 'Banque',                   icon: 'money_on',            route: '/donnees-base/admin/banque'            },
       { id: 'agence',           label: 'Agence',                   icon: 'store',               route: '/donnees-base/admin/agence'           },
-      { id: 'direction',        label: 'Département / Direction',  icon: 'business',            route: '/donnees-base/admin/direction'        },
-      { id: 'service',          label: 'Service',                  icon: 'group_work',          route: '/donnees-base/admin/service'          },
+      { id: 'direction',        label: 'Directions',               icon: 'business',            route: '/donnees-base/admin/direction'        },
+      { id: 'departement',      label: 'Départements',             icon: 'domain',              route: '/donnees-base/admin/departement'      },
+      { id: 'service',          label: 'Services',                 icon: 'group_work',          route: '/donnees-base/admin/service'          },
       { id: 'grade',            label: 'Groupe',                   icon: 'military_tech',      route: '/donnees-base/carriere/grade'         },
       { id: 'categorie',        label: 'Catégorie / Classe',       icon: 'category',           route: '/donnees-base/carriere/categorie'     },
       { id: 'echelon',          label: 'Échelon',                  icon: 'signal_cellular_alt',route: '/donnees-base/carriere/echelon'        },
       { id: 'grille-salariale', label: 'Grille salariale',         icon: 'table_chart',         route: '/donnees-base/admin/grille-salariale' },
       { id: 'type-indemnite',   label: 'Liste des indemnités',     icon: 'paid',                route: '/donnees-base/admin/type-indemnite'   },
       { id: 'regime-securite-social', label: 'Régimes de sécurité sociale', icon: 'health_and_safety', route: '/donnees-base/admin/regimes-securite-sociale' },
-      { id: 'types-retenues',   label: 'Liste des retenues',       icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
+      { id: 'types-retenues',   label: 'Types de retenues',        icon: 'money_off',           route: '/donnees-base/admin/type-retenue-employe' },
       { id: 'type-contrat',     label: 'Type contrat',             icon: 'article',             route: '/donnees-base/admin/type-contrat'     },
       { id: 'type-conge',       label: 'Type congé/absence',       icon: 'beach_access',        route: '/donnees-base/admin/type-conge'       },
       { id: 'param-groupe',     label: 'Paramétrage Groupe',       icon: 'tune',                route: '/donnees-base/carriere/param-groupe'   },
@@ -51,7 +52,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
   grh: [
     {
       id: 'grh-dashboard',
-      label: 'Tableau de bord GA',
+      label: 'Tableau de bord Gest Admin',
       icon: 'dashboard',
       route: '/grh'
     },
@@ -96,9 +97,8 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Gestion de la Paie',
       icon: 'payments',
       children: [
-        { id: 'bulletin-lot', label: 'Lots de Bulletins', icon: 'layers', route: '/paie/lots' },
-        { id: 'bulletin-individuel', label: 'Bulletins de Paie', icon: 'receipt_long', route: '/paie/bulletins' },
-        { id: 'avoirs', label: 'Avoirs', icon: 'add_card', route: '/paie/variables/avoirs' },
+        { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
+        { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
         { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' },
         { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' }
       ]
@@ -177,10 +177,10 @@ export class ModuleNavService {
   sidebarOpen$: Observable<boolean> = this.drawerOpenSubject.asObservable();
 
   quickLinks = [
-    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard', color: '#1e293b' },
-    { label: 'Employés', route: '/grh/employes', icon: 'badge', color: '#1e293b' },
-    { label: 'Bulletins', route: '/paie/bulletins', icon: 'receipt', color: '#1e293b' },
-    { label: 'Profils', route: '/profils/utilisateurs', icon: 'manage_accounts', color: '#1e293b' }
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard', color: '#0060B3' },
+    { label: 'Employés', route: '/grh/employes', icon: 'badge', color: '#0060B3' },
+    { label: 'Génération bulletins', route: '/paie/lots', icon: 'receipt', color: '#0060B3' },
+    { label: 'Profils', route: '/profils/utilisateurs', icon: 'manage_accounts', color: '#0060B3' }
   ];
 
   get activeModule(): AppModule | null {

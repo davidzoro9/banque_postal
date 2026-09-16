@@ -43,6 +43,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   grades:         RefItem[] = [];   // pour Grille salariale et Paramétrage indemnité
   typesIndemnite: RefItem[] = [];   // pour Paramétrage indemnité
   fonctions:      RefItem[] = [];   // pour Paramétrage indemnité
+  emplois:        RefItem[] = [];   // pour Paramétrage indemnité (Primes Spécifiques)
   agences:        RefItem[] = [];   // pour Direction et Département
   directeursList: { id: string; libelle: string; description?: string }[] = []; // pour Directeur de Département
   categoriesList: string[] = [];
@@ -135,6 +136,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   }
 
   regleType: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE' = 'ORDINAIRE';
+  indemniteTab: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE' = 'ORDINAIRE';
+  rawIndemniteItems: RefItem[] = [];
 
   fonctionsNominationBPBF = [
     'DIRECTEUR DE DÉPARTEMENT',
@@ -152,30 +155,63 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     'AGENT DE LIAISON'
   ];
 
+  getItemRegleType(item: RefItem): 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE' {
+    if (item.emploiId || item.emploi || item.emploiLibelle) return 'SPECIFIQUE';
+    if (item.regleType === 'SPECIFIQUE') return 'SPECIFIQUE';
+    if (item.regleType === 'NOMINATION') return 'NOMINATION';
+    if (item.regleType === 'ORDINAIRE') return 'ORDINAIRE';
+
+    if (item.fonctionId || item.fonction || item.fonctionLibelle) {
+      const f = (item.fonction || item.fonctionLibelle || '').toUpperCase();
+      if (this.fonctionsSpecifiquesBPBF.some(fs => f.includes(fs))) return 'SPECIFIQUE';
+      return 'NOMINATION';
+    }
+    if (item.gradeId || item.grade || item.categorieId || item.categorie) return 'ORDINAIRE';
+    return 'ORDINAIRE';
+  }
+
+  countIndemniteByTab(tab: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE'): number {
+    return this.rawIndemniteItems.filter(item => this.getItemRegleType(item) === tab).length;
+  }
+
+  setIndemniteTab(tab: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE'): void {
+    this.indemniteTab = tab;
+    this.regleType = tab;
+    this.updateIndemniteDataSource();
+  }
+
+  updateIndemniteDataSource(): void {
+    if (this.type !== 'param-indemnite') {
+      this.dataSource.data = this.rawIndemniteItems;
+      return;
+    }
+    const filtered = this.rawIndemniteItems.filter(item => this.getItemRegleType(item) === this.indemniteTab);
+    this.dataSource.data = filtered;
+
+    if (this.indemniteTab === 'ORDINAIRE') {
+      this.displayedColumns = ['code', 'typeIndemnite', 'grade', 'categorie', 'taux', 'actif', 'actions'];
+    } else if (this.indemniteTab === 'NOMINATION') {
+      this.displayedColumns = ['code', 'fonction', 'typeIndemnite', 'taux', 'actif', 'actions'];
+    } else if (this.indemniteTab === 'SPECIFIQUE') {
+      this.displayedColumns = ['code', 'emploi', 'typeIndemnite', 'taux', 'actif', 'actions'];
+    }
+    if (this.paginator) this.dataSource.paginator = this.paginator;
+    if (this.sort) this.dataSource.sort = this.sort;
+  }
+
+  get fonctionsNomination(): RefItem[] {
+    return this.fonctions;
+  }
+
   onRegleTypeChange(type: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE'): void {
     this.regleType = type;
-    if (type === 'ORDINAIRE') {
-      this.formGroup.patchValue({
-        typeNomination: 'NON_NOMMEE',
-        fonctionId: null,
-        gradeId: null,
-        categorieId: null
-      });
-    } else if (type === 'NOMINATION') {
-      this.formGroup.patchValue({
-        typeNomination: 'NOMMEE',
-        fonctionId: null,
-        gradeId: null,
-        categorieId: null
-      });
-    } else if (type === 'SPECIFIQUE') {
-      this.formGroup.patchValue({
-        typeNomination: 'NOMMEE',
-        fonctionId: null,
-        gradeId: null,
-        categorieId: null
-      });
-    }
+    this.formGroup.patchValue({
+      typeNomination: type === 'ORDINAIRE' ? 'NON_NOMMEE' : 'NOMMEE',
+      fonctionId: null,
+      emploiId: null,
+      gradeId: null,
+      categorieId: null
+    });
     this.setupValidators();
   }
 
@@ -240,6 +276,54 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   onServiceDepartmentChange(departementId: string | null): void {
     if (departementId) this.formGroup.patchValue({ directionId: null });
+  }
+
+  get availableParentDirections(): RefItem[] {
+    if (!this.editingItem || !this.editingItem.id) {
+      return this.directions;
+    }
+    const currentId = String(this.editingItem.id);
+    return this.directions.filter(d => String(d.id) !== currentId);
+  }
+
+  getParentServiceInfo(row: RefItem): { type: 'DIRECTION' | 'NONE'; label: string } {
+    if (!row) return { type: 'NONE', label: 'Non rattaché' };
+    if (row.directionId || row.directionLibelle) {
+      const dir = this.directions.find(d => String(d.id) === String(row.directionId));
+      const name = dir?.libelle || dir?.name || row.directionLibelle || `Direction #${row.directionId}`;
+      return { type: 'DIRECTION', label: name };
+    }
+    return { type: 'NONE', label: 'Non rattaché' };
+  }
+
+  getParentDepartmentInfo(row: RefItem): { type: 'DIRECTION' | 'NONE'; label: string } {
+    if (!row) return { type: 'NONE', label: 'Direction Générale Adjointe (DGA)' };
+    if (row.directionId || (row as any).directionLibelle) {
+      const dir = this.directions.find(d => String(d.id) === String(row.directionId));
+      const name = dir?.libelle || dir?.name || (row as any).directionLibelle || `Direction #${row.directionId}`;
+      return { type: 'DIRECTION', label: name };
+    }
+    return { type: 'NONE', label: 'Direction Générale Adjointe (DGA)' };
+  }
+
+  getParentDirectionInfo(row: RefItem): { type: 'PARENT_DIR' | 'DEPARTEMENT' | 'AGENCE' | 'CENTRAL'; label: string } {
+    if (!row) return { type: 'CENTRAL', label: 'Sommet (DG)' };
+    if ((row as any).parentDirectionId || (row as any).parentDirectionLibelle) {
+      const pDir = this.directions.find(d => String(d.id) === String((row as any).parentDirectionId));
+      const name = pDir?.libelle || pDir?.name || (row as any).parentDirectionLibelle || `Direction #${(row as any).parentDirectionId}`;
+      return { type: 'PARENT_DIR', label: name };
+    }
+    if (row.departementId || row.departementLibelle || (row as any).departmentLibelle) {
+      const dep = this.departements.find(d => String(d.id) === String(row.departementId));
+      const name = dep?.libelle || dep?.name || row.departementLibelle || (row as any).departmentLibelle || `Département #${row.departementId}`;
+      return { type: 'DEPARTEMENT', label: name };
+    }
+    if (row.agenceId || row.agenceLibelle) {
+      const ag = this.agences.find(a => String(a.id) === String(row.agenceId));
+      const name = ag?.libelle || ag?.name || row.agenceLibelle || `Agence #${row.agenceId}`;
+      return { type: 'AGENCE', label: name };
+    }
+    return { type: 'CENTRAL', label: 'Sommet (DG)' };
   }
 
   getSalaryItem(classification: string, echelon: number): RefItem | undefined {
@@ -391,6 +475,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       agenceId:      [null],
       departementId: [null],
       directionId:   [null],
+      parentDirectionId: [null],
       directeurId:   [null],
       echelle:       [''],
       echellon:      [''],
@@ -402,6 +487,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       baseCalcul: ['REMUNERATION_BRUTE'],
       fonction:      [''],
       fonctionId:    [null],
+      emploi:        [''],
+      emploiId:      [null],
       grade:         [''],
       categorie:     [''],
       gradeId:       [null],
@@ -425,7 +512,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       if (this.type === 'grille-salariale') {
         this.displayedColumns = ['gradeConcat', 'categorie', 'echellon', 'montant', 'actif', 'actions'];
       } else if (this.type === 'param-indemnite') {
-        this.displayedColumns = ['code', 'typeIndemnite', 'fonction', 'grade', 'categorie', 'taux', 'actif', 'actions'];
+        this.indemniteTab = 'ORDINAIRE';
+        this.regleType = 'ORDINAIRE';
+        this.displayedColumns = ['code', 'typeIndemnite', 'grade', 'categorie', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-retraite') {
         this.displayedColumns = ['grade', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-prise-en-charge') {
@@ -442,6 +531,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.displayedColumns = ['code', 'libelle', 'tauxAbattement', 'actif', 'actions'];
       } else if (this.type === 'fonction' || this.type?.includes('fonction')) {
         this.displayedColumns = ['libelle', 'actif', 'actions'];
+      } else if (this.type === 'service') {
+        this.displayedColumns = ['code', 'libelle', 'parentRattachement', 'actif', 'actions'];
+      } else if (this.type === 'direction') {
+        this.displayedColumns = ['code', 'libelle', 'parentRattachement', 'actif', 'actions'];
+      } else if (this.type === 'departement') {
+        this.displayedColumns = ['code', 'libelle', 'parentRattachement', 'actif', 'actions'];
       } else {
         this.displayedColumns = this.shouldHideCode
           ? ['libelle', 'actif', 'actions']
@@ -457,8 +552,6 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     const hiddenTypes = [
       'emploi',
       'fonction',
-      'direction',
-      'service',
       'type-indemnite',
       'type-retenue-employe',
       'type-retenue-emploi',
@@ -478,10 +571,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       if (property === 'gradeConcat') return this.getGradeConcat(item);
       if (property === 'categorie') return this.getCatCodeDisplay(item.categorie || item.code);
       if (property === 'echellon') return this.getEchelonCodeDisplay(item.echellon);
+      if (property === 'parentRattachement') {
+        if (this.type === 'service') return this.getParentServiceInfo(item).label;
+        if (this.type === 'direction') return this.getParentDirectionInfo(item).label;
+        if (this.type === 'departement') return this.getParentDepartmentInfo(item).label;
+      }
       return (item as any)[property];
     };
     this.dataSource.filterPredicate = (data: RefItem, filter: string) => {
-      const searchStr = (Object.values(data).join(' ') + ' ' + this.getGradeConcat(data)).toLowerCase();
+      let extra = '';
+      if (this.type === 'service') extra = ' ' + this.getParentServiceInfo(data).label;
+      if (this.type === 'direction') extra = ' ' + this.getParentDirectionInfo(data).label;
+      if (this.type === 'departement') extra = ' ' + this.getParentDepartmentInfo(data).label;
+      const searchStr = (Object.values(data).join(' ') + ' ' + this.getGradeConcat(data) + extra).toLowerCase();
       return searchStr.includes(filter);
     };
   }
@@ -496,10 +598,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
 
   loadData(): void {
     this.dbRefService.getItems$(this.type).subscribe(items => {
-      this.dataSource.data = items || [];
-      if (this.paginator) this.dataSource.paginator = this.paginator;
-      if (this.sort) this.dataSource.sort = this.sort;
+      this.onItemsLoaded(items);
     });
+  }
+
+  private onItemsLoaded(items: RefItem[]): void {
+    this.rawIndemniteItems = items || [];
+    if (this.type === 'param-indemnite') {
+      this.updateIndemniteDataSource();
+    } else {
+      this.dataSource.data = this.rawIndemniteItems;
+    }
+    if (this.paginator) this.dataSource.paginator = this.paginator;
+    if (this.sort) this.dataSource.sort = this.sort;
   }
 
   loadHierarchyData(): void {
@@ -528,7 +639,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     } else {
       this.departements = [];
     }
-    if (this.type === 'service') {
+    if (this.type === 'service' || this.type === 'direction' || this.type === 'departement') {
       this.dbRefService.getItems('direction').subscribe(items => this.directions = items);
     } else {
       this.directions = [];
@@ -567,9 +678,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         }
       });
       this.dbRefService.getItems('fonction').subscribe(items => this.fonctions = items);
+      this.dbRefService.getItems('emploi').subscribe(items => this.emplois = items);
     } else {
       this.typesIndemnite = [];
       this.fonctions = [];
+      this.emplois = [];
     }
     if (this.type === 'type-retenue-emploi') {
       this.dbRefService.getItems('type-retenue-employe').subscribe(items => {
@@ -616,21 +729,34 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('typeRetenueId')?.clearValidators();
     this.formGroup.get('baseCalcul')?.clearValidators();
     this.formGroup.get('fonctionId')?.clearValidators();
+    this.formGroup.get('emploiId')?.clearValidators();
     this.formGroup.get('directeurId')?.clearValidators();
     this.formGroup.get('agenceId')?.clearValidators();
     this.formGroup.get('departementId')?.clearValidators();
     this.formGroup.get('directionId')?.clearValidators();
+    this.formGroup.get('parentDirectionId')?.clearValidators();
     this.formGroup.get('gradeId')?.clearValidators();
     this.formGroup.get('categorieId')?.clearValidators();
     this.formGroup.get('echelonId')?.clearValidators();
 
     if (this.type === 'param-indemnite') {
       this.formGroup.get('typeIndemniteId')?.setValidators([Validators.required]);
+      this.formGroup.get('taux')?.setValidators([Validators.required, Validators.min(0)]);
       if (this.regleType === 'ORDINAIRE') {
         this.formGroup.get('gradeId')?.setValidators([Validators.required]);
         this.formGroup.get('categorieId')?.setValidators([Validators.required]);
-      } else {
+        this.formGroup.get('fonctionId')?.clearValidators();
+        this.formGroup.get('emploiId')?.clearValidators();
+      } else if (this.regleType === 'NOMINATION') {
+        this.formGroup.get('gradeId')?.clearValidators();
+        this.formGroup.get('categorieId')?.clearValidators();
         this.formGroup.get('fonctionId')?.setValidators([Validators.required]);
+        this.formGroup.get('emploiId')?.clearValidators();
+      } else if (this.regleType === 'SPECIFIQUE') {
+        this.formGroup.get('gradeId')?.clearValidators();
+        this.formGroup.get('categorieId')?.clearValidators();
+        this.formGroup.get('fonctionId')?.clearValidators();
+        this.formGroup.get('emploiId')?.setValidators([Validators.required]);
       }
     } else if (this.type === 'type-retenue-emploi') {
       this.formGroup.get('typeRetenueId')?.setValidators([Validators.required]);
@@ -644,6 +770,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.formGroup.get('categorieId')?.setValidators([Validators.required]);
     } else if (this.type === 'param-retraite') {
       this.formGroup.get('gradeId')?.setValidators([Validators.required]);
+    } else if (this.type === 'service') {
+      this.formGroup.get('directionId')?.setValidators([Validators.required]);
     } else {
       // this.formGroup.get('libelle')?.setValidators([Validators.maxLength(150)]);
       this.formGroup.get('libelle')?.setValidators([
@@ -661,10 +789,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('typeRetenueId')?.updateValueAndValidity();
     this.formGroup.get('baseCalcul')?.updateValueAndValidity();
     this.formGroup.get('fonctionId')?.updateValueAndValidity();
+    this.formGroup.get('emploiId')?.updateValueAndValidity();
     this.formGroup.get('directeurId')?.updateValueAndValidity();
     this.formGroup.get('departementId')?.updateValueAndValidity();
     this.formGroup.get('agenceId')?.updateValueAndValidity();
     this.formGroup.get('directionId')?.updateValueAndValidity();
+    this.formGroup.get('parentDirectionId')?.updateValueAndValidity();
     this.formGroup.get('gradeId')?.updateValueAndValidity();
     this.formGroup.get('categorieId')?.updateValueAndValidity();
     this.formGroup.get('echelonId')?.updateValueAndValidity();
@@ -677,12 +807,12 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.fonctionIndemnitesList = [];
     this.formGroup.reset({
       code: '', libelle: '', description: '', actif: true,
-      montant: 0, agenceId: null, departementId: null, directionId: null, directeurId: null,
+      montant: 0, agenceId: null, departementId: null, directionId: null, parentDirectionId: null, directeurId: null,
       categorieId: null, echelonId: null, gradeId: null, echelle: '', echellon: '',
       typeIndemnite: '', typeIndemniteId: null, typeRetenue: '', typeRetenueId: null,
       regimeSecuriteSocialId: null,
       baseCalcul: 'REMUNERATION_BRUTE',
-      fonction: '', fonctionId: null, grade: '', categorie: '', categories: [], taux: 0,
+      fonction: '', fonctionId: null, emploi: '', emploiId: null, grade: '', categorie: '', categories: [], taux: 0,
       tauxExoneration: 0, plafondExoneration: 0, tauxAbattement: 25, typeNomination: 'NON_NOMMEE'
     });
     if (this.type === 'grille-salariale') {
@@ -693,7 +823,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         montant: 0
       });
     } else if (this.type === 'param-indemnite') {
+      this.regleType = this.indemniteTab;
       this.availableCategoriesForSelectedGroup = [];
+      this.formGroup.patchValue({
+        typeNomination: this.indemniteTab === 'ORDINAIRE' ? 'NON_NOMMEE' : 'NOMMEE',
+        fonctionId: null,
+        emploiId: null,
+        gradeId: null,
+        categorieId: null
+      });
     }
     this.setupValidators();
     this.formGroup.get('code')?.enable();
@@ -733,17 +871,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         taux:          0,
       });
     } else if (this.type === 'param-indemnite') {
-      const fName = (item.fonction || '').toUpperCase();
-      if (this.fonctionsNominationBPBF.some(fn => fName.includes(fn))) {
-        this.regleType = 'NOMINATION';
-      } else if (this.fonctionsSpecifiquesBPBF.some(fs => fName.includes(fs))) {
-        this.regleType = 'SPECIFIQUE';
-      } else if (item.typeNomination === 'NOMMEE') {
-        this.regleType = 'NOMINATION';
-      } else {
-        this.regleType = 'ORDINAIRE';
-      }
-
+      this.regleType = this.getItemRegleType(item);
       const nomType = item.typeNomination || (this.regleType === 'ORDINAIRE' ? 'NON_NOMMEE' : 'NOMMEE');
 
       this.formGroup.reset({
@@ -761,6 +889,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         typeRetenue:   'Part Agent',
         fonction:      item.fonctionLibelle || item.fonction || '',
         fonctionId:    item.fonctionId ? String(item.fonctionId) : null,
+        emploi:        item.emploiLibelle || item.emploi || '',
+        emploiId:      item.emploiId ? String(item.emploiId) : null,
         grade:         item.gradeLibelle || item.grade || '',
         gradeId:       item.gradeId ? String(item.gradeId) : null,
         categorie:     item.categorieLibelle || item.categorie || '',
@@ -771,6 +901,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         tauxAbattement:  defaultAbattement,
         typeNomination:  nomType
       });
+      this.setupValidators();
     } else if (this.type === 'type-retenue-emploi') {
       this.formGroup.reset({
         code:          item.code || '',
@@ -872,6 +1003,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         agenceId:      item.agenceId ? String(item.agenceId) : null,
         departementId: item.departementId ? String(item.departementId) : null,
         directionId:   item.directionId ? String(item.directionId) : null,
+        parentDirectionId: item.parentDirectionId ? String(item.parentDirectionId) : null,
         directeurId:   item.directeurId ? String(item.directeurId) : null,
         echelle:       item.echelle || '',
         echellon:      item.echellon || '',
@@ -932,7 +1064,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     };
 
     const prefix = pfxMap[type] || 'REF';
-    const currentList = this.dataSource.data || [];
+    const currentList = (type === 'param-indemnite' && this.rawIndemniteItems && this.rawIndemniteItems.length > 0)
+      ? this.rawIndemniteItems
+      : (this.dataSource.data || []);
 
     let maxNum = 0;
     currentList.forEach(item => {
@@ -986,6 +1120,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     const selectedRegimeSecuriteSocial = this.regimesSecuriteSocialList.find(regime => String(regime.id) === String(v.regimeSecuriteSocialId));
     const selectedDepartement = this.departements.find(departement => String(departement.id) === String(v.departementId));
     const selectedDirection = this.directions.find(direction => String(direction.id) === String(v.directionId));
+    const selectedParentDirection = this.directions.find(direction => String(direction.id) === String(v.parentDirectionId));
     const selectedDirecteur = this.directeursList.find(directeur => directeur.id === String(v.directeurId));
 
     let item: RefItem;
@@ -1015,35 +1150,51 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       };
     } else if (this.type === 'param-indemnite') {
       const typeIndemniteLabel = selectedTypeIndemnite?.libelle || selectedTypeIndemnite?.code || '';
-      const fonctionLabel = selectedFonction?.libelle || selectedFonction?.code || '';
+      const fonctionLabel = selectedFonction?.libelle || selectedFonction?.name || selectedFonction?.code || '';
       const gradeLabel = selectedGrade?.libelle || selectedGrade?.code || '';
       const categorieLabel = selectedCategorie?.libelle || selectedCategorie?.code || '';
       const libVal = typeIndemniteLabel || 'Indemnité';
-      const finalCode = this.editingItem?.code || (v.code && v.code.trim() ? v.code.trim() : this.generateCode(this.type, libVal));
+      let finalCode = this.editingItem?.code || (v.code && v.code.trim() ? v.code.trim() : this.generateCode(this.type, libVal));
+      if (!this.editingItem && this.rawIndemniteItems && this.rawIndemniteItems.some(it => it.code === finalCode)) {
+        finalCode = this.generateCode(this.type, libVal);
+      }
+
+      const isOrdinaire = this.regleType === 'ORDINAIRE';
+      const isNomination = this.regleType === 'NOMINATION';
+      const isSpecifique = this.regleType === 'SPECIFIQUE';
+
+      const selectedEmploi = this.emplois.find(e => String(e.id) === String(v.emploiId) || e.code === v.emploiId);
+      const emploiLabel = selectedEmploi?.libelle || selectedEmploi?.name || selectedEmploi?.code || '';
+
       item = {
         id:            this.editingItem?.id,
         code:          finalCode,
         libelle:       libVal,
-        description:   `Fonction: ${fonctionLabel || '-'}, Grade: ${gradeLabel || '-'}, Cat: ${categorieLabel || '-'}`,
+        description:   isOrdinaire
+          ? `Groupe: ${gradeLabel || '-'}, Cat: ${categorieLabel || '-'}`
+          : (isSpecifique ? `Emploi: ${emploiLabel || '-'}` : `Fonction: ${fonctionLabel || '-'}`),
         actif:         v.actif ?? true,
         montant:       Number(v.taux ?? v.montant ?? 0),
         typeIndemnite: libVal,
         typeIndemniteId: String(v.typeIndemniteId),
         typeIndemniteLibelle: libVal,
-        fonctionId:    v.fonctionId ? String(v.fonctionId) : undefined,
-        fonction:      fonctionLabel,
-        fonctionLibelle: fonctionLabel,
-        gradeId:       v.gradeId ? String(v.gradeId) : undefined,
-        grade:         gradeLabel,
-        gradeLibelle:  gradeLabel,
-        categorieId:   v.categorieId ? String(v.categorieId) : undefined,
-        categorie:     categorieLabel,
-        categorieLibelle: categorieLabel,
+        fonctionId:    (isNomination && v.fonctionId) ? String(v.fonctionId) : undefined,
+        fonction:      isNomination ? (fonctionLabel || v.fonction || '') : '',
+        fonctionLibelle: isNomination ? (fonctionLabel || v.fonction || '') : '',
+        emploiId:      (isSpecifique && v.emploiId) ? String(v.emploiId) : undefined,
+        emploi:        isSpecifique ? (emploiLabel || v.emploi || '') : '',
+        emploiLibelle: isSpecifique ? (emploiLabel || v.emploi || '') : '',
+        gradeId:       (isOrdinaire && v.gradeId) ? String(v.gradeId) : undefined,
+        grade:         (isOrdinaire) ? (gradeLabel || v.grade || '') : '',
+        gradeLibelle:  (isOrdinaire) ? (gradeLabel || v.grade || '') : '',
+        categorieId:   (isOrdinaire && v.categorieId) ? String(v.categorieId) : undefined,
+        categorie:     (isOrdinaire) ? (categorieLabel || v.categorie || '') : '',
+        categorieLibelle: (isOrdinaire) ? (categorieLabel || v.categorie || '') : '',
         taux:          Number(v.taux ?? v.montant ?? 0),
         tauxExoneration: Number(v.tauxExoneration ?? 0),
         plafondExoneration: Number(v.plafondExoneration ?? 0),
         regleType:     this.regleType,
-        typeNomination: v.typeNomination || (this.regleType === 'ORDINAIRE' ? 'NON_NOMMEE' : 'NOMMEE')
+        typeNomination: isOrdinaire ? 'NON_NOMMEE' : 'NOMMEE'
       };
     } else if (this.type === 'grade') {
       const gName = v.libelle || v.grade || 'GROUPE I';
@@ -1122,6 +1273,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         departementLibelle: selectedDepartement?.libelle,
         directionId:   v.directionId ? String(v.directionId) : undefined,
         directionLibelle: selectedDirection?.libelle,
+        parentDirectionId: v.parentDirectionId ? String(v.parentDirectionId) : undefined,
+        parentDirectionLibelle: selectedParentDirection?.libelle,
         directeurId:   v.directeurId ? String(v.directeurId) : undefined,
         directeurLibelle: selectedDirecteur?.libelle,
         tauxAbattement: v.tauxAbattement !== undefined && v.tauxAbattement !== null ? Number(v.tauxAbattement) : undefined,
@@ -1137,7 +1290,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     if (this.isEditing && this.editingItem) {
       this.dbRefService.updateItem(this.type, targetCode, item).subscribe({
         next: (items) => {
-          this.dataSource.data = items;
+          this.onItemsLoaded(items);
           if (this.type === 'grille-salariale' && this.paginator) {
             this.paginator.pageSize = 250;
           }
@@ -1151,7 +1304,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     } else {
       this.dbRefService.addItem(this.type, item).subscribe({
         next: (items) => {
-          this.dataSource.data = items;
+          this.onItemsLoaded(items);
           if (this.type === 'grille-salariale' && this.paginator) {
             this.paginator.pageSize = 250;
           }
@@ -1171,7 +1324,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     if (confirm(msg)) {
       this.dbRefService.deleteItem(this.type, item).subscribe({
         next: (items) => {
-          this.dataSource.data = items;
+          this.onItemsLoaded(items);
         },
         error: (err)  => { alert(err.message || 'Erreur lors de la suppression.'); }
       });
@@ -1186,7 +1339,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     }
     this.dbRefService.toggleItemStatus(this.type, item.code).subscribe({
       next: (items) => {
-        this.dataSource.data = items;
+        this.onItemsLoaded(items);
       },
       error: (err) => { alert(err.message || 'Erreur lors du changement de statut.'); }
     });

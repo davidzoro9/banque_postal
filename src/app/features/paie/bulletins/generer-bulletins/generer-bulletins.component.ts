@@ -3,11 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { EmployeeService } from '../../../grh/employes/services/employee.service';
 import { Employee } from '../../../grh/employes/models/employee.model';
-import { calculateOfficialIUTS, computeEmployeeFamilyCharges } from '../../../../core/utils/iuts-calculator.utils';
 import { DbRefService } from '../../../donnees-base/services/db-ref.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { numberToFrenchWords } from '../bulletin-individuel/bulletin-individuel.component';
+import { BulletinPdfService } from '../../services/bulletin-pdf.service';
+import { BulletinService, BulletinDto } from '../../services/bulletin.service';
 
 @Component({
   selector: 'app-generer-bulletins',
@@ -44,10 +45,31 @@ export class GenererBulletinsComponent implements OnInit {
   newSessionForm = {
     mois: String(new Date().getMonth() + 1).padStart(2, '0'),
     annee: new Date().getFullYear(),
+    name: '',
     periode: `${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][new Date().getMonth()]} ${new Date().getFullYear()}`,
-    typeSession: 'PAIE_NORMALE',
-    codeSession: `SESS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    typeSession: 'ORDINAIRE',
+    codeSession: `SESS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+    modeCible: 'TOUS' as 'TOUS' | 'SELECTION'
   };
+
+  // Recherche et sélection dans le modal de création
+  searchNewSessionEmployee: string = '';
+  employesSelectionnesIdsForNewSession: { [id: string]: boolean } = {};
+
+  // Sélection des agents pour la session (Création / Recalcul)
+  showSelectionEmployesModal = false;
+  modeGenerationSession: 'TOUS' | 'SELECTION' = 'TOUS';
+  get modeGenerationExtraordinaire(): 'TOUS' | 'SELECTION' { return this.modeGenerationSession; }
+  set modeGenerationExtraordinaire(val: 'TOUS' | 'SELECTION') { this.modeGenerationSession = val; }
+  searchSelectionEmployee: string = '';
+  filtreStatutModal: 'TOUS' | 'NON_CALCULE' | 'DEJA_CALCULE' = 'TOUS';
+  tousLesEmployes: Employee[] = [];
+  employesSelectionnesIds: { [id: string]: boolean } = {};
+
+  // Justification de l'écart comparatif
+  showJustificationModal = false;
+  selectedBulletinForJustification: any = null;
+  justificationTexte: string = '';
 
   isCalculating = false;
   bulletins: any[] = [];
@@ -108,7 +130,9 @@ export class GenererBulletinsComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private employeeService: EmployeeService,
-    private dbRefService: DbRefService
+    private dbRefService: DbRefService,
+    private bulletinPdfService: BulletinPdfService,
+    private bulletinService: BulletinService
   ) {}
 
   ngOnInit(): void {
@@ -133,7 +157,7 @@ export class GenererBulletinsComponent implements OnInit {
     this.currentSession = session;
     this.vueActive = 'DETAIL_SESSION';
     this.periode = session.periode || `${session.mois}/${session.annee}`;
-    this.sessionType = (session.typeSession === 'GRATIFICATION' || session.typeSession === 'EXTRAORDINAIRE') ? 'EXTRAORDINAIRE' : 'ORDINAIRE';
+    this.sessionType = session.typeSession === 'EXTRAORDINAIRE' ? 'EXTRAORDINAIRE' : 'ORDINAIRE';
     
     // Déterminer l'index du mois
     const mNum = parseInt(session.mois, 10);
@@ -147,29 +171,29 @@ export class GenererBulletinsComponent implements OnInit {
       this.http.get<any[]>(`${environment.apiUrl}/paie/sessions/${session.id}/bulletins`).pipe(
         catchError(() => of([]))
       ).subscribe(savedBulletins => {
-        if (savedBulletins && savedBulletins.length > 0) {
-          this.bulletins = savedBulletins.map(b => this.adapterBulletinFromBackend(b));
-          this.isCalculating = false;
-        } else {
-          // Lancer le calcul dynamique pour les agents actifs de la session
-          this.lancerCalculPaie();
-        }
+        this.bulletins = (savedBulletins || []).map(b => this.adapterBulletinFromBackend(b));
+        this.isCalculating = false;
       });
     } else {
-      this.lancerCalculPaie();
+      this.bulletins = [];
+      this.isCalculating = false;
     }
   }
 
   ouvrirModalCreerSession(): void {
-    const nextMonth = this.moisIndex + 1 <= 12 ? this.moisIndex + 1 : 1;
-    const mmStr = String(nextMonth).padStart(2, '0');
+    const defaultMois = String(this.moisIndex + 1).padStart(2, '0');
     this.newSessionForm = {
-      mois: mmStr,
+      mois: defaultMois,
       annee: this.selectedYear,
-      periode: this.moisListe[nextMonth - 1] || `${this.moisNoms[nextMonth - 1]} ${this.selectedYear}`,
-      typeSession: 'PAIE_NORMALE',
-      codeSession: `SESS-${this.selectedYear}-${mmStr}`
+      name: '',
+      typeSession: 'ORDINAIRE',
+      periode: '',
+      codeSession: '',
+      modeCible: 'TOUS'
     };
+    this.searchNewSessionEmployee = '';
+    this.chargerEmployesPourSelection();
+    this.actualiserCodeSession();
     this.showCreateSessionModal = true;
   }
 
@@ -177,25 +201,223 @@ export class GenererBulletinsComponent implements OnInit {
     this.showCreateSessionModal = false;
   }
 
-  onAnneeSelectChange(event: any): void {
-    const y = parseInt(event.target.value, 10);
+  get employesFiltresPourNouvelleSession(): Employee[] {
+    if (!this.searchNewSessionEmployee || !this.searchNewSessionEmployee.trim()) {
+      return this.tousLesEmployes;
+    }
+    const q = this.searchNewSessionEmployee.toLowerCase().trim();
+    return this.tousLesEmployes.filter(e =>
+      (e.matricule && e.matricule.toLowerCase().includes(q)) ||
+      (e.nom && e.nom.toLowerCase().includes(q)) ||
+      (e.prenom && e.prenom.toLowerCase().includes(q)) ||
+      ((e.nom || '') + ' ' + (e.prenom || '')).toLowerCase().includes(q)
+    );
+  }
+
+  get nbEmployesSelectionnesNouvelleSession(): number {
+    return Object.keys(this.employesSelectionnesIdsForNewSession)
+      .filter(k => this.employesSelectionnesIdsForNewSession[k]).length;
+  }
+
+  toggleSelectAllNouvelleSession(checked: boolean): void {
+    const cible = this.searchNewSessionEmployee ? this.employesFiltresPourNouvelleSession : this.tousLesEmployes;
+    cible.forEach(e => {
+      if (e.id) this.employesSelectionnesIdsForNewSession[String(e.id)] = checked;
+    });
+  }
+
+  cocherTranche50NouvelleSession(): void {
+    this.tousLesEmployes.forEach(e => {
+      if (e.id) this.employesSelectionnesIdsForNewSession[String(e.id)] = false;
+    });
+    let count = 0;
+    for (const emp of this.tousLesEmployes) {
+      if (emp.id && count < 50) {
+        this.employesSelectionnesIdsForNewSession[String(emp.id)] = true;
+        count++;
+      }
+    }
+  }
+
+  actualiserCodeSession(): void {
+    const y = Number(this.newSessionForm.annee) || this.selectedYear;
+    const m = String(this.newSessionForm.mois || '01').padStart(2, '0');
     this.newSessionForm.annee = y;
-    const mIdx = parseInt(this.newSessionForm.mois, 10) - 1;
-    this.newSessionForm.periode = `${this.moisNoms[mIdx] || ''} ${y}`;
-    this.newSessionForm.codeSession = `SESS-${y}-${this.newSessionForm.mois}`;
+    this.newSessionForm.mois = m;
+    const mIdx = Math.max(0, Math.min(11, parseInt(m, 10) - 1));
+    const nomMois = this.moisNoms[mIdx] || `Mois ${m}`;
+    const isExtra = this.newSessionForm.typeSession === 'EXTRAORDINAIRE';
+
+    if (isExtra) {
+      const libelle = this.newSessionForm.name?.trim() ? this.newSessionForm.name.trim() : 'Extraordinaire';
+      this.newSessionForm.periode = `${libelle} — ${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-EXT-${y}-${m}`;
+    } else {
+      this.newSessionForm.periode = `${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-${y}-${m}`;
+    }
+  }
+
+  onAnneeSelectChange(event: any): void {
+    const val = event?.target ? event.target.value : event;
+    this.newSessionForm.annee = parseInt(val, 10);
+    this.actualiserCodeSession();
   }
 
   onMoisSelectChange(event: any): void {
-    const m = event.target.value;
-    const mIdx = parseInt(m, 10) - 1;
-    this.newSessionForm.mois = m;
-    this.newSessionForm.periode = `${this.moisNoms[mIdx] || ''} ${this.newSessionForm.annee}`;
-    this.newSessionForm.codeSession = `SESS-${this.newSessionForm.annee}-${m}`;
+    const val = event?.target ? event.target.value : event;
+    this.newSessionForm.mois = val;
+    this.actualiserCodeSession();
+  }
+
+  changerModeCibleNouvelleSession(mode: 'TOUS' | 'SELECTION'): void {
+    this.newSessionForm.modeCible = mode;
+    if (mode === 'SELECTION') {
+      this.employesSelectionnesIdsForNewSession = {};
+    } else {
+      this.tousLesEmployes.forEach(e => {
+        if (e.id) this.employesSelectionnesIdsForNewSession[String(e.id)] = true;
+      });
+    }
+  }
+
+  toggleSelectEmployeeForNewSession(empId: any): void {
+    if (!empId) return;
+    const key = String(empId);
+    this.employesSelectionnesIdsForNewSession[key] = !this.employesSelectionnesIdsForNewSession[key];
+  }
+
+  isEmployeSelectedForNewSession(empId: any): boolean {
+    return !!this.employesSelectionnesIdsForNewSession[String(empId)];
+  }
+
+  isEmployeSelectedForGeneration(empId: any): boolean {
+    return !!this.employesSelectionnesIds[String(empId)];
+  }
+
+  getGradeConcat(emp: Employee): string {
+    if (!emp) return '—';
+
+    // 1. Si déjà au format standardisé arabe (ex: CL2E02, C1E01, HCEX)
+    let directGrade = (emp.grade || '').trim().toUpperCase();
+    if (/^(C|CL|HC)\d*(E\d+|EX)$/i.test(directGrade)) {
+      return directGrade;
+    }
+
+    // 2. Si le grade direct contient des chiffres romains (ex: CLIIE02 -> CL2E02)
+    const romanDirectMatch = directGrade.match(/^CL\s*(VIII|VII|VI|V|IV|III|II|I)\s*(E\d+|EX)?$/i);
+    if (romanDirectMatch) {
+      const romanMap: Record<string, string> = {
+        'VIII': '8', 'VII': '7', 'VI': '6', 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1'
+      };
+      const rNum = romanMap[romanDirectMatch[1].toUpperCase()] || romanDirectMatch[1];
+      const echPart = romanDirectMatch[2] ? romanDirectMatch[2].toUpperCase() : '';
+      if (echPart) {
+        return `CL${rNum}${echPart}`;
+      }
+      directGrade = `CL${rNum}`;
+    }
+
+    // 3. Déterminer le code de la catégorie (ex: 'CLASSE II' -> 'CL2', '1ère CATEGORIE' -> 'C1')
+    const rawCat = (emp.categoriePro || (emp as any).categorie || '').trim().toUpperCase();
+    const catCode = this.getCatCodeDisplay(rawCat);
+
+    // 4. Déterminer le code de l'échelon (ex: 'Échelon 2' -> 'E02')
+    const rawEch = (emp.echelon || '').trim().toUpperCase();
+    const echCode = this.getEchelonCodeDisplay(rawEch);
+
+    if (catCode && echCode) {
+      return `${catCode}${echCode}`;
+    }
+
+    return directGrade || catCode || echCode || '—';
+  }
+
+  getCatCodeDisplay(str: string): string {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+
+    // Classes bancaires (CL1 à CL8) - Tester impérativement de VIII à I pour éviter les faux positifs
+    if (upper.includes('CLASSE VIII') || upper === 'VIII' || upper === 'CL8' || upper === 'CLASSE 8' || upper === 'CL VIII') return 'CL8';
+    if (upper.includes('CLASSE VII') || upper === 'VII' || upper === 'CL7' || upper === 'CLASSE 7' || upper === 'CL VII') return 'CL7';
+    if (upper.includes('CLASSE VI') || upper === 'VI' || upper === 'CL6' || upper === 'CLASSE 6' || upper === 'CL VI') return 'CL6';
+    if (upper.includes('CLASSE V') || upper === 'V' || upper === 'CL5' || upper === 'CLASSE 5' || upper === 'CL V') return 'CL5';
+    if (upper.includes('CLASSE IV') || upper === 'IV' || upper === 'CL4' || upper === 'CLASSE 4' || upper === 'CL IV') return 'CL4';
+    if (upper.includes('CLASSE III') || upper === 'III' || upper === 'CL3' || upper === 'CLASSE 3' || upper === 'CL III') return 'CL3';
+    if (upper.includes('CLASSE II') || upper === 'II' || upper === 'CL2' || upper === 'CLASSE 2' || upper === 'CL II') return 'CL2';
+    if (upper.includes('CLASSE I') || upper === 'I' || upper === 'CL1' || upper === 'CLASSE 1' || upper === 'CL I') return 'CL1';
+
+    // Catégories d'exécution et maîtrise (C1 à C7)
+    if (upper.includes('1ERE') || upper.includes('1ÈRE') || upper.includes('1RE') || upper.includes('CATEGORIE 1') || upper.includes('CAT 1') || upper === '1' || upper === 'C1') return 'C1';
+    if (upper.includes('2EME') || upper.includes('2ÈME') || upper.includes('2E') || upper.includes('CATEGORIE 2') || upper.includes('CAT 2') || upper === '2' || upper === 'C2') return 'C2';
+    if (upper.includes('3EME') || upper.includes('3ÈME') || upper.includes('3E') || upper.includes('CATEGORIE 3') || upper.includes('CAT 3') || upper === '3' || upper === 'C3') return 'C3';
+    if (upper.includes('4EME') || upper.includes('4ÈME') || upper.includes('4E') || upper.includes('CATEGORIE 4') || upper.includes('CAT 4') || upper === '4' || upper === 'C4') return 'C4';
+    if (upper.includes('5EME') || upper.includes('5ÈME') || upper.includes('5E') || upper.includes('CATEGORIE 5') || upper.includes('CAT 5') || upper === '5' || upper === 'C5') return 'C5';
+    if (upper.includes('6EME') || upper.includes('6ÈME') || upper.includes('6E') || upper.includes('CATEGORIE 6') || upper.includes('CAT 6') || upper === '6' || upper === 'C6') return 'C6';
+    if (upper.includes('7EME') || upper.includes('7ÈME') || upper.includes('7E') || upper.includes('CATEGORIE 7') || upper.includes('CAT 7') || upper === '7' || upper === 'C7') return 'C7';
+
+    // Hors Catégorie
+    if (upper.includes('HORS') || upper.startsWith('HC')) return 'HC';
+
+    // Regex générique pour attraper CL + chiffre ou chiffre romain
+    if (upper.startsWith('CL') || upper.includes('CLASSE')) {
+      const romanMap: Record<string, string> = {
+        'VIII': '8', 'VII': '7', 'VI': '6', 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1'
+      };
+      const match = upper.match(/VIII|VII|VI|IV|V|III|II|I|\d+/);
+      if (match) {
+        const val = romanMap[match[0]] || match[0];
+        return `CL${val}`;
+      }
+    }
+
+    if (upper.startsWith('C') && /^C\d+/.test(upper)) {
+      return upper.match(/^C\d+/)?.[0] || upper;
+    }
+
+    const num = upper.replace(/[^0-9]/g, '');
+    if (num) return `C${num}`;
+
+    return upper;
+  }
+
+  getEchelonCodeDisplay(str: string): string {
+    if (!str) return '';
+    const upper = str.toUpperCase().trim();
+    if (upper.includes('EXCEPT') || upper.endsWith('EX')) return 'EX';
+    if (upper.startsWith('E') && !upper.startsWith('ECH')) {
+      const num = parseInt(upper.substring(1), 10);
+      if (!isNaN(num)) return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    const numStr = upper.replace(/[^0-9]/g, '');
+    if (numStr) {
+      const num = parseInt(numStr, 10);
+      return num < 10 ? `E0${num}` : `E${num}`;
+    }
+    return upper;
   }
 
   soumettreCreerSession(): void {
+    if (this.newSessionForm.typeSession === 'EXTRAORDINAIRE' && (!this.newSessionForm.name || !this.newSessionForm.name.trim())) {
+      alert('Le libellé de la session extraordinaire est obligatoire.');
+      return;
+    }
+
+    let idsPourGeneration: number[] | null = null;
+    if (this.newSessionForm.modeCible === 'SELECTION') {
+      idsPourGeneration = Object.keys(this.employesSelectionnesIdsForNewSession)
+        .filter(k => !!this.employesSelectionnesIdsForNewSession[k])
+        .map(k => Number(k))
+        .filter(n => !isNaN(n) && n > 0);
+      if (idsPourGeneration.length === 0) {
+        alert('Veuillez sélectionner au moins un agent pour cette session.');
+        return;
+      }
+    }
+
     const payload = {
       codeSession: this.newSessionForm.codeSession,
+      name: this.newSessionForm.name,
       mois: this.newSessionForm.mois,
       annee: this.newSessionForm.annee,
       periode: this.newSessionForm.periode,
@@ -211,30 +433,212 @@ export class GenererBulletinsComponent implements OnInit {
     ).subscribe(created => {
       if (created) {
         this.fermerModalCreerSession();
-        this.chargerToutesLesSessions();
+        this.currentSession = created;
+        this.vueActive = 'DETAIL_SESSION';
+        this.periode = created.periode || `${created.mois}/${created.annee}`;
+        this.sessionType = created.typeSession === 'EXTRAORDINAIRE' ? 'EXTRAORDINAIRE' : 'ORDINAIRE';
+        
+        const mNum = parseInt(created.mois, 10);
+        if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) {
+          this.moisIndex = mNum - 1;
+        }
+
+        // Lancement direct de la génération ciblée côté Spring Boot
+        this.lancerGenerationSession(idsPourGeneration && idsPourGeneration.length > 0 ? idsPourGeneration : undefined);
       }
     });
   }
 
-  lancerGenerationSession(): void {
+  clicBoutonGenerer(): void {
+    if (!this.currentSession) return;
+    this.chargerEmployesPourSelection();
+    this.searchSelectionEmployee = '';
+    this.modeGenerationSession = 'TOUS';
+    this.showSelectionEmployesModal = true;
+  }
+
+  chargerEmployesPourSelection(): void {
+    this.employeeService.getAll().subscribe(employees => {
+      this.tousLesEmployes = (employees || []).filter(e => e.statut === 'Actif' || !e.statut || (e.statut as any) === 'ACTIF');
+      this.employesSelectionnesIds = {};
+      this.employesSelectionnesIdsForNewSession = {};
+      this.tousLesEmployes.forEach(e => {
+        if (e.id) {
+          this.employesSelectionnesIds[String(e.id)] = true;
+          this.employesSelectionnesIdsForNewSession[String(e.id)] = true;
+        }
+      });
+    });
+  }
+
+  isAgentCalculeDansSession(empId: any): boolean {
+    if (!empId || !this.bulletins || this.bulletins.length === 0) return false;
+    const targetId = Number(empId);
+    return this.bulletins.some(b => {
+      const bEmpId = Number(b.employeeId || b.employee?.id);
+      return bEmpId === targetId;
+    });
+  }
+
+  get nbAgentsCalculesDansSession(): number {
+    if (!this.bulletins) return 0;
+    return this.bulletins.length;
+  }
+
+  get nbAgentsNonCalculesDansSession(): number {
+    return Math.max(0, this.tousLesEmployes.length - this.nbAgentsCalculesDansSession);
+  }
+
+  cocherTranche50(onlyPending: boolean = true): void {
+    // Décocher tout d'abord
+    this.tousLesEmployes.forEach(e => {
+      if (e.id) this.employesSelectionnesIds[String(e.id)] = false;
+    });
+
+    let count = 0;
+    for (const emp of this.tousLesEmployes) {
+      if (!emp.id) continue;
+      const alreadyDone = this.isAgentCalculeDansSession(emp.id);
+      if (!onlyPending || !alreadyDone) {
+        this.employesSelectionnesIds[String(emp.id)] = true;
+        count++;
+        if (count >= 50) break;
+      }
+    }
+
+    if (count === 0 && onlyPending) {
+      this.cocherTranche50(false);
+    }
+  }
+
+  get employesFiltresPourSelection(): Employee[] {
+    let list = this.tousLesEmployes;
+    if (this.filtreStatutModal === 'NON_CALCULE') {
+      list = list.filter(e => !this.isAgentCalculeDansSession(e.id));
+    } else if (this.filtreStatutModal === 'DEJA_CALCULE') {
+      list = list.filter(e => this.isAgentCalculeDansSession(e.id));
+    }
+
+    if (!this.searchSelectionEmployee || !this.searchSelectionEmployee.trim()) {
+      return list;
+    }
+    const q = this.searchSelectionEmployee.toLowerCase().trim();
+    return list.filter(e =>
+      (e.matricule && e.matricule.toLowerCase().includes(q)) ||
+      (e.nom && e.nom.toLowerCase().includes(q)) ||
+      (e.prenom && e.prenom.toLowerCase().includes(q)) ||
+      ((e.nom || '') + ' ' + (e.prenom || '')).toLowerCase().includes(q)
+    );
+  }
+
+  toggleSelectAllEmployes(checked: boolean): void {
+    const cible = (this.searchSelectionEmployee || this.filtreStatutModal !== 'TOUS')
+      ? this.employesFiltresPourSelection
+      : this.tousLesEmployes;
+    cible.forEach(e => {
+      if (e.id) this.employesSelectionnesIds[String(e.id)] = checked;
+    });
+  }
+
+  get nbEmployesSelectionnes(): number {
+    return Object.values(this.employesSelectionnesIds).filter(Boolean).length;
+  }
+
+  fermerModalSelectionEmployes(): void {
+    this.showSelectionEmployesModal = false;
+  }
+
+  changerModeGenerationSession(mode: 'TOUS' | 'SELECTION'): void {
+    this.modeGenerationSession = mode;
+    if (mode === 'SELECTION') {
+      this.employesSelectionnesIds = {};
+    } else {
+      this.tousLesEmployes.forEach(e => {
+        if (e.id) this.employesSelectionnesIds[String(e.id)] = true;
+      });
+    }
+  }
+
+  toggleSelectEmployeeGeneration(empId: any): void {
+    if (!empId) return;
+    const key = String(empId);
+    this.employesSelectionnesIds[key] = !this.employesSelectionnesIds[key];
+  }
+
+  validerGenerationSession(): void {
+    let ids: number[] = [];
+    if (this.modeGenerationSession === 'SELECTION') {
+      ids = Object.keys(this.employesSelectionnesIds)
+        .filter(k => !!this.employesSelectionnesIds[k])
+        .map(k => Number(k))
+        .filter(n => !isNaN(n) && n > 0);
+      if (ids.length === 0) {
+        alert('Veuillez sélectionner au moins un agent pour cette session de paie.');
+        return;
+      }
+    }
+    this.showSelectionEmployesModal = false;
+    this.lancerGenerationSession(ids.length > 0 ? ids : undefined);
+  }
+
+  validerGenerationExtraordinaire(): void {
+    this.validerGenerationSession();
+  }
+
+  lancerGenerationSession(employeeIds?: number[]): void {
     if (!this.currentSession || !this.currentSession.id) {
-      this.lancerCalculPaie();
+      this.bulletins = [];
+      this.isCalculating = false;
       return;
     }
     this.isCalculating = true;
-    this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${this.currentSession.id}/generer`, {}).pipe(
+    const body = (employeeIds && employeeIds.length > 0) ? employeeIds : null;
+    this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${this.currentSession.id}/generer`, body).pipe(
       catchError(err => {
         alert('Erreur lors de la génération: ' + (err?.error?.message || err.message));
         return of([]);
       })
     ).subscribe(bulletins => {
-      if (bulletins && bulletins.length > 0) {
-        this.bulletins = bulletins.map(b => this.adapterBulletinFromBackend(b));
+      this.bulletins = (bulletins || []).map(b => this.adapterBulletinFromBackend(b));
+      if (this.bulletins.length > 0) {
         this.currentSession.statut = 'GENERE';
-      } else {
-        this.genererBulletinsDepuisEmployees();
       }
       this.isCalculating = false;
+    });
+  }
+
+  // === GESTION DE LA JUSTIFICATION DES ÉCARTS ===
+  ouvrirModalJustification(b: any): void {
+    this.selectedBulletinForJustification = b;
+    this.justificationTexte = b.justificationEcart || '';
+    this.showJustificationModal = true;
+  }
+
+  fermerModalJustification(): void {
+    this.showJustificationModal = false;
+    this.selectedBulletinForJustification = null;
+    this.justificationTexte = '';
+  }
+
+  sauvegarderJustification(): void {
+    if (!this.selectedBulletinForJustification?.id) {
+      alert('Impossible d\'enregistrer la justification : identifiant du bulletin manquant.');
+      return;
+    }
+    const bId = this.selectedBulletinForJustification.id;
+    const txt = this.justificationTexte;
+    this.bulletinService.updateJustification(bId, txt).subscribe({
+      next: (updated) => {
+        this.selectedBulletinForJustification.justificationEcart = updated.justificationEcart !== undefined ? updated.justificationEcart : txt;
+        const found = this.bulletins.find(b => b.id === bId);
+        if (found) {
+          found.justificationEcart = this.selectedBulletinForJustification.justificationEcart;
+        }
+        this.fermerModalJustification();
+      },
+      error: (err) => {
+        alert('Erreur lors de la mise à jour de la justification : ' + (err?.error?.message || err.message));
+      }
     });
   }
 
@@ -277,101 +681,86 @@ export class GenererBulletinsComponent implements OnInit {
     copy.mois = this.periode;
     copy.etat = b.statut || (this.currentSession ? this.currentSession.statut : 'GENERE');
 
-    const sBase = copy.salaireBase || 0;
-    copy.salaireBase = sBase;
+    // Récupération stricte des montants réels calculés et persistés en base par Spring Boot
+    copy.salaireBase = b.salaireBase ?? 0;
+    copy.surSalaire = b.surSalaire ?? 0;
+    copy.totalIndemnites = b.totalIndemnites ?? 0;
+    copy.totalAvoirs = b.totalAvoirs ?? 0;
+    copy.salaireBrut = b.salaireBrut ?? (copy.salaireBase + copy.surSalaire + copy.totalIndemnites + copy.totalAvoirs);
+    copy.totalExonerations = b.totalExonerations ?? 0;
+    copy.abattementForfaitaire = b.abattementForfaitaire ?? 0;
+    copy.baseImposable = b.baseImposable ?? 0;
 
-    const isGratif = (this.currentSession?.typeSession || '').toUpperCase().includes('GRATIF') ||
-                     (copy.typeSession || '').toUpperCase().includes('GRATIF');
-    if (isGratif) {
-      copy.salaireBase = sBase;
-      copy.totalIndemnites = 0;
-      copy.indemnitesDetails = [];
-      copy.totalAvoirs = 0;
-      copy.salaireBrut = sBase;
-      copy.abattementForfaitaire = 0;
-      copy.exoFiscalesIndemnites = 0;
-      copy.baseImposable = 0;
-      copy.cotisationCnssAgent = 0;
-      copy.cotisationCarfoAgent = 0;
-      copy.cotisationCrraeAgent = 0;
-      copy.cotisationCNSS = 0;
-      copy.impotIUTS = 0;
-      copy.retenueFSP = 0;
-      copy.avanceSurSolde = 0;
-      copy.precompteAvance = 0;
-      copy.totalPrecomptes = 0;
-      copy.totalRetenues = 0;
-      copy.partPatronaleCnss = 0;
-      copy.partPatronaleCarfo = 0;
-      copy.partPatronaleCrrae = 0;
-      copy.totalRetenuesPatronales = 0;
-      copy.salaireNet = sBase; // LE NET DEVIENT LE BRUT !
-      copy.salaireNetM1 = sBase;
-      copy.ecartNet = 0;
-      return copy;
-    }
+    // Cotisations salariales réelles issues de PostgreSQL
+    const cotisCnss = b.cotisationCnss != null ? b.cotisationCnss : (b.cotisationCNSS != null ? b.cotisationCNSS : (b.cotisationCnssAgent != null ? b.cotisationCnssAgent : 0));
+    copy.cotisationCnss = cotisCnss;
+    copy.cotisationCNSS = cotisCnss;
+    copy.cotisationCnssAgent = cotisCnss;
 
-    let indList = b.lines ? b.lines.filter((l: any) => (l.typeLigne === 'GAIN' || l.category === 'GAIN') && l.code !== 'SAL_BASE') : [];
+    const cotisCarfo = b.cotisationCarfo != null ? b.cotisationCarfo : (b.cotisationCarfoAgent != null ? b.cotisationCarfoAgent : 0);
+    copy.cotisationCarfo = cotisCarfo;
+    copy.cotisationCarfoAgent = cotisCarfo;
+
+    const cotisCrrae = b.cotisationCrrae != null ? b.cotisationCrrae : (b.cotisationCrraeAgent != null ? b.cotisationCrraeAgent : 0);
+    copy.cotisationCrrae = cotisCrrae;
+    copy.cotisationCrraeAgent = cotisCrrae;
+
+    const iuts = b.impotIuts != null ? b.impotIuts : (b.impotIUTS != null ? b.impotIUTS : 0);
+    copy.impotIuts = iuts;
+    copy.impotIUTS = iuts;
+
+    const fsp = b.cotisationSolidarite != null ? b.cotisationSolidarite : (b.retenueFSP != null ? b.retenueFSP : 0);
+    copy.cotisationSolidarite = fsp;
+    copy.retenueFSP = fsp;
+
+    const precompte = b.totalPrecomptes != null ? b.totalPrecomptes : (b.precompteAvance != null ? b.precompteAvance : (b.avanceSurSolde != null ? b.avanceSurSolde : 0));
+    copy.totalPrecomptes = precompte;
+    copy.precompteAvance = precompte;
+    copy.avanceSurSolde = precompte;
+
+    copy.totalRetenues = b.totalRetenues != null ? b.totalRetenues : (cotisCnss + cotisCarfo + cotisCrrae + iuts + fsp + precompte);
+    copy.totalRetenuesPatronales = b.totalCotisationsPatronales != null ? b.totalCotisationsPatronales : (b.totalRetenuesPatronales != null ? b.totalRetenuesPatronales : (b.totalChargesPatronales != null ? b.totalChargesPatronales : 0));
+    copy.salaireNet = b.salaireNet != null ? b.salaireNet : (copy.salaireBrut - copy.totalRetenues);
+
+    const sitB = (copy.situationFamiliale || copy.situationMatrimoniale || b.situationFamiliale || b.situationMatrimoniale || '').toUpperCase();
+    const basePartsB = sitB.includes('MARI') ? 2 : 1;
+    copy.partsFiscales = b.partsFiscales != null ? b.partsFiscales : (basePartsB + (b.nombreCharges || 0));
+
+    let indList = b.lines ? b.lines.filter((l: any) => {
+      const cd = (l.code || '').toUpperCase();
+      const nm = (l.name || l.libelle || '').toUpperCase();
+      return (l.typeLigne === 'GAIN' || l.category === 'GAIN' || l.category === 'INDEMNITES')
+        && cd !== 'SAL_BASE' && !nm.includes('SALAIRE DE BASE')
+        && cd !== 'SUR_SALAIRE' && !nm.includes('SURSALAIRE');
+    }) : [];
     if (indList.length > 0) {
       indList = indList.map((i: any) => ({
         typeIndemnite: i.name || i.libelle || i.typeIndemnite || 'INDEMNITE',
         code: i.code || '200',
-        montant: i.amount !== undefined ? i.amount : (i.montant || 0)
+        montant: i.amount !== undefined ? i.amount : (i.montant !== undefined ? i.montant : (i.gain || 0)),
+        taux: i.taux || i.rate || ''
       }));
     } else if (b.indemnitesDetails && b.indemnitesDetails.length > 0) {
       indList = b.indemnitesDetails;
     } else {
       indList = [];
     }
+
     copy.indemnitesDetails = indList;
-    const totIndem = copy.totalIndemnites !== undefined ? copy.totalIndemnites : indList.reduce((sum: number, item: any) => sum + item.montant, 0);
-    copy.totalIndemnites = totIndem;
 
-    const brut = copy.salaireBrut !== undefined ? copy.salaireBrut : (sBase + totIndem);
-    copy.salaireBrut = brut;
+    // Comparatif N vs N-1 réel issu du backend
+    if (b.salaireNetPrecedent !== undefined && b.salaireNetPrecedent !== null) {
+      copy.salaireNetM1 = b.salaireNetPrecedent;
+      copy.ecartNet = b.ecartNet !== undefined ? b.ecartNet : (copy.salaireNet - b.salaireNetPrecedent);
+    } else if (b.salaireNetM1 !== undefined && b.salaireNetM1 !== null) {
+      copy.salaireNetM1 = b.salaireNetM1;
+      copy.ecartNet = b.ecartNet !== undefined ? b.ecartNet : (copy.salaireNet - b.salaireNetM1);
+    } else {
+      copy.salaireNetM1 = copy.salaireNet;
+      copy.ecartNet = 0;
+    }
 
-    const abattement = Math.round(sBase * 0.20);
-    const exoFiscales = Math.round(totIndem * 0.20);
-    const baseImposable = Math.max(0, brut - abattement - exoFiscales);
-    copy.abattementForfaitaire = abattement;
-    copy.exoFiscalesIndemnites = exoFiscales;
-    copy.baseImposable = baseImposable;
-
-    const isCarfo = (copy.regimeSecuriteSocialCode || copy.regimeSecuriteSocialLibelle || '').toUpperCase().includes('CARFO');
-    const cotisCnss = !isCarfo ? Math.round(brut * 0.055) : 0;
-    const cotisCarfo = isCarfo ? Math.round(sBase * 0.08) : 0;
-    const cotisCrrae = Math.round(sBase * 0.03);
-    const impotIuts = Math.round(baseImposable * 0.12);
-    const netPreFsp = Math.max(0, brut - (cotisCnss || cotisCarfo) - cotisCrrae - impotIuts);
-    const fsp = netPreFsp >= 100000 ? Math.round(netPreFsp * 0.01) : 0;
-    const avance = copy.totalPrecomptes !== undefined ? copy.totalPrecomptes : (copy.precompteAvance || copy.avanceSurSolde || 0);
-
-    copy.cotisationCnssAgent = cotisCnss;
-    copy.cotisationCarfoAgent = cotisCarfo;
-    copy.cotisationCrraeAgent = cotisCrrae;
-    copy.impotIUTS = impotIuts;
-    copy.retenueFSP = fsp;
-    copy.avanceSurSolde = avance;
-    copy.precompteAvance = avance;
-    copy.totalPrecomptes = avance;
-
-    const totalRetenues = (cotisCnss || cotisCarfo) + cotisCrrae + impotIuts + fsp + avance;
-    copy.totalRetenues = totalRetenues;
-
-    const patCnss = !isCarfo ? Math.round(brut * 0.16) : 0;
-    const patCarfo = isCarfo ? Math.round(sBase * 0.14) : 0;
-    const patCrrae = Math.round(sBase * 0.06);
-    copy.partPatronaleCnss = patCnss;
-    copy.partPatronaleCarfo = patCarfo;
-    copy.partPatronaleCrrae = patCrrae;
-    copy.totalRetenuesPatronales = (isCarfo ? patCarfo : patCnss) + patCrrae;
-
-    const net = brut - totalRetenues;
-    copy.salaireNet = net;
-
-    let prevNet = net * 0.98;
-    copy.salaireNetM1 = Math.round(prevNet);
-    copy.ecartNet = Math.round(net - prevNet);
+    copy.justificationEcart = b.justificationEcart || '';
     return copy;
   }
 
@@ -386,12 +775,10 @@ export class GenererBulletinsComponent implements OnInit {
     }
     this.moisIndex = newIndex;
     this.periode = `${this.moisNoms[this.moisIndex]} ${this.selectedYear}`;
-    this.lancerCalculPaie();
   }
 
   changerSession(type: 'ORDINAIRE' | 'EXTRAORDINAIRE'): void {
     this.sessionType = type;
-    this.lancerCalculPaie();
   }
 
   ouvrirModalModifierVariables(b: any): void {
@@ -476,687 +863,98 @@ export class GenererBulletinsComponent implements OnInit {
     const b = this.selectedBulletinForEdit;
     const workedDays = Number(this.editVariablesForm.workedDays) || 30;
     const scheduledDays = Number(this.editVariablesForm.scheduledWorkingDays) || 30;
-    const ratio = Math.max(0, Math.min(1, workedDays / scheduledDays));
 
-    // Sauvegarder les valeurs de base initiales si pas encore fait
-    if (b.salaireBaseOriginal === undefined) {
-      b.salaireBaseOriginal = b.salaireBase;
-    }
-    if (b.totalIndemnitesOriginal === undefined) {
-      b.totalIndemnitesOriginal = b.totalIndemnites;
-    }
-
-    b.joursPresents = workedDays;
     b.workedDays = workedDays;
     b.scheduledWorkingDays = scheduledDays;
-    b.quantitePresence = Number(ratio.toFixed(2));
-    b.tauxPresence = Number((ratio * 100).toFixed(2));
-    b.primeExceptionnelle = Number(this.editVariablesForm.primeExceptionnelle) || 0;
-    b.totalAvoirs = b.primeExceptionnelle;
-    b.precompteAvance = Number(this.editVariablesForm.precompteAvance) || 0;
-    b.totalPrecomptes = b.precompteAvance;
-    b.nombreHeuresSup = Number(this.editVariablesForm.nombreHeuresSup) || 0;
-    b.heuresSup = this.getMontantHeuresSup();
     b.motifAjustement = this.editVariablesForm.motifAjustement;
 
-    // Recalcul du salaire de base et indemnités
-    b.salaireBase = Math.round(b.salaireBaseOriginal * ratio);
+    const empId = Number(b.employeeId || b.employee?.id);
+    const sessId = this.currentSession?.id;
 
-    const isGratifSession = (this.currentSession?.typeSession || '').toUpperCase().includes('GRATIF') ||
-                            (b.typeSession || '').toUpperCase().includes('GRATIF');
-
-    if (isGratifSession) {
-      b.totalIndemnites = 0;
-      b.primeExceptionnelle = 0;
-      b.totalAvoirs = 0;
-      b.heuresSup = 0;
-      b.nombreHeuresSup = 0;
-      b.cotisationCNSS = 0;
-      b.cotisationCnssAgent = 0;
-      b.cotisationCarfoAgent = 0;
-      b.cotisationCrraeAgent = 0;
-      b.abattementForfaitaire = 0;
-      b.baseImposable = 0;
-      b.impotIUTS = 0;
-      b.retenueFSP = 0;
-      b.precompteAvance = 0;
-      b.totalPrecomptes = 0;
-      b.totalRetenues = 0;
-      b.salaireBrut = b.salaireBase;
-      b.salaireNet = b.salaireBase; // LE NET DEVIENT LE BRUT !
-    } else {
-      b.totalIndemnites = Math.round(b.totalIndemnitesOriginal * ratio) + b.primeExceptionnelle;
-      b.salaireBrut = b.salaireBase + b.totalIndemnites + b.heuresSup;
-
-      // Cotisations sociales : régime CNSS par défaut pour la banque
-      const isCarfo = (b.regimeSecuriteSocialCode || b.regimeSecuriteSocialLibelle || '').toUpperCase().includes('CARFO');
-      b.cotisationCNSS = !isCarfo ? Math.round(b.salaireBrut * 0.055) : 0;
-      b.cotisationCnssAgent = b.cotisationCNSS;
-      b.cotisationCarfoAgent = isCarfo ? Math.round(b.salaireBase * 0.08) : 0;
-      b.cotisationCrraeAgent = Math.round(b.salaireBase * 0.03);
-
-      // Retenues et impôt IUTS
-      b.abattementForfaitaire = Math.round(b.salaireBase * 0.20);
-      b.baseImposable = Math.max(0, b.salaireBrut - b.abattementForfaitaire);
-      const netPreFsp = Math.max(0, b.salaireBrut - (b.cotisationCnssAgent || b.cotisationCarfoAgent) - b.cotisationCrraeAgent - (b.impotIUTS || 0));
-      b.retenueFSP = netPreFsp >= 100000 ? Math.round(netPreFsp * 0.01) : 0;
-      
-      // Déduction stricte de TOUTES les retenues incluant le précompte / avance
-      b.totalRetenues = (b.cotisationCnssAgent || b.cotisationCarfoAgent) + b.cotisationCrraeAgent + (b.impotIUTS || 0) + b.retenueFSP + (b.precompteAvance || 0);
-      b.salaireNet = b.salaireBrut - b.totalRetenues;
+    if (!sessId || !empId) {
+      this.fermerModalModifierVariables();
+      return;
     }
 
-    // Mettre à jour l'écart comparatif
-    if (b.salaireNetM1) {
-      b.ecartNet = b.salaireNet - b.salaireNetM1;
-    }
+    this.isCalculating = true;
 
-    // Persistance automatique en backend PostgreSQL (Création ou Mise à jour)
-    const payload = {
-      employeeId: b.employeeId || b.employee?.id,
-      sessionPaieId: this.currentSession?.id,
-      code: b.code || `BUL-${b.matricule || 'EMP'}`,
-      typeSession: this.sessionType || 'ORDINAIRE',
-      dateFrom: b.dateFrom,
-      dateTo: b.dateTo,
-      workedDays: b.workedDays,
-      scheduledWorkingDays: b.scheduledWorkingDays,
-      salaireBase: b.salaireBase,
-      totalIndemnites: b.totalIndemnites,
-      totalAvoirs: b.totalAvoirs,
-      salaireBrut: b.salaireBrut,
-      baseImposable: b.baseImposable,
-      cotisationCnss: b.cotisationCNSS,
-      impotIuts: b.impotIUTS,
-      totalPrecomptes: b.totalPrecomptes,
-      totalRetenues: b.totalRetenues,
-      totalCotisationsPatronales: b.totalRetenuesPatronales || b.partPatronaleCnss,
-      salaireNet: b.salaireNet,
-      statut: b.etat || 'VALIDE',
-      lines: [
-        { code: 'SAL_BASE', libelle: 'SALAIRE DE BASE', name: 'SALAIRE DE BASE', typeLigne: 'GAIN', montant: b.salaireBase, ordre: 1 },
-        ...(b.heuresSup > 0 ? [{ code: 'H_SUP', libelle: `HEURES SUPPLÉMENTAIRES (${b.nombreHeuresSup}H)`, name: `HEURES SUPPLÉMENTAIRES (${b.nombreHeuresSup}H)`, typeLigne: 'GAIN', montant: b.heuresSup, ordre: 2 }] : []),
-        ...(b.totalIndemnites > 0 ? [{ code: 'INDEMNITES', libelle: 'INDEMNITÉS TOTALES', name: 'INDEMNITÉS TOTALES', typeLigne: 'GAIN', montant: b.totalIndemnites, ordre: 3 }] : []),
-        { code: 'CNSS_SAL', libelle: 'RETENUE CNSS AGENT (5.5%)', name: 'RETENUE CNSS AGENT (5.5%)', typeLigne: 'RETENUE', montant: b.cotisationCNSS, ordre: 4 },
-        { code: 'IUTS', libelle: 'IMPÔT SUR SALAIRE IUTS', name: 'IMPÔT SUR SALAIRE IUTS', typeLigne: 'RETENUE', montant: b.impotIUTS || 0, ordre: 5 },
-        ...(b.totalPrecomptes > 0 ? [{ code: 'PRECOMPTE', libelle: 'PRÉCOMPTES & AVANCES SUR SALAIRE', name: 'PRÉCOMPTES & AVANCES SUR SALAIRE', typeLigne: 'PRECOMPTE', montant: b.totalPrecomptes, ordre: 6 }] : []),
-        { code: 'NET_PAYE', libelle: 'NET A PAYER', name: 'NET A PAYER', typeLigne: 'NET', montant: b.salaireNet, ordre: 7 }
-      ]
+    // Mise à jour des variables persistées en backend
+    const updatePayload = {
+      workedDays: workedDays,
+      scheduledWorkingDays: scheduledDays,
+      justificationEcart: b.motifAjustement || b.justificationEcart
     };
 
-    if (b.id) {
-      this.http.put<any>(`${environment.apiUrl}/bulletins/${b.id}`, payload).subscribe({
-        next: (res) => {
-          if (res && res.id) b.id = res.id;
-        },
-        error: () => {}
-      });
-    } else {
-      this.http.post<any>(`${environment.apiUrl}/bulletins`, payload).subscribe({
-        next: (res) => {
-          if (res && res.id) b.id = res.id;
-        },
-        error: () => {}
-      });
-    }
+    const updateRequest$ = b.id 
+      ? this.http.put<any>(`${environment.apiUrl}/bulletins/${b.id}`, updatePayload)
+      : of(null);
 
-    // Sauvegarde de l'état ajusté dans le cache local
-    try {
-      const cacheKey = `bpbf_ajustements_${this.periode}`;
-      const existing = JSON.parse(localStorage.getItem(cacheKey) || '{}');
-      existing[b.matricule || b.employeeId] = {
-        workedDays: b.workedDays,
-        scheduledWorkingDays: b.scheduledWorkingDays,
-        primeExceptionnelle: b.primeExceptionnelle,
-        precompteAvance: b.precompteAvance,
-        totalPrecomptes: b.totalPrecomptes,
-        nombreHeuresSup: b.nombreHeuresSup,
-        heuresSup: b.heuresSup,
-        motifAjustement: b.motifAjustement,
-        salaireBase: b.salaireBase,
-        totalIndemnites: b.totalIndemnites,
-        salaireBrut: b.salaireBrut,
-        totalRetenues: b.totalRetenues,
-        salaireNet: b.salaireNet
-      };
-      localStorage.setItem(cacheKey, JSON.stringify(existing));
-    } catch (e) {}
-
-    this.fermerModalModifierVariables();
+    updateRequest$.pipe(
+      catchError(() => of(null))
+    ).subscribe(() => {
+      // Déclenche le recalcul complet officiel côté Spring Boot / PostgreSQL
+      this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${sessId}/generer`, [empId]).pipe(
+        catchError(err => {
+          alert('Erreur lors du recalcul serveur: ' + (err?.error?.message || err.message));
+          return of([]);
+        })
+      ).subscribe(recalculatedList => {
+        this.isCalculating = false;
+        if (recalculatedList && recalculatedList.length > 0) {
+          const updatedDto = this.adapterBulletinFromBackend(recalculatedList[0]);
+          const idx = this.bulletins.findIndex(item => String(item.employeeId) === String(empId) || String(item.id) === String(updatedDto.id));
+          if (idx >= 0) {
+            this.bulletins[idx] = updatedDto;
+          } else {
+            this.bulletins.push(updatedDto);
+          }
+        }
+        this.fermerModalModifierVariables();
+      });
+    });
   }
 
   toggleModeComparatif(): void {
     this.modeComparatifMminus1 = !this.modeComparatifMminus1;
   }
 
-  lancerCalculPaie(): void {
-    this.isCalculating = true;
-    this.genererBulletinsDepuisEmployees();
-  }
-
-  private genererBulletinsDepuisEmployees(employeeList?: Employee[]): void {
-    if (employeeList && employeeList.length > 0) {
-      this.buildBulletins(employeeList);
-      return;
-    }
-
-    this.employeeService.getAll().subscribe(employees => {
-      const list = (employees && employees.length > 0) ? employees : [];
-      this.buildBulletins(list);
-    });
-  }
-
-  private buildBulletins(employees: Employee[]): void {
-    if (employees.length === 0) {
-      this.bulletins = [];
-      this.isCalculating = false;
-      return;
-    }
-
-    forkJoin({
-      infoDtos: forkJoin(employees.map(emp => 
-        this.employeeService.getSalaryInformation(String(emp.id)).pipe(
-          catchError(() => of(null))
-        )
-      )),
-      familles: forkJoin(employees.map(emp => 
-        this.employeeService.getFamily(String(emp.id)).pipe(
-          catchError(() => of(undefined))
-        )
-      )),
-      allAvoirs: this.http.get<any[]>(`${environment.apiUrl}/avoirs`).pipe(
-        catchError(() => of([]))
-      ),
-      allPrecomptes: this.http.get<any[]>(`${environment.apiUrl}/precomptes`).pipe(
-        catchError(() => of([]))
-      )
-    }).subscribe(({ infoDtos, familles, allAvoirs, allPrecomptes }) => {
-      const calculated = employees.map((emp, index) => {
-        return this.mapBulletinFromInfoDtoOrEmployee(
-          emp,
-          infoDtos[index],
-          familles[index],
-          allAvoirs || [],
-          allPrecomptes || []
-        );
-      });
-      this.bulletins = this.adapterBulletinsSelonSession(calculated);
-      this.isCalculating = false;
-    });
-  }
-
-  private parseEmployeeHireDate(dateStr?: string): Date | null {
-    if (!dateStr) return null;
-    const str = String(dateStr).trim();
-    if (str.includes('/')) {
-      const parts = str.split('/');
-      if (parts.length === 3) {
-        const p1 = parseInt(parts[0], 10);
-        const p2 = parseInt(parts[1], 10);
-        const p3 = parseInt(parts[2], 10);
-        if (p1 > 12) {
-          // DD/MM/YYYY
-          return new Date(p3, p2 - 1, p1);
-        } else if (p2 > 12) {
-          // MM/DD/YYYY
-          return new Date(p3, p1 - 1, p2);
-        } else {
-          // Default MM/DD/YYYY (e.g. 8/25/2026 from datepicker)
-          return new Date(p3, p1 - 1, p2);
-        }
-      }
-    } else if (str.includes('-')) {
-      const parts = str.split('-');
-      if (parts.length === 3) {
-        const p1 = parseInt(parts[0], 10);
-        const p2 = parseInt(parts[1], 10);
-        const p3 = parseInt(parts[2], 10);
-        if (p1 > 1000) {
-          return new Date(p1, p2 - 1, p3);
-        } else {
-          return new Date(p3, p2 - 1, p1);
-        }
-      }
-    }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  private mapBulletinFromInfoDtoOrEmployee(emp: Employee, infoDto: any, famille?: any, allAvoirs: any[] = [], allPrecomptes: any[] = []): any {
-    const payMonth = this.moisIndex; // 0-indexed (6 = Juillet, 7 = Août, etc.)
-    const payYear = 2026;
-    const daysInMonthCal = new Date(payYear, payMonth + 1, 0).getDate();
-    const mmStr = String(payMonth + 1).padStart(2, '0');
-    const startPeriodStr = `01/${mmStr}/${payYear}`;
-    const endPeriodStr = `${daysInMonthCal}/${mmStr}/${payYear}`;
-
-    // Calcul du Prorata Temporis basé sur la date de prise de fonction / embauche
-    const hireDate = this.parseEmployeeHireDate(emp.dateEmbauche);
-    let ratioPresence = 1.0;
-    let isProrata = false;
-    let joursPresents = 30;
-
-    if (hireDate) {
-      const hYear = hireDate.getFullYear();
-      const hMonth = hireDate.getMonth();
-      const hDay = hireDate.getDate();
-
-      if (hYear === payYear && hMonth === payMonth) {
-        // Embauché pendant le mois de paie en cours !
-        const joursReels = Math.max(1, daysInMonthCal - hDay + 1);
-        joursPresents = Math.min(30, joursReels);
-        ratioPresence = Math.min(1, Math.max(0, joursPresents / 30));
-        isProrata = true;
-      } else if (hireDate > new Date(payYear, payMonth, daysInMonthCal)) {
-        // Embauché dans un mois futur
-        ratioPresence = 0;
-        joursPresents = 0;
-        isProrata = true;
-      } else {
-        // Déjà en poste
-        ratioPresence = 1.0;
-        joursPresents = 30;
-        isProrata = false;
-      }
-    }
-
-    const quantitePresence = Number(ratioPresence.toFixed(2));
-    const tauxPresence = Number((ratioPresence * 100).toFixed(2));
-
-    const sBaseMensuel = (infoDto && infoDto.salaireBase && Number(infoDto.salaireBase) > 0)
-      ? Number(infoDto.salaireBase)
-      : (emp.salaireBase || 0);
-
-    const sBase = Math.round(sBaseMensuel * ratioPresence);
-
-    let rawIndemnitesMensuelles = (infoDto && infoDto.indemnites && infoDto.indemnites.length > 0)
-      ? infoDto.indemnites.map((i: any) => ({
-          typeIndemnite: (i.libelle || i.typeIndemniteCode || 'INDEMNITE').toUpperCase(),
-          code: i.typeIndemniteCode || i.code || '',
-          montantMensuel: Number(i.montant) || 0
-        }))
-      : [];
-
-    if (rawIndemnitesMensuelles.length === 0) {
-      if (emp.primeLogement && emp.primeLogement > 0) {
-        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE LOGEMENT', code: '200', montantMensuel: emp.primeLogement });
-      }
-      if (emp.primeTransport && emp.primeTransport > 0) {
-        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE TRANSPORT / ASTREINTE', code: '210', montantMensuel: emp.primeTransport });
-      }
-      if (emp.primeResponsabilite && emp.primeResponsabilite > 0) {
-        rawIndemnitesMensuelles.push({ typeIndemnite: 'INDEMNITE DE RESPONSABILITE / CAISSE', code: '230', montantMensuel: emp.primeResponsabilite });
-      }
-      if (emp.autresIndemnites && emp.autresIndemnites.length > 0) {
-        emp.autresIndemnites.forEach((ai, idx) => {
-          if (ai.montant > 0) rawIndemnitesMensuelles.push({ typeIndemnite: (ai.libelle || 'INDEMNITE').toUpperCase(), code: `29${idx + 1}`, montantMensuel: ai.montant });
-        });
-      }
-    }
-
-    const rawIndemnites = rawIndemnitesMensuelles.map((i: any) => ({
-      typeIndemnite: i.typeIndemnite,
-      code: i.code,
-      montant: Math.round(i.montantMensuel * ratioPresence)
-    }));
-
-    // Récupération des avoirs de l'agent enregistrés dans la table des Avoirs
-    const empAvoirs = (allAvoirs || []).filter((a: any) =>
-      String(a.employeeId) === String(emp.id) ||
-      (a.matricule && emp.matricule && a.matricule.trim() === emp.matricule.trim()) ||
-      (a.employeeName && emp.nom && a.employeeName.toLowerCase().includes(emp.nom.toLowerCase()))
-    );
-    const avoirsDetails = empAvoirs.filter((a: any) => a.statut !== 'SOLDE').map((a: any) => {
-      let m = a.montantMensuel || a.amountMensuel || 0;
-      if (!m && a.amount) m = Math.round(a.amount / (a.echeance || a.echeancesTotal || 1));
-      if (!m && a.montant) m = a.montant;
-      return {
-        id: a.id,
-        code: a.salaryElementCode || `AVOIR_${a.id}`,
-        name: (a.salaryElementName || a.libelle || a.name || 'AVOIR & PRIME DU MOIS').toUpperCase(),
-        montant: m,
-        regle: a.salaryElementName || a.libelle || 'AVOIR & PRIME PERIODIQUE'
-      };
-    });
-    const totalAvoirs = avoirsDetails.reduce((sum: number, a: any) => sum + a.montant, 0);
-
-    // Récupération des précomptes de l'agent enregistrés dans la table des Précomptes
-    const empPrecomptes = (allPrecomptes || []).filter((p: any) =>
-      String(p.employeeId) === String(emp.id) ||
-      (p.matricule && emp.matricule && p.matricule.trim() === emp.matricule.trim()) ||
-      (p.employeeName && emp.nom && p.employeeName.toLowerCase().includes(emp.nom.toLowerCase()))
-    );
-    const precomptesDetails = empPrecomptes.filter((p: any) => p.statut !== 'SOLDE').map((p: any) => {
-      let m = p.montantMensuel || p.amountMensuel || 0;
-      if (!m && p.amount) m = Math.round(p.amount / (p.echeance || p.echeancesTotal || 1));
-      if (!m && p.montant) m = p.montant;
-      return {
-        id: p.id,
-        code: p.salaryElementCode || `PREC_${p.id}`,
-        name: (p.salaryElementName || p.libelle || p.name || 'PRÉCOMPTE / RETENUE').toUpperCase(),
-        montant: m,
-        regle: p.salaryElementName || p.libelle || 'DÉDUCTION MENSUELLE'
-      };
-    });
-    const totalPrecomptes = precomptesDetails.reduce((sum: number, p: any) => sum + p.montant, 0);
-
-    const totIndem = rawIndemnites.reduce((acc: number, item: any) => acc + item.montant, 0);
-    const brut = sBase + totIndem + totalAvoirs;
-
-    const pecParams = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : undefined;
-    const nCharges = computeEmployeeFamilyCharges(emp, pecParams, 20, 4, famille);
-    const computedGrade = this.computeGradeCode(emp);
-
-    const calc = calculateOfficialIUTS(sBase, rawIndemnites.map((i: any) => ({ libelle: i.typeIndemnite, montant: i.montant })), {
-      vehiculeFourni: emp.vehiculeFourni,
-      logementFourni: emp.logementFourni,
-      nombreChargesFamille: nCharges,
-      inclureFSP: true,
-      inclureCRRAE: true
-    });
-
-    const abattementForfaitaire = calc.abattementForfaitaire || Math.round(sBase * 0.20);
-    const exoFiscalesIndemnites = (calc.totalExonerations && calc.totalExonerations > abattementForfaitaire)
-      ? (calc.totalExonerations - abattementForfaitaire)
-      : Math.round(totIndem * 0.20);
-    const baseImposable = calc.baseImposable || Math.max(0, brut - abattementForfaitaire - exoFiscalesIndemnites);
-
-    // Retenues salariales Agent : CNSS par défaut pour la banque, ou CARFO si agent public
-    const isCarfo = (emp.regimeSecuriteSocialCode || emp.regimeSecuriteSocialLibelle || '').toUpperCase().includes('CARFO');
-    const cotisationCarfoAgent = isCarfo ? Math.round(sBase * 0.08) : 0;
-    const cotisationCnssAgent = !isCarfo ? Math.round(brut * 0.055) : 0;
-    const cotisationCrraeAgent = Math.round(sBase * 0.03);
-    const impotIUTS = calc.iutsNet || 0;
-
-    // FSP légal : 1% sur le salaire net d'impôt (si >= 100 000 FCFA)
-    const netAvantFsp = Math.max(0, brut - (cotisationCarfoAgent || cotisationCnssAgent) - cotisationCrraeAgent - impotIUTS);
-    const retenueFSP = calc.fondsSoutienPat !== undefined && calc.fondsSoutienPat !== 0
-      ? calc.fondsSoutienPat
-      : (netAvantFsp >= 100000 ? Math.round(netAvantFsp * 0.01) : 0);
-
-    const avanceSurSolde = totalPrecomptes;
-    const totalRetenuesAgent = (cotisationCarfoAgent || cotisationCnssAgent) + cotisationCrraeAgent + impotIUTS + retenueFSP + avanceSurSolde;
-
-    // Retenues patronales Employeur : régime pertinent uniquement
-    const partPatronaleCarfo = isCarfo ? Math.round(sBase * 0.14) : 0;
-    const partPatronaleCnss = !isCarfo ? Math.round(brut * 0.16) : 0;
-    const partPatronaleCrrae = Math.round(sBase * 0.06);
-    const totalRetenuesPatronales = (isCarfo ? partPatronaleCarfo : partPatronaleCnss) + partPatronaleCrrae;
-
-    const salaireNet = brut - totalRetenuesAgent;
-
-    const b: any = {
-      employeeId: emp.id,
-      employeeName: `${emp.nom || ''} ${emp.prenom || ''}`.trim().toUpperCase() || 'AGENT',
-      matricule: emp.matricule || 'EMP-001',
-      fonction: emp.fonction || emp.poste || emp.service || 'Agent',
-      grade: computedGrade,
-      categorie: emp.categoriePro || 'CLASSE I',
-      dateEmbauche: emp.dateEmbauche,
-      isProrata,
-      joursPresents,
-      quantitePresence,
-      tauxPresence,
-      periodeTexte: `${startPeriodStr} - ${endPeriodStr} (${this.periode})`,
-      moisCode: mmStr,
-      anneeCode: String(payYear),
-      mois: this.periode,
-      salaireBase: sBase,
-      salaireBaseMensuel: sBaseMensuel,
-      totalIndemnites: totIndem,
-      totalAvoirs: totalAvoirs,
-      primeExceptionnelle: totalAvoirs,
-      avoirsDetails: avoirsDetails,
-      precomptesDetails: precomptesDetails,
-      totalPrecomptes: totalPrecomptes,
-      precompteAvance: totalPrecomptes,
-      avanceSurSolde: totalPrecomptes,
-      salaireBrut: brut,
-      indemnitesDetails: rawIndemnites,
-      abattementForfaitaire,
-      exoFiscalesIndemnites,
-      baseImposable,
-      cotisationCarfoAgent,
-      cotisationCnssAgent,
-      cotisationCrraeAgent,
-      impotIUTS,
-      retenueFSP,
-      totalRetenues: totalRetenuesAgent,
-      partPatronaleCarfo,
-      partPatronaleCnss,
-      partPatronaleCrrae,
-      totalRetenuesPatronales,
-      salaireNet,
-      nombreCharges: nCharges,
-      banque: (infoDto && infoDto.banque) || emp.banque || 'BANQUE POSTALE DU BURKINA FASO - BPBF',
-      iban: (infoDto && infoDto.iban) || emp.iban || '—',
-      modePaiement: (infoDto && infoDto.modePaiement) || emp.modePaiement || 'Virement bancaire'
-    };
-
-    // Restaurer les ajustements de variables et heures supplémentaires sauvegardés
-    try {
-      const cacheKey = `bpbf_ajustements_${this.periode}`;
-      const savedMap = JSON.parse(localStorage.getItem(cacheKey) || '{}');
-      const saved = savedMap[emp.matricule || emp.id];
-      if (saved) {
-        if (saved.workedDays !== undefined) b.joursPresents = saved.workedDays;
-        if (saved.scheduledWorkingDays !== undefined) b.scheduledWorkingDays = saved.scheduledWorkingDays;
-        if (saved.primeExceptionnelle !== undefined) b.primeExceptionnelle = saved.primeExceptionnelle;
-        if (saved.totalAvoirs !== undefined) b.totalAvoirs = saved.totalAvoirs;
-        if (saved.precompteAvance !== undefined) b.precompteAvance = saved.precompteAvance;
-        if (saved.totalPrecomptes !== undefined) b.totalPrecomptes = saved.totalPrecomptes;
-        if (saved.nombreHeuresSup !== undefined) b.nombreHeuresSup = saved.nombreHeuresSup;
-        if (saved.heuresSup !== undefined) b.heuresSup = saved.heuresSup;
-        if (saved.motifAjustement !== undefined) b.motifAjustement = saved.motifAjustement;
-        if (saved.salaireBase !== undefined) b.salaireBase = saved.salaireBase;
-        if (saved.totalIndemnites !== undefined) b.totalIndemnites = saved.totalIndemnites;
-        if (saved.salaireBrut !== undefined) b.salaireBrut = saved.salaireBrut;
-        if (saved.totalRetenues !== undefined) b.totalRetenues = saved.totalRetenues;
-        if (saved.salaireNet !== undefined) b.salaireNet = saved.salaireNet;
-      }
-    } catch (e) {}
-
-    return b;
-  }
-
-  private computeGradeCode(emp: any): string {
-    const rawGrade = emp.grade;
-    const rawCat = emp.categoriePro || emp.categorie;
-    const rawEch = emp.echelon;
-
-    if (rawGrade && /^(C|CL|HC)\d*(E\d+|EX)$/i.test(rawGrade.trim())) {
-      return rawGrade.trim().toUpperCase();
-    }
-
-    let g = (rawGrade || '').trim();
-    let c = (rawCat || '').trim();
-    let e = (rawEch || '').trim();
-
-    if (g.includes('Échelon') || g.includes('Echelon') || g.includes('ECHELON') || g.includes('echelon')) {
-      const parts = g.split(/(?=Échelon|Echelon|ECHELON|echelon)/i);
-      if (parts.length >= 2) {
-        if (!c) c = parts[0].trim();
-        if (!e) e = parts[1].trim();
-      }
-    }
-
-    let catCode = '';
-    const cUpper = (c || g).toUpperCase();
-    if (cUpper.includes('HORS') || cUpper.startsWith('HC')) {
-      catCode = 'HC';
-    } else if (cUpper.includes('CLASSE') || cUpper.startsWith('CL')) {
-      const m = cUpper.match(/\d+|I{1,3}|IV|V|VI{1,3}|VIII/);
-      if (m) {
-        const romanToNum: Record<string, string> = { 'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8' };
-        const num = romanToNum[m[0]] || m[0];
-        catCode = `CL${num}`;
-      } else {
-        catCode = 'CL1';
-      }
-    } else {
-      const num = cUpper.replace(/[^0-9]/g, '');
-      catCode = num ? `C${num}` : 'C1';
-    }
-
-    let echCode = '';
-    const eUpper = (e || g).toUpperCase();
-    if (eUpper.includes('EXCEPT') || eUpper.endsWith('EX')) {
-      echCode = 'EX';
-    } else {
-      const m = eUpper.replace(/[^0-9]/g, '');
-      if (m) {
-        const num = parseInt(m, 10);
-        echCode = num < 10 ? `E0${num}` : `E${num}`;
-      } else {
-        echCode = 'E01';
-      }
-    }
-
-    return `${catCode}${echCode}`;
-  }
-
-  private buildBulletinFromEmployee(emp: Employee, famille?: Array<{ estCharge?: boolean }>): any {
-    const sBase = emp.salaireBase || 0;
-    let pLog = emp.primeLogement || 0;
-    let pTrans = emp.primeTransport || 0;
-    let pResp = emp.primeResponsabilite || 0;
-
-    const indemnitesList: Array<{ libelle: string; code: string; montant: number }> = [];
-    if (pLog > 0) {
-      indemnitesList.push({ libelle: 'INDEMNITE DE LOGEMENT', code: 'x_indem_loge', montant: pLog });
-    }
-    if (pTrans > 0) {
-      indemnitesList.push({ libelle: 'INDEMNITE DE TRANSPORT / ASTREINTE', code: 'x_indem_astr', montant: pTrans });
-    }
-    if (pResp > 0) {
-      indemnitesList.push({ libelle: 'INDEMNITE DE RESPONSABILITE', code: 'x_indem_finance', montant: pResp });
-    }
-
-    if (emp.autresIndemnites && emp.autresIndemnites.length > 0) {
-      emp.autresIndemnites.forEach((ai, idx) => {
-        if (ai.montant > 0) indemnitesList.push({ libelle: (ai.libelle || 'INDEMNITE').toUpperCase(), code: `x_indem_${idx + 1}`, montant: ai.montant });
-      });
-    }
-
-    const pecParams = this.dbRefService ? this.dbRefService.getParamPriseEnCharge() : undefined;
-    const nCharges = computeEmployeeFamilyCharges(emp, pecParams, 20, 4, famille);
-    const computedGrade = this.computeGradeCode(emp);
-
-    const calc = calculateOfficialIUTS(sBase, indemnitesList, {
-      vehiculeFourni: emp.vehiculeFourni,
-      logementFourni: emp.logementFourni,
-      nombreChargesFamille: nCharges,
-      inclureFSP: true,
-      inclureCRRAE: true
-    });
-
-    const partPatronaleCnss = Math.round(calc.remunerationTotale * 0.16);
-    const autresRetenues = (calc.fondsSoutienPat || 0) + (calc.crrae || 0);
-
-    return {
-      employeeId: emp.id,
-      employeeName: `${emp.nom || ''} ${emp.prenom || ''}`.trim().toUpperCase() || 'AGENT',
-      matricule: emp.matricule || 'EMP-001',
-      fonction: emp.fonction || emp.poste || emp.service || 'Agent',
-      grade: computedGrade,
-      categorie: emp.categoriePro || 'CLASSE I',
-      salaireBase: calc.salaireBase,
-      totalIndemnites: calc.totalIndemnites,
-      salaireBrut: calc.remunerationTotale,
-      cotisationCNSS: calc.cotisationCNSS,
-      partPatronaleCnss,
-      baseImposable: calc.baseImposable,
-      nombreCharges: nCharges,
-      impotIUTS: calc.iutsNet,
-      salaireNetBrut: Math.max(0, calc.remunerationTotale - calc.cotisationCNSS - calc.iutsNet),
-      autresRetenues,
-      totalRetenues: calc.totalRetenues,
-      salaireNet: calc.salaireNet,
-      indemnitesDetails: indemnitesList.map(i => ({ typeIndemnite: i.libelle, code: i.code, montant: i.montant }))
-    };
-  }
-
-  private adapterBulletinsSelonSession(list: any[]): any[] {
-    return list.map(b => {
-      let copy = JSON.parse(JSON.stringify(b));
-      copy.mois = this.periode;
-      copy.sessionType = this.sessionType;
-
-      let baseSal = copy.salaireBase || 150000;
-
-      if ((this.currentSession?.typeSession || '').toUpperCase().includes('GRATIF')) {
-        copy.indemnitesDetails = [];
-        copy.totalIndemnites = 0;
-        copy.totalAvoirs = 0;
-        copy.salaireBrut = baseSal;
-        copy.cotisationCNSS = 0;
-        copy.partPatronaleCnss = 0;
-        copy.baseImposable = 0;
-        copy.impotIUTS = 0;
-        copy.salaireNetBrut = baseSal;
-        copy.autresRetenues = 0;
-        copy.totalRetenues = 0;
-        copy.salaireNet = baseSal; // LE NET DEVIENT LE BRUT !
-        copy.etat = (this.currentSession && this.currentSession.statut) ? this.currentSession.statut : 'GENERE';
-        copy.dateValidation = null;
-        copy.salaireNetM1 = baseSal;
-        copy.ecartNet = 0;
-        return copy;
-      }
-
-      let indemnites: Array<{typeIndemnite: string; montant: number}> = copy.indemnitesDetails || [];
-
-      // Recalcul avec le barème officiel IUTS
-      const indList = indemnites.map(i => ({ libelle: i.typeIndemnite, montant: i.montant }));
-      const calc = calculateOfficialIUTS(baseSal, indList, {
-        nombreChargesFamille: copy.nombreCharges || 0,
-        inclureFSP: true,
-        inclureCRRAE: true
-      });
-
-      copy.indemnitesDetails = indemnites;
-      copy.totalIndemnites = calc.totalIndemnites;
-      copy.salaireBrut = calc.remunerationTotale;
-      copy.cotisationCNSS = calc.cotisationCNSS;
-      copy.partPatronaleCnss = Math.round(calc.remunerationTotale * 0.16);
-      copy.baseImposable = calc.baseImposable;
-      copy.impotIUTS = calc.iutsNet;
-      copy.salaireNetBrut = Math.max(0, calc.remunerationTotale - calc.cotisationCNSS - calc.iutsNet);
-      copy.autresRetenues = (calc.fondsSoutienPat || 0) + (calc.crrae || 0);
-      copy.totalRetenues = calc.totalRetenues;
-      copy.salaireNet = calc.salaireNet;
-
-      // État initial
-      copy.etat = (this.currentSession && this.currentSession.statut) ? this.currentSession.statut : 'GENERE';
-      copy.dateValidation = null;
-
-      // Calcul comparatif M-1 vs M
-      let prevNet = copy.salaireNet * (this.sessionType === 'ORDINAIRE' ? 0.98 : 0.5);
-      copy.salaireNetM1 = Math.round(prevNet);
-      copy.ecartNet = Math.round(copy.salaireNet - prevNet);
-
-      return copy;
-    });
-  }
-
   validerBulletin(b: any): void {
     if (this.sessionCloturee) return;
     b.etat = 'VALIDE';
     b.dateValidation = new Date().toLocaleString('fr-FR');
+    if (b.id) {
+      this.http.put<any>(`${environment.apiUrl}/bulletins/${b.id}`, { statut: 'VALIDE' }).subscribe({
+        error: (err) => console.error('Erreur lors de la validation du bulletin:', err)
+      });
+    }
   }
 
   refuserBulletin(b: any): void {
     if (this.sessionCloturee) return;
     b.etat = 'GENERE';
     b.dateValidation = null;
+    if (b.id) {
+      this.http.put<any>(`${environment.apiUrl}/bulletins/${b.id}`, { statut: 'GENERE' }).subscribe({
+        error: (err) => console.error('Erreur lors de la réinitialisation du statut du bulletin:', err)
+      });
+    }
   }
 
   voirDetails(b: any): void {
-    let target = b;
-    if (!b.cotisationCnssAgent || b.cotisationCnssAgent === 0) {
-      target = this.adapterBulletinFromBackend(b);
+    if (b && b.id) {
+      this.isCalculating = true;
+      this.http.get<any>(`${environment.apiUrl}/bulletins/${b.id}`).pipe(
+        catchError(err => {
+          console.warn('Erreur chargement détails bulletin par ID, utilisation des données locales:', err);
+          return of(b);
+        })
+      ).subscribe(fullB => {
+        this.isCalculating = false;
+        this.selectedBulletin = this.enrichSelectedBulletinLines(fullB || b);
+      });
+    } else {
+      this.selectedBulletin = this.enrichSelectedBulletinLines(b);
     }
-    this.selectedBulletin = this.enrichSelectedBulletinLines(target);
   }
 
   fermerModal(): void {
@@ -1166,312 +964,295 @@ export class GenererBulletinsComponent implements OnInit {
   enrichSelectedBulletinLines(b: any): any {
     if (!b) return b;
 
-    const sBase = b.salaireBase || 0;
-    const isGratif = (b.typeSession || this.currentSession?.typeSession || '').toUpperCase().includes('GRATIF');
-    if (isGratif) {
-      return {
-        ...b,
-        salaireBase: sBase,
-        totalIndemnites: 0,
-        totalAvoirs: 0,
-        salaireBrut: sBase,
-        cotisationCNSS: 0,
-        cotisationCnssAgent: 0,
-        cotisationCarfoAgent: 0,
-        cotisationCrraeAgent: 0,
-        impotIUTS: 0,
-        retenueFSP: 0,
-        totalPrecomptes: 0,
-        precompteAvance: 0,
-        totalRetenues: 0,
-        salaireNet: sBase, // LE NET DEVIENT LE BRUT !
-        lines: [
-          { name: 'GRATIFICATION ANNUELLE (13ÈME MOIS)', gain: sBase }
-        ]
-      };
-    }
+    let lines: Array<{ name: string; gain?: number; retenue?: number; baseCalcul?: number; tauxFormatted?: string; code?: string; ordre?: number }> = [];
 
-    const brut = b.salaireBrut !== undefined ? b.salaireBrut : (sBase + (b.totalIndemnites || 0));
+    if (b.lines && b.lines.length > 0) {
+      lines = b.lines.map((l: any) => {
+        const cd = (l.code || '').toUpperCase();
+        const nm = (l.libelle || l.name || '').toUpperCase();
 
-    // Avoirs lines
-    const lines: Array<{ name: string; gain?: number; retenue?: number }> = [];
-    lines.push({ name: 'SALAIRE DE BASE', gain: sBase });
+        const isRetenue = l.typeLigne === 'RETENUE' || l.typeLigne === 'RETENUE_SOCIALE' || l.typeLigne === 'IMPOT' ||
+          l.typeLigne === 'PRECOMPTE' || l.category === 'RETENUE' || l.category === 'PRECOMPTE' ||
+          cd.includes('CNSS') || cd.includes('IUTS') || cd.includes('CRRAE') || cd.includes('SOLIDAR') ||
+          cd.includes('FSP') || cd.includes('PREC') || cd.includes('AVANCE') || cd.includes('TROP') ||
+          nm.includes('RETENUE') || nm.includes('TROP-PER') || nm.includes('TROP_PER') || nm.includes('TROP PER') ||
+          (l.retenue !== undefined && l.retenue !== null && l.retenue > 0);
 
-    if (b.indemnitesDetails && b.indemnitesDetails.length > 0) {
-      b.indemnitesDetails.forEach((ind: any) => {
-        if (ind.montant > 0) {
-          lines.push({
-            name: (ind.typeIndemnite || ind.libelle || 'INDEMNITÉ').toUpperCase(),
-            gain: ind.montant
-          });
+        const isGain = l.gain !== undefined && l.gain !== null ? true : (l.typeLigne === 'GAIN' || l.category === 'GAIN' || l.category === 'INDEMNITES' || !isRetenue);
+
+        const isPatronale = l.typeLigne === 'COTISATION_PATRONALE' || l.typeLigne === 'CHARGE_PATRONALE';
+        if (isPatronale) return null;
+
+        const montant = l.montant !== undefined ? l.montant : (l.amount !== undefined ? l.amount : (isGain ? l.gain : l.retenue));
+        const gainVal = l.gain !== undefined ? l.gain : (isGain ? montant : undefined);
+        const retenueVal = l.retenue !== undefined ? l.retenue : (!isGain ? montant : undefined);
+
+        let tauxStr = '';
+        if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm === 'SALAIRE DE BASE' || nm === 'SUR-SALAIRE' || nm === 'SURSALAIRE') {
+          tauxStr = String(b.workedDays || 30);
+        } else if (cd.includes('TROP') || cd.includes('PREC') || nm.includes('TROP') || nm.includes('PRECOMPTE')) {
+          tauxStr = '';
+        } else if (l.tauxFormatted) {
+          tauxStr = l.tauxFormatted;
+        } else if (l.taux !== undefined && l.taux !== null && l.taux !== '') {
+          if (cd.includes('IUTS')) {
+            const tVal = Number(l.taux);
+            tauxStr = tVal > 0 ? `${tVal} %` : 'Barème';
+          } else {
+            tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
+          }
         }
-      });
+
+        const baseVal = l.baseCalcul !== undefined ? l.baseCalcul : (isGain ? montant : undefined);
+
+        return {
+          code: l.code,
+          name: nm,
+          typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
+          gain: gainVal,
+          retenue: retenueVal,
+          baseCalcul: baseVal,
+          tauxFormatted: tauxStr,
+          ordre: l.ordre !== undefined ? l.ordre : undefined
+        };
+      }).filter((l: any) => l !== null);
     }
 
-    if (b.avoirsDetails && b.avoirsDetails.length > 0) {
-      b.avoirsDetails.forEach((av: any) => {
-        if (av.montant > 0) {
-          lines.push({
-            name: (av.name || av.libelle || 'AVOIR & PRIME DU MOIS').toUpperCase(),
-            gain: av.montant
-          });
-        }
-      });
-    } else if ((b.totalAvoirs || b.primeExceptionnelle || 0) > 0) {
-      lines.push({
-        name: 'AVOIRS & PRIMES DU MOIS',
-        gain: b.totalAvoirs || b.primeExceptionnelle
-      });
-    }
+    const getOrderWeight = (l: any): number => {
+      const cd = (l.code || '').toUpperCase();
+      const nm = (l.name || l.libelle || '').toUpperCase();
 
-    // Retenues lines: Un seul régime obligatoire (CARFO OU CNSS, jamais les deux à la fois !)
-    const isCarfo = (b.regimeSecuriteSocialCode || b.regimeSecuriteSocialLibelle || b.regime || '').toUpperCase().includes('CARFO');
-
-    if (isCarfo && b.cotisationCarfoAgent && b.cotisationCarfoAgent > 0) {
-      lines.push({
-        name: 'COTISATION PENSION RETRAITE CARFO (PART AGENT)',
-        retenue: b.cotisationCarfoAgent
-      });
-    } else {
-      const cnssVal = b.cotisationCnssAgent || b.cotisationCNSS || Math.round(brut * 0.055);
-      if (cnssVal > 0) {
-        lines.push({
-          name: 'RETENUE SÉCURITÉ SOCIALE CNSS (PART AGENT)',
-          retenue: cnssVal
-        });
+      // 1. Précomptes et trop-perçus TOUJOURS en poids 30
+      if (cd.startsWith('PREC') || cd.includes('AVANCE') || cd.includes('TROP') ||
+          nm.includes('PRÉCOMPTE') || nm.includes('PRECOMPTE') || nm.includes('AVANCE') ||
+          nm.includes('TROP-PER') || nm.includes('TROP_PER') || nm.includes('TROP PER') ||
+          l.typeLigne === 'PRECOMPTE' || l.typeLigne === 'RETENUE') {
+        return 30;
       }
-    }
 
-    const crraeVal = b.cotisationCrraeAgent !== undefined ? b.cotisationCrraeAgent : Math.round(sBase * 0.03);
-    if (crraeVal > 0) {
-      lines.push({
-        name: 'COTISATION RETRAITE COMPLÉMENTAIRE CRRAE',
-        retenue: crraeVal
-      });
-    }
+      // 2. Cotisations sociales et impôts légaux
+      if (cd.includes('CNSS') || nm.includes('CNSS')) return 20;
+      if (cd.includes('IUTS') || nm.includes('IUTS')) return 21;
+      if (cd.includes('CRRAE') || nm.includes('CRRAE')) return 22;
+      if (cd.includes('SOLIDAR') || cd.includes('FSP') || nm.includes('SOLIDARITE') || nm.includes('SOLIDARITÉ')) return 23;
 
-    const iutsVal = b.impotIUTS || b.impotIuts || 0;
-    if (iutsVal > 0) {
-      const chargeText = b.nombreCharges > 0 ? ` (${b.nombreCharges} CHARGE[S])` : '';
-      lines.push({
-        name: `IUTS DU MOIS${chargeText}`,
-        retenue: iutsVal
-      });
-    }
+      // 3. Salaire de base et sur-salaire
+      if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP'))) return 1;
+      if (cd === 'SUR_SALAIRE' || nm.includes('SURSALAIRE') || nm.includes('SUR-SALAIRE')) return 2;
+      if (cd.includes('CAISSE') || nm.includes('CAISSE')) return 3;
+      if (cd.includes('SUJETION') || cd.includes('SUJ') || nm.includes('SUJETION') || nm.includes('SUJÉTION')) return 4;
+      if (cd.includes('TRANS') || cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT') || nm.includes('DÉPLACEMENT')) return 5;
+      if (cd.includes('LOG') || nm.includes('LOGEMENT') || nm.includes('MAISON')) return 6;
+      if (cd.includes('CASH') || cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT') || nm.includes('GUICHET')) return 7;
+      if (l.gain !== undefined && l.gain !== null && l.gain > 0) return 10;
 
-    // FSP légal : 1% sur le salaire net d'impôt (si >= 100 000 FCFA)
-    const sumRetPreFsp = lines.reduce((sum, l) => sum + (l.retenue || 0), 0);
-    const netPreFsp = Math.max(0, brut - sumRetPreFsp);
-    let fspVal = (netPreFsp >= 100000) ? Math.round(netPreFsp * 0.01) : 0;
-    if (b.retenueFSP !== undefined && b.retenueFSP > 0 && Math.abs(b.retenueFSP - fspVal) < 100) {
-      fspVal = b.retenueFSP;
-    }
-    b.retenueFSP = fspVal;
-    if (fspVal > 0) {
-      lines.push({
-        name: 'RETENUE FONDS DE SOUTIEN PATRIOTIQUE (FSP)',
-        retenue: fspVal
-      });
-    }
-
-    // Précomptes & Avances
-    if (b.precomptesDetails && b.precomptesDetails.length > 0) {
-      b.precomptesDetails.forEach((pr: any) => {
-        if (pr.montant > 0) {
-          lines.push({
-            name: (pr.name || pr.libelle || 'PRÉCOMPTE / RETENUE').toUpperCase(),
-            retenue: pr.montant
-          });
-        }
-      });
-    } else {
-      const totPrec = b.totalPrecomptes || b.avanceSurSolde || b.precompteAvance || 0;
-      if (totPrec > 0) {
-        lines.push({
-          name: 'PRÉCOMPTES & AVANCES SUR SALAIRE',
-          retenue: totPrec
-        });
+      if (l.ordre !== undefined && l.ordre !== null && l.ordre > 0) {
+        return l.ordre;
       }
-    }
+      return 40;
+    };
 
-    b.lines = lines;
+    lines.sort((a, b) => getOrderWeight(a) - getOrderWeight(b));
 
-    // SYNCHRONISATION ABSOLUE : Le total des avoirs et le total des retenues sont TOUJOURS la somme exacte des lignes
+    const copy = { ...b };
+    copy.lines = lines;
+
+    // Respecter rigoureusement les totaux calculés par le backend
     const totGains = lines.reduce((acc, l) => acc + (l.gain || 0), 0);
     const totRets = lines.reduce((acc, l) => acc + (l.retenue || 0), 0);
-
-    b.salaireBrut = totGains;
-    b.totalRetenues = totRets;
-    b.salaireNet = totGains - totRets;
-
-    // Charges Patronales : uniquement le régime pertinent
-    if (isCarfo) {
-      b.partPatronaleCarfo = Math.round(sBase * 0.14);
-      b.partPatronaleCnss = 0;
-    } else {
-      b.partPatronaleCnss = Math.round(brut * 0.16);
-      b.partPatronaleCarfo = 0;
-    }
-    b.partPatronaleCrrae = Math.round(sBase * 0.06);
-    b.totalRetenuesPatronales = (isCarfo ? b.partPatronaleCarfo : b.partPatronaleCnss) + b.partPatronaleCrrae;
+    copy.salaireBrut = copy.salaireBrut != null ? copy.salaireBrut : totGains;
+    copy.totalRetenues = copy.totalRetenues != null ? copy.totalRetenues : totRets;
+    copy.salaireNet = copy.salaireNet != null ? copy.salaireNet : (copy.salaireBrut - copy.totalRetenues);
 
     // Montant en toutes lettres
-    b.montantEnLettres = numberToFrenchWords(Math.round(b.salaireNet || 0));
+    copy.montantEnLettres = numberToFrenchWords(Math.round(copy.salaireNet || 0));
 
     // Mode de règlement et compte
-    b.modeReglement = b.modePaiement || 'Virement bancaire / BPBF';
-    b.numeroCompteBancaire = b.iban || (b.employee ? b.employee.iban : '—');
-    b.code = b.code || `SLIP/${b.anneeCode || '2026'}/${b.moisCode || '08'}-${b.matricule || '001'}`;
+    const emp = copy.employee || this.tousLesEmployes.find(e => String(e.id) === String(copy.employeeId));
+    copy.nom = copy.nom || emp?.nom || (copy.employeeName ? copy.employeeName.split(' ')[0] : '—');
+    copy.prenom = copy.prenom || emp?.prenom || (copy.employeeName && copy.employeeName.includes(' ') ? copy.employeeName.substring(copy.employeeName.indexOf(' ') + 1) : '—');
+    copy.emploi = copy.emploi && copy.emploi !== '—' ? copy.emploi : (emp?.fonction || emp?.poste || copy.fonction || '—');
+    copy.dateEmbauche = copy.dateEmbauche && copy.dateEmbauche !== '—' ? copy.dateEmbauche : (emp?.dateEmbauche || '—');
+    copy.service = copy.service && copy.service !== '—' ? copy.service : (emp?.service || emp?.departement || emp?.direction || '—');
+    copy.numeroCnss = copy.numeroCnss && copy.numeroCnss !== '—' ? copy.numeroCnss : (emp?.numeroCnss || emp?.numeroCNI || '—');
+    copy.situationFamiliale = copy.situationFamiliale || copy.situationMatrimoniale || emp?.situationFamiliale || emp?.situationMatrimoniale || 'Célibataire';
+    copy.situationMatrimoniale = copy.situationFamiliale;
+    const isMarriedGen = copy.situationFamiliale.toUpperCase().includes('MARI');
+    copy.partsFiscales = copy.partsFiscales != null ? copy.partsFiscales : ((isMarriedGen ? 2 : 1) + (copy.nombreCharges || 0));
+    copy.classification = copy.classification && copy.classification !== '—' ? copy.classification : (copy.grade || (emp ? this.getGradeConcat(emp) : '—'));
+    let genAnc = copy.anciennete != null ? copy.anciennete : (emp?.anciennete != null ? emp.anciennete : (copy.ancienneteAnnees != null ? copy.ancienneteAnnees : 0));
+    if (genAnc === 0 && (copy.dateEmbauche || emp?.dateEmbauche)) {
+      try {
+        const dEmb = new Date(copy.dateEmbauche || emp.dateEmbauche);
+        const ref = copy.dateTo ? new Date(copy.dateTo) : new Date();
+        genAnc = Math.max(0, ref.getFullYear() - dEmb.getFullYear());
+      } catch {}
+    }
+    copy.anciennete = genAnc;
+    copy.ancienneteAnnees = genAnc;
+    if (!copy.cotisationCnss && !copy.cotisationCNSS && !copy.cotisationCnssAgent) {
+      const cnssLine = lines.find((l: any) => {
+        const c = (l.code || '').toUpperCase();
+        const nm = (l.name || l.libelle || '').toUpperCase();
+        return (c.includes('CNSS') || nm.includes('CNSS')) && !c.includes('PATRON') && !nm.includes('PATRON');
+      });
+      if (cnssLine) {
+        copy.cotisationCnss = cnssLine.retenue || cnssLine.gain || (cnssLine as any).montant || 0;
+      } else if (copy.salaireBrut) {
+        const baseCnss = Math.min(copy.salaireBrut, 800000);
+        copy.cotisationCnss = Math.round(baseCnss * 0.055);
+      }
+    }
+    copy.cumulBrut = (copy.cumulBrutExercice != null && copy.cumulBrutExercice > 0) ? copy.cumulBrutExercice : (copy.cumulBrut != null && copy.cumulBrut > 0 ? copy.cumulBrut : copy.salaireBrut);
+    copy.cumulBaseImposable = (copy.cumulBaseImposableExercice != null && copy.cumulBaseImposableExercice > 0) ? copy.cumulBaseImposableExercice : (copy.cumulBaseImposable != null && copy.cumulBaseImposable > 0 ? copy.cumulBaseImposable : copy.baseImposable);
+    copy.cumulCnss = (copy.cumulCnssExercice != null && copy.cumulCnssExercice > 0) ? copy.cumulCnssExercice : (copy.cumulCnss != null && copy.cumulCnss > 0 ? copy.cumulCnss : (copy.cotisationCnss || copy.cotisationCNSS || 0));
+    copy.cumulIuts = (copy.cumulIutsExercice != null && copy.cumulIutsExercice > 0) ? copy.cumulIutsExercice : (copy.cumulIuts != null && copy.cumulIuts > 0 ? copy.cumulIuts : (copy.impotIuts || copy.impotIUTS || 0));
+    copy.cumulCrrae = (copy.cumulCrraeExercice != null && copy.cumulCrraeExercice > 0) ? copy.cumulCrraeExercice : (copy.cumulCrrae != null && copy.cumulCrrae > 0 ? copy.cumulCrrae : (copy.cotisationCrrae || copy.cotisationCrraeAgent || 0));
+    copy.banque = copy.banque || (emp && emp.banque) || 'BANQUE POSTALE';
+    const rawIban = copy.numeroCompteBancaire || emp?.iban;
+    copy.numeroCompteBancaire = (rawIban && !rawIban.includes('0000000000') && rawIban !== '08000002501' && rawIban !== '—')
+      ? rawIban
+      : ((copy.matricule || emp?.matricule) ? `Compte BPBF — ${copy.matricule || emp?.matricule}` : '—');
 
-    return b;
+    if (!copy.dateFrom && this.currentSession) {
+      copy.dateFrom = this.currentSession.dateFrom || this.currentSession.dateDebut;
+      copy.dateTo = this.currentSession.dateTo || this.currentSession.dateFin;
+      if (!copy.dateFrom && this.currentSession.annee && this.currentSession.mois) {
+        const y = this.currentSession.annee;
+        const m = String(this.currentSession.mois).padStart(2, '0');
+        const mNum = parseInt(m, 10);
+        const lastDay = new Date(y, mNum, 0).getDate();
+        copy.dateFrom = `${y}-${m}-01`;
+        copy.dateTo = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+      }
+    }
+    copy.periode = copy.periode || copy.sessionPeriode || this.currentSession?.periode || this.periode;
+    copy.sessionType = copy.sessionType || copy.typeSession || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE';
+
+    copy.modeReglement = copy.modePaiement || (emp && emp.modePaiement) || `Virement bancaire / ${copy.banque}`;
+    copy.numeroCompteBancaire = copy.numeroCompteBancaire || copy.iban || (emp ? emp.iban : '—');
+    copy.code = copy.code || `BLT-${copy.id || '001'}`;
+
+    return copy;
+  }
+
+  formatDateFr(dateStr?: string): string {
+    if (!dateStr) return '—';
+    try {
+      const parts = String(dateStr).split('T')[0].split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  }
+
+  formatMoisAnnee(dateStr?: string): string {
+    if (!dateStr) return '—';
+    try {
+      const parts = String(dateStr).split('T')[0].split('-');
+      const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      if (parts.length >= 2) {
+        const mIdx = parseInt(parts[1], 10) - 1;
+        if (mIdx >= 0 && mIdx < 12) {
+          return `${mois[mIdx]} ${parts[0]}`;
+        }
+      }
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return `${mois[d.getMonth()]} ${d.getFullYear()}`;
+    } catch {
+      return dateStr;
+    }
   }
 
   imprimerBulletin(bulletin?: any): void {
     const raw = bulletin || this.selectedBulletin;
     if (!raw) return;
-    const enriched = this.enrichSelectedBulletinLines(raw);
 
-    const printWin = window.open('', '_blank', 'width=1000,height=1200');
-    if (!printWin) {
-      alert('Veuillez autoriser les fenêtres pop-up pour imprimer le bulletin.');
-      return;
+    if (raw.id) {
+      // Ouverture directe via l'URL native du backend (pas de blob URL, pas de blocage Chrome)
+      this.bulletinPdfService.ouvrirBulletinDirect(raw.id);
+    } else {
+      const enriched = this.enrichSelectedBulletinLines(raw);
+      const filename = `bulletin-${enriched.matricule || 'paie'}-${(enriched.mois || this.periode || 'mensuel').replace(/\s+/g, '_')}.pdf`;
+      this.genererPdfParPreview(enriched, filename);
     }
+  }
 
-    const fmt = (n: number | undefined) => {
-      if (n === undefined || n === null) return '0';
-      return Math.round(n).toLocaleString('fr-FR');
+  private genererPdfParPreview(enriched: any, filename: string): void {
+    const dto: any = {
+      code: enriched.code,
+      employeeId: enriched.employeeId || enriched.employee?.id,
+      employeeName: enriched.employeeName || (enriched.nom && enriched.prenom ? `${enriched.prenom} ${enriched.nom}` : undefined),
+      employeeNom: enriched.nom,
+      employeePrenom: enriched.prenom,
+      matricule: enriched.matricule,
+      fonction: enriched.emploi || enriched.fonction,
+      emploi: enriched.emploi || enriched.fonction,
+      gradeLibelle: enriched.classification || enriched.grade,
+      classification: enriched.classification || enriched.grade,
+      situationFamiliale: enriched.situationFamiliale || enriched.situationMatrimoniale || 'Célibataire',
+      situationMatrimoniale: enriched.situationFamiliale || enriched.situationMatrimoniale || 'Célibataire',
+      partsFiscales: enriched.partsFiscales,
+      nombreCharges: enriched.nombreCharges || 0,
+      dateEmbauche: enriched.dateEmbauche,
+      service: enriched.service,
+      departement: enriched.departement,
+      numeroCnss: enriched.numeroCnss,
+      numeroCompteBancaire: enriched.numeroCompteBancaire,
+      banque: enriched.banque,
+      anciennete: enriched.anciennete,
+      ancienneteAnnees: enriched.ancienneteAnnees,
+      dateFrom: enriched.dateFrom,
+      dateTo: enriched.dateTo,
+      scheduledWorkingDays: enriched.scheduledWorkingDays || 30,
+      workedDays: enriched.joursPresents || enriched.workedDays || 30,
+      salaireBase: enriched.salaireBase,
+      surSalaire: enriched.surSalaire,
+      totalIndemnites: enriched.totalIndemnites,
+      totalAvoirs: enriched.totalAvoirs,
+      salaireBrut: enriched.salaireBrut,
+      baseImposable: enriched.baseImposable,
+      cotisationCnss: enriched.cotisationCnss || enriched.cotisationCNSS || enriched.cotisationCnssAgent,
+      impotIuts: enriched.impotIuts || enriched.impotIUTS,
+      cotisationCrrae: enriched.cotisationCrrae || enriched.cotisationCrraeAgent,
+      totalPrecomptes: enriched.totalPrecomptes,
+      totalRetenues: enriched.totalRetenues,
+      totalCotisationsPatronales: enriched.totalRetenuesPatronales || enriched.partPatronaleCnss,
+      salaireNet: enriched.salaireNet,
+      cumulBrutExercice: enriched.cumulBrutExercice || enriched.cumulBrut,
+      cumulBaseImposableExercice: enriched.cumulBaseImposableExercice || enriched.cumulBaseImposable,
+      cumulCnssExercice: enriched.cumulCnssExercice || enriched.cumulCnss,
+      cumulIutsExercice: enriched.cumulIutsExercice || enriched.cumulIuts,
+      cumulCrraeExercice: enriched.cumulCrraeExercice || enriched.cumulCrrae,
+      statut: enriched.etat || 'VALIDE',
+      lines: (enriched.lines || []).map((l: any) => ({
+        code: l.code || 'LINE',
+        libelle: l.name || l.libelle,
+        name: l.name || l.libelle,
+        typeLigne: l.retenue ? 'RETENUE' : 'GAIN',
+        taux: l.rate || (l.taux != null ? l.taux : (l.tauxFormatted ? parseFloat(String(l.tauxFormatted).replace('%', '').trim()) : 100)),
+        baseCalcul: l.baseCalcul,
+        montant: l.gain || l.retenue || l.amount || 0
+      }))
     };
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-        <meta charset="UTF-8">
-        <title>Bulletin de Paie - ${enriched.employeeName}</title>
-        <style>
-          @page { size: A4 portrait; margin: 10mm; }
-          body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; margin: 0; padding: 10px; font-size: 11px; }
-          .header-box { display: flex; justify-content: space-between; border-bottom: 2px solid #0060B3; padding-bottom: 8px; margin-bottom: 10px; }
-          .brand-logo { font-size: 18px; font-weight: 800; color: #0060B3; }
-          .sub-brand { font-size: 10px; color: #64748b; }
-          .doc-title { text-align: right; }
-          .doc-title h1 { font-size: 16px; margin: 0; }
-          .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; }
-          .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 10.5px; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; }
-          .table-lines { border: 1.5px solid #000; margin-bottom: 0; }
-          .table-lines th { background: #e5e7eb; color: #000; border: 1px solid #000; padding: 6px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; }
-          .table-lines td { border: 1px solid #000; padding: 5px 10px; font-size: 11px; }
-          .table-recap { border: 1.5px solid #000; border-top: none; margin-top: -1px; margin-bottom: 12px; }
-          .table-recap th { background: #e5e7eb; color: #000; border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; font-weight: 700; text-align: center; }
-          .table-recap td { border: 1px solid #000; padding: 5px 8px; font-size: 11px; }
-          .cell-blank { border: none !important; background: transparent !important; }
-          .right { text-align: right; }
-          .bold { font-weight: 700; }
-          .net-hdr { background: #cbd5e1 !important; font-weight: 800; text-align: right !important; }
-          .net-val { font-size: 13px; font-weight: 900; color: #000; }
-          .in-words { margin-top: 10px; padding: 8px; background: #f8fafc; border-left: 3px solid #0060B3; font-style: italic; }
-          .footer-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 25px; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="header-box">
-          <div>
-            <div class="brand-logo">BANQUE POSTALE DU BURKINA FASO</div>
-            <div class="sub-brand">01 BP 600 Ouagadougou 01 - N° IFU : 00012345Z - N° CNSS : 45892-A</div>
-          </div>
-          <div class="doc-title">
-            <h1>BULLETIN DE PAIE</h1>
-            <div style="color: #0060B3; font-weight: 700;">Réf : ${enriched.code}</div>
-            <div style="font-size: 10px; color: #64748b;">Période : ${enriched.periodeTexte || enriched.mois || this.periode}</div>
-          </div>
-        </div>
-
-        <div class="grid-info">
-          <div>
-            <div class="info-row"><span>Salarié :</span> <strong>${enriched.employeeName}</strong></div>
-            <div class="info-row"><span>Matricule :</span> <strong>${enriched.matricule}</strong></div>
-            <div class="info-row"><span>Fonction :</span> <strong>${enriched.fonction}</strong></div>
-          </div>
-          <div>
-            <div class="info-row"><span>Compte Bancaire :</span> <strong>${enriched.numeroCompteBancaire}</strong></div>
-            <div class="info-row"><span>Règlement :</span> <strong>${enriched.modeReglement}</strong></div>
-            <div class="info-row"><span>Charges Famille :</span> <strong>${enriched.nombreCharges || 0} charge(s)</strong></div>
-          </div>
-        </div>
-
-        <table class="table-lines" style="table-layout: fixed; width: 100%;">
-          <colgroup>
-            <col style="width: 32%;">
-            <col style="width: 26%;">
-            <col style="width: 21%;">
-            <col style="width: 21%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th colspan="2" style="text-align: left;">ÉLÉMENTS DE PAIE</th>
-              <th style="text-align: right;">AVOIRS</th>
-              <th style="text-align: right;">RETENUES</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(enriched.lines || []).map((l: any) => `
-              <tr>
-                <td colspan="2" style="font-weight: 600;">${l.name}</td>
-                <td class="right">${l.gain ? fmt(l.gain) : ''}</td>
-                <td class="right">${l.retenue ? fmt(l.retenue) : ''}</td>
-              </tr>
-            `).join('')}
-            <!-- Ligne 1 recap : Headers -->
-            <tr style="background: #dcdcdc;">
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">MODE DE PAIEMENT</th>
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">BASE IMPOSABLE</th>
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">TOTAL DES AVOIRS</th>
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">TOTAL DES RETENUES</th>
-            </tr>
-            <!-- Ligne 1 recap : Valeurs -->
-            <tr>
-              <td style="border: 1px solid #000;">${enriched.modeReglement || 'Virement'}</td>
-              <td class="right" style="border: 1px solid #000;">${fmt(enriched.baseImposable)}</td>
-              <td class="right bold" style="border: 1px solid #000;">${fmt(enriched.salaireBrut)}</td>
-              <td class="right bold" style="border: 1px solid #000;">${fmt(enriched.totalRetenues)}</td>
-            </tr>
-            <!-- Ligne 2 recap : Headers -->
-            <tr style="background: #dcdcdc;">
-              <td class="cell-blank" style="border: none;"></td>
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">RAP PART PATRONAL</th>
-              <th style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px; text-align: center;">PART PATRONALE</th>
-              <th class="net-hdr" style="border: 1px solid #000; padding: 5px 8px; font-size: 10.5px;">NET A PAYER</th>
-            </tr>
-            <!-- Ligne 2 recap : Valeurs -->
-            <tr>
-              <td class="cell-blank" style="border: none;"></td>
-              <td class="right" style="border: 1px solid #000;"></td>
-              <td class="right bold" style="border: 1px solid #000;">${fmt(enriched.totalRetenuesPatronales || enriched.partPatronaleCnss || 0)}</td>
-              <td class="right net-val" style="border: 1px solid #000;">${fmt(enriched.salaireNet)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="in-words">
-          <strong>Net à Payer en toutes lettres :</strong> ${enriched.montantEnLettres}
-        </div>
-
-        <div class="footer-sign">
-          <div>Direction Générale (BPBF)</div>
-          <div>Signature du Salarié</div>
-        </div>
-
-        <script>
-          window.onload = function() { setTimeout(() => window.print(), 300); }
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWin.document.open();
-    printWin.document.write(htmlContent);
-    printWin.document.close();
+    this.bulletinPdfService.previewBulletinPdf(dto).subscribe({
+      next: (blob) => {
+        this.bulletinPdfService.ouvrirEtTelechargerPdf(blob, filename);
+      },
+      error: (err) => {
+        alert('Erreur lors de la génération du PDF du bulletin : ' + (err?.message || 'Erreur serveur'));
+      }
+    });
   }
 
   imprimerRegistrePaie(): void {
@@ -1480,246 +1261,20 @@ export class GenererBulletinsComponent implements OnInit {
       return;
     }
 
-    const printWin = window.open('', '_blank', 'width=1200,height=900');
-    if (!printWin) {
-      alert('Veuillez autoriser les fenêtres pop-up pour imprimer le registre de paie.');
-      return;
+    const filename = `registre-paie-${this.periode.replace(/\s+/g, '_')}.pdf`;
+
+    if (this.currentSession?.id) {
+      this.bulletinPdfService.getRegistrePaiePdf(this.currentSession.id).subscribe({
+        next: (blob) => {
+          this.bulletinPdfService.ouvrirEtTelechargerPdf(blob, filename);
+        },
+        error: (err) => {
+          console.error('Erreur téléchargement registre PDF:', err);
+          alert('Erreur lors du téléchargement du registre de paie PDF : ' + (err?.message || 'Vérifiez que la session est bien générée.'));
+        }
+      });
+    } else {
+      alert('Veuillez sélectionner ou générer une session pour imprimer son registre de paie officiel en PDF.');
     }
-
-    const formatMoney = (n: number) => {
-      const val = Math.round(n || 0);
-      return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    };
-
-    const isBrouillon = !this.sessionEstValidee && !this.sessionCloturee;
-
-    // Totaux généraux
-    const totBase = this.bulletins.reduce((s, b) => s + (b.salaireBase || 0), 0);
-    const totIndem = this.bulletins.reduce((s, b) => s + (b.totalIndemnites || 0), 0);
-    const totBrut = this.bulletins.reduce((s, b) => s + (b.salaireBrut || (b.salaireBase + b.totalIndemnites)), 0);
-    const totCnssAgent = this.bulletins.reduce((s, b) => s + (b.cotisationCNSS || b.cotisationCnssAgent || 0), 0);
-    const totCnssPatronale = this.bulletins.reduce((s, b) => s + (b.chargesPatronales || b.cotisationCnssPatronale || 0), 0);
-    const totBaseImposable = this.bulletins.reduce((s, b) => s + (b.baseImposable || 0), 0);
-    const totIuts = this.bulletins.reduce((s, b) => s + (b.impotIUTS || b.iuts || 0), 0);
-    const totNet = this.bulletins.reduce((s, b) => s + (b.salaireNet || 0), 0);
-    const totRetenues = this.bulletins.reduce((s, b) => s + (b.totalPrecomptes || b.totalRetenuesDiverses || 0), 0);
-    const totTotalRetenues = this.bulletins.reduce((s, b) => s + (b.totalRetenues || ((b.cotisationCNSS || 0) + (b.impotIUTS || 0) + (b.totalPrecomptes || 0))), 0);
-    const totNetAPayer = this.bulletins.reduce((s, b) => s + (b.netAPayer || 0), 0);
-
-    const rowsHtml = this.bulletins.map((b, idx) => {
-      const matricule = b.matricule || `000${idx + 1}`;
-      const nomPrenoms = b.employeeName || (b.nom && b.prenom ? `${b.nom} ${b.prenom}` : 'Collaborateur');
-      const grade = b.grade || b.echelon || b.categorie || 'C1E01';
-      const salBase = b.salaireBase || 0;
-      const indemPrimes = b.totalIndemnites || 0;
-      const totalBrut = b.salaireBrut || (salBase + indemPrimes);
-      const assVieillesse = b.cotisationCNSS || b.cotisationCnssAgent || 0;
-      const partPatronale = b.chargesPatronales || b.cotisationCnssPatronale || 0;
-      const baseImposable = b.baseImposable || 0;
-      const chrg = b.chargesFamille || b.nombreCharges || 0;
-      const iuts = b.impotIUTS || b.iuts || 0;
-      const salNet = b.salaireNet || (totalBrut - assVieillesse - iuts);
-      const retenues = b.totalPrecomptes || b.totalRetenuesDiverses || 0;
-      const totalRet = b.totalRetenues || (assVieillesse + iuts + retenues);
-      const netAPayer = b.netAPayer || (totalBrut - totalRet);
-
-      return `
-        <tr>
-          <td style="text-align: center; font-family: monospace;">${matricule}</td>
-          <td style="font-weight: 600; text-align: left; padding-left: 6px;">${nomPrenoms}</td>
-          <td style="text-align: center; font-family: monospace;">${grade}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(salBase)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(indemPrimes)}</td>
-          <td style="text-align: right; font-family: monospace; font-weight: 700;">${formatMoney(totalBrut)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(assVieillesse)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(partPatronale)}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(baseImposable)}</td>
-          <td style="text-align: center; font-weight: 700;">${chrg > 0 ? chrg : ''}</td>
-          <td style="text-align: right; font-family: monospace;">${formatMoney(iuts)}</td>
-          <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatMoney(salNet)}</td>
-          <td style="text-align: right; font-family: monospace;">${retenues > 0 ? formatMoney(retenues) : ''}</td>
-          <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatMoney(totalRet)}</td>
-          <td style="text-align: right; font-family: monospace; font-weight: 800; background: #f8fafc;">${formatMoney(netAPayer)}</td>
-          <td style="text-align: center; color: #64748b; font-size: 10px;">${idx + 1}</td>
-        </tr>
-      `;
-    }).join('');
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-        <meta charset="UTF-8">
-        <title>REGISTRE DE PAIE - ${this.periode}</title>
-        <style>
-          @page {
-            size: A4 landscape;
-            margin: 8mm 8mm 8mm 8mm;
-          }
-          body {
-            font-family: Arial, Helvetica, sans-serif;
-            color: #0f172a;
-            background: #ffffff;
-            margin: 0;
-            padding: 4px;
-            font-size: 10px;
-          }
-          .header-table {
-            width: 100%;
-            margin-bottom: 8px;
-            border-collapse: collapse;
-          }
-          .company-info {
-            font-size: 10.5px;
-            font-weight: 700;
-            color: #000000;
-          }
-          .brouillon-stamp {
-            color: #dc2626;
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            border: 2px solid #dc2626;
-            padding: 2px 10px;
-            display: inline-block;
-            transform: rotate(-5deg);
-          }
-          .doc-title {
-            text-align: center;
-            font-size: 16px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #000000;
-          }
-          .period-info {
-            text-align: right;
-            font-size: 11px;
-            font-weight: 700;
-          }
-          .registre-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9.5px;
-          }
-          .registre-table th {
-            border: 1px solid #334155;
-            background: #f1f5f9;
-            padding: 5px 3px;
-            font-size: 9px;
-            text-align: center;
-            font-weight: 700;
-            color: #0f172a;
-          }
-          .registre-table td {
-            border: 1px solid #cbd5e1;
-            padding: 4px 3px;
-            vertical-align: middle;
-          }
-          .registre-table tr:nth-child(even) {
-            background: #fafafa;
-          }
-          .total-row td {
-            border-top: 2px solid #000000 !important;
-            border-bottom: 2px solid #000000 !important;
-            background: #e2e8f0 !important;
-            font-weight: 800 !important;
-            font-size: 9.5px;
-            padding: 6px 3px;
-          }
-          @media print {
-            .no-print { display: none; }
-            body { padding: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <table class="header-table">
-          <tr>
-            <td style="width: 25%; vertical-align: top;">
-              <div class="company-info">BANQUE DES PRETS DU BURKINA FASO (BPBF)</div>
-              <div style="font-size: 9px; color: #475569;">02 BP 5299 Ouagadougou 02</div>
-            </td>
-            <td style="width: 20%; text-align: center; vertical-align: middle;">
-              ${isBrouillon ? '<div class="brouillon-stamp">BROUILLON</div>' : '<div style="color: #059669; font-weight: 800; font-size: 13px; border: 2px solid #059669; padding: 2px 8px; display: inline-block;">SESSION VALIDÉE</div>'}
-            </td>
-            <td style="width: 30%; text-align: center; vertical-align: middle;">
-              <div class="doc-title">REGISTRE DE PAIE</div>
-            </td>
-            <td style="width: 25%; vertical-align: top;" class="period-info">
-              <div>PERIODE : ${this.periode.toUpperCase()}</div>
-              <div>[ ${this.sessionType || 'ORDINAIRE'} ]</div>
-              <div style="font-size: 9.5px; color: #475569; font-weight: normal;">Page 1 sur 1</div>
-            </td>
-          </tr>
-        </table>
-
-        <table class="registre-table">
-          <thead>
-            <tr>
-              <th style="width: 45px;">Matricule</th>
-              <th style="width: 140px;">Nom et Prénoms</th>
-              <th style="width: 45px;">Grade</th>
-              <th style="width: 65px;">Salaire<br>de base</th>
-              <th style="width: 65px;">Indemnités<br>et primes</th>
-              <th style="width: 70px;">Total brut</th>
-              <th style="width: 60px;">Assurance<br>vieillesse</th>
-              <th style="width: 60px;">Part<br>patronale</th>
-              <th style="width: 65px;">Base<br>imposable</th>
-              <th style="width: 30px;">Chrg</th>
-              <th style="width: 55px;">IUTS</th>
-              <th style="width: 65px;">Salaire<br>net</th>
-              <th style="width: 55px;">Retenues</th>
-              <th style="width: 65px;">Total<br>retenues</th>
-              <th style="width: 70px;">Net à<br>payer</th>
-              <th style="width: 20px;">N°</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-            <tr class="total-row">
-              <td colspan="3" style="text-align: center;">TOTAUX GÉNÉRAUX (${this.bulletins.length} salariés)</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totBase)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totIndem)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totBrut)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totCnssAgent)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totCnssPatronale)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totBaseImposable)}</td>
-              <td style="text-align: center;">—</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totIuts)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totNet)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totRetenues)}</td>
-              <td style="text-align: right; font-family: monospace;">${formatMoney(totTotalRetenues)}</td>
-              <td style="text-align: right; font-family: monospace; font-size: 10.5px;">${formatMoney(totNetAPayer)}</td>
-              <td style="text-align: center;">—</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="display: flex; justify-content: space-between; margin-top: 18px; font-size: 10px; font-weight: 700;">
-          <div style="text-align: center; width: 220px; border-top: 1px dashed #000; padding-top: 4px;">
-            Le Gestionnaire de Paie
-          </div>
-          <div style="text-align: center; width: 220px; border-top: 1px dashed #000; padding-top: 4px;">
-            Le Chef de Département RH
-          </div>
-          <div style="text-align: center; width: 220px; border-top: 1px dashed #000; padding-top: 4px;">
-            La Direction Générale
-          </div>
-        </div>
-
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWin.document.open();
-    printWin.document.write(htmlContent);
-    printWin.document.close();
   }
 }

@@ -100,12 +100,19 @@ p { font-size: 12px; color: var(--on-surface-3); margin: 0; }
 .full-name { font-weight: 600; font-size: 13px; }
 .emp-email { font-size: 11px; color: var(--on-surface-3); }
 .service-chip {
-  background: #e8f0fe; color: #1a73e8;
-  font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-block;
+  white-space: nowrap;
 }
 .statut-badge {
   font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
   white-space: nowrap;
+  display: inline-block;
 }
 .actions-cell { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity 0.15s; }
 .emp-row:hover .actions-cell { opacity: 1; }

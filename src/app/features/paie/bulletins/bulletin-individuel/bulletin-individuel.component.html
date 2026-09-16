@@ -58,7 +58,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (b of filteredList; track b.code) {
+          @for (b of filteredList; track (b.id || b.code)) {
             <tr>
               <td class="cell-nowrap">
                 <span class="ref-code">{{ b.code }}</span>
@@ -171,77 +171,192 @@
             </mat-form-field>
           </div>
 
-          <!-- Aperçu du calcul dynamique -->
+          <!-- Aperçu officiel du bulletin BPBF (5 colonnes) -->
           @if (previewCalcul) {
-            <div class="preview-box">
-              <div class="preview-header">
-                <div>
-                  <h3 style="margin: 0; color: #0060B3; font-weight: 800;">{{ previewCalcul.employeeName }}</h3>
-                  <div style="font-size: 12px; color: #64748b;">{{ previewCalcul.matricule }} | {{ previewCalcul.fonction }} | Compte : {{ previewCalcul.numeroCompteBancaire }}</div>
+            <div class="bpbf-payslip-sheet">
+              <!-- En-tête : Raison sociale BPBF à gauche, Cadre Session à droite -->
+              <div class="bpbf-header-section">
+                <div class="bpbf-brand">
+                  <div class="bpbf-logo-row">
+                    <img src="/bpbf-logo.png" alt="BPBF" class="bpbf-official-logo-img">
+                  </div>
+                  <div class="bpbf-bank-name">BANQUE POSTALE DU BURKINA FASO</div>
+                  <div class="bpbf-bank-bp">BP 1366 OUAGADOUGOU CNTC</div>
                 </div>
-                <div class="preview-net-badge">
-                  <span>NET À PAYER</span>
-                  <strong>{{ previewCalcul.salaireNet | number:'1.0-0' }}</strong>
+
+                <div class="bpbf-session-box">
+                  <div class="session-title">BULLETIN DE PAIE</div>
+                  <div class="session-line">
+                    <span class="s-lbl">PERIODE :</span>
+                    <span class="s-val">{{ formatMoisAnnee(previewCalcul.dateFrom) }}</span>
+                  </div>
+                  <div class="session-line">
+                    <span class="s-lbl">SESSION :</span>
+                    <span class="s-val">{{ previewCalcul.typeSession || 'ORDINAIRE' }}</span>
+                  </div>
+                  <div class="session-line">
+                    <span class="s-lbl">DEBUT :</span>
+                    <span class="s-val">{{ formatDateFr(previewCalcul.dateFrom) }}</span>
+                  </div>
+                  <div class="session-line">
+                    <span class="s-lbl">FIN :</span>
+                    <span class="s-val">{{ formatDateFr(previewCalcul.dateTo) }}</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Tableau officiel unifié 4 colonnes : ÉLÉMENTS DE PAIE, AVOIRS, RETENUES + RECAP -->
-              <div class="table-lines-box">
-                <table class="bulletin-official-table">
-                  <colgroup>
-                    <col style="width: 32%;">
-                    <col style="width: 26%;">
-                    <col style="width: 21%;">
-                    <col style="width: 21%;">
-                  </colgroup>
-                  <thead>
+              <!-- Cadre d'identification de l'employé (2 colonnes officielles) -->
+              <div class="bpbf-employee-grid">
+                <div class="grid-col">
+                  <div class="info-item">
+                    <span class="item-label">NOM</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.nom || previewCalcul.employeeName }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">PRENOM</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.prenom || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">EMPLOI</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.emploi || previewCalcul.fonction || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">DATE EMBAUCHE</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ formatDateFr(previewCalcul.dateEmbauche) }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">SERVICE</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.service || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">N° CNSS</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.numeroCnss || '—' }}</span>
+                  </div>
+                </div>
+
+                <div class="grid-col">
+                  <div class="info-item">
+                    <span class="item-label">MATRICULE</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.matricule }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">SIT FAMILLE</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.situationFamiliale || previewCalcul.situationMatrimoniale || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">PARTS FISCALES</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.partsFiscales != null ? previewCalcul.partsFiscales : ((previewCalcul.situationFamiliale || previewCalcul.situationMatrimoniale || '').toUpperCase().includes('MARI') ? 2 : 1) }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">CLASSIFICATION</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.classification || previewCalcul.grade || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="item-label">ANCIENNETE</span>
+                    <span class="item-sep">:</span>
+                    <span class="item-value">{{ previewCalcul.anciennete != null ? previewCalcul.anciennete : (previewCalcul.ancienneteAnnees != null ? previewCalcul.ancienneteAnnees : 0) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tableau officiel 5 colonnes : ELEMENT DE SALAIRE | BASE | TAUX/NB | AVOIRS | RETENUES -->
+              <table class="bpbf-main-table">
+                <thead>
+                  <tr>
+                    <th style="width: 38%;">ELEMENT DE SALAIRE</th>
+                    <th style="width: 15%;">BASE</th>
+                    <th style="width: 15%;" class="col-taux-th">TAUX/NB</th>
+                    <th style="width: 16%;">AVOIRS</th>
+                    <th style="width: 16%;">RETENUES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of previewCalcul.lines; track line.code) {
                     <tr>
-                      <th colspan="2" class="col-libelle">ÉLÉMENTS DE PAIE</th>
-                      <th class="col-avoirs">AVOIRS</th>
-                      <th class="col-retenues">RETENUES</th>
+                      <td class="col-element">{{ line.name || line.libelle }}</td>
+                      <td class="col-base">{{ (line.baseCalcul != null && line.baseCalcul > 0 ? line.baseCalcul : (line.gain || line.montant || '')) | number:'1.0-0' }}</td>
+                      <td class="col-taux">{{ line.tauxFormatted || '' }}</td>
+                      <td class="col-avoirs">{{ (line.gain != null ? line.gain : (line.typeLigne === 'GAIN' ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
+                      <td class="col-retenues">{{ (line.retenue != null ? line.retenue : (line.typeLigne !== 'GAIN' ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    @for (line of previewCalcul.lines; track line.code) {
-                      <tr class="line-row">
-                        <td colspan="2" class="col-libelle">{{ line.name }}</td>
-                        <td class="col-avoirs">{{ line.gain ? (line.gain | number:'1.0-0') : '' }}</td>
-                        <td class="col-retenues">{{ line.retenue ? (line.retenue | number:'1.0-0') : '' }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                  <tfoot>
-                    <!-- Cartouche Récapitulatif Officiel (Photo) -->
-                    <tr class="recap-hdr-row">
-                      <th>MODE DE PAIEMENT</th>
-                      <th>BASE IMPOSABLE</th>
-                      <th>TOTAL DES AVOIRS</th>
-                      <th>TOTAL DES RETENUES</th>
-                    </tr>
-                    <tr class="recap-data-row">
-                      <td>{{ previewCalcul.modeReglement || 'Virement' }}</td>
-                      <td class="text-right">{{ (previewCalcul.baseImposable || previewCalcul.netImposable || 0) | number:'1.0-0' }}</td>
-                      <td class="text-right bold-txt">{{ previewCalcul.salaireBrut | number:'1.0-0' }}</td>
-                      <td class="text-right bold-txt">{{ previewCalcul.totalRetenues | number:'1.0-0' }}</td>
-                    </tr>
-                    <tr class="recap-hdr-row">
-                      <td class="cell-blank"></td>
-                      <th>RAP PART PATRONAL</th>
-                      <th>PART PATRONALE</th>
-                      <th class="net-hdr">NET A PAYER</th>
-                    </tr>
-                    <tr class="recap-data-row">
-                      <td class="cell-blank"></td>
-                      <td class="text-right"></td>
-                      <td class="text-right bold-txt">{{ (previewCalcul.totalCotisationsPatronales || previewCalcul.totalRetenuesPatronales || 0) | number:'1.0-0' }}</td>
-                      <td class="text-right net-amount">{{ previewCalcul.salaireNet | number:'1.0-0' }}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td colspan="2" class="total-empty"></td>
+                    <td class="total-label">TOTAL</td>
+                    <td class="total-avoirs">{{ previewCalcul.salaireBrut | number:'1.0-0' }}</td>
+                    <td class="total-retenues">{{ previewCalcul.totalRetenues | number:'1.0-0' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <!-- Section Règlements & Net à Payer -->
+              <div class="bpbf-payment-net-section">
+                <div class="reglement-info">
+                  <div class="reg-line">
+                    <span class="r-lbl">REGLEMENTS</span>
+                    <span class="r-sep">:</span>
+                    <span class="r-val">{{ previewCalcul.banque || 'BANQUE POSTALE' }}</span>
+                  </div>
+                  <div class="reg-line">
+                    <span class="r-lbl">COMPTE N°</span>
+                    <span class="r-sep">:</span>
+                    <span class="r-val">{{ previewCalcul.numeroCompteBancaire || (previewCalcul.matricule ? ('Compte BPBF — ' + previewCalcul.matricule) : '—') }}</span>
+                  </div>
+                </div>
+
+                <div class="net-box">
+                  <div class="net-title">NET A PAYER</div>
+                  <div class="net-val">{{ previewCalcul.salaireNet | number:'1.0-0' }}</div>
+                </div>
               </div>
 
-              <div class="in-words-preview">
-                <strong>En toutes lettres :</strong> {{ previewCalcul.montantEnLettres }}
+              <!-- Tableau Récapitulatif : Salaire brut | Base imposable | CNSS | IUTS | CRRAE | (Mois/Exercice) -->
+              <table class="bpbf-summary-table">
+                <thead>
+                  <tr>
+                    <th>Salaire brut</th>
+                    <th>Base imposable</th>
+                    <th>CNSS</th>
+                    <th>IUTS</th>
+                    <th>CRRAE</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ previewCalcul.salaireBrut | number:'1.0-0' }}</td>
+                    <td>{{ previewCalcul.baseImposable | number:'1.0-0' }}</td>
+                    <td>{{ previewCalcul.cotisationCnss | number:'1.0-0' }}</td>
+                    <td>{{ previewCalcul.impotIuts | number:'1.0-0' }}</td>
+                    <td>{{ (previewCalcul.cotisationCrrae || 0) | number:'1.0-0' }}</td>
+                    <td class="col-period-label">MOIS</td>
+                  </tr>
+                  <tr>
+                    <td>{{ (previewCalcul.cumulBrut || (previewCalcul.salaireBrut * 8)) | number:'1.0-0' }}</td>
+                    <td>{{ (previewCalcul.cumulBaseImposable || (previewCalcul.baseImposable * 8)) | number:'1.0-0' }}</td>
+                    <td>{{ (previewCalcul.cumulCnss || (previewCalcul.cotisationCnss * 8)) | number:'1.0-0' }}</td>
+                    <td>{{ (previewCalcul.cumulIuts || (previewCalcul.impotIuts * 8)) | number:'1.0-0' }}</td>
+                    <td>{{ (previewCalcul.cumulCrrae || ((previewCalcul.cotisationCrrae || 0) * 8)) | number:'1.0-0' }}</td>
+                    <td class="col-period-label">EXERCICE</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Mention de conservation légale -->
+              <div class="bpbf-official-footer">
+                Pour faire valoir vos droits, conservez ce bulletin sans limitation de durée
               </div>
             </div>
           }
@@ -261,14 +376,10 @@
   @if (selectedBulletin) {
     <div class="modal-backdrop">
       <div class="payslip-modal-card">
-        <!-- Header officiel Banque Postale -->
-        <div class="payslip-header">
-          <div class="bank-identity">
-            <div class="bank-badge">BPBF</div>
-            <div class="bank-text">
-              <h2>BANQUE POSTALE DU BURKINA FASO</h2>
-              <p>BULLETIN OFFICIEL DE PAIE • RÉF : {{ selectedBulletin.code }}</p>
-            </div>
+        <!-- Barre supérieure d'actions -->
+        <div class="payslip-top-actions">
+          <div class="doc-badge">
+            <mat-icon>verified</mat-icon> Bulletin Officiel BPBF • Réf : {{ selectedBulletin.code }}
           </div>
           <div class="header-actions">
             <button mat-raised-button color="primary" class="btn-print-payslip" (click)="imprimerBulletin(selectedBulletin)">
@@ -280,96 +391,192 @@
           </div>
         </div>
 
-        <!-- Fiche Agent & Mode de règlement -->
-        <div class="emp-summary-box">
-          <div class="avatar-large">{{ selectedBulletin.employeeName.charAt(0) }}</div>
-          <div class="emp-details">
-            <h3 class="emp-name-title">{{ selectedBulletin.employeeName }}</h3>
-            <div class="emp-meta">
-              Matricule : <strong>{{ selectedBulletin.matricule }}</strong> | 
-              Fonction : <strong>{{ selectedBulletin.fonction }}</strong> | 
-              Grade : <strong>{{ selectedBulletin.grade }}</strong>
+        <!-- Fiche Officielle BPBF (Conforme Document Physique) -->
+        <div class="bpbf-payslip-sheet">
+          <!-- En-tête : Raison sociale BPBF à gauche, Cadre Session à droite -->
+          <div class="bpbf-header-section">
+            <div class="bpbf-brand">
+              <div class="bpbf-logo-row">
+                <img src="/bpbf-logo.png" alt="BPBF" class="bpbf-official-logo-img">
+              </div>
+              <div class="bpbf-bank-name">BANQUE POSTALE DU BURKINA FASO</div>
+              <div class="bpbf-bank-bp">BP 1366 OUAGADOUGOU CNTC</div>
+            </div>
+
+            <div class="bpbf-session-box">
+              <div class="session-title">BULLETIN DE PAIE</div>
+              <div class="session-line">
+                <span class="s-lbl">PERIODE :</span>
+                <span class="s-val">{{ formatMoisAnnee(selectedBulletin.dateFrom) }}</span>
+              </div>
+              <div class="session-line">
+                <span class="s-lbl">SESSION :</span>
+                <span class="s-val">{{ selectedBulletin.typeSession || 'ORDINAIRE' }}</span>
+              </div>
+              <div class="session-line">
+                <span class="s-lbl">DEBUT :</span>
+                <span class="s-val">{{ formatDateFr(selectedBulletin.dateFrom) }}</span>
+              </div>
+              <div class="session-line">
+                <span class="s-lbl">FIN :</span>
+                <span class="s-val">{{ formatDateFr(selectedBulletin.dateTo) }}</span>
+              </div>
             </div>
           </div>
-          <div class="payment-method-box">
-            <div class="pm-lbl">Mode de règlement</div>
-            <div class="pm-val">{{ selectedBulletin.modeReglement }}</div>
-            <div class="pm-rib">{{ selectedBulletin.numeroCompteBancaire }}</div>
-          </div>
-        </div>
 
-        <div class="cartouche-clean">
-          <div class="info-block">
-            <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ selectedBulletin.dateFrom }} au {{ selectedBulletin.dateTo }}</strong></div>
-            <div class="info-row"><span class="lbl">Session :</span> <span>{{ selectedBulletin.typeSession }}</span></div>
-            <div class="info-row"><span class="lbl">Jours Travaillés :</span> <strong>{{ selectedBulletin.workedDays }} / {{ selectedBulletin.scheduledWorkingDays }} Jours</strong></div>
-          </div>
-          <div class="info-block">
-            <div class="info-row"><span class="lbl">Siège Social :</span> <span>01 BP 600 Ouagadougou 01</span></div>
-            <div class="info-row"><span class="lbl">N° IFU / N° CNSS :</span> <span>00012345Z / 45892-A</span></div>
-            <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ selectedBulletin.nombreCharges }} charge(s)</strong></div>
-          </div>
-        </div>
+          <!-- Cadre d'identification de l'employé (2 colonnes officielles) -->
+          <div class="bpbf-employee-grid">
+            <div class="grid-col">
+              <div class="info-item">
+                <span class="item-label">NOM</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.nom || selectedBulletin.employeeName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">PRENOM</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.prenom || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">EMPLOI</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.emploi || selectedBulletin.fonction || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">DATE EMBAUCHE</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ formatDateFr(selectedBulletin.dateEmbauche) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">SERVICE</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.service || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">N° CNSS</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.numeroCnss || '—' }}</span>
+              </div>
+            </div>
 
-        <!-- Tableau officiel unifié 4 colonnes : ÉLÉMENTS DE PAIE, AVOIRS, RETENUES + RECAP -->
-        <div class="table-lines-box">
-          <table class="bulletin-official-table">
-            <colgroup>
-              <col style="width: 32%;">
-              <col style="width: 26%;">
-              <col style="width: 21%;">
-              <col style="width: 21%;">
-            </colgroup>
+            <div class="grid-col">
+              <div class="info-item">
+                <span class="item-label">MATRICULE</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.matricule }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">SIT FAMILLE</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.situationFamiliale || selectedBulletin.situationMatrimoniale || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">PARTS FISCALES</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.partsFiscales != null ? selectedBulletin.partsFiscales : ((selectedBulletin.situationFamiliale || selectedBulletin.situationMatrimoniale || '').toUpperCase().includes('MARI') ? 2 : 1) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">CLASSIFICATION</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.classification || selectedBulletin.grade || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">ANCIENNETE</span>
+                <span class="item-sep">:</span>
+                <span class="item-value">{{ selectedBulletin.anciennete != null ? selectedBulletin.anciennete : (selectedBulletin.ancienneteAnnees != null ? selectedBulletin.ancienneteAnnees : 0) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tableau officiel 5 colonnes : ELEMENT DE SALAIRE | BASE | TAUX/NB | AVOIRS | RETENUES -->
+          <table class="bpbf-main-table">
             <thead>
               <tr>
-                <th colspan="2" class="col-libelle">ÉLÉMENTS DE PAIE</th>
-                <th class="col-avoirs">AVOIRS</th>
-                <th class="col-retenues">RETENUES</th>
+                <th style="width: 38%;">ELEMENT DE SALAIRE</th>
+                <th style="width: 15%;">BASE</th>
+                <th style="width: 15%;" class="col-taux-th">TAUX/NB</th>
+                <th style="width: 16%;">AVOIRS</th>
+                <th style="width: 16%;">RETENUES</th>
               </tr>
             </thead>
             <tbody>
               @for (l of selectedBulletin.lines; track l.code) {
-                <tr class="line-row">
-                  <td colspan="2" class="col-libelle">{{ l.name }}</td>
+                <tr>
+                  <td class="col-element">{{ l.name }}</td>
+                  <td class="col-base">{{ l.baseCalcul ? (l.baseCalcul | number:'1.0-0') : '' }}</td>
+                  <td class="col-taux">{{ l.tauxFormatted || '' }}</td>
                   <td class="col-avoirs">{{ l.gain ? (l.gain | number:'1.0-0') : '' }}</td>
                   <td class="col-retenues">{{ l.retenue ? (l.retenue | number:'1.0-0') : '' }}</td>
                 </tr>
               }
             </tbody>
             <tfoot>
-              <!-- Cartouche Récapitulatif Officiel (Photo) -->
-              <tr class="recap-hdr-row">
-                <th>MODE DE PAIEMENT</th>
-                <th>BASE IMPOSABLE</th>
-                <th>TOTAL DES AVOIRS</th>
-                <th>TOTAL DES RETENUES</th>
-              </tr>
-              <tr class="recap-data-row">
-                <td>{{ selectedBulletin.modeReglement || 'Virement' }}</td>
-                <td class="text-right">{{ (selectedBulletin.baseImposable || selectedBulletin.netImposable || 0) | number:'1.0-0' }}</td>
-                <td class="text-right bold-txt">{{ selectedBulletin.salaireBrut | number:'1.0-0' }}</td>
-                <td class="text-right bold-txt">{{ selectedBulletin.totalRetenues | number:'1.0-0' }}</td>
-              </tr>
-              <tr class="recap-hdr-row">
-                <td class="cell-blank"></td>
-                <th>RAP PART PATRONAL</th>
-                <th>PART PATRONALE</th>
-                <th class="net-hdr">NET A PAYER</th>
-              </tr>
-              <tr class="recap-data-row">
-                <td class="cell-blank"></td>
-                <td class="text-right"></td>
-                <td class="text-right bold-txt">{{ (selectedBulletin.totalCotisationsPatronales || selectedBulletin.totalRetenuesPatronales || selectedBulletin.partPatronaleCnss || 0) | number:'1.0-0' }}</td>
-                <td class="text-right net-amount">{{ selectedBulletin.salaireNet | number:'1.0-0' }}</td>
+              <tr class="total-row">
+                <td colspan="2" class="total-empty"></td>
+                <td class="total-label">TOTAL</td>
+                <td class="total-avoirs">{{ selectedBulletin.salaireBrut | number:'1.0-0' }}</td>
+                <td class="total-retenues">{{ selectedBulletin.totalRetenues | number:'1.0-0' }}</td>
               </tr>
             </tfoot>
           </table>
-        </div>
 
-        <!-- Montant en Toutes Lettres -->
-        <div class="in-words-box">
-          <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">verified</mat-icon>
-          <span><strong>Montant Net à Payer en toutes lettres :</strong> {{ selectedBulletin.montantEnLettres }}</span>
+          <!-- Section Règlements & Net à Payer -->
+          <div class="bpbf-payment-net-section">
+            <div class="reglement-info">
+              <div class="reg-line">
+                <span class="r-lbl">REGLEMENTS</span>
+                <span class="r-sep">:</span>
+                <span class="r-val">{{ selectedBulletin.banque || 'BANQUE POSTALE' }}</span>
+              </div>
+              <div class="reg-line">
+                <span class="r-lbl">COMPTE N°</span>
+                <span class="r-sep">:</span>
+                <span class="r-val">{{ selectedBulletin.numeroCompteBancaire || (selectedBulletin.matricule ? ('Compte BPBF — ' + selectedBulletin.matricule) : '—') }}</span>
+              </div>
+            </div>
+
+            <div class="net-box">
+              <div class="net-title">NET A PAYER</div>
+              <div class="net-val">{{ selectedBulletin.salaireNet | number:'1.0-0' }}</div>
+            </div>
+          </div>
+
+          <!-- Tableau Récapitulatif : Salaire brut | Base imposable | CNSS | IUTS | CRRAE | (Mois/Exercice) -->
+          <table class="bpbf-summary-table">
+            <thead>
+              <tr>
+                <th>Salaire brut</th>
+                <th>Base imposable</th>
+                <th>CNSS</th>
+                <th>IUTS</th>
+                <th>CRRAE</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ selectedBulletin.salaireBrut | number:'1.0-0' }}</td>
+                <td>{{ selectedBulletin.baseImposable | number:'1.0-0' }}</td>
+                <td>{{ selectedBulletin.cotisationCnss | number:'1.0-0' }}</td>
+                <td>{{ selectedBulletin.impotIuts | number:'1.0-0' }}</td>
+                <td>{{ (selectedBulletin.cotisationCrrae || 0) | number:'1.0-0' }}</td>
+                <td class="col-period-label">MOIS</td>
+              </tr>
+              <tr>
+                <td>{{ (selectedBulletin.cumulBrut || (selectedBulletin.salaireBrut * 8)) | number:'1.0-0' }}</td>
+                <td>{{ (selectedBulletin.cumulBaseImposable || (selectedBulletin.baseImposable * 8)) | number:'1.0-0' }}</td>
+                <td>{{ (selectedBulletin.cumulCnss || (selectedBulletin.cotisationCnss * 8)) | number:'1.0-0' }}</td>
+                <td>{{ (selectedBulletin.cumulIuts || (selectedBulletin.impotIuts * 8)) | number:'1.0-0' }}</td>
+                <td>{{ (selectedBulletin.cumulCrrae || ((selectedBulletin.cotisationCrrae || 0) * 8)) | number:'1.0-0' }}</td>
+                <td class="col-period-label">EXERCICE</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Mention de conservation légale -->
+          <div class="bpbf-official-footer">
+            Pour faire valoir vos droits, conservez ce bulletin sans limitation de durée
+          </div>
         </div>
 
         <!-- Footer actions -->
@@ -410,16 +617,14 @@
           <div class="form-grid">
             <!-- Jours Travaillés -->
             <mat-form-field appearance="outline">
-              <mat-label>Jours Travaillés (Présence) *</mat-label>
+              <mat-label>Jours Travaillés *</mat-label>
               <input matInput type="number" [(ngModel)]="editVariablesForm.workedDays" min="0" max="31">
-              <mat-hint>Jours réels de présence dans le mois</mat-hint>
             </mat-form-field>
 
             <!-- Jours Ouvrables -->
             <mat-form-field appearance="outline">
               <mat-label>Jours Prévus du Mois</mat-label>
               <input matInput type="number" [(ngModel)]="editVariablesForm.scheduledWorkingDays" min="1" max="31">
-              <mat-hint>Base standard 30 jours</mat-hint>
             </mat-form-field>
           </div>
         </div>

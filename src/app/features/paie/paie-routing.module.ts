@@ -21,7 +21,7 @@ const routes: Routes = [
   
   // 1. Traitements & Bulletins
   { path: 'lots', component: GenererBulletinsComponent },
-  { path: 'bulletins', component: BulletinIndividuelComponent },
+  { path: 'bulletins', redirectTo: 'lots', pathMatch: 'full' },
   { path: 'bulletins/individuel', redirectTo: 'bulletins', pathMatch: 'full' },
   { path: 'bulletins/lot', redirectTo: 'lots', pathMatch: 'full' },
   { path: 'bulletins/generer', redirectTo: 'lots', pathMatch: 'full' },
@@ -29,9 +29,11 @@ const routes: Routes = [
 
   // 2. Éléments Variables
   { path: 'variables/avoirs', component: AvoirsComponent },
+  { path: 'variables/rappels', component: AvoirsComponent },
   { path: 'variables/precomptes', component: PrecomptesComponent },
   { path: 'variables/trop-percus', component: TropPercusComponent },
   { path: 'avoirs', redirectTo: 'variables/avoirs', pathMatch: 'full' },
+  { path: 'rappels', redirectTo: 'variables/avoirs', pathMatch: 'full' },
   { path: 'precomptes', redirectTo: 'variables/precomptes', pathMatch: 'full' },
   { path: 'trop-percus', redirectTo: 'variables/trop-percus', pathMatch: 'full' },
 

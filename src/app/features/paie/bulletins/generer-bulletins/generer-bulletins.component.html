@@ -57,10 +57,10 @@
                   <td style="padding: 12px 14px; font-weight: 600;">{{ s.periode || (s.mois + '/' + s.annee) }}</td>
                   <td style="padding: 12px 14px;">
                     <span style="background: #eff6ff; color: #1d4ed8; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
-                      {{ s.typeSession || 'PAIE_NORMALE' }}
+                      {{ s.typeSession || 'ORDINAIRE' }}
                     </span>
                   </td>
-                  <td style="padding: 12px 14px;">{{ s.nombreEmployes || '-' }} agents</td>
+                  <td style="padding: 12px 14px;">{{ s.nombreEmployes != null ? s.nombreEmployes : 0 }} agents</td>
                   <td style="padding: 12px 14px; text-align: right; font-weight: 600; font-family: monospace;">
                     {{ (s.totalBrut | number:'1.0-0') || '0' }}
                   </td>
@@ -140,7 +140,7 @@
       <!-- Actions du Workflow (Générer, Valider, Clôturer) -->
       <div style="display: flex; gap: 10px; align-items: center;">
         @if (!sessionCloturee) {
-          <button mat-stroked-button color="primary" (click)="lancerGenerationSession()" style="font-weight: 700; border-radius: 8px;">
+          <button mat-stroked-button color="primary" (click)="clicBoutonGenerer()" style="font-weight: 700; border-radius: 8px;">
             <mat-icon style="margin-right: 4px;">calculate</mat-icon> {{ sessionEstBrouillon ? 'Calculer & Générer la Paie' : 'Recalculer la Paie' }}
           </button>
 
@@ -181,9 +181,9 @@
         <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #94a3b8;">post_add</mat-icon>
         <h3 style="margin-top: 12px; color: #1e293b;">Session en Brouillon — Aucun bulletin généré</h3>
         <p style="color: #64748b; font-size: 14px; max-width: 500px; margin: 8px auto 20px;">
-          Cliquez sur le bouton ci-dessous pour lancer le calcul automatique et générer les bulletins de paie pour tous les agents actifs.
+          Cliquez sur le bouton ci-dessous pour lancer le calcul automatique et générer les bulletins de paie.
         </p>
-        <button mat-raised-button color="primary" (click)="lancerCalculPaie()"
+        <button mat-raised-button color="primary" (click)="clicBoutonGenerer()"
           style="font-weight: 700; border-radius: 8px; background: #0060B3; color: white; padding: 0 24px; height: 42px;">
           <mat-icon style="margin-right: 6px;">calculate</mat-icon> Lancer le Calcul & Générer les Bulletins
         </button>
@@ -279,7 +279,8 @@
               <!-- Colonnes dynamiques du Mode Comparatif M-1 vs M -->
               @if (modeComparatifMminus1) {
                 <th style="text-align: right;">Net M-1</th>
-                <th style="text-align: right;">Écart</th>
+                <th style="text-align: right;">Écart (Δ)</th>
+                <th style="text-align: left; min-width: 170px;">Justification Écart</th>
               }
 
               <th style="text-align: center; width: 100px;">Statut</th>
@@ -300,9 +301,9 @@
                 <td style="text-align: right; font-weight: 600;">{{ (b.salaireBase || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #16a34a; font-weight: 600;">+{{ (b.totalIndemnites || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; font-weight: 700;">{{ (b.salaireBrut || 0) | number:'1.0-0' }}</td>
-                <td style="text-align: right; color: #ef4444;">-{{ (b.cotisationCNSS || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #ef4444;">-{{ (b.cotisationCnss || b.cotisationCNSS || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #ef4444;">
-                  -{{ (b.impotIUTS || 0) | number:'1.0-0' }}
+                  -{{ (b.impotIuts || b.impotIUTS || 0) | number:'1.0-0' }}
                   @if (b.nombreCharges > 0) {
                     <span class="badge-charge" title="{{ b.nombreCharges }} charge(s) de famille">{{ b.nombreCharges }} chg</span>
                   }
@@ -315,12 +316,22 @@
                 <!-- Données Comparatives M-1 vs M -->
                 @if (modeComparatifMminus1) {
                   <td style="font-weight: 600; text-align: right; white-space: nowrap;">
-                    {{ b.salaireNetM1 | number:'1.0-0' }}
+                    {{ (b.salaireNetM1 || b.salaireNetPrecedent || 0) | number:'1.0-0' }}
                   </td>
                   <td style="font-weight: 800; text-align: right; white-space: nowrap;">
-                    <span [style.color]="b.ecartNet >= 0 ? '#16a34a' : '#ef4444'">
-                      {{ b.ecartNet >= 0 ? '+' : '' }}{{ b.ecartNet | number:'1.0-0' }}
+                    <span [style.color]="(b.ecartNet || 0) >= 0 ? '#16a34a' : '#ef4444'">
+                      {{ (b.ecartNet || 0) >= 0 ? '+' : '' }}{{ (b.ecartNet || 0) | number:'1.0-0' }}
                     </span>
+                  </td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 11.5px; color: #475569; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="b.justificationEcart || ''">
+                        {{ b.justificationEcart || '—' }}
+                      </span>
+                      <button mat-icon-button (click)="ouvrirModalJustification(b)" title="Justifier l'écart" style="width: 24px; height: 24px; line-height: 24px; padding: 0;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #0284c7;">edit_note</mat-icon>
+                      </button>
+                    </div>
                   </td>
                 }
 
@@ -389,14 +400,10 @@
 @if (selectedBulletin) {
   <div class="modal-backdrop" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
     <div class="payslip-modal-card">
-      <!-- Header officiel Banque Postale -->
-      <div class="payslip-header">
-        <div class="bank-identity">
-          <div class="bank-badge">BPBF</div>
-          <div class="bank-text">
-            <h2>BANQUE POSTALE DU BURKINA FASO</h2>
-            <p>BULLETIN OFFICIEL DE PAIE • RÉF : {{ selectedBulletin.code }}</p>
-          </div>
+      <!-- Barre supérieure d'actions -->
+      <div class="payslip-top-actions">
+        <div class="doc-badge">
+          <mat-icon>verified</mat-icon> Bulletin Officiel BPBF • Réf : {{ selectedBulletin.code }}
         </div>
         <div class="header-actions">
           <button mat-raised-button color="primary" class="btn-print-payslip" (click)="imprimerBulletin(selectedBulletin)">
@@ -408,97 +415,213 @@
         </div>
       </div>
 
-      <!-- Fiche Agent & Mode de règlement -->
-      <div class="emp-summary-box">
-        <div class="avatar-large">{{ selectedBulletin.employeeName.charAt(0) }}</div>
-        <div class="emp-details">
-          <h3 class="emp-name-title">{{ selectedBulletin.employeeName }}</h3>
-          <div class="emp-meta">
-            Matricule : <strong>{{ selectedBulletin.matricule }}</strong> | 
-            Fonction : <strong>{{ selectedBulletin.fonction }}</strong> | 
-            Grade : <strong>{{ selectedBulletin.grade }}</strong>
+      <!-- Fiche Officielle BPBF (Conforme Document Physique) -->
+      <div class="bpbf-payslip-sheet">
+        <!-- En-tête : Raison sociale BPBF à gauche, Cadre Session à droite -->
+        <div class="bpbf-header-section">
+          <div class="bpbf-brand">
+            <div class="bpbf-logo-row">
+              <img src="/bpbf-logo.png" alt="BPBF" class="bpbf-official-logo-img">
+            </div>
+            <div class="bpbf-bank-name">BANQUE POSTALE DU BURKINA FASO</div>
+            <div class="bpbf-bank-bp">BP 1366 OUAGADOUGOU CNTC</div>
+          </div>
+
+          <div class="bpbf-session-box">
+            <div class="session-title">BULLETIN DE PAIE</div>
+            <div class="session-line">
+              <span class="s-lbl">PERIODE :</span>
+              <span class="s-val">{{ selectedBulletin.periode || formatMoisAnnee(selectedBulletin.dateFrom) || '—' }}</span>
+            </div>
+            <div class="session-line">
+              <span class="s-lbl">SESSION :</span>
+              <span class="s-val">{{ selectedBulletin.sessionType || selectedBulletin.typeSession || sessionType || 'ORDINAIRE' }}</span>
+            </div>
+            <div class="session-line">
+              <span class="s-lbl">DEBUT :</span>
+              <span class="s-val">{{ formatDateFr(selectedBulletin.dateFrom || currentSession?.dateFrom || currentSession?.dateDebut) }}</span>
+            </div>
+            <div class="session-line">
+              <span class="s-lbl">FIN :</span>
+              <span class="s-val">{{ formatDateFr(selectedBulletin.dateTo || currentSession?.dateTo || currentSession?.dateFin) }}</span>
+            </div>
           </div>
         </div>
-        <div class="payment-method-box">
-          <div class="pm-lbl">Mode de règlement</div>
-          <div class="pm-val">{{ selectedBulletin.modeReglement }}</div>
-          <div class="pm-rib">{{ selectedBulletin.numeroCompteBancaire }}</div>
-        </div>
-      </div>
 
-      <div class="cartouche-clean">
-        <div class="info-block">
-          <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ selectedBulletin.periodeTexte || selectedBulletin.mois || periode }}</strong></div>
-          <div class="info-row"><span class="lbl">Session :</span> <span>{{ selectedBulletin.sessionType || sessionType || 'ORDINAIRE' }}</span></div>
-          <div class="info-row"><span class="lbl">Jours Travaillés :</span> <strong>{{ selectedBulletin.joursPresents || 30 }} / 30 Jours</strong></div>
-        </div>
-        <div class="info-block">
-          <div class="info-row"><span class="lbl">Siège Social :</span> <span>01 BP 600 Ouagadougou 01</span></div>
-          <div class="info-row"><span class="lbl">N° IFU / N° CNSS :</span> <span>00012345Z / 45892-A</span></div>
-          <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ selectedBulletin.nombreCharges || 0 }} charge(s)</strong></div>
-        </div>
-      </div>
+        <!-- Cadre d'identification de l'employé (2 colonnes officielles) -->
+        <div class="bpbf-employee-grid">
+          <div class="grid-col">
+            <div class="info-item">
+              <span class="item-label">NOM</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.nom || selectedBulletin.employeeName }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">PRENOM</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.prenom || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">EMPLOI</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.emploi || selectedBulletin.fonction || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">DATE EMBAUCHE</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ formatDateFr(selectedBulletin.dateEmbauche) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">SERVICE</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.service || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">N° CNSS</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.numeroCnss || '—' }}</span>
+            </div>
+          </div>
 
-      <!-- Tableau officiel unifié 4 colonnes : ÉLÉMENTS DE PAIE, AVOIRS, RETENUES + RECAP -->
-      <div class="table-lines-box">
-        <table class="bulletin-official-table">
-          <colgroup>
-            <col style="width: 32%;">
-            <col style="width: 26%;">
-            <col style="width: 21%;">
-            <col style="width: 21%;">
-          </colgroup>
+          <div class="grid-col">
+            <div class="info-item">
+              <span class="item-label">MATRICULE</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.matricule }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">SIT FAMILLE</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.situationFamiliale || selectedBulletin.situationMatrimoniale || 'Célibataire' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">PARTS FISCALES</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.partsFiscales != null ? selectedBulletin.partsFiscales : (((selectedBulletin.situationFamiliale || selectedBulletin.situationMatrimoniale || '').toUpperCase().includes('MARI') ? 2 : 1) + (selectedBulletin.nombreCharges || 0)) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">CLASSIFICATION</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.classification || selectedBulletin.grade || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="item-label">ANCIENNETE</span>
+              <span class="item-sep">:</span>
+              <span class="item-value">{{ selectedBulletin.anciennete != null ? selectedBulletin.anciennete : (selectedBulletin.ancienneteAnnees != null ? selectedBulletin.ancienneteAnnees : 0) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tableau officiel 5 colonnes : ELEMENT DE SALAIRE | BASE | TAUX/NB | AVOIRS | RETENUES -->
+        <table class="bpbf-main-table">
           <thead>
             <tr>
-              <th colspan="2" class="col-libelle">ÉLÉMENTS DE PAIE</th>
-              <th class="col-avoirs">AVOIRS</th>
-              <th class="col-retenues">RETENUES</th>
+              <th style="width: 38%;">ELEMENT DE SALAIRE</th>
+              <th style="width: 15%;">BASE</th>
+              <th style="width: 15%;" class="col-taux-th">TAUX/NB</th>
+              <th style="width: 16%;">AVOIRS</th>
+              <th style="width: 16%;">RETENUES</th>
             </tr>
           </thead>
           <tbody>
             @for (l of selectedBulletin.lines; track l.name) {
-              <tr class="line-row">
-                <td colspan="2" class="col-libelle">{{ l.name }}</td>
-                <td class="col-avoirs">{{ l.gain ? (l.gain | number:'1.0-0') : '' }}</td>
-                <td class="col-retenues">{{ l.retenue ? (l.retenue | number:'1.0-0') : '' }}</td>
+              <tr>
+                <td class="col-element">{{ l.name }}</td>
+                <td class="col-base">{{ (l.baseCalcul != null && l.baseCalcul > 0 ? l.baseCalcul : (l.gain || l.montant || '')) | number:'1.0-0' }}</td>
+                <td class="col-taux">{{ l.tauxFormatted || '' }}</td>
+                <td class="col-avoirs">{{ (l.gain != null ? l.gain : (l.typeLigne === 'GAIN' ? (l.montant || l.amount) : '')) | number:'1.0-0' }}</td>
+                <td class="col-retenues">{{ (l.retenue != null ? l.retenue : (l.typeLigne !== 'GAIN' ? (l.montant || l.amount) : '')) | number:'1.0-0' }}</td>
               </tr>
             }
           </tbody>
           <tfoot>
-            <!-- Cartouche Récapitulatif Officiel (Photo) -->
-            <tr class="recap-hdr-row">
-              <th>MODE DE PAIEMENT</th>
-              <th>BASE IMPOSABLE</th>
-              <th>TOTAL DES AVOIRS</th>
-              <th>TOTAL DES RETENUES</th>
-            </tr>
-            <tr class="recap-data-row">
-              <td>{{ selectedBulletin.modeReglement || 'Virement' }}</td>
-              <td class="text-right">{{ (selectedBulletin.baseImposable || 0) | number:'1.0-0' }}</td>
-              <td class="text-right bold-txt">{{ (selectedBulletin.salaireBrut || 0) | number:'1.0-0' }}</td>
-              <td class="text-right bold-txt">{{ (selectedBulletin.totalRetenues || 0) | number:'1.0-0' }}</td>
-            </tr>
-            <tr class="recap-hdr-row">
-              <td class="cell-blank"></td>
-              <th>RAP PART PATRONAL</th>
-              <th>PART PATRONALE</th>
-              <th class="net-hdr">NET A PAYER</th>
-            </tr>
-            <tr class="recap-data-row">
-              <td class="cell-blank"></td>
-              <td class="text-right"></td>
-              <td class="text-right bold-txt">{{ (selectedBulletin.totalRetenuesPatronales || selectedBulletin.totalCotisationsPatronales || selectedBulletin.partPatronaleCnss || 0) | number:'1.0-0' }}</td>
-              <td class="text-right net-amount">{{ (selectedBulletin.salaireNet || 0) | number:'1.0-0' }}</td>
+            <tr class="total-row">
+              <td colspan="2" class="total-empty"></td>
+              <td class="total-label">TOTAL</td>
+              <td class="total-avoirs">{{ (selectedBulletin.salaireBrut || 0) | number:'1.0-0' }}</td>
+              <td class="total-retenues">{{ (selectedBulletin.totalRetenues || 0) | number:'1.0-0' }}</td>
             </tr>
           </tfoot>
         </table>
+
+        <!-- Section Règlements & Net à Payer -->
+        <div class="bpbf-payment-net-section">
+          <div class="reglement-info">
+            <div class="reg-line">
+              <span class="r-lbl">REGLEMENTS</span>
+              <span class="r-sep">:</span>
+              <span class="r-val">{{ selectedBulletin.banque || 'BANQUE POSTALE' }}</span>
+            </div>
+            <div class="reg-line">
+              <span class="r-lbl">COMPTE N°</span>
+              <span class="r-sep">:</span>
+              <span class="r-val">{{ selectedBulletin.numeroCompteBancaire || (selectedBulletin.matricule ? ('Compte BPBF — ' + selectedBulletin.matricule) : '—') }}</span>
+            </div>
+          </div>
+
+          <div class="net-box">
+            <div class="net-title">NET A PAYER</div>
+            <div class="net-val">{{ (selectedBulletin.salaireNet || 0) | number:'1.0-0' }}</div>
+          </div>
+        </div>
+
+        <!-- Tableau Récapitulatif : Salaire brut | Base imposable | CNSS | IUTS | CRRAE | (Mois/Exercice) -->
+        <table class="bpbf-summary-table">
+          <thead>
+            <tr>
+              <th>Salaire brut</th>
+              <th>Base imposable</th>
+              <th>CNSS</th>
+              <th>IUTS</th>
+              <th>CRRAE</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ (selectedBulletin.salaireBrut || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.baseImposable || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cotisationCnss || selectedBulletin.cotisationCNSS || selectedBulletin.cotisationCnssAgent || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.impotIuts || selectedBulletin.impotIUTS || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cotisationCrrae || selectedBulletin.cotisationCrraeAgent || 0) | number:'1.0-0' }}</td>
+              <td class="col-period-label">MOIS</td>
+            </tr>
+            <tr>
+              <td>{{ (selectedBulletin.cumulBrutExercice || selectedBulletin.cumulBrut || selectedBulletin.salaireBrut || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cumulBaseImposableExercice || selectedBulletin.cumulBaseImposable || selectedBulletin.baseImposable || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cumulCnssExercice || selectedBulletin.cumulCnss || selectedBulletin.cotisationCnss || selectedBulletin.cotisationCNSS || selectedBulletin.cotisationCnssAgent || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cumulIutsExercice || selectedBulletin.cumulIuts || selectedBulletin.impotIuts || selectedBulletin.impotIUTS || 0) | number:'1.0-0' }}</td>
+              <td>{{ (selectedBulletin.cumulCrrae || selectedBulletin.cotisationCrrae || selectedBulletin.cotisationCrraeAgent || 0) | number:'1.0-0' }}</td>
+              <td class="col-period-label">EXERCICE</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Mention de conservation légale -->
+        <div class="bpbf-official-footer">
+          Pour faire valoir vos droits, conservez ce bulletin sans limitation de durée
+        </div>
       </div>
 
-      <!-- Montant en Toutes Lettres -->
-      <div class="in-words-box">
-        <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">verified</mat-icon>
-        <span><strong>Montant Net à Payer en toutes lettres :</strong> {{ selectedBulletin.montantEnLettres }}</span>
-      </div>
+      <!-- Section Comparatif M / M-1 et Justification -->
+      @if (selectedBulletin.salaireNetPrecedent != null || selectedBulletin.ecartNet != null) {
+        <div style="margin: 14px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 13px; font-weight: 700; color: #334155;">
+              Comparatif Paie Précédente : Net M-1 = <strong>{{ (selectedBulletin.salaireNetPrecedent || selectedBulletin.salaireNetM1 || 0) | number:'1.0-0' }} FCFA</strong>
+              &bull; Écart = <span [style.color]="(selectedBulletin.ecartNet || 0) >= 0 ? '#16a34a' : '#ef4444'" style="font-weight: 800;">{{ (selectedBulletin.ecartNet || 0) >= 0 ? '+' : '' }}{{ (selectedBulletin.ecartNet || 0) | number:'1.0-0' }} FCFA</span>
+            </div>
+            <button mat-stroked-button color="primary" (click)="ouvrirModalJustification(selectedBulletin)" style="font-size: 12px; height: 32px; border-radius: 6px;">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">edit_note</mat-icon> Justifier l'écart
+            </button>
+          </div>
+          @if (selectedBulletin.justificationEcart) {
+            <div style="font-size: 12px; color: #475569; background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px;">
+              <strong>Justification enregistrée :</strong> {{ selectedBulletin.justificationEcart }}
+            </div>
+          }
+        </div>
+      }
 
       <!-- Footer actions -->
       <div class="popup-footer-bar">
@@ -539,14 +662,12 @@
           <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Jours Travaillés *</label>
           <input type="number" min="0" max="31" [(ngModel)]="editVariablesForm.workedDays"
                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; font-weight: 600; color: #0060B3;">
-          <small style="color: #64748b; font-size: 11px;">Jours réels de présence dans le mois</small>
         </div>
 
         <div>
           <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Jours Prévus</label>
           <input type="number" min="1" max="31" [(ngModel)]="editVariablesForm.scheduledWorkingDays"
                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px;">
-          <small style="color: #64748b; font-size: 11px;">Base standard 30 jours</small>
         </div>
       </div>
 
@@ -564,24 +685,32 @@
 
 <!-- Modal Créer une Nouvelle Session de Paie -->
 @if (showCreateSessionModal) {
-  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
-    <div style="background: #ffffff; border-radius: 14px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+    <div class="session-modal-dialog">
       
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 8px; color: #0284c7;">
-          <mat-icon>add_circle</mat-icon>
-          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Nouvelle Session de Paie</h2>
+      <!-- En-tête du modal -->
+      <div class="modal-head">
+        <div class="head-title-wrap">
+          <div class="head-icon-circle">
+            <mat-icon>add_circle</mat-icon>
+          </div>
+          <div>
+            <h2>Nouvelle Session de Paie</h2>
+            <div style="font-size: 12px; color: var(--on-surface-3);">Configuration des paramètres et ciblage des agents</div>
+          </div>
         </div>
-        <button mat-icon-button (click)="fermerModalCreerSession()"><mat-icon>close</mat-icon></button>
+        <button mat-icon-button class="close-btn" (click)="fermerModalCreerSession()"><mat-icon>close</mat-icon></button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 18px;">
         <!-- Année & Mois -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Année *</label>
-            <select [value]="newSessionForm.annee" (change)="onAnneeSelectChange($event)"
-                    style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: white; font-weight: 700; color: #0284c7;">
+            <label class="form-group-label">
+              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">calendar_today</mat-icon>
+              Année *
+            </label>
+            <select class="form-control-select" [(ngModel)]="newSessionForm.annee" (ngModelChange)="actualiserCodeSession()">
               @for (an of anneesDisponibles; track an) {
                 <option [value]="an">{{ an }}</option>
               }
@@ -589,9 +718,11 @@
           </div>
 
           <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Mois *</label>
-            <select [value]="newSessionForm.mois" (change)="onMoisSelectChange($event)"
-                    style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: white; font-weight: 600;">
+            <label class="form-group-label">
+              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">date_range</mat-icon>
+              Mois *
+            </label>
+            <select class="form-control-select" [(ngModel)]="newSessionForm.mois" (ngModelChange)="actualiserCodeSession()">
               @for (m of moisNoms; track $index) {
                 <option [value]="$index + 1 < 10 ? '0' + ($index + 1) : '' + ($index + 1)">{{ m }}</option>
               }
@@ -601,27 +732,412 @@
 
         <!-- Type de session -->
         <div>
-          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Type de Session *</label>
-          <select [(ngModel)]="newSessionForm.typeSession"
-                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
-            <option value="PAIE_NORMALE">Paie normale</option>
-            <option value="GRATIFICATION">Gratification annuelle</option>
+          <label class="form-group-label">
+            <mat-icon style="font-size: 15px; width: 15px; height: 15px;">category</mat-icon>
+            Type de Session *
+          </label>
+          <select class="form-control-select" [(ngModel)]="newSessionForm.typeSession" (ngModelChange)="actualiserCodeSession()">
+            <option value="ORDINAIRE">Session Ordinaire (Mensuelle)</option>
+            <option value="EXTRAORDINAIRE">Session Extraordinaire (Spécifique)</option>
           </select>
         </div>
 
-        <!-- Code Session (Auto) -->
+        <!-- Libellé de session (Obligatoire pour Extraordinaire) -->
+        @if (newSessionForm.typeSession === 'EXTRAORDINAIRE') {
+          <div>
+            <label class="form-group-label">
+              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">edit_note</mat-icon>
+              Libellé de la session * (Obligatoire)
+            </label>
+            <input type="text" class="form-control-input" [(ngModel)]="newSessionForm.name" (ngModelChange)="actualiserCodeSession()"
+                   placeholder="Ex: Gratification 2026, Prime de bilan...">
+          </div>
+        }
+
+        <!-- Code Session (Généré) -->
         <div>
-          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Code Session (Généré)</label>
-          <input type="text" [(ngModel)]="newSessionForm.codeSession" readonly
-                 style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; font-family: monospace; font-size: 14px; font-weight: 700; color: #0284c7;">
+          <label class="form-group-label">
+            <mat-icon style="font-size: 15px; width: 15px; height: 15px;">tag</mat-icon>
+            Code Session (Généré automatiquement)
+          </label>
+          <input type="text" class="form-control-input" [(ngModel)]="newSessionForm.codeSession" readonly
+                 style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #0284c7; letter-spacing: 0.5px;">
+        </div>
+
+        <!-- Ciblage des agents pour la session -->
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          <label class="form-group-label" style="margin-bottom: 10px; font-size: 13px;">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">groups</mat-icon>
+            Agents concernés par cette session de paie *
+          </label>
+
+          <!-- Cartes de sélection du mode -->
+          <div class="mode-choice-cards">
+            <div class="mode-card" [class.selected]="newSessionForm.modeCible === 'TOUS'"
+                 (click)="changerModeCibleNouvelleSession('TOUS')">
+              <div class="card-radio-circle">
+                <div class="inner-dot"></div>
+              </div>
+              <mat-icon class="card-icon">groups</mat-icon>
+              <div class="card-texts">
+                <span class="card-main-title">Tous les agents actifs</span>
+                <span class="card-sub-title">Traitement en lot complet ({{ tousLesEmployes.length }} agents)</span>
+              </div>
+            </div>
+
+            <div class="mode-card" [class.selected]="newSessionForm.modeCible === 'SELECTION'"
+                 (click)="changerModeCibleNouvelleSession('SELECTION')">
+              <div class="card-radio-circle">
+                <div class="inner-dot"></div>
+              </div>
+              <mat-icon class="card-icon">tune</mat-icon>
+              <div class="card-texts">
+                <span class="card-main-title">Sélection ciblée</span>
+                <span class="card-sub-title">Individuelle ou par tranche de 50</span>
+              </div>
+            </div>
+          </div>
+
+          @if (newSessionForm.modeCible === 'SELECTION') {
+            <div class="agents-selection-panel">
+              <!-- Toolbar -->
+              <div class="selection-toolbar">
+                <div class="search-box-wrap">
+                  <mat-icon>search</mat-icon>
+                  <input type="text" [(ngModel)]="searchNewSessionEmployee" placeholder="Rechercher par matricule, nom ou prénom...">
+                </div>
+
+                <div class="actions-and-counter">
+                  <div class="btn-group">
+                    <button type="button" class="tool-btn btn-fast-50" (click)="cocherTranche50NouvelleSession()">
+                      <mat-icon>bolt</mat-icon> +50 premiers
+                    </button>
+                    <button type="button" class="tool-btn" (click)="toggleSelectAllNouvelleSession(true)">
+                      <mat-icon>done_all</mat-icon> Tout cocher
+                    </button>
+                    <button type="button" class="tool-btn" (click)="toggleSelectAllNouvelleSession(false)">
+                      <mat-icon>remove_done</mat-icon> Tout décocher
+                    </button>
+                  </div>
+
+                  <span class="counter-badge">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">how_to_reg</mat-icon>
+                    {{ nbEmployesSelectionnesNouvelleSession }} / {{ tousLesEmployes.length }} sélectionné(s)
+                  </span>
+                </div>
+              </div>
+
+              <!-- Tableau des agents scrollable comme la vue liste des employés -->
+              <div class="table-scroll-container">
+                <table class="agents-custom-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 44px; text-align: center;"></th>
+                      <th>MATRICULE</th>
+                      <th>NOM & PRÉNOM</th>
+                      <th>GRADE</th>
+                      <th>EMPLOI</th>
+                      <th>FONCTION</th>
+                      <th>SERVICE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if (employesFiltresPourNouvelleSession.length === 0) {
+                      <tr>
+                        <td colspan="7" class="empty-table-cell">
+                          Aucun agent ne correspond à la recherche
+                        </td>
+                      </tr>
+                    }
+                    @for (emp of employesFiltresPourNouvelleSession; track emp.id) {
+                      <tr class="agent-tr-row" [class.row-selected]="isEmployeSelectedForNewSession(emp.id)"
+                          (click)="toggleSelectEmployeeForNewSession(emp.id)">
+                        <td style="text-align: center;">
+                          <input type="checkbox" class="custom-checkbox" [checked]="isEmployeSelectedForNewSession(emp.id)"
+                                 (click)="$event.stopPropagation(); toggleSelectEmployeeForNewSession(emp.id)">
+                        </td>
+                        <td>
+                          <span class="matricule-tag">{{ emp.matricule }}</span>
+                        </td>
+                        <td>
+                          <div class="name-cell">
+                            <span class="full-name">{{ emp.nom }} {{ emp.prenom }}</span>
+                            <span class="emp-email">{{ emp.email || '—' }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="grade-badge">
+                            {{ getGradeConcat(emp) }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="text-cell">{{ emp.poste || '—' }}</span>
+                        </td>
+                        <td>
+                          <span class="text-cell">{{ emp.fonction || '—' }}</span>
+                        </td>
+                        <td>
+                          <span class="service-chip">{{ emp.service || '—' }}</span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
         </div>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-        <button mat-stroked-button (click)="fermerModalCreerSession()">Annuler</button>
-        <button mat-raised-button color="primary" (click)="soumettreCreerSession()"
-                style="background: #0284c7; color: white; font-weight: 700; border-radius: 8px;">
-          <mat-icon style="margin-right: 4px;">check_circle</mat-icon> Créer la Session
+      <!-- Actions de pied de modal -->
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-cancel" (click)="fermerModalCreerSession()">Annuler</button>
+        <button type="button" class="btn-submit" (click)="soumettreCreerSession()">
+          <mat-icon>check_circle</mat-icon> Créer la Session
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal Sélection des Employés pour Calcul / Recalcul de Paie -->
+@if (showSelectionEmployesModal) {
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+    <div class="session-modal-dialog">
+      
+      <!-- En-tête du modal -->
+      <div class="modal-head">
+        <div class="head-title-wrap">
+          <div class="head-icon-circle" style="background: rgba(0, 96, 179, 0.15); color: #0060B3;">
+            <mat-icon>calculate</mat-icon>
+          </div>
+          <div>
+            <h2>Génération de Paie — {{ currentSession?.codeSession || 'Session' }}</h2>
+            <div style="font-size: 12px; color: var(--on-surface-3);">
+              Session <strong>{{ currentSession?.typeSession === 'EXTRAORDINAIRE' ? 'EXTRAORDINAIRE' : 'ORDINAIRE' }}</strong> (<em>{{ currentSession?.name || currentSession?.periode }}</em>)
+            </div>
+          </div>
+        </div>
+        <button mat-icon-button class="close-btn" (click)="fermerModalSelectionEmployes()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <!-- Indicateur d'avancement de la session de paie -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 12px 18px; border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <mat-icon style="color: #10b981; font-size: 24px; width: 24px; height: 24px;">pie_chart</mat-icon>
+          <div>
+            <div style="font-size: 13px; font-weight: 800; color: var(--on-surface);">Avancement du lot de paie</div>
+            <div style="font-size: 12px; color: var(--on-surface-3);">
+              <strong>{{ nbAgentsCalculesDansSession }}</strong> calculé(s) sur <strong>{{ tousLesEmployes.length }}</strong> agents au total
+            </div>
+          </div>
+        </div>
+        @if (nbAgentsNonCalculesDansSession > 0) {
+          <span style="font-size: 12px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 4px 14px; border-radius: 20px; font-weight: 800;">
+            ⏳ {{ nbAgentsNonCalculesDansSession }} restant(s)
+          </span>
+        } @else {
+          <span style="font-size: 12px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 14px; border-radius: 20px; font-weight: 800;">
+            ✓ Traitement 100% complet
+          </span>
+        }
+      </div>
+
+      <!-- Cartes de sélection du mode -->
+      <div class="mode-choice-cards">
+        <div class="mode-card" [class.selected]="modeGenerationSession === 'TOUS'"
+             (click)="changerModeGenerationSession('TOUS')">
+          <div class="card-radio-circle">
+            <div class="inner-dot"></div>
+          </div>
+          <mat-icon class="card-icon">groups</mat-icon>
+          <div class="card-texts">
+            <span class="card-main-title">Tous les agents actifs</span>
+            <span class="card-sub-title">Calcul global en lot complet ({{ tousLesEmployes.length }} agents)</span>
+          </div>
+        </div>
+
+        <div class="mode-card" [class.selected]="modeGenerationSession === 'SELECTION'"
+             (click)="changerModeGenerationSession('SELECTION')">
+          <div class="card-radio-circle">
+            <div class="inner-dot"></div>
+          </div>
+          <mat-icon class="card-icon">tune</mat-icon>
+          <div class="card-texts">
+            <span class="card-main-title">Sélection par tranches / ciblée</span>
+            <span class="card-sub-title">Tranches de 50 ou sélection individuelle</span>
+          </div>
+        </div>
+      </div>
+
+      @if (modeGenerationSession === 'SELECTION') {
+        <div class="agents-selection-panel">
+          
+          <!-- Filtres par statut d'avancement -->
+          <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <button type="button" (click)="filtreStatutModal = 'TOUS'"
+                    [style.background]="filtreStatutModal === 'TOUS' ? '#0060B3' : 'var(--surface-variant)'"
+                    [style.color]="filtreStatutModal === 'TOUS' ? '#ffffff' : 'var(--on-surface)'"
+                    style="border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+              Tous ({{ tousLesEmployes.length }})
+            </button>
+            <button type="button" (click)="filtreStatutModal = 'NON_CALCULE'"
+                    [style.background]="filtreStatutModal === 'NON_CALCULE' ? '#d97706' : 'var(--surface-variant)'"
+                    [style.color]="filtreStatutModal === 'NON_CALCULE' ? '#ffffff' : 'var(--on-surface)'"
+                    style="border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+              ⏳ En attente ({{ nbAgentsNonCalculesDansSession }})
+            </button>
+            <button type="button" (click)="filtreStatutModal = 'DEJA_CALCULE'"
+                    [style.background]="filtreStatutModal === 'DEJA_CALCULE' ? '#059669' : 'var(--surface-variant)'"
+                    [style.color]="filtreStatutModal === 'DEJA_CALCULE' ? '#ffffff' : 'var(--on-surface)'"
+                    style="border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+              ✓ Déjà calculés ({{ nbAgentsCalculesDansSession }})
+            </button>
+          </div>
+
+          <!-- Toolbar -->
+          <div class="selection-toolbar">
+            <div class="search-box-wrap">
+              <mat-icon>search</mat-icon>
+              <input type="text" [(ngModel)]="searchSelectionEmployee" placeholder="Rechercher par matricule, nom ou prénom...">
+            </div>
+
+            <div class="actions-and-counter">
+              <div class="btn-group">
+                <button type="button" class="tool-btn btn-fast-amber" (click)="cocherTranche50(true)">
+                  <mat-icon>bolt</mat-icon> +50 en attente
+                </button>
+                <button type="button" class="tool-btn" (click)="toggleSelectAllEmployes(true)">
+                  <mat-icon>done_all</mat-icon> Tout cocher
+                </button>
+                <button type="button" class="tool-btn" (click)="toggleSelectAllEmployes(false)">
+                  <mat-icon>remove_done</mat-icon> Tout décocher
+                </button>
+              </div>
+
+              <span class="counter-badge">
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">how_to_reg</mat-icon>
+                {{ nbEmployesSelectionnes }} / {{ tousLesEmployes.length }} sélectionné(s)
+              </span>
+            </div>
+          </div>
+
+          <!-- Tableau des agents scrollable comme la vue liste des employés -->
+          <div class="table-scroll-container">
+            <table class="agents-custom-table">
+              <thead>
+                <tr>
+                  <th style="width: 44px; text-align: center;"></th>
+                  <th>MATRICULE</th>
+                  <th>NOM & PRÉNOM</th>
+                  <th>GRADE</th>
+                  <th>EMPLOI</th>
+                  <th>FONCTION</th>
+                  <th>SERVICE</th>
+                  <th>STATUT</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (employesFiltresPourSelection.length === 0) {
+                  <tr>
+                    <td colspan="8" class="empty-table-cell">
+                      Aucun agent ne correspond aux filtres actuels
+                    </td>
+                  </tr>
+                }
+                @for (emp of employesFiltresPourSelection; track emp.id) {
+                  <tr class="agent-tr-row" [class.row-selected]="isEmployeSelectedForGeneration(emp.id)"
+                      (click)="toggleSelectEmployeeGeneration(emp.id)">
+                    <td style="text-align: center;">
+                      <input type="checkbox" class="custom-checkbox" [checked]="isEmployeSelectedForGeneration(emp.id)"
+                             (click)="$event.stopPropagation(); toggleSelectEmployeeGeneration(emp.id)">
+                    </td>
+                    <td>
+                      <span class="matricule-tag">{{ emp.matricule }}</span>
+                    </td>
+                    <td>
+                      <div class="name-cell">
+                        <span class="full-name">{{ emp.nom }} {{ emp.prenom }}</span>
+                        <span class="emp-email">{{ emp.email || '—' }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="grade-badge">
+                        {{ getGradeConcat(emp) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="text-cell">{{ emp.poste || '—' }}</span>
+                    </td>
+                    <td>
+                      <span class="text-cell">{{ emp.fonction || '—' }}</span>
+                    </td>
+                    <td>
+                      <span class="service-chip">{{ emp.service || '—' }}</span>
+                    </td>
+                    <td>
+                      @if (isAgentCalculeDansSession(emp.id)) {
+                        <span class="status-pill status-done">
+                          ✓ Calculé
+                        </span>
+                      } @else {
+                        <span class="status-pill status-pending">
+                          ⏳ En attente
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Actions footer -->
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-cancel" (click)="fermerModalSelectionEmployes()">Annuler</button>
+        <button type="button" class="btn-submit" (click)="validerGenerationSession()" style="background: #0060B3;">
+          <mat-icon>calculate</mat-icon> Lancer le Calcul de la Paie
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Justification de l'Écart -->
+@if (showJustificationModal && selectedBulletinForJustification) {
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+    <div style="background: #ffffff; border-radius: 14px; max-width: 520px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; color: #0060B3;">
+          <mat-icon>edit_note</mat-icon>
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Justification de l'Écart de Salaire</h2>
+        </div>
+        <button mat-icon-button (click)="fermerModalJustification()"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 13px;">
+        <div><strong>Agent :</strong> {{ selectedBulletinForJustification.employeeName || (selectedBulletinForJustification.nom + ' ' + selectedBulletinForJustification.prenom) }} ({{ selectedBulletinForJustification.matricule }})</div>
+        <div style="margin-top: 6px;">
+          <strong>Net M-1 :</strong> {{ (selectedBulletinForJustification.salaireNetM1 || selectedBulletinForJustification.salaireNetPrecedent || 0) | number:'1.0-0' }} FCFA &bull;
+          <strong>Net M :</strong> {{ (selectedBulletinForJustification.salaireNet || 0) | number:'1.0-0' }} FCFA &bull;
+          <strong>Écart :</strong> <span [style.color]="(selectedBulletinForJustification.ecartNet || 0) >= 0 ? '#16a34a' : '#ef4444'" style="font-weight: 700;">{{ (selectedBulletinForJustification.ecartNet || 0) >= 0 ? '+' : '' }}{{ (selectedBulletinForJustification.ecartNet || 0) | number:'1.0-0' }} FCFA</span>
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">Motif / Justification de l'écart *</label>
+        <textarea [(ngModel)]="justificationTexte" rows="4" placeholder="Ex: Augmentation indiciaire échelon, prime d'ancienneté, régularisation heures supplémentaires..."
+                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-family: inherit;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+        <button mat-stroked-button (click)="fermerModalJustification()">Annuler</button>
+        <button mat-raised-button color="primary" (click)="sauvegarderJustification()" style="background: #0060B3; color: white; font-weight: 700; border-radius: 8px;">
+          <mat-icon style="margin-right: 4px;">save</mat-icon> Enregistrer la Justification
         </button>
       </div>
 

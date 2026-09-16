@@ -223,3 +223,215 @@ table           { width: 100%; border-collapse: collapse; }
     }
   }
 }
+
+/* ─── STYLES SOUS-ONGLETS GRILLE INDEMNITAIRE (ANNEXE III BPBF) ─── */
+.indemnite-tabs-wrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 0 24px 18px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.indemnite-tab-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  outline: none;
+
+  &:hover {
+    border-color: #0284c7;
+    background: var(--surface-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+  }
+
+  &.active {
+    background: var(--surface);
+    border-color: #0284c7;
+    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.18);
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1.5px;
+      left: 20px;
+      right: 20px;
+      height: 3px;
+      background: #0284c7;
+      border-radius: 3px 3px 0 0;
+    }
+
+    .itc-title {
+      color: #0284c7;
+      font-weight: 700;
+    }
+
+    .itc-badge {
+      background: #0284c7;
+      color: #ffffff;
+    }
+  }
+
+  .itc-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    &.ordinaire {
+      background: rgba(37, 99, 235, 0.1);
+      color: #2563eb;
+      border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    &.nomination {
+      background: rgba(124, 58, 237, 0.1);
+      color: #7c3aed;
+      border: 1px solid rgba(124, 58, 237, 0.2);
+    }
+
+    &.specifique {
+      background: rgba(13, 148, 136, 0.1);
+      color: #0d9488;
+      border: 1px solid rgba(13, 148, 136, 0.2);
+    }
+  }
+
+  .itc-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .itc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .itc-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s ease;
+  }
+
+  .itc-badge {
+    background: var(--surface-variant);
+    color: var(--on-surface-2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+  }
+
+  .itc-sub {
+    font-size: 11px;
+    color: var(--on-surface-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+}
+
+/* ─── SÉLECTEUR DE TYPE DE RÈGLE DANS LE MODAL DE SAISIE ─── */
+.regle-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.regle-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: var(--on-surface-3);
+    margin-bottom: 4px;
+    transition: color 0.15s ease;
+  }
+
+  .regle-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--on-surface);
+  }
+
+  .regle-desc {
+    font-size: 10px;
+    color: var(--on-surface-3);
+    margin-top: 2px;
+  }
+
+  &:hover {
+    border-color: #0284c7;
+    background: var(--surface-hover);
+  }
+
+  &.active {
+    border-color: #0284c7;
+    background: rgba(2, 132, 199, 0.08);
+
+    mat-icon {
+      color: #0284c7;
+    }
+
+    .regle-title {
+      color: #0284c7;
+    }
+  }
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+

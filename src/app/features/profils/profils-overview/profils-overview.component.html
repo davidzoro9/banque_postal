@@ -20,7 +20,7 @@
           <mat-icon>badge</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.rolesCount }}</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.rolesCount ?? 0) }}</span>
           <span class="stat-label">Profils & Rôles</span>
         </div>
       </mat-card-content>
@@ -32,7 +32,7 @@
           <mat-icon>people</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.activeUsers }} / {{ stats.usersCount }}</span>
+          <span class="stat-value">{{ isLoading ? '...' : ((stats?.activeUsers ?? 0) + ' / ' + (stats?.usersCount ?? 0)) }}</span>
           <span class="stat-label">Utilisateurs Actifs</span>
         </div>
       </mat-card-content>
@@ -44,7 +44,7 @@
           <mat-icon>rule</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.permissionsCount }}</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.permissionsCount ?? 0) }}</span>
           <span class="stat-label">Droits d'Actions Gérés</span>
         </div>
       </mat-card-content>
@@ -56,7 +56,7 @@
           <mat-icon>menu_book</mat-icon>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.manualsCount }}</span>
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.manualsCount ?? 0) }}</span>
           <span class="stat-label">Guides & Manuel</span>
         </div>
       </mat-card-content>

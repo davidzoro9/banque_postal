@@ -57,6 +57,7 @@ export interface EmployeeSalaryInformation {
   iban: string;
   intituleCompte: string;
   salaireBase: number;
+  surSalaire?: number;
   indemnites: EmployeeIndemnity[];
   totalIndemnites: number;
   remunerationBrute: number;
@@ -99,6 +100,7 @@ export interface EmployeeSalarySituation {
   gradeId?: number | string;
   gradeLibelle?: string;
   salaireBase: number;
+  surSalaire?: number;
   totalIndemnites: number;
   salaireBrut: number;
 }
@@ -162,6 +164,10 @@ export interface Employee {
   lieuNaissance: string;
   nationalite: string;
   numeroCNI: string;
+  numeroCnss?: string;
+  situationMatrimoniale?: string;
+  situationFamiliale?: string;
+  anciennete?: number;
 
   // Éducation
   dernierDiplome?: string;
@@ -228,10 +234,10 @@ export interface Employee {
   grade: string;
   niveau: string;
   echelle?: string;
-  gradeId?: string;
-  categorieId?: string;
-  echelonId?: string;
-  grilleSalarialeId?: string;
+  gradeId?: string | number;
+  categorieId?: string | number;
+  echelonId?: string | number;
+  grilleSalarialeId?: string | number;
 
   // Indemnités
   primeLogement: number;
@@ -248,6 +254,7 @@ export interface Employee {
 
   // Salaire
   salaireBase: number;
+  surSalaire?: number;
   salaireBrut: number;
   modePaiement: ModePaiement;
   banque?: string;

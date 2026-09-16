@@ -43,6 +43,12 @@ export class AuthService {
     return this.userSubject.value !== null;
   }
 
+  public isAgentRole(role?: string | null): boolean {
+    if (!role) return false;
+    const r = role.trim().toUpperCase();
+    return r === 'AGENT' || r === 'EMPLOYE' || r === 'EMPLOYEE' || r === 'COLLABORATEUR' || r.includes('AGENT') || r.includes('EMPLOYE');
+  }
+
   getPermissionsForRole(role: string): string[] {
     const matrix = this.permissionsMatrix;
     if (Array.isArray(matrix) && matrix.length > 0) {
@@ -92,16 +98,19 @@ export class AuthService {
     return this.http.post<any>(`${environment.apiUrl}/utilisateurs/login`, { email, password }).pipe(
       timeout(4000),
       map(res => {
-        const permissions = this.getPermissionsForRole(res.role || 'EMPLOYE');
+        const role = res.role || 'EMPLOYE';
+        const permissions = this.getPermissionsForRole(role);
         const user: User = {
           id: String(res.id),
           nom: res.nom,
           prenom: res.prenom,
           email: res.email,
-          role: res.role as UserRole,
+          username: res.username || res.email,
+          matricule: res.username,
+          role: role as UserRole,
           permissions: permissions,
           avatar: '',
-          poste: res.role === 'ADMIN' ? 'Administrateur' : res.role,
+          poste: role === 'ADMIN' ? 'Administrateur' : (this.isAgentRole(role) ? 'Collaborateur Salarié' : role),
           department: ''
         };
         
@@ -110,55 +119,13 @@ export class AuthService {
         return user;
       }),
       catchError(err => {
-        // 1. Si le serveur répond avec un rejet (401/403/bad credentials) -> REJET STRICT
         if (err.status === 401 || err.status === 403 || (err.error && (err.error.message || err.error.error))) {
           const msg = err.error?.message || err.error?.error || 'Identifiant ou mot de passe incorrect.';
           return throwError(() => new Error(msg));
         }
 
-        // 2. Mode hors-ligne : Vérification stricte contre la liste exacte des utilisateurs autorisés dans la base
-        console.warn('[AuthService] Connexion hors-ligne avec contrôle strict des comptes enregistrés:', err);
-        const lower = (email || '').toLowerCase().trim();
-        const pwd = (password || '').trim();
-
-        // Comptes enregistrés autorisés (David ZOROM, Marie Dupont, Jean Martin, Sophie Bernard)
-        const knownUsers = [
-          { email: 'davidzorom9@gmail.com', username: 'davidzorom', pwd: ['5621', 'admin'], nom: 'ZOROM', prenom: 'David', role: 'ADMIN', actif: true },
-          { email: 'marie.dupont@entreprise.com', username: 'marie.dupont', pwd: ['password123', 'admin', '1234'], nom: 'Dupont', prenom: 'Marie', role: 'DRH', actif: true },
-          { email: 'jean.martin@entreprise.com', username: 'jean.martin', pwd: ['1234', 'password123'], nom: 'Martin', prenom: 'Jean', role: 'GESTIONNAIRE_PAIE', actif: true },
-          { email: 'sophie.bernard@entreprise.com', username: 'sophie.bernard', pwd: ['1234', 'password123'], nom: 'Bernard', prenom: 'Sophie', role: 'VALIDATEUR', actif: true },
-          { email: 'paul.kabore@entreprise.com', username: 'paul.kabore', pwd: ['1234'], nom: 'Kaboré', prenom: 'Paul', role: 'CONSULTANT', actif: false } // Suspendu
-        ];
-
-        const matched = knownUsers.find(u => u.email.toLowerCase() === lower || u.username.toLowerCase() === lower);
-
-        if (!matched) {
-          return throwError(() => new Error("Identifiant ou mot de passe incorrect. Le compte n'existe pas dans le système."));
-        }
-
-        if (!matched.actif) {
-          return throwError(() => new Error("Ce compte utilisateur est suspendu ou désactivé. Veuillez contacter l'administrateur."));
-        }
-
-        if (!matched.pwd.includes(pwd)) {
-          return throwError(() => new Error("Mot de passe incorrect."));
-        }
-
-        const permissions = this.getPermissionsForRole(matched.role);
-        const fallbackUser: User = {
-          id: Date.now().toString(),
-          nom: matched.nom,
-          prenom: matched.prenom,
-          email: matched.email,
-          role: matched.role as UserRole,
-          permissions: permissions,
-          avatar: '',
-          poste: matched.role === 'ADMIN' ? 'Administrateur RH' : matched.role,
-          department: 'Direction Générale'
-        };
-        localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
-        this.userSubject.next(fallbackUser);
-        return of(fallbackUser);
+        console.error('[AuthService] Erreur de connexion au backend Spring Boot:', err);
+        return throwError(() => new Error("Impossible de joindre le serveur d'authentification. Veuillez vous assurer que le backend Spring Boot est actif."));
       })
     );
   }

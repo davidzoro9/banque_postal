@@ -20,8 +20,8 @@ export class AuthGuard implements CanActivate {
     const url = state.url;
     const role = this.authService.currentUser?.role;
 
-    // Si rôle EMPLOYE ordinaire et essaie d'accéder aux modules d'administration
-    if (role === 'EMPLOYE' && !url.includes('/mon-espace')) {
+    // Si profil AGENT ou EMPLOYE et essaie d'accéder aux modules d'administration
+    if (this.authService.isAgentRole(role) && !url.includes('/mon-espace')) {
       this.router.navigate(['/mon-espace']);
       return false;
     }

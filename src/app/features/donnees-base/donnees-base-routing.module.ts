@@ -19,7 +19,7 @@ const routes: Routes = [
   { path: 'admin/param-indemnite', component: DbRefListComponent, data: { title: 'Grille indemnitaire',     icon: 'settings_suggest',   type: 'param-indemnite' } },
   { path: 'admin/type-contrat',    component: DbRefListComponent, data: { title: 'Type contrat',        icon: 'article',            type: 'type-contrat'    } },
   { path: 'admin/type-conge',      component: DbRefListComponent, data: { title: 'Type congé / absence',icon: 'beach_access',       type: 'type-conge'      } },
-  { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Liste des retenues', icon: 'money_off', type: 'type-retenue-employe' } },
+  { path: 'admin/type-retenue-employe', component: DbRefListComponent, data: { title: 'Types de retenues', icon: 'money_off', type: 'type-retenue-employe' } },
   { path: 'admin/type-retenue-emploi',  component: DbRefListComponent, data: { title: 'Retenues',  icon: 'tune', type: 'type-retenue-emploi' } },
   { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
   { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes (Burkina Faso)', icon: 'location_city', type: 'ville' } },

@@ -17,12 +17,28 @@
     </div>
   </div>
 
+  <!-- Messages d'alerte -->
+  @if (successMessage) {
+    <div class="alert-banner alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+      <button mat-icon-button (click)="successMessage=''"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-banner alert-danger">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMessage }}</span>
+      <button mat-icon-button (click)="errorMessage=''"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+
   <!-- Barre de Recherche & Filtres -->
   <mat-card class="filter-card">
     <mat-card-content>
       <div class="filter-row">
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Rechercher un élément (code, libellé...)</mat-label>
+          <mat-label>Rechercher un élément</mat-label>
           <mat-icon matPrefix>search</mat-icon>
           <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: SAL_BASE, CNSS, Logement...">
           @if (searchQuery) {
@@ -60,20 +76,20 @@
         <thead>
           <tr>
             <th style="width: 45px; text-align: center;">Ordre</th>
-            <th style="width: 130px;">Code</th>
+            <th style="width: 110px;">Code</th>
             <th>Libellé / Nom</th>
-            <th style="width: 170px;">Catégorie Parente</th>
-            <th style="width: 120px;">Méthode</th>
-            <th>Formule / Règle</th>
-            <th style="text-align: center; width: 65px;">Cotis.</th>
-            <th style="text-align: center; width: 65px;">Impos.</th>
-            <th style="text-align: center; width: 85px;">Statut</th>
-            <th style="text-align: center; width: 110px;">Actions</th>
+            <th style="width: 160px;">Catégorie Parente</th>
+            <th style="width: 110px;">Méthode</th>
+            <th style="width: 140px;">Formule / Règle</th>
+            <th style="text-align: center; width: 55px;">Cotis.</th>
+            <th style="text-align: center; width: 55px;">Impos.</th>
+            <th style="text-align: center; width: 75px;">Statut</th>
+            <th class="col-actions" style="text-align: center; width: 120px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (el of filteredList; track el.id) {
-            <tr>
+            <tr (dblclick)="openEditModal(el)" title="Double-cliquez pour modifier">
               <td style="text-align: center; font-weight: 700; color: #94a3b8; font-family: monospace;">
                 {{ el.ordre }}
               </td>
@@ -83,7 +99,7 @@
               </td>
               <td>
                 <span class="cat-pill" [class.gain]="el.type === 'GAIN'" [class.ret]="el.type === 'RETENUE'" [class.pat]="el.type === 'PATRONALE'">
-                  {{ el.categoryName }}
+                  {{ el.categoryName || '—' }}
                 </span>
               </td>
               <td>
@@ -107,15 +123,15 @@
                   {{ el.statut ? 'Actif' : 'Inactif' }}
                 </span>
               </td>
-              <td style="text-align: center;">
+              <td class="col-actions" style="text-align: center;">
                 <div class="action-btns">
-                  <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(el)">
+                  <button mat-icon-button color="primary" title="Modifier l'élément" (click)="openEditModal(el); $event.stopPropagation()">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button mat-icon-button [title]="el.statut ? 'Désactiver' : 'Activer'" (click)="toggleStatut(el)">
+                  <button mat-icon-button [title]="el.statut ? 'Désactiver' : 'Activer'" (click)="toggleStatut(el); $event.stopPropagation()">
                     <mat-icon [style.color]="el.statut ? '#4ade80' : '#94a3b8'">{{ el.statut ? 'toggle_on' : 'toggle_off' }}</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteElement(el)">
+                  <button mat-icon-button color="warn" title="Supprimer l'élément" (click)="deleteElement(el); $event.stopPropagation()">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
@@ -129,11 +145,11 @@
 
   <!-- MODAL : Création / Modification Élément de Salaire -->
   @if (showDialog) {
-    <div class="modal-backdrop custom-modal-overlay">
-      <div class="modal-container large-modal">
+    <div class="modal-backdrop custom-modal-overlay" (click)="closeModal()">
+      <div class="modal-container large-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="mh-title">
-            <mat-icon>format_list_numbered</mat-icon>
+            <mat-icon>{{ editingElement ? 'edit_note' : 'add_circle' }}</mat-icon>
             <h2>{{ editingElement ? 'Modifier l\'Élément de Salaire' : 'Nouvel Élément de Salaire' }}</h2>
           </div>
           <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
@@ -141,31 +157,49 @@
 
         <div class="modal-body">
           <div class="form-grid">
+            <!-- Nom -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Code *</mat-label>
-                <input matInput [(ngModel)]="formModel.code" placeholder="Ex: IND_LOGE" style="text-transform: uppercase;">
+                <mat-label>Nom *</mat-label>
+                <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Indemnité de Logement, Avance sur salaire...">
               </mat-form-field>
             </div>
 
+            <!-- Code -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Catégorie *</mat-label>
+                <mat-label>Code *</mat-label>
+                <input matInput [(ngModel)]="formModel.code" placeholder="Ex: IND_LOGE, AV_SAL..." style="text-transform: uppercase;">
+              </mat-form-field>
+            </div>
+
+            <!-- Catégorie Parente -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Catégorie Parente *</mat-label>
                 <mat-select [(ngModel)]="formModel.categoryId" (selectionChange)="onCategoryChange($event.value)">
                   @for (cat of categoriesList; track cat.id) {
-                    <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+                    <mat-option [value]="cat.id">
+                      {{ cat.name }}
+                    </mat-option>
                   }
                 </mat-select>
               </mat-form-field>
             </div>
 
-            <div class="full-col">
+            <!-- Type / Nature -->
+            <div>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Nom *</mat-label>
-                <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Indemnité de Logement">
+                <mat-label>Type *</mat-label>
+                <mat-select [(ngModel)]="formModel.type">
+                  <mat-option value="GAIN">Gain</mat-option>
+                  <mat-option value="RETENUE">Retenue</mat-option>
+                  <mat-option value="PATRONALE">Patronale</mat-option>
+                </mat-select>
               </mat-form-field>
             </div>
 
+            <!-- Méthode de Calcul -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Méthode de Calcul *</mat-label>
@@ -174,18 +208,20 @@
                   <mat-option value="POURCENTAGE">Pourcentage</mat-option>
                   <mat-option value="FORMULE_COMPLEXE">Formule Complexe</mat-option>
                   <mat-option value="SAISIE_MANUELLE">Saisie Manuelle</mat-option>
+                  <mat-option value="GRILLE">Grille Salariale</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>
 
+            <!-- Ordre -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Ordre</mat-label>
-                <input matInput type="number" [(ngModel)]="formModel.ordre" placeholder="10, 20, 30...">
+                <mat-label>Ordre d'affichage sur bulletin</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.ordre" placeholder="1, 2, 10, 20...">
               </mat-form-field>
             </div>
 
-            <!-- Affichage selon la Méthode de Calcul -->
+            <!-- Paramètre de la Formule / Valeur selon la Méthode -->
             @if (formModel.calculationMethod === 'POURCENTAGE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
@@ -196,46 +232,53 @@
             } @else if (formModel.calculationMethod === 'MONTANT_FIXE' || formModel.calculationMethod === 'FIXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Formule</mat-label>
+                  <mat-label>Montant Fixe par défaut</mat-label>
                   <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000">
                 </mat-form-field>
               </div>
             } @else if (formModel.calculationMethod === 'SAISIE_MANUELLE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Formule</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0 (Saisie individuelle sur le bulletin)">
+                  <mat-label>Valeur par défaut</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0">
                 </mat-form-field>
               </div>
             } @else {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Formule</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: SAL_BASE * 0.10">
+                  <mat-label>Formule de calcul</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: SAL_BASE * 0.10, BRUT_COTISABLE * 0.055...">
                 </mat-form-field>
               </div>
             }
 
+            <!-- Options Checkboxes -->
             <div class="full-col checkbox-group">
               <label class="cb-item">
                 <input type="checkbox" [(ngModel)]="formModel.isCotisable">
-                <span>Est cotisable</span>
+                <span><strong>Est cotisable</strong></span>
               </label>
               <label class="cb-item">
                 <input type="checkbox" [(ngModel)]="formModel.isImposable">
-                <span>Est imposable</span>
+                <span><strong>Est imposable</strong></span>
+              </label>
+              <label class="cb-item">
+                <input type="checkbox" [(ngModel)]="formModel.statut">
+                <span><strong>Élément actif</strong></span>
               </label>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button mat-stroked-button (click)="closeModal()">Annuler</button>
-          <button mat-raised-button color="primary" [disabled]="!formModel.code || !formModel.name" (click)="saveElement()" class="btn-save">
-            <mat-icon>check</mat-icon> {{ editingElement ? 'Mettre à jour' : 'Créer l\'Élément' }}
+          <button mat-stroked-button (click)="closeModal()" [disabled]="isSaving">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.code || !formModel.name || isSaving" (click)="saveElement()" class="btn-save">
+            <mat-icon>{{ isSaving ? 'hourglass_empty' : 'check' }}</mat-icon>
+            {{ isSaving ? 'Enregistrement...' : (editingElement ? 'Enregistrer les modifications' : 'Créer l\'Élément') }}
           </button>
         </div>
       </div>
     </div>
   }
 </div>
+

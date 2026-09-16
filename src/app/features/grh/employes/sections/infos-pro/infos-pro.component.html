@@ -43,11 +43,18 @@
         <div class="form-grid-2">
           <mat-form-field appearance="outline">
             <mat-label>Matricule</mat-label>
-            <input matInput [value]="employee.matricule" readonly>
+            <input matInput formControlName="matricule">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Date de prise de fonction</mat-label>
+            <mat-label>N° CNSS</mat-label>
+            <input matInput formControlName="numeroCnss" placeholder="Ex: 191091435003A">
+          </mat-form-field>
+        </div>
+
+        <div class="form-grid-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Date de prise de fonction / embauche</mat-label>
             <input matInput [matDatepicker]="pickerEmbauche" formControlName="dateEmbauche" placeholder="JJ/MM/AAAA">
             <mat-datepicker-toggle matIconSuffix [for]="pickerEmbauche"></mat-datepicker-toggle>
             <mat-datepicker #pickerEmbauche></mat-datepicker>
@@ -183,6 +190,7 @@
 
             <mat-select
               formControlName="gradeId"
+              [compareWith]="compareIds"
               (selectionChange)="onGradeChange()">
 
               @for (grade of grades$ | async; track grade.id) {
@@ -202,6 +210,7 @@
 
             <mat-select
               formControlName="categorieId"
+              [compareWith]="compareIds"
               (selectionChange)="onCategoryChange()">
 
               @for (categorie of availableSalaryCategories; track categorie.id) {
@@ -220,6 +229,7 @@
 
             <mat-select
               formControlName="echelonId"
+              [compareWith]="compareIds"
               (selectionChange)="onClassificationChange()">
 
               @for (echelon of availableSalaryEchelons; track echelon.id) {
@@ -255,8 +265,22 @@
               <mat-error>Aucune grille ne correspond à cette classification</mat-error>
             }
           </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Sur-salaire</mat-label>
+            <input matInput type="number" formControlName="surSalaire" min="0" placeholder="0"
+                   (keydown)="preventNegativeInput($event)" (input)="onSurSalaireInput($event)">
+            <span matTextSuffix style="margin-right: 8px; font-weight: 500;">FCFA</span>
+            @if (form.get('surSalaire')?.hasError('min')) {
+              <mat-error>Le sur-salaire ne peut pas être négatif</mat-error>
+            }
+          </mat-form-field>
         </div>
 
+        <div class="salary-grid-net-card">
+          <span class="net-label">Net à payer</span>
+          <strong class="net-amount">{{ (currentNetSalary != null ? (currentNetSalary | number:'1.2-2') : '0.00') }}</strong>
+        </div>
 
         <p class="form-section-label">Paramétrage retraite</p>
         <div class="form-grid-2" style="margin-bottom:16px;">

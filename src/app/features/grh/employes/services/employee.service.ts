@@ -57,19 +57,17 @@ const createDefaultEmployee = (partial: Partial<Employee>): Employee => {
     exonerationsFiscales: partial.exonerationsFiscales || [],
     exonerationsSociales: partial.exonerationsSociales || [],
     avantagesParticuliers: partial.avantagesParticuliers || [],
-    salaireBase: partial.salaireBase || 150000,
-    salaireBrut: partial.salaireBrut || 200000,
+    salaireBase: partial.salaireBase ?? 0,
+    salaireBrut: partial.salaireBrut ?? 0,
     modePaiement: partial.modePaiement || 'Virement bancaire',
     banque: partial.banque || 'Banque Postale du Burkina Faso (BPBF)',
-    iban: partial.iban || 'BF01 01001 000000000000 00',
+    iban: partial.iban || '',
     documents: partial.documents || [],
     observations: partial.observations || '',
     evaluations: partial.evaluations || [],
     historiqueActions: partial.historiqueActions || []
   };
 };
-
-const BPBF_INITIAL_EMPLOYEES: Employee[] = [];
 
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
@@ -230,7 +228,16 @@ export class EmployeeService {
     result.departement = db.departmentLibelle || result.departement || '';
     result.categoriePro = db.categorieLibelle || result.categoriePro || '';
     result.echelon = db.echelonLibelle || result.echelon || '';
-    result.grade = db.grilleSalarialeLibelle || result.grade || '';
+    result.grade = db.grade || db.grilleSalarialeLibelle || result.grade || '';
+    if (result.grade) {
+      const romanDirectMatch = String(result.grade).trim().match(/^CL\s*(VIII|VII|VI|V|IV|III|II|I)\s*(E\d+|EX)?$/i);
+      if (romanDirectMatch) {
+        const romanMap: Record<string, string> = { 'VIII': '8', 'VII': '7', 'VI': '6', 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1' };
+        const rNum = romanMap[romanDirectMatch[1].toUpperCase()] || romanDirectMatch[1];
+        const echPart = romanDirectMatch[2] ? romanDirectMatch[2].toUpperCase() : '';
+        result.grade = `CL${rNum}${echPart}`;
+      }
+    }
     
     return createDefaultEmployee(result);
   }
@@ -312,12 +319,41 @@ export class EmployeeService {
     );
   }
 
+  simulateSalary(id: string, salaireBase?: number, surSalaire?: number): Observable<EmployeeSalaryInformation> {
+    const params: Record<string, string> = {};
+    if (salaireBase != null) params['salaireBase'] = String(salaireBase);
+    if (surSalaire != null) params['surSalaire'] = String(surSalaire);
+    return this.http.get<EmployeeSalaryInformation>(
+      `${environment.apiUrl}/employes/${id}/informations-salariales/simulation`,
+      { params }
+    );
+  }
+
   getSalarySituation(id: string): Observable<EmployeeSalarySituation> {
     return this.http.get<EmployeeSalarySituation>(`${environment.apiUrl}/employes/${id}/situation-salariale`);
   }
 
   getEmployeeIndemnities(id: string): Observable<EmployeeIndemnity[]> {
     return this.http.get<EmployeeIndemnity[]>(`${environment.apiUrl}/employes/${id}/indemnites`);
+  }
+
+  toggleIndemnite(employeeId: string, indemniteId: number | string): Observable<EmployeeIndemnity> {
+    return this.http.put<EmployeeIndemnity>(`${environment.apiUrl}/employes/${employeeId}/indemnites/${indemniteId}/toggle`, {});
+  }
+
+  deleteIndemnite(employeeId: string, indemniteId: number | string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/employes/${employeeId}/indemnites/${indemniteId}`);
+  }
+
+  updateAvantages(id: string, avantages: { vehiculeFourni?: boolean; logementFourni?: boolean }): Observable<Employee> {
+    return this.http.put<any>(`${environment.apiUrl}/employes/${id}/avantages`, avantages).pipe(
+      map(item => {
+        const updated = this.toFrontend(item);
+        this.employees = this.employees.map(e => String(e.id) === String(id) ? updated : e);
+        this.employeesSubject.next(this.employees);
+        return updated;
+      })
+    );
   }
 
   getEmployeeExemptions(id: string): Observable<EmployeeExemption[]> {

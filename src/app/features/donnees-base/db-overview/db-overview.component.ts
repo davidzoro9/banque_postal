@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { DashboardStatsService } from '../../../core/services/dashboard-stats.service';
+import { DonneesBaseDashboardStats } from '../../../core/models/dashboard-stats.model';
 
 @Component({
   selector: 'app-db-overview',
@@ -7,7 +9,11 @@ import { Router } from '@angular/router';
   styleUrls: ['./db-overview.component.scss'],
   standalone: false
 })
-export class DbOverviewComponent {
+export class DbOverviewComponent implements OnInit {
+
+  stats: DonneesBaseDashboardStats | null = null;
+  isLoading = true;
+  hasError = false;
 
   sections = [
     {
@@ -44,7 +50,39 @@ export class DbOverviewComponent {
     }
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private statsService: DashboardStatsService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadStats();
+  }
+
+  loadStats(): void {
+    this.isLoading = true;
+    this.hasError = false;
+    this.statsService.getDonneesBaseStats().subscribe({
+      next: (res) => {
+        this.stats = res;
+        this.isLoading = false;
+        if (res.emploisCount !== undefined) {
+          this.sections[0].badge = `${res.emploisCount} emplois gérés`;
+        }
+        if (res.grillesCount !== undefined) {
+          this.sections[1].badge = `${res.grillesCount} échelons & grilles`;
+        }
+        if (res.indemnitesCount !== undefined) {
+          this.sections[2].badge = `${res.indemnitesCount} types configurés`;
+        }
+      },
+      error: (err) => {
+        console.error('Erreur chargement statistiques Paramètres Généraux:', err);
+        this.hasError = true;
+        this.isLoading = false;
+      }
+    });
+  }
 
   navigateTo(route: string): void {
     this.router.navigate([route]);

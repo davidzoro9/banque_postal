@@ -1,159 +1,1144 @@
+// ==========================================================================
+// ORGANIGRAMME OFFICIEL BANQUE POSTALE DU BURKINA FASO (BPBF)
+// ==========================================================================
+
+:host {
+  display: block;
+  width: 100%;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
 .organigramme-page {
-  padding: 24px;
-  max-width: 1400px;
+  padding: 20px 24px 60px 24px;
+  max-width: 100%;
   margin: 0 auto;
 
-  .page-header {
-    margin-bottom: 24px;
-    .header-content {
+  &.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: #f8fafc;
+    padding: 16px;
+    overflow: auto;
+  }
+}
+
+// ─── BARRE D'EN-TÊTE ET OUTILS ─────────────────────────────────────────────
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    .header-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: #002b66;
+      color: white;
       display: flex;
       align-items: center;
-      gap: 16px;
-      .header-icon-box {
-        width: 52px;
-        height: 52px;
-        border-radius: 12px;
-        background: rgba(2, 132, 199, 0.12);
-        border: 1px solid rgba(2, 132, 199, 0.25);
-        color: #0284c7;
+      justify-content: center;
+      mat-icon { font-size: 26px; width: 26px; height: 26px; }
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .page-subtitle {
+      margin: 2px 0 0 0;
+      font-size: 13px;
+      color: #64748b;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .search-icon {
+        position: absolute;
+        left: 10px;
+        color: #94a3b8;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .search-input {
+        width: 240px;
+        padding: 8px 32px 8px 36px;
+        font-size: 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        outline: none;
+        transition: all 0.2s;
+        background: #f8fafc;
+
+        &:focus {
+          width: 280px;
+          border-color: #002b66;
+          background: white;
+          box-shadow: 0 0 0 3px rgba(0, 43, 102, 0.1);
+        }
+      }
+
+      .clear-btn {
+        position: absolute;
+        right: 8px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      }
+    }
+
+    .view-toggle {
+      display: flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 8px;
+
+      .toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+        &.active {
+          background: white;
+          color: #002b66;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+      }
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 8px;
+
+      .ctrl-btn {
+        width: 30px;
+        height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
-        mat-icon { font-size: 28px; width: 28px; height: 28px; }
+        border: none;
+        background: white;
+        border-radius: 6px;
+        color: #334155;
+        cursor: pointer;
+        transition: background 0.2s;
+        mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+        &:hover { background: #e2e8f0; }
       }
-      h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--on-surface); }
-      p { margin: 4px 0 0 0; color: var(--on-surface-3); font-size: 13px; }
+
+      .zoom-indicator {
+        font-size: 11px;
+        font-weight: 800;
+        color: #475569;
+        min-width: 40px;
+        text-align: center;
+      }
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+      &:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+      }
+
+      &.print-btn {
+        background: #002b66;
+        color: white;
+        border-color: #002b66;
+
+        &:hover { background: #083c8a; }
+      }
+    }
+  }
+}
+
+// ─── ÉTAT DE CHARGEMENT ────────────────────────────────────────────────────
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #002b66;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// ─── VUE GRAPHIQUE ARBRE BPBF ──────────────────────────────────────────────
+.chart-viewport {
+  width: 100%;
+  overflow: auto;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  padding: 24px 16px 40px 16px;
+}
+
+.chart-canvas {
+  min-width: 1540px;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Bannière de titre officiel
+.official-title-banner {
+  text-align: center;
+  margin-bottom: 24px;
+
+  .bpbf-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: #000;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.3px;
+    font-family: inherit;
+  }
+
+  .title-underline {
+    width: 680px;
+    height: 3px;
+    background: #000;
+    margin: 0 auto;
+  }
+}
+
+// ─── CARTES DE L'ORGANIGRAMME (STYLE OFFICIEL BPBF) ────────────────────────
+.org-card {
+  position: relative;
+  cursor: pointer;
+  border: 1.5px solid #000;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  }
+
+  &.highlight {
+    outline: 3px solid #f59e0b;
+    animation: pulseHighlight 1.5s infinite;
+  }
+
+  .card-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    text-align: center;
+    position: relative;
+  }
+
+  .card-name {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(0,0,0,0.15);
+  }
+}
+
+@keyframes pulseHighlight {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+// Thèmes de couleurs selon le document officiel
+.card-navy {
+  background: #002b66;
+  color: white;
+  border-color: #00193d;
+
+  .card-name { color: white; }
+  .badge-count { background: rgba(255,255,255,0.25); color: white; }
+}
+
+.card-comite {
+  background: #ffeb99; // Jaune / or du document
+  color: #000;
+  border-color: #000;
+  min-width: 170px;
+  max-width: 220px;
+
+  .card-name { color: #000; font-size: 13px; font-weight: 800; }
+  .badge-count { background: rgba(0,0,0,0.1); color: #000; }
+}
+
+.card-grey {
+  background: #d8dde3; // Gris du document
+  color: #000;
+  border-color: #000;
+
+  .card-name { color: #000; font-size: 12.5px; font-weight: 800; }
+  .badge-count { background: rgba(0,0,0,0.1); color: #000; }
+}
+
+.card-green {
+  background: #c8e6c9; // Vert clair du Secrétariat
+  color: #000;
+  border-color: #000;
+
+  .card-name { color: #000; font-size: 12.5px; font-weight: 800; }
+  .badge-count { background: rgba(0,0,0,0.1); color: #000; }
+}
+
+.card-steel-blue {
+  background: #94b8db; // Bleu clair des 8 directions
+  color: #000;
+  border-color: #000;
+
+  .card-name { color: #000; font-size: 12px; font-weight: 800; }
+  .badge-count { background: rgba(0,0,0,0.1); color: #000; }
+}
+
+.card-service {
+  background: #ffffff;
+  color: #000;
+  border: 1.2px solid #000;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #002b66;
+  }
+
+  .srv-text {
+    line-height: 1.2;
+    flex: 1;
+  }
+
+  .srv-count {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #475569;
+    background: #e2e8f0;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+}
+
+// ─── NIVEAU HAUT : CA + COMITÉS + LÉGENDE ──────────────────────────────────
+.top-governance-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 20px;
+  padding: 0 40px;
+
+  .comites-row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    position: relative;
+    padding-top: 10px;
+  }
+
+  .ca-to-comites-connector {
+    position: absolute;
+    top: 0;
+    left: 120px;
+    width: 630px;
+    height: 10px;
+    border-top: 2px solid #000;
+    border-left: 2px solid #000;
+    border-right: 2px solid #000;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 310px;
+      width: 2px;
+      height: 12px;
+      background: #000;
     }
   }
 
-  .agence-card {
-    border-radius: 12px;
-    border: 2px solid #0060B3;
-    background: #f0f7ff;
-    box-shadow: 0 4px 12px rgba(0, 96, 179, 0.08);
+  .ca-center-wrapper {
+    position: relative;
+    z-index: 2;
+
+    .card-ca {
+      width: 260px;
+      padding: 6px 0;
+    }
   }
 
-  .org-tree {
-    margin-top: 24px;
+  // Légende officielle
+  .official-legend-box {
+    border: 1.5px solid #000;
+    background: white;
+    padding: 10px 14px;
+    border-radius: 4px;
+    width: 230px;
+
+    .legend-header {
+      font-size: 13px;
+      font-weight: 900;
+      text-decoration: underline;
+      margin-bottom: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+
+      &:last-child { margin-bottom: 0; }
+
+      .line-sample {
+        display: inline-block;
+        width: 44px;
+
+        &.solid-sample {
+          height: 0;
+          border-top: 2px solid #000;
+        }
+
+        &.dashed-sample {
+          height: 0;
+          border-top: 2px dashed #000;
+        }
+      }
+
+      .legend-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #000;
+      }
+    }
+  }
+}
+
+// ─── NIVEAU MOYEN : DIRECTIONS DE CONTRÔLE + DG/DGA ────────────────────────
+.executive-middle-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: relative;
+  gap: 60px;
+  margin-bottom: 24px;
+  padding-left: 170px;
+
+  .control-directions-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    width: 240px;
+
+    // Lignes verticales fonctionnelles en pointillés
+    .functional-line-v {
+      position: absolute;
+      width: 2px;
+      border-left: 2px dashed #000;
+
+      &.dashed-audit {
+        top: -30px;
+        left: 80px;
+        height: 30px;
+      }
+
+      &.dashed-risques {
+        top: -45px;
+        left: -80px;
+        height: 100px;
+        border-left: 2px dashed #000;
+      }
+    }
+
+    .control-box-row {
+      display: flex;
+      align-items: center;
+      position: relative;
+
+      .card-control {
+        width: 220px;
+      }
+
+      .control-to-dg-line {
+        flex: 1;
+        height: 2px;
+        background: #000;
+        min-width: 40px;
+      }
+    }
+  }
+
+  .dg-dga-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     position: relative;
 
-    .tree-line-main {
+    .stem-vertical-ca-dg {
       width: 2px;
-      height: 24px;
-      background: #0060B3;
-      margin: 0 auto;
+      height: 18px;
+      background: #000;
     }
 
-    .level-2-header {
-      text-align: center;
-      margin-bottom: 16px;
-      .level-badge {
-        background: #0060B3;
-        color: white;
-        font-weight: 700;
-        font-size: 12px;
-        padding: 6px 18px;
-        border-radius: 20px;
-        letter-spacing: 0.5px;
+    .dg-row {
+      display: flex;
+      align-items: center;
+      position: relative;
+
+      .card-dg {
+        width: 220px;
+        padding: 4px 0;
+      }
+
+      .dg-to-secretariat-line {
+        width: 50px;
+        height: 2px;
+        background: #000;
+      }
+
+      .card-secretariat {
+        width: 190px;
       }
     }
 
-    .level-2-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
+    .stem-vertical-dg-dga {
+      width: 2px;
+      height: 34px;
+      background: #000;
+    }
 
-      @media (max-width: 900px) {
-        grid-template-columns: 1fr;
+    .dga-wrapper {
+      .card-dga {
+        width: 220px;
+        padding: 4px 0;
+      }
+    }
+  }
+}
+
+// ─── NIVEAU BAS : LES 10 COLONNES OPÉRATIONNELLES ──────────────────────────
+.operational-level-section {
+  position: relative;
+  width: 100%;
+
+  .stem-vertical-dga-ops {
+    width: 2px;
+    height: 22px;
+    background: #000;
+    margin: 0 auto;
+  }
+
+  .horizontal-distribution-bar {
+    width: 96%;
+    height: 2px;
+    background: #000;
+    margin: 0 auto;
+  }
+
+  .operational-grid-10 {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 12px;
+    margin-top: 0;
+
+    .op-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .stem-top-col {
+        width: 2px;
+        height: 14px;
+        background: #000;
       }
 
-      .unit-group-box {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      .dir-header-card,
+      .dep-header-card {
+        width: 100%;
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-        .group-title {
+      .stem-dir-services {
+        width: 2px;
+        height: 12px;
+        background: #000;
+      }
+
+      .services-column {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+        padding-left: 10px;
+        border-left: 2px solid #000;
+
+        .service-stem-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-weight: 700;
-          font-size: 14px;
-          color: #0060B3;
-          margin-bottom: 16px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #e2e8f0;
-          mat-icon { font-size: 20px; width: 20px; height: 20px; }
-        }
+          position: relative;
 
-        &.departements-box {
-          .group-title { color: #2e7d32; }
+          .service-h-line {
+            width: 10px;
+            height: 2px;
+            background: #000;
+            position: absolute;
+            left: -10px;
+          }
         }
+      }
+    }
+  }
+}
 
-        .units-list {
+// ─── VUE TABLEAU SYNTHÉTIQUE ───────────────────────────────────────────────
+.table-view-container {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  padding: 24px;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1f5f9;
+
+    h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .total-badge {
+      background: #002b66;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+  }
+
+  .bpbf-data-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
+      border-bottom: 2px solid #e2e8f0;
+      text-align: left;
+    }
+
+    td {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #1e293b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    .highlight-row td {
+      background: #f0f7ff;
+    }
+
+    .type-pill {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+
+      &.pill-exec { background: #dbeafe; color: #1e40af; }
+      &.pill-control { background: #fef3c7; color: #92400e; }
+      &.pill-dir { background: #e0f2fe; color: #0369a1; }
+      &.pill-dep { background: #f1f5f9; color: #475569; }
+    }
+
+    .view-unit-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      font-size: 12px;
+      font-weight: 700;
+      color: #002b66;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #002b66;
+        color: white;
+        border-color: #002b66;
+      }
+    }
+  }
+}
+
+// ─── VOLET LATÉRAL DE DÉTAIL (DRAWER) ──────────────────────────────────────
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.node-details-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 90vw;
+  background: white;
+  z-index: 1001;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+
+    .drawer-title-group {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+
+      .drawer-icon-wrap {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #002b66;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        mat-icon { font-size: 24px; width: 24px; height: 24px; }
+      }
+
+      .category-tag {
+        font-size: 10.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.5px;
+      }
+
+      .unit-title {
+        margin: 2px 0 0 0;
+        font-size: 16px;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.3;
+      }
+    }
+
+    .drawer-close-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+    }
+  }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+
+    .info-section {
+      margin-bottom: 24px;
+
+      .unit-description {
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.5;
+        margin: 0 0 14px 0;
+      }
+
+      .relations-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .relation-item {
           display: flex;
-          flex-direction: column;
-          gap: 16px;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 12px;
+
+          .relation-label {
+            color: #64748b;
+            font-weight: 600;
+          }
+
+          .relation-value {
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+
+            &.solid-badge {
+              background: #f1f5f9;
+              color: #0f172a;
+              border-left: 3px solid #000;
+            }
+
+            &.dashed-badge {
+              background: #fef3c7;
+              color: #92400e;
+              border-left: 3px dashed #d97706;
+            }
+          }
+        }
+      }
+    }
+
+    .employees-section {
+      .section-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+
+        .section-title {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 800;
+          color: #0f172a;
         }
 
-        .unit-card {
+        .headcount-badge {
+          background: #002b66;
+          color: white;
+          font-size: 11px;
+          font-weight: 800;
+          padding: 3px 10px;
+          border-radius: 12px;
+        }
+      }
+
+      .empty-employees-box {
+        text-align: center;
+        padding: 32px 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px dashed #cbd5e1;
+
+        mat-icon {
+          font-size: 36px;
+          width: 36px;
+          height: 36px;
+          color: #94a3b8;
+          margin-bottom: 8px;
+        }
+
+        p {
+          margin: 0;
+          font-size: 12.5px;
+          color: #64748b;
+        }
+      }
+
+      .employees-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        .employee-item-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
-          padding: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
 
-          .unit-card-header {
+          &:hover {
+            background: white;
+            border-color: #002b66;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            transform: translateX(3px);
+
+            .emp-link-btn {
+              color: #002b66;
+            }
+          }
+
+          .emp-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #002b66;
+            color: white;
             display: flex;
             align-items: center;
-            gap: 10px;
-            .unit-icon { color: #0060B3; font-size: 22px; width: 22px; height: 22px; }
-            .unit-info {
-              display: flex;
-              flex-direction: column;
-              .unit-code { font-size: 10px; font-weight: 800; color: #64748b; }
-              .unit-name { font-size: 14px; font-weight: 700; color: #1e293b; }
-            }
-          }
-
-          .unit-desc {
+            justify-content: center;
             font-size: 12px;
-            color: #64748b;
-            margin: 6px 0 10px 32px;
+            font-weight: 800;
+            flex-shrink: 0;
           }
 
-          .services-sub-list {
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px dashed #cbd5e1;
-            .sub-label {
-              font-size: 11px;
+          .emp-info {
+            flex: 1;
+            min-width: 0;
+
+            .emp-name {
+              font-size: 13px;
               font-weight: 700;
-              color: #475569;
-              display: flex;
-              align-items: center;
-              gap: 4px;
-              margin-bottom: 6px;
-              mat-icon { font-size: 14px; width: 14px; height: 14px; }
+              color: #0f172a;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
 
-            .service-chip {
-              display: inline-flex;
-              align-items: center;
-              gap: 4px;
-              background: white;
-              border: 1px solid #cbd5e1;
-              padding: 4px 10px;
-              border-radius: 12px;
-              font-size: 11px;
-              font-weight: 600;
-              color: #334155;
-              margin: 3px 4px 3px 0;
-              mat-icon { font-size: 13px; width: 13px; height: 13px; color: #0060B3; }
+            .emp-role {
+              font-size: 11.5px;
+              color: #64748b;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
+
+            .emp-meta {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-top: 3px;
+
+              .matricule-tag {
+                font-size: 10px;
+                font-weight: 800;
+                background: #e2e8f0;
+                color: #475569;
+                padding: 1px 5px;
+                border-radius: 3px;
+              }
+
+              .meta-item {
+                font-size: 11px;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                mat-icon { font-size: 12px; width: 12px; height: 12px; }
+              }
+            }
+          }
+
+          .emp-link-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            mat-icon { font-size: 18px; width: 18px; height: 18px; }
           }
         }
       }
     }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+// ─── STYLES D'IMPRESSION OFFICIELLE (PAYSAGE) ──────────────────────────────
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .no-print,
+  .page-header,
+  .drawer-overlay,
+  .node-details-drawer {
+    display: none !important;
+  }
+
+  .organigramme-page {
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .chart-viewport {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .chart-canvas {
+    transform: scale(0.85) !important;
+    transform-origin: top center !important;
+    min-width: 100% !important;
   }
 }

@@ -181,7 +181,7 @@
         <div class="modal-header">
           <div class="mh-title">
             <mat-icon>history_toggle_drop_down</mat-icon>
-            <h2>{{ editingItem ? 'Modifier le Trop-perçu' : 'Nouveau Trop-perçu (Spontané en 1 fois)' }}</h2>
+            <h2>{{ editingItem ? 'Modifier le Trop-perçu' : 'Nouveau Trop-perçu' }}</h2>
           </div>
           <button mat-icon-button (click)="closeModal()">
             <mat-icon>close</mat-icon>
@@ -189,11 +189,6 @@
         </div>
 
         <div class="modal-body">
-          <div class="notice-box">
-            <mat-icon>info</mat-icon>
-            <span>Ce montant sera déduit directement du net à payer <strong>en 1 seule fois</strong> sur le bulletin du mois d'application sélectionné.</span>
-          </div>
-
           <div class="form-grid">
             <!-- Sélection Agent -->
             <div class="form-group full-width">
@@ -201,41 +196,38 @@
               <input type="text" class="custom-input" placeholder="Filtrer par nom ou matricule..."
                      [(ngModel)]="agentSearchText" (ngModelChange)="agentSearchText = $event">
               <select class="custom-select" [(ngModel)]="formModel.employeeId" (ngModelChange)="onEmployeeSelect()">
-                <option [ngValue]="undefined" disabled>— Sélectionner un agent ({{ filteredEmployeesForSelect.length }} disponibles) —</option>
+                <option [ngValue]="undefined" disabled>— Sélectionner un agent —</option>
                 @for (emp of filteredEmployeesForSelect; track emp.id) {
-                  <option [ngValue]="emp.id">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})</option>
+                  <option [ngValue]="emp.id">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}</option>
                 }
               </select>
             </div>
 
-            <!-- Mois Origine (Erreur) -->
+            <!-- Mois Origine -->
             <div class="form-group">
-              <label>Mois de l'erreur (Origine)</label>
+              <label>Mois d'origine</label>
               <select class="custom-select" [(ngModel)]="formModel.moisOrigine">
                 @for (m of moisList; track m.code) {
-                  <option [value]="m.code">{{ m.label }} ({{ m.code }})</option>
+                  <option [value]="m.code">{{ m.label }}</option>
                 }
               </select>
-              <span class="field-hint">Mois où la somme a été versée à tort</span>
             </div>
 
-            <!-- Mois Application (Retenue) -->
+            <!-- Mois Application -->
             <div class="form-group">
-              <label>Mois de déduction (Application) <span class="required">*</span></label>
+              <label>Mois d'application <span class="required">*</span></label>
               <select class="custom-select" [(ngModel)]="formModel.moisApplication">
                 @for (m of moisList; track m.code) {
-                  <option [value]="m.code">{{ m.label }} ({{ m.code }})</option>
+                  <option [value]="m.code">{{ m.label }}</option>
                 }
               </select>
-              <span class="field-hint">Bulletin sur lequel déduire la somme</span>
             </div>
 
             <!-- Montant à retenir -->
             <div class="form-group">
-              <label>Montant à retenir (FCFA) <span class="required">*</span></label>
+              <label>Montant à retenir <span class="required">*</span></label>
               <input type="number" class="custom-input amount-input" placeholder="Ex: 35000"
                      [(ngModel)]="formModel.amount" min="1" step="1000">
-              <span class="field-hint">Prélèvement unique à 100%</span>
             </div>
 
             <!-- Statut -->
@@ -253,7 +245,6 @@
               <label>Motif / Justification du trop-perçu</label>
               <input type="text" class="custom-input" placeholder="Ex: Trop-perçu indemnité kilométrique suite à absence non déduite..."
                      [(ngModel)]="formModel.motif">
-              <span class="field-hint">Ce libellé apparaîtra pour justifier la retenue</span>
             </div>
           </div>
         </div>
