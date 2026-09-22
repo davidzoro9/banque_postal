@@ -1,0 +1,39 @@
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: sigrh_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sigrh_db
+      POSTGRES_USER: sigrh_user
+      POSTGRES_PASSWORD: sigrh_password_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./24_07_plain.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./sigrh_init_data.sql:/docker-entrypoint-initdb.d/02_data.sql
+
+  # Application Web SIGRH (Spring Boot + Angular tout-en-un)
+  sigrh_app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sigrh_app
+    restart: always
+    ports:
+      - "8080:8081"
+    depends_on:
+      - postgres
+    environment:
+      - PORT=8081
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=sigrh_db
+      - DB_USER=sigrh_user
+      - DB_PASSWORD=sigrh_password_123
+
+volumes:
+  postgres_data:
+    name: db-test
