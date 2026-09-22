@@ -360,61 +360,75 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
     title: 'Chapitre 6 : Module Carrières, Évaluations & Promotions',
     category: 'Gestion des Talents',
     summary: 'Procédures de saisie des évaluations annuelles, calcul automatique des propositions d\'avancement d\'échelon et validation des reclassements.',
-    accessPath: 'Barre Supérieure > Gest Admin > Sous-menu Carrières',
+    accessPath: 'Barre Supérieure > CARRIÈRES > Sous-menu Gestion des Carrières',
     subsections: [
       {
-        title: '6.1 Saisie des Notes & Campagne d\'Évaluation Annuelle',
-        accessPath: 'Carrières > Notation & Évaluations > Bouton « Évaluer un Agent »',
-        description: 'Enregistrement des appréciations annuelles de performance par le supérieur hiérarchique.',
+        title: '6.1 Saisie des Notations & Campagne d\'Évaluation Annuelle',
+        accessPath: 'Carrières > Notations & Évaluations > Bouton « Nouvelle Évaluation »',
+        description: 'Enregistrement des notations annuelles chiffrées selon les 3 axes réglementaires de la Banque Postale (/20).',
         fields: [
           { name: 'Collaborateur', type: 'Sélection', required: true, description: 'Agent évalué' },
-          { name: 'Exercice d\'évaluation', type: 'Sélection (Année)', required: true, description: 'Campagne de notation (ex: 2026)' },
-          { name: 'Compétences Métier', type: 'Note sur 20', required: true, description: 'Maîtrise technique et atteinte des objectifs fixés' },
-          { name: 'Qualité de Service & Esprit d\'Équipe', type: 'Note sur 20', required: true, description: 'Comportement professionnel et ponctualité' },
-          { name: 'Appréciation générale', type: 'Texte libre', required: true, description: 'Synthèse managériale et besoins de formation identifiés' }
+          { name: 'Exercice d\'évaluation', type: 'Nombre', required: true, description: 'Année de notation (ex: 2026)' },
+          { name: 'Atteinte des Objectifs (40%)', type: 'Note / 20', required: true, description: 'Performance opérationnelle et résultats mesurables' },
+          { name: 'Compétences & Rigueur (40%)', type: 'Note / 20', required: true, description: 'Expertise technique bancaire, conformité et respect des procédures' },
+          { name: 'Comportement & Éthique (20%)', type: 'Note / 20', required: true, description: 'Ponctualité, relation client et esprit d\'équipe' },
+          { name: 'Note Globale', type: 'Calculée', required: false, description: 'Moyenne pondérée automatique sur 20' },
+          { name: 'Appréciation générale', type: 'Texte', required: false, description: 'Mention automatique (Excellent, Très Bien, Bien, Passable, Insuffisant) et recommandations' }
         ],
         steps: [
-          '1. Ouvrir le module « Carrières » et cliquer sur « Saisie des Notes »',
-          '2. Sélectionner l\'exercice de notation actif',
-          '3. Rechercher le collaborateur à noter dans la liste de votre équipe',
-          '4. Renseigner les notes critères par critère dans la grille d\'évaluation',
-          '5. Le système calcule la moyenne générale pondérée',
-          '6. Saisir l\'appréciation finale et les recommandations de formation',
-          '7. Cliquer sur « Enregistrer la Fiche d\'Évaluation »'
+          '1. Ouvrir le module « CARRIÈRES » et cliquer sur le sous-menu « Notations & Évaluations »',
+          '2. Cliquer sur le bouton « Nouvelle Évaluation »',
+          '3. Sélectionner le collaborateur à évaluer parmi les agents de la banque',
+          '4. Renseigner l\'exercice (ex: 2026) et les 3 notes (/20)',
+          '5. Constater le calcul en temps réel de la Note Globale et de l\'Appréciation suggérée',
+          '6. Ajuster les observations managériales puis cliquer sur « Enregistrer & Valider la Notation »',
+          '7. La note est sauvegardée dans PostgreSQL et historisée dans le tableau des performances'
         ]
       },
       {
-        title: '6.2 Génération Automatique des Propositions d\'Avancements d\'Échelon',
-        accessPath: 'Carrières > Avancements d\'Échelon > Bouton « Générer les Propositions »',
-        description: 'Traitement automatique identifiant les agents ayant atteint la durée d\'ancienneté requise dans leur échelon.',
+        title: '6.2 Moteur d\'Avancements d\'Échelon Automatique (E01 à E15)',
+        accessPath: 'Carrières > Avancements d\'Échelon > Bouton « Générer les Propositions d\'Avancement »',
+        description: 'Moteur de promotion automatique identifiant les agents ayant 2 ans d\'ancienneté dans leur échelon et calculant le passage à l\'échelon n+1.',
         steps: [
-          '1. Accéder à l\'écran « Avancements d\'Échelon »',
+          '1. Accéder au sous-menu « Avancements d\'Échelon »',
           '2. Cliquer sur le bouton « Générer les Propositions d\'Avancement »',
-          '3. Le système parcourt la base de données et retient tous les agents éligibles (2 ans d\'ancienneté dans l\'échelon actuel)',
-          '4. Visualiser la liste des propositions : Matricule, Nom, Groupe, Catégorie, Échelon Actuel (ex: Échelon 4), Nouvel Échelon proposé (ex: Échelon 5), Ancien Salaire de Base et Nouveau Salaire de Base',
-          '5. Apporter des ajustements ou exclusions motivées si nécessaire',
-          '6. Cliquer sur « Valider la Liste des Avancements » après avis de la commission paritaire',
-          '7. Le système met à jour instantanément la fiche de chaque employé et applique le nouvel échelon pour la prochaine session de paie'
+          '3. Le système analyse les agents actifs dans PostgreSQL, extrait leur échelon actuel (E01 à E14) et calcule l\'échelon supérieur (n+1)',
+          '4. Le comparatif affiche : Matricule, Nom, Fonction, Échelon Actuel vs Proposé, Salaire de Base Actuel, Nouveau Salaire de Base et Gain Mensuel Brut (+ FCFA)',
+          '5. Cliquer sur le bouton « Valider » en regard de chaque agent proposé',
+          '6. Le système met à jour instantanément dans PostgreSQL le profil de l\'employé, son échelon, sa grille indiciaire et sa fiche salariale',
+          '7. Les prochains bulletins de paie calculés intègrent immédiatement le nouveau salaire de base sans ressaisie'
         ],
-        systemBehavior: 'Aucune ressaisie manuelle n\'est requise en paie : la mise à jour de l\'échelon entraîne la lecture automatique de la nouvelle valeur indiciaire dans la grille officielle.'
+        systemBehavior: 'Mise à jour transactionnelle directe dans PostgreSQL : Employee.echelonObj, SituationSalariale et recalcul immédiat du salaire net via InformationSalarialeCalculService.'
       },
       {
-        title: '6.3 Reclassements Professionnels Conventionnels',
-        accessPath: 'Carrières > Reclassements > Bouton « Nouveau Reclassement »',
-        description: 'Changement de catégorie ou de groupe suite à l\'obtention d\'un diplôme homologué ou concours interne.',
+        title: '6.3 Reclassements Professionnels & Changement de Catégorie',
+        accessPath: 'Carrières > Reclassements & Qualifications > Bouton « Nouveau Reclassement »',
+        description: 'Changement de classe, catégorie et grade suite à obtention de diplôme homologué (ITB/Master) ou concours interne.',
         steps: [
-          '1. Sélectionner l\'employé bénéficiaire',
-          '2. Choisir le nouveau Groupe salarial (ex: passage du Groupe I au Groupe II) et la nouvelle Catégorie professionnelle',
-          '3. Définir l\'échelon de reclassement garantissant au moins le maintien du salaire indiciaire antérieur',
-          '4. Renseigner la date d\'effet de la décision et joindre l\'acte administratif',
-          '5. Cliquer sur « Enregistrer le Reclassement »'
+          '1. Accéder au sous-menu « Reclassements & Qualifications »',
+          '2. Cliquer sur « Nouveau Reclassement »',
+          '3. Sélectionner le collaborateur : sa situation actuelle (catégorie, grade, échelon, salaire base) s\'affiche automatiquement',
+          '4. Renseigner la Référence de l\'Acte Décisionnel (ex: Décision N° 2026/012/DG/DRH) et le motif',
+          '5. Choisir la nouvelle catégorie, le nouveau grade et le nouvel échelon',
+          '6. Cliquer sur « Valider & Appliquer le Reclassement » : les données sont actées et appliquées en base'
+        ]
+      },
+      {
+        title: '6.4 Plan & Catalogue de Formations Continues',
+        accessPath: 'Carrières > Plan de Formation > Bouton « Planifier une Session »',
+        description: 'Gestion du catalogue des modules d\'apprentissage bancaire et suivi des sessions présentielles / e-learning.',
+        steps: [
+          '1. Consulter les modules dans l\'onglet « Catalogue des Modules » ou en créer de nouveaux',
+          '2. Dans l\'onglet « Sessions Planifiées », cliquer sur « Planifier une Session »',
+          '3. Choisir le thème, la date de session et le nombre de participants prévus',
+          '4. Confirmer, clôturer ou annuler les sessions selon leur déroulement'
         ]
       }
     ],
     workflow: [
-      'Lancement campagne d\'évaluation -> Saisie des notes hiérarchiques -> Génération des propositions d\'avancement -> Arbitrage DRH / DG -> Mise à jour automatique de la rémunération'
+      'Campagne annuelle d\'évaluation (/20) -> Génération automatique des propositions d\'échelons (E01-E15) -> Validation DRH/DG -> Prise en compte instantanée en paie sans ressaisie -> Suivi des reclassements et formations'
     ],
-    tips: 'Tout avancement validé met à jour instantanément la rémunération indiciaire de base sans nécessiter de ressaisie manuelle.'
+    tips: 'Le module est 100% interconnecté avec PostgreSQL : valider un avancement met automatiquement à jour la paie et les cotisations CNSS/IUTS.'
   },
 
   // =========================================================================

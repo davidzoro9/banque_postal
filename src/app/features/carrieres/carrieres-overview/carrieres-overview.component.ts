@@ -1,7 +1,8 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../core/models/app-module.model';
+import { CarrieresService, DashboardCarrieresStats, CarriereAvancement, CarriereNotation } from '../services/carrieres.service';
 
 @Component({
   selector: 'app-carrieres-overview',
@@ -12,35 +13,58 @@ import { APP_MODULES } from '../../../core/models/app-module.model';
 export class CarrieresOverviewComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'carrieres')!;
 
-  kpis = [
-    { label: 'Compétences référencées', value: '186', icon: 'psychology',              color: '#0060B3', sub: 'Référentiel actif' },
-    { label: 'Formations planifiées',   value: '14',  icon: 'school',                  color: '#0060B3', sub: 'Ce semestre' },
-    { label: 'Entretiens annuels',      value: '67%', icon: 'star_rate',               color: '#1B3A6B', sub: 'Complétés' },
-    { label: 'Mobilités internes',      value: '5',   icon: 'transfer_within_a_station', color: '#FFC700', sub: 'En cours' }
-  ];
+  stats: DashboardCarrieresStats = {
+    totalEmployees: 0,
+    totalNotations: 0,
+    moyenneNotes: 0,
+    avancementsProposes: 0,
+    avancementsValides: 0,
+    totalReclassements: 0
+  };
 
-  quickActions = [
-    { label: 'Référentiel',      icon: 'menu_book',                route: '/carrieres/competences/referentiel',   color: '#0060B3' },
-    { label: 'Plan de formation',icon: 'event_note',               route: '/carrieres/formations/plan',           color: '#0060B3' },
-    { label: 'Entretiens annuels',icon: 'forum',                   route: '/carrieres/evaluations/entretiens',    color: '#1B3A6B' },
-    { label: 'Mobilité',         icon: 'transfer_within_a_station',route: '/carrieres/mobilite',                  color: '#FFC700' }
-  ];
+  recentAvancements: CarriereAvancement[] = [];
+  recentNotations: CarriereNotation[] = [];
+  loading = true;
 
-  upcomingFormations = [
-    { titre: 'Leadership & Management',   date: '15/06/2026', participants: 12, statut: 'Confirmée' },
-    { titre: 'Angular Avancé',            date: '22/06/2026', participants: 8,  statut: 'Confirmée' },
-    { titre: 'Communication efficace',    date: '05/07/2026', participants: 15, statut: 'Planifiée' },
-    { titre: 'Gestion de projet Agile',   date: '12/07/2026', participants: 10, statut: 'Planifiée' }
-  ];
-
-  constructor(public moduleNav: ModuleNavService, private router: Router) {}
+  constructor(
+    public moduleNav: ModuleNavService,
+    private router: Router,
+    private carrieresService: CarrieresService
+  ) {}
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading = true;
+    this.carrieresService.getDashboardStats().subscribe({
+      next: (res) => {
+        if (res) this.stats = res;
+      },
+      error: () => {}
+    });
+
+    this.carrieresService.fetchAvancements().subscribe({
+      next: (res) => {
+        this.recentAvancements = (res || []).slice(0, 5);
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      }
+    });
+
+    this.carrieresService.fetchNotations().subscribe({
+      next: (res) => {
+        this.recentNotations = (res || []).slice(0, 5);
+      },
+      error: () => {}
+    });
   }
 
   navigate(route: string): void {
     this.router.navigate([route]);
   }
 }
-

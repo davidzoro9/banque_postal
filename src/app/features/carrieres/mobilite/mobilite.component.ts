@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CarrieresService, MobiliteDemande } from '../services/carrieres.service';
-import { EmployeeService } from '../../grh/employes/services/employee.service';
-import { Employee } from '../../grh/employes/models/employee.model';
+import { CarrieresService, CarriereAvancement } from '../services/carrieres.service';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -12,79 +10,115 @@ import { Observable } from 'rxjs';
   standalone: false
 })
 export class MobiliteComponent implements OnInit {
-  mobilites$!: Observable<MobiliteDemande[]>;
-  employees$!: Observable<Employee[]>;
+  avancements$!: Observable<CarriereAvancement[]>;
+  allAvancements: CarriereAvancement[] = [];
+  filteredAvancements: CarriereAvancement[] = [];
 
-  showAddForm = false;
-  saving = false;
+  selectedExercice: number = new Date().getFullYear();
+  searchQuery: string = '';
+  statutFilter: string = '';
 
-  newMobility = {
-    employeeId: '',
-    typeMobility: 'Promotion' as MobiliteDemande['typeMobility'],
-    posteCible: '',
-    serviceCible: '',
-    commentaires: ''
-  };
-
-  readonly typesMobility: MobiliteDemande['typeMobility'][] = [
-    'Promotion',
-    'Mutation géographique',
-    'Reconversion professionnelle'
-  ];
+  generating = false;
+  processingId: number | null = null;
+  messageFeedback: string = '';
 
   constructor(
     private carrieresService: CarrieresService,
-    private employeeService: EmployeeService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.mobilites$ = this.carrieresService.mobilites$;
-    this.employees$ = this.employeeService.getAll();
+    this.avancements$ = this.carrieresService.avancements$;
+    this.loadAvancements();
   }
 
-  addMobility(employees: Employee[]): void {
-    const selectedEmp = employees.find(e => e.id === this.newMobility.employeeId);
-    if (!selectedEmp) return;
-
-    this.saving = true;
-
-    const formattedDate = new Date().toISOString().slice(0, 10);
-    const name = `${selectedEmp.prenom} ${selectedEmp.nom}`;
-
-    this.carrieresService.addMobility({
-      employeeId: selectedEmp.id,
-      employeeName: name,
-      typeMobility: this.newMobility.typeMobility,
-      posteCible: this.newMobility.posteCible.trim(),
-      serviceCible: this.newMobility.serviceCible.trim(),
-      dateDemande: formattedDate,
-      commentaires: this.newMobility.commentaires.trim(),
-      statut: 'En attente'
-    }).subscribe(() => {
-      this.saving = false;
-      this.newMobility = {
-        employeeId: '',
-        typeMobility: 'Promotion',
-        posteCible: '',
-        serviceCible: '',
-        commentaires: ''
-      };
-      this.showAddForm = false;
+  loadAvancements(): void {
+    this.carrieresService.fetchAvancements(this.selectedExercice).subscribe({
+      next: (list) => {
+        this.allAvancements = list || [];
+        this.applyFilter();
+      },
+      error: () => {
+        this.allAvancements = [];
+        this.filteredAvancements = [];
+      }
     });
   }
 
-  changeStatus(id: string, status: MobiliteDemande['statut']): void {
-    this.carrieresService.updateMobilityStatus(id, status).subscribe();
+  genererPropositions(): void {
+    this.generating = true;
+    this.messageFeedback = '';
+    this.carrieresService.genererAvancements(this.selectedExercice).subscribe({
+      next: (list) => {
+        this.generating = false;
+        this.allAvancements = list || [];
+        this.applyFilter();
+        this.messageFeedback = `Propositions d'avancement pour l'exercice ${this.selectedExercice} générées avec succès (${this.allAvancements.length} agents).`;
+      },
+      error: (err) => {
+        this.generating = false;
+        this.messageFeedback = 'Erreur lors de la génération des propositions.';
+      }
+    });
   }
 
-  getInitials(name: string): string {
-    if (!name) return '??';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+  validerAvancement(id?: number): void {
+    if (!id) return;
+    this.processingId = id;
+    this.carrieresService.validerAvancement(id, 'Commission de Carrière BPBF').subscribe({
+      next: () => {
+        this.processingId = null;
+        this.loadAvancements();
+        this.messageFeedback = 'Avancement validé avec succès ! L\'échelon et le salaire de base de l\'agent ont été mis à jour dans PostgreSQL.';
+      },
+      error: () => {
+        this.processingId = null;
+        this.messageFeedback = 'Erreur lors de la validation de l\'avancement.';
+      }
+    });
+  }
+
+  rejeterAvancement(id?: number): void {
+    if (!id) return;
+    const motif = prompt('Veuillez préciser le motif de rejet / ajournement :', 'Avis défavorable de la commission');
+    if (!motif) return;
+
+    this.processingId = id;
+    this.carrieresService.rejeterAvancement(id, motif).subscribe({
+      next: () => {
+        this.processingId = null;
+        this.loadAvancements();
+      },
+      error: () => {
+        this.processingId = null;
+      }
+    });
+  }
+
+  applyFilter(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredAvancements = this.allAvancements.filter(a => {
+      const matricule = (a.employee?.matricule || '').toLowerCase();
+      const nom = (a.employee?.nom || '').toLowerCase();
+      const prenom = (a.employee?.prenom || '').toLowerCase();
+      const matchText = !q || matricule.includes(q) || nom.includes(q) || prenom.includes(q);
+      const matchStatut = !this.statutFilter || a.statut === this.statutFilter;
+      return matchText && matchStatut;
+    });
+  }
+
+  get totalImpactMasseSalariale(): number {
+    return this.allAvancements
+      .filter(a => a.statut === 'VALIDE' || a.statut === 'PROPOSE')
+      .reduce((sum, a) => sum + (a.ecartSalaire || 0), 0);
+  }
+
+  get countProposes(): number {
+    return this.allAvancements.filter(a => a.statut === 'PROPOSE').length;
+  }
+
+  get countValides(): number {
+    return this.allAvancements.filter(a => a.statut === 'VALIDE').length;
   }
 
   goBack(): void {

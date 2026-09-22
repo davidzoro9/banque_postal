@@ -1,44 +1,112 @@
 <div class="module-overview">
   <div class="page-header">
     <div class="ph-content">
-      <div class="ph-icon"><mat-icon>{{ module.icon }}</mat-icon></div>
       <div>
-        <h1>{{ module.name }}</h1>
-        <p>{{ module.description }}</p>
+        <h1>Gestion des Carrières & Compétences — Banque Postale</h1>
+        <p>Pilotage des notations annuelles, avancements d'échelon (E01 à E15), reclassements catégoriels et plans de formation continue.</p>
       </div>
     </div>
   </div>
 
-  <mat-card class="table-card">
+  <!-- KPI Grid (Real Data from PostgreSQL) -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.totalNotations }}</span>
+        <span class="kpi-label">Notations Enregistrées</span>
+        <span class="kpi-sub">Collaborateurs évalués</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.moyenneNotes }} / 20</span>
+        <span class="kpi-label">Moyenne Globale</span>
+        <span class="kpi-sub">Performance de la banque</span>
+      </div>
+    </div>
+
+    <div class="kpi-card highlight">
+      <div class="kpi-info">
+        <span class="kpi-value text-primary">{{ stats.avancementsProposes }}</span>
+        <span class="kpi-label">Avancements Proposés</span>
+        <span class="kpi-sub">Échelons n+1 en attente</span>
+      </div>
+    </div>
+
+    <div class="kpi-card success">
+      <div class="kpi-info">
+        <span class="kpi-value text-success">{{ stats.avancementsValides }}</span>
+        <span class="kpi-label">Avancements Validés</span>
+        <span class="kpi-sub">Pris en compte en paie</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Action Navigation Links -->
+  <div class="section-title">Espaces Opérationnels</div>
+  <div class="quick-actions-row">
+    <button class="qa-btn" (click)="navigate('/carrieres/evaluations')">
+      Notations & Évaluations
+    </button>
+    <button class="qa-btn" (click)="navigate('/carrieres/mobilite')">
+      Avancements d'Échelon (E01-E15)
+    </button>
+    <button class="qa-btn" (click)="navigate('/carrieres/competences')">
+      Reclassements Professionnels
+    </button>
+    <button class="qa-btn" (click)="navigate('/carrieres/formations')">
+      Catalogue & Sessions Formations
+    </button>
+  </div>
+
+  <!-- Recent Promotions Table -->
+  <mat-card class="table-card mb-4">
     <mat-card-header>
-      <mat-card-title>Formations à venir</mat-card-title>
-      <button mat-button color="primary" (click)="navigate('/carrieres/formations/catalogue')" class="see-all-btn">
-        Catalogue <mat-icon>arrow_forward</mat-icon>
+      <mat-card-title>Dernières Propositions d'Avancement d'Échelon</mat-card-title>
+      <button mat-button color="primary" (click)="navigate('/carrieres/mobilite')">
+        Voir tous les avancements
       </button>
     </mat-card-header>
     <mat-card-content>
-      <table class="data-table">
-        <thead>
-          <tr><th>Formation</th><th>Date</th><th>Participants</th><th>Statut</th></tr>
-        </thead>
-        <tbody>
-          @for (f of upcomingFormations; track f.titre) {
+      @if (recentAvancements.length === 0) {
+        <div class="empty-state">
+          <p>Aucune proposition d'avancement générée pour le moment. Rendez-vous dans l'onglet <strong>Avancements d'Échelon</strong> pour lancer la génération automatique.</p>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
             <tr>
-              <td><strong>{{ f.titre }}</strong></td>
-              <td>{{ f.date }}</td>
-              <td>
-                <div class="participants-bar">
-                  <span>{{ f.participants }}</span>
-                  <mat-icon style="font-size:14px;width:14px;height:14px;color:#9e9e9e">person</mat-icon>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge" [class.confirmed]="f.statut === 'Confirmée'">{{ f.statut }}</span>
-              </td>
+              <th>Matricule & Agent</th>
+              <th>Échelon Actuel</th>
+              <th>Échelon Proposé</th>
+              <th class="text-right">Salaire Base Actuel</th>
+              <th class="text-right">Nouveau Salaire</th>
+              <th class="text-right">Gain Mensuel</th>
+              <th>Statut</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (a of recentAvancements; track a.id) {
+              <tr>
+                <td>
+                  <strong>{{ a.employee?.matricule || '—' }}</strong> — {{ a.employee?.nom }} {{ a.employee?.prenom }}
+                </td>
+                <td><span class="badge-neutral">{{ a.echelonActuel?.libelle || 'E01' }}</span></td>
+                <td><span class="badge-proposed">{{ a.echelonPropose?.libelle || 'E02' }}</span></td>
+                <td class="text-right">{{ a.salaireBaseActuel | number:'1.0-0' }} F</td>
+                <td class="text-right font-bold">{{ a.salaireBasePropose | number:'1.0-0' }} F</td>
+                <td class="text-right text-success font-bold">+{{ a.ecartSalaire | number:'1.0-0' }} F</td>
+                <td>
+                  <span class="status-pill" [class.valide]="a.statut === 'VALIDE'" [class.propose]="a.statut === 'PROPOSE'" [class.rejete]="a.statut === 'REJETE'">
+                    {{ a.statut }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
     </mat-card-content>
   </mat-card>
 </div>

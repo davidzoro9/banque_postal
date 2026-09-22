@@ -146,18 +146,18 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
   carrieres: [
     {
       id: 'carrieres-dashboard',
-      label: 'Tableau de bord GPEC',
+      label: 'Tableau de bord Carrières',
       icon: 'dashboard',
       route: '/carrieres'
     },
     {
-      id: 'carrieres-gpec',
-      label: 'GPEC & Compétences',
+      id: 'carrieres-operations',
+      label: 'Gestion des Carrières',
       icon: 'trending_up',
       children: [
-        { id: 'competences', label: 'Référentiel Compétences', icon: 'psychology', route: '/carrieres/competences' },
-        { id: 'evaluations', label: 'Évaluations & Entretiens', icon: 'star', route: '/carrieres/evaluations' },
-        { id: 'mobilite', label: 'Mobilité & Promotions', icon: 'alt_route', route: '/carrieres/mobilite' },
+        { id: 'evaluations', label: 'Notations & Évaluations', icon: 'star', route: '/carrieres/evaluations' },
+        { id: 'mobilite', label: 'Avancements d\'Échelon', icon: 'trending_up', route: '/carrieres/mobilite' },
+        { id: 'competences', label: 'Reclassements & Qualifications', icon: 'workspace_premium', route: '/carrieres/competences' },
         { id: 'formations', label: 'Plan de Formation', icon: 'school', route: '/carrieres/formations' }
       ]
     }

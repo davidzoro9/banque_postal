@@ -4,6 +4,97 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
+export interface EmployeeRef {
+  id: number;
+  matricule?: string;
+  nom?: string;
+  prenom?: string;
+  name?: string;
+  poste?: string;
+  service?: string;
+  direction?: string;
+}
+
+export interface EchelonRef {
+  id: number;
+  code?: string;
+  libelle?: string;
+  description?: string;
+}
+
+export interface CategorieRef {
+  id: number;
+  code?: string;
+  libelle?: string;
+}
+
+export interface GradeRef {
+  id: number;
+  code?: string;
+  libelle?: string;
+}
+
+export interface CarriereNotation {
+  id?: number;
+  employee: any;
+  exercice?: number;
+  noteObjectifs?: number;
+  noteCompetences?: number;
+  noteComportement?: number;
+  noteGlobale?: number;
+  appreciation?: string;
+  evaluateur?: string;
+  dateEvaluation?: string;
+  statut?: string;
+}
+
+export interface CarriereAvancement {
+  id?: number;
+  employee: any;
+  exercice?: number;
+  echelonActuel?: EchelonRef;
+  echelonPropose?: EchelonRef;
+  salaireBaseActuel?: number;
+  salaireBasePropose?: number;
+  ecartSalaire?: number;
+  typeAvancement?: string; // 'ANCIENNETE' | 'CHOIX_MERITE'
+  statut?: 'PROPOSE' | 'VALIDE' | 'REJETE';
+  dateProposition?: string;
+  dateValidation?: string;
+  validateur?: string;
+  observations?: string;
+}
+
+export interface CarriereReclassement {
+  id?: number;
+  employee: any;
+  dateDemande?: string;
+  dateEffet?: string;
+  categorieAncienne?: CategorieRef;
+  categorieNouvelle?: CategorieRef;
+  gradeAncien?: GradeRef;
+  gradeNouveau?: GradeRef;
+  echelonAncien?: EchelonRef;
+  echelonNouveau?: EchelonRef;
+  salaireBaseAncien?: number;
+  salaireBaseNouveau?: number;
+  referenceActe?: string;
+  motif?: string;
+  statut?: 'PROPOSE' | 'VALIDE' | 'REJETE';
+  dateValidation?: string;
+  validateur?: string;
+  observations?: string;
+}
+
+export interface DashboardCarrieresStats {
+  totalEmployees: number;
+  totalNotations: number;
+  moyenneNotes: number;
+  avancementsProposes: number;
+  avancementsValides: number;
+  totalReclassements: number;
+}
+
 export interface Competence {
   id: string;
   libelle: string;
@@ -16,7 +107,7 @@ export interface FormationCatalogue {
   id: string;
   titre: string;
   description: string;
-  duree: number; // in hours
+  duree: number;
 }
 
 export interface FormationSession {
@@ -35,7 +126,7 @@ export interface EvaluationEntretien {
   employeeName: string;
   date: string;
   evaluateur: string;
-  note: number; // 1 to 5
+  note: number;
   objectifs: string;
   commentaires: string;
 }
@@ -54,12 +145,18 @@ export interface MobiliteDemande {
 
 @Injectable({ providedIn: 'root' })
 export class CarrieresService {
+  private notationsSubject = new BehaviorSubject<CarriereNotation[]>([]);
+  private avancementsSubject = new BehaviorSubject<CarriereAvancement[]>([]);
+  private reclassementsSubject = new BehaviorSubject<CarriereReclassement[]>([]);
   private competencesSubject = new BehaviorSubject<Competence[]>([]);
   private catalogueSubject = new BehaviorSubject<FormationCatalogue[]>([]);
   private sessionsSubject = new BehaviorSubject<FormationSession[]>([]);
   private evaluationsSubject = new BehaviorSubject<EvaluationEntretien[]>([]);
   private mobilitesSubject = new BehaviorSubject<MobiliteDemande[]>([]);
 
+  notations$ = this.notationsSubject.asObservable();
+  avancements$ = this.avancementsSubject.asObservable();
+  reclassements$ = this.reclassementsSubject.asObservable();
   competences$ = this.competencesSubject.asObservable();
   catalogue$ = this.catalogueSubject.asObservable();
   sessions$ = this.sessionsSubject.asObservable();
@@ -71,6 +168,9 @@ export class CarrieresService {
   }
 
   refreshAll(): void {
+    this.fetchNotations().subscribe();
+    this.fetchAvancements().subscribe();
+    this.fetchReclassements().subscribe();
     this.fetchCompetences().subscribe();
     this.fetchCatalogue().subscribe();
     this.fetchSessions().subscribe();
@@ -78,10 +178,106 @@ export class CarrieresService {
     this.fetchMobilites().subscribe();
   }
 
+  // --- Dashboard Stats ---
+  getDashboardStats(): Observable<DashboardCarrieresStats> {
+    return this.http.get<DashboardCarrieresStats>(`${environment.apiUrl}/carrieres/dashboard`);
+  }
+
+  // --- Notations & Évaluations de Performance ---
+  fetchNotations(exercice?: number): Observable<CarriereNotation[]> {
+    const url = exercice ? `${environment.apiUrl}/carrieres/notations?exercice=${exercice}` : `${environment.apiUrl}/carrieres/notations`;
+    return this.http.get<CarriereNotation[]>(url).pipe(
+      tap(list => this.notationsSubject.next(list || []))
+    );
+  }
+
+  saveNotation(notation: CarriereNotation): Observable<CarriereNotation> {
+    return this.http.post<CarriereNotation>(`${environment.apiUrl}/carrieres/notations`, notation).pipe(
+      tap(saved => {
+        const list = this.notationsSubject.value;
+        const index = list.findIndex(n => n.id === saved.id);
+        if (index >= 0) {
+          list[index] = saved;
+          this.notationsSubject.next([...list]);
+        } else {
+          this.notationsSubject.next([saved, ...list]);
+        }
+      })
+    );
+  }
+
+  deleteNotation(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/carrieres/notations/${id}`).pipe(
+      tap(() => {
+        this.notationsSubject.next(this.notationsSubject.value.filter(n => n.id !== id));
+      })
+    );
+  }
+
+  // --- Avancements d'Échelon ---
+  fetchAvancements(exercice?: number): Observable<CarriereAvancement[]> {
+    const url = exercice ? `${environment.apiUrl}/carrieres/avancements?exercice=${exercice}` : `${environment.apiUrl}/carrieres/avancements`;
+    return this.http.get<CarriereAvancement[]>(url).pipe(
+      tap(list => this.avancementsSubject.next(list || []))
+    );
+  }
+
+  genererAvancements(exercice?: number): Observable<CarriereAvancement[]> {
+    const url = exercice ? `${environment.apiUrl}/carrieres/avancements/generer?exercice=${exercice}` : `${environment.apiUrl}/carrieres/avancements/generer`;
+    return this.http.post<CarriereAvancement[]>(url, {}).pipe(
+      tap(list => this.avancementsSubject.next(list || []))
+    );
+  }
+
+  validerAvancement(id: number, validateur?: string): Observable<CarriereAvancement> {
+    const v = validateur ? `?validateur=${encodeURIComponent(validateur)}` : '';
+    return this.http.post<CarriereAvancement>(`${environment.apiUrl}/carrieres/avancements/${id}/valider${v}`, {}).pipe(
+      tap(updated => {
+        const list = this.avancementsSubject.value.map(a => a.id === id ? updated : a);
+        this.avancementsSubject.next(list);
+      })
+    );
+  }
+
+  rejeterAvancement(id: number, motif?: string): Observable<CarriereAvancement> {
+    const m = motif ? `?motif=${encodeURIComponent(motif)}` : '';
+    return this.http.post<CarriereAvancement>(`${environment.apiUrl}/carrieres/avancements/${id}/rejeter${m}`, {}).pipe(
+      tap(updated => {
+        const list = this.avancementsSubject.value.map(a => a.id === id ? updated : a);
+        this.avancementsSubject.next(list);
+      })
+    );
+  }
+
+  // --- Reclassements Professionnels ---
+  fetchReclassements(): Observable<CarriereReclassement[]> {
+    return this.http.get<CarriereReclassement[]>(`${environment.apiUrl}/carrieres/reclassements`).pipe(
+      tap(list => this.reclassementsSubject.next(list || []))
+    );
+  }
+
+  saveReclassement(reclassement: CarriereReclassement): Observable<CarriereReclassement> {
+    return this.http.post<CarriereReclassement>(`${environment.apiUrl}/carrieres/reclassements`, reclassement).pipe(
+      tap(saved => {
+        this.reclassementsSubject.next([saved, ...this.reclassementsSubject.value]);
+      })
+    );
+  }
+
+  validerReclassement(id: number, validateur?: string): Observable<CarriereReclassement> {
+    const v = validateur ? `?validateur=${encodeURIComponent(validateur)}` : '';
+    return this.http.post<CarriereReclassement>(`${environment.apiUrl}/carrieres/reclassements/${id}/valider${v}`, {}).pipe(
+      tap(updated => {
+        const list = this.reclassementsSubject.value.map(r => r.id === id ? updated : r);
+        this.reclassementsSubject.next(list);
+      })
+    );
+  }
+
   // --- Competences ---
   fetchCompetences(): Observable<Competence[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/carrieres/competences`).pipe(
-      map(list => list.map(c => this.toFrontendCompetence(c))),
+      map(list => (list || []).map(c => this.toFrontendCompetence(c))),
       tap(list => this.competencesSubject.next(list))
     );
   }
@@ -91,8 +287,7 @@ export class CarrieresService {
     return this.http.post<any>(`${environment.apiUrl}/carrieres/competences`, backendPayload).pipe(
       map(c => this.toFrontendCompetence(c)),
       tap(newComp => {
-        const list = this.competencesSubject.value;
-        this.competencesSubject.next([...list, newComp]);
+        this.competencesSubject.next([...this.competencesSubject.value, newComp]);
       })
     );
   }
@@ -100,8 +295,7 @@ export class CarrieresService {
   deleteCompetence(id: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/carrieres/competences/${id}`).pipe(
       tap(() => {
-        const list = this.competencesSubject.value.filter(c => c.id !== id);
-        this.competencesSubject.next(list);
+        this.competencesSubject.next(this.competencesSubject.value.filter(c => c.id !== id));
       })
     );
   }
@@ -109,7 +303,7 @@ export class CarrieresService {
   // --- Catalogue ---
   fetchCatalogue(): Observable<FormationCatalogue[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/carrieres/catalogue`).pipe(
-      map(list => list.map(item => ({
+      map(list => (list || []).map(item => ({
         id: String(item.id),
         titre: item.titre,
         description: item.description,
@@ -128,8 +322,7 @@ export class CarrieresService {
         duree: item.duree
       })),
       tap(newCourse => {
-        const list = this.catalogueSubject.value;
-        this.catalogueSubject.next([...list, newCourse]);
+        this.catalogueSubject.next([...this.catalogueSubject.value, newCourse]);
       })
     );
   }
@@ -137,7 +330,7 @@ export class CarrieresService {
   // --- Sessions ---
   fetchSessions(): Observable<FormationSession[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/carrieres/sessions`).pipe(
-      map(list => list.map(item => ({
+      map(list => (list || []).map(item => ({
         id: String(item.id),
         titre: item.titre,
         date: item.date,
@@ -162,8 +355,7 @@ export class CarrieresService {
         duree: item.duree
       })),
       tap(newSess => {
-        const list = this.sessionsSubject.value;
-        this.sessionsSubject.next([...list, newSess]);
+        this.sessionsSubject.next([...this.sessionsSubject.value, newSess]);
       })
     );
   }
@@ -177,10 +369,10 @@ export class CarrieresService {
     );
   }
 
-  // --- Evaluations ---
+  // --- Evaluations & Mobilites (Compat) ---
   fetchEvaluations(): Observable<EvaluationEntretien[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/carrieres/evaluations`).pipe(
-      map(list => list.map(item => ({
+      map(list => (list || []).map(item => ({
         id: String(item.id),
         employeeId: String(item.employeeId),
         employeeName: item.employeeName,
@@ -194,33 +386,9 @@ export class CarrieresService {
     );
   }
 
-  addEvaluation(ev: Omit<EvaluationEntretien, 'id'>): Observable<EvaluationEntretien> {
-    const payload = {
-      ...ev,
-      employeeId: Number(ev.employeeId)
-    };
-    return this.http.post<any>(`${environment.apiUrl}/carrieres/evaluations`, payload).pipe(
-      map(item => ({
-        id: String(item.id),
-        employeeId: String(item.employeeId),
-        employeeName: item.employeeName,
-        date: item.date,
-        evaluateur: item.evaluateur,
-        note: item.note,
-        objectifs: item.objectifs,
-        commentaires: item.commentaires
-      })),
-      tap(newEv => {
-        const list = this.evaluationsSubject.value;
-        this.evaluationsSubject.next([newEv, ...list]);
-      })
-    );
-  }
-
-  // --- Mobilites ---
   fetchMobilites(): Observable<MobiliteDemande[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/carrieres/mobilites`).pipe(
-      map(list => list.map(item => ({
+      map(list => (list || []).map(item => ({
         id: String(item.id),
         employeeId: String(item.employeeId),
         employeeName: item.employeeName,
@@ -235,40 +403,6 @@ export class CarrieresService {
     );
   }
 
-  addMobility(mob: Omit<MobiliteDemande, 'id'>): Observable<MobiliteDemande> {
-    const payload = {
-      ...mob,
-      employeeId: Number(mob.employeeId)
-    };
-    return this.http.post<any>(`${environment.apiUrl}/carrieres/mobilites`, payload).pipe(
-      map(item => ({
-        id: String(item.id),
-        employeeId: String(item.employeeId),
-        employeeName: item.employeeName,
-        typeMobility: item.typeMobility,
-        posteCible: item.posteCible,
-        serviceCible: item.serviceCible,
-        dateDemande: item.dateDemande,
-        commentaires: item.commentaires,
-        statut: item.statut
-      })),
-      tap(newMob => {
-        const list = this.mobilitesSubject.value;
-        this.mobilitesSubject.next([newMob, ...list]);
-      })
-    );
-  }
-
-  updateMobilityStatus(id: string, statut: MobiliteDemande['statut']): Observable<void> {
-    return this.http.patch<any>(`${environment.apiUrl}/carrieres/mobilites/${id}?statut=${statut}`, {}).pipe(
-      map(() => {
-        const list = this.mobilitesSubject.value.map(m => m.id === id ? { ...m, statut } : m);
-        this.mobilitesSubject.next(list);
-      })
-    );
-  }
-
-  // Helper converters
   private toFrontendCompetence(c: any): Competence {
     return {
       id: String(c.id),
