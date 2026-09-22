@@ -1,0 +1,65 @@
+<div class="profils-overview-page">
+  <!-- En-tête -->
+  <div class="header-banner">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion de la Paie</h1>
+        <p>Calcul automatique des salaires, bulletins de paie, cotisations sociales, retenues et déclarations réglementaires.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides : Bulletins traités et Bulletins à traiter -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: rgba(0, 135, 90, 0.15); color: #00875A;">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ bulletinsTraites }}</span>
+          <span class="stat-label">Bulletins traités</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: rgba(245, 124, 0, 0.15); color: #f57c00;">
+          <mat-icon>pending_actions</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ bulletinsATraiter }}</span>
+          <span class="stat-label">Bulletins à traiter</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Sections principales -->
+  <h2 class="section-title">Espaces de Gestion de la Paie</h2>
+  <div class="sections-grid">
+    @for (s of sections; track s.title) {
+      <mat-card class="section-card" (click)="navigateTo(s.route)" matRipple>
+        <mat-card-header>
+          <div class="card-header-icon" [style.background]="s.color">
+            <mat-icon>{{ s.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ s.title }}</mat-card-title>
+          <span class="badge-chip">{{ s.badge }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ s.description }}</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary">
+            Accéder à la gestion <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+</div>

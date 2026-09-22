@@ -1,0 +1,160 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="cancel()">Congés & Absences</span>
+    <span class="sep">›</span>
+    <span class="current">Nouvelle demande</span>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <div mat-card-avatar class="header-avatar" style="background: linear-gradient(135deg, #0060B3, #0284c7); color: white; display: flex; align-items: center; justify-content: center; border-radius: 10px; width: 44px; height: 44px;">
+        <mat-icon>beach_access</mat-icon>
+      </div>
+      <mat-card-title style="font-size: 18px; font-weight: 700; color: #0060B3;">Demande de Congé / Absence</mat-card-title>
+      <mat-card-subtitle>Banque Postale du Burkina Faso — Décompte automatique et contrôle des droits</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content style="padding-top: 16px;">
+      <form [formGroup]="form">
+
+        <!-- 1. IDENTIFICATION AGENT -->
+        <p class="form-section-label">1. Agent concerné</p>
+        <div class="form-grid-2">
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Sélectionner l'agent *</mat-label>
+            <mat-select formControlName="employeeId" (selectionChange)="onEmployeeSelect($event.value)">
+              <div style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; background: #fafafa;">
+                <mat-icon style="color: #94a3b8; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+                <input matInput placeholder="Rechercher par nom, prénom ou matricule..." 
+                       formControlName="employeSearch" 
+                       (keydown)="$event.stopPropagation()"
+                       style="width: 100%; border: none; outline: none; font-size: 13px; background: transparent;">
+              </div>
+              @for (emp of filteredEmployees$ | async; track emp.id) {
+                <mat-option [value]="emp.id">
+                  {{ emp.prenom }} {{ emp.nom }} — <strong>{{ emp.matricule }}</strong>
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+        </div>
+
+        <!-- APERÇU DU SOLDE EN TEMPS RÉEL SI EMPLOYÉ SÉLECTIONNÉ -->
+        @if (selectedEmployeeSolde) {
+          <div class="solde-preview-box">
+            <div class="sp-col">
+              <span class="sp-label">Droit annuel</span>
+              <span class="sp-val">{{ selectedEmployeeSolde.droitAnnuel }} jours</span>
+            </div>
+            <div class="sp-col">
+              <span class="sp-label">Jours acquis</span>
+              <span class="sp-val" style="color: #0284c7;">{{ selectedEmployeeSolde.joursAcquis }} j</span>
+            </div>
+            <div class="sp-col">
+              <span class="sp-label">Jours déjà pris</span>
+              <span class="sp-val" style="color: #dc2626;">{{ selectedEmployeeSolde.joursPris }} j</span>
+            </div>
+            <div class="sp-col highlight">
+              <span class="sp-label">Solde actuel disponible</span>
+              <span class="sp-val bold" style="color: #059669;">{{ selectedEmployeeSolde.soldeRestant }} jours</span>
+            </div>
+          </div>
+        }
+
+        <!-- 2. TYPE & PÉRIODE DU CONGÉ -->
+        <p class="form-section-label" style="margin-top: 20px;">2. Type & Période du congé</p>
+        <div class="form-grid-2">
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Type de congé / absence *</mat-label>
+            <mat-select formControlName="typeAbsenceCongeId">
+              @for (t of typesConge; track t.id) {
+                <mat-option [value]="t.id">{{ t.name }}</mat-option>
+              }
+              @if (typesConge.length === 0) {
+                <mat-option disabled value="">Aucun type de congé configuré</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de début *</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="dateDebut" placeholder="JJ/MM/AAAA">
+            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de fin *</mat-label>
+            <input matInput [matDatepicker]="endPicker" formControlName="dateFin" placeholder="JJ/MM/AAAA">
+            <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+
+        </div>
+
+        <!-- BANDEAU CALCUL DURÉE ET SIMULATION SOLDE -->
+        @if (nbJours > 0) {
+          <div class="simulation-banner" [class.warning]="isSoldeInsuffisant">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <mat-icon [style.color]="isSoldeInsuffisant ? '#dc2626' : '#059669'">
+                {{ isSoldeInsuffisant ? 'warning' : 'check_circle' }}
+              </mat-icon>
+              <div>
+                <div style="font-size: 14px; font-weight: 700; color: #0f172a;">
+                  Durée calculée : <strong>{{ nbJours }} jour(s) ouvrable(s)</strong> (hors week-ends et jours fériés légaux)
+                </div>
+                @if (selectedEmployeeSolde) {
+                  <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                    Solde après validation : <strong>{{ soldeApresPrise }} jour(s)</strong>
+                    @if (isSoldeInsuffisant) {
+                      <span style="color: #dc2626; font-weight: 700;"> — Attention : La durée demandée dépasse le solde disponible !</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- 3. MOTIF & JUSTIFICATIF -->
+        <p class="form-section-label" style="margin-top: 20px;">3. Motif & Justificatif</p>
+        <div class="form-grid-1">
+
+          <mat-form-field appearance="outline">
+            <mat-label>Motif de la demande *</mat-label>
+            <textarea matInput formControlName="motif" rows="3"
+                      placeholder="Décrivez le motif de votre départ en congé ou absence…"></textarea>
+            <mat-error>Le motif est requis (au moins 5 caractères).</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Référence justificatif / Pièce jointe</mat-label>
+            <input matInput formControlName="justificatif"
+                   placeholder="Ex: Certificat médical N°124, Acte de mariage...">
+          </mat-form-field>
+
+        </div>
+
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions style="padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+      <button mat-stroked-button (click)="cancel()">Annuler</button>
+      <button mat-raised-button color="primary" (click)="save()"
+              [disabled]="saving || form.invalid"
+              style="background: #0060B3; color: white; font-weight: 700; padding: 0 24px; height: 42px; border-radius: 8px;">
+        @if (saving) {
+          <mat-icon class="spin-icon">sync</mat-icon>
+        } @else {
+          <mat-icon style="margin-right: 4px;">send</mat-icon>
+        }
+        <span>{{ saving ? 'Envoi en cours...' : 'Soumettre la Demande' }}</span>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

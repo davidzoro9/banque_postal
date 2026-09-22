@@ -1,0 +1,107 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <button mat-icon-button (click)="cancel()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1 class="page-title">Nouveau Contrat</h1>
+        <div class="page-subtitle">Renseignez les informations du contrat</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <form [formGroup]="form" class="form-container">
+      <mat-card class="form-card">
+        <mat-card-header>
+          <div mat-card-avatar class="card-icon">
+            <mat-icon>article</mat-icon>
+          </div>
+          <mat-card-title>Informations Générales</mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="form-grid">
+            <!-- Employé -->
+            <mat-form-field appearance="outline">
+              <mat-label>Employé concerné</mat-label>
+              <mat-select formControlName="employe">
+                <mat-option value="">— Aucun —</mat-option>
+                <div style="padding: 6px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; background: #fafafa;">
+                  <mat-icon style="color: #888; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+                  <input matInput placeholder="Rechercher un employé..." 
+                         formControlName="employeSearch" 
+                         (keydown)="$event.stopPropagation()"
+                         style="width: 100%; border: none; outline: none; font-size: 14px; background: transparent;">
+                </div>
+                @for (emp of filteredEmployees$ | async; track emp.id) {
+                  <mat-option [value]="emp.prenom + ' ' + emp.nom">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+ 
+            <!-- Service -->
+            <mat-form-field appearance="outline">
+              <mat-label>Service</mat-label>
+              <mat-select formControlName="service">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (srv of services$ | async; track srv.code) {
+                  <mat-option [value]="srv.libelle">{{ srv.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+ 
+            <!-- Type -->
+            <mat-form-field appearance="outline">
+              <mat-label>Type de Contrat</mat-label>
+              <mat-select formControlName="type">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (t of contrats$ | async; track t.code) {
+                  <mat-option [value]="t.libelle">{{ t.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+ 
+            <!-- Statut -->
+            <mat-form-field appearance="outline">
+              <mat-label>Statut</mat-label>
+              <mat-select formControlName="statut">
+                <mat-option value="">— Aucun —</mat-option>
+                @for (s of statuts; track s) {
+                  <mat-option [value]="s">{{ s }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+ 
+            <!-- Date Début -->
+            <mat-form-field appearance="outline">
+              <mat-label>Date de début</mat-label>
+              <input matInput [matDatepicker]="startPicker" formControlName="dateDebut">
+              <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+            </mat-form-field>
+ 
+            <!-- Date Fin -->
+            <mat-form-field appearance="outline">
+              <mat-label>Date de fin</mat-label>
+              <input matInput [matDatepicker]="endPicker" formControlName="dateFin">
+              <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+            </mat-form-field>
+ 
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <div class="form-actions">
+        <button mat-button type="button" (click)="cancel()">Annuler</button>
+        <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid || saving">
+          <mat-icon *ngIf="!saving">save</mat-icon>
+          <span>{{ saving ? 'Enregistrement...' : 'Enregistrer' }}</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

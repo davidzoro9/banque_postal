@@ -1,0 +1,506 @@
+<div class="precomptes-page">
+  <!-- En-tête Principal -->
+  <div class="page-header">
+    <div class="ph-left">
+      <div class="ph-icon">
+        <mat-icon>credit_score</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Précomptes & Avances</h1>
+        <p class="ph-subtitle">Suivi des prêts, avances sur salaire et retenues mensualisées prélevées sur bulletins</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-create" (click)="openAddModal()">
+        <mat-icon>add</mat-icon> Nouveau Précompte
+      </button>
+      <button mat-stroked-button class="btn-refresh" (click)="loadPrecomptes()" title="Rafraîchir les données PostgreSQL">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Flash -->
+  @if (successMessage) {
+    <div class="alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-danger">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Cartes KPI Exécutives (Vue synthétique en haut de page) -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon icon-blue">
+        <mat-icon>folder_shared</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Dossiers en cours</span>
+        <div class="kpi-value">{{ countEnCours }} <span class="kpi-sub">/ {{ filteredList.length }} total</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-indigo">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Montant Total Prêté / Avancé</span>
+        <div class="kpi-value">{{ totalEngage | number:'1.0-0' }} <span class="kpi-currency">FCFA</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-emerald">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Montant Déjà Remboursé</span>
+        <div class="kpi-value text-emerald">{{ totalRembourse | number:'1.0-0' }} <span class="kpi-currency">FCFA</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-amber">
+        <mat-icon>pending_actions</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Reste Global à Recouvrer</span>
+        <div class="kpi-value text-amber">{{ totalRestant | number:'1.0-0' }} <span class="kpi-currency">FCFA</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche & Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <div class="search-box">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" 
+                 placeholder="Rechercher un agent, matricule, élément, réf..." class="search-input">
+          @if (searchQuery) {
+            <button class="clear-btn" (click)="searchQuery=''; applyFilter()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+
+        <div class="filter-controls">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Statut</mat-label>
+            <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
+              <mat-option value="">— Tous les statuts —</mat-option>
+              <mat-option value="EN_COURS">En cours</mat-option>
+              <mat-option value="SOLDE">Soldé</mat-option>
+              <mat-option value="SUSPENDU">Suspendu</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Élément</mat-label>
+            <mat-select [(ngModel)]="elementFilter" (selectionChange)="applyFilter()">
+              <mat-option value="">— Tous les éléments —</mat-option>
+              @for (elem of elementsList; track elem.id) {
+                <mat-option [value]="elem.name">{{ elem.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <div class="pagination-info">
+            <span>{{ filteredList.length > 0 ? '1-' + filteredList.length : '0' }} / {{ precomptesList.length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bandeau d'actions groupées si sélection active -->
+      @if (selectedIds.size > 0) {
+        <div class="selection-banner">
+          <div class="sb-text">
+            <mat-icon>check_circle</mat-icon>
+            <span><strong>{{ selectedIds.size }}</strong> précompte(s) sélectionné(s)</span>
+          </div>
+          <button mat-button class="sb-btn" (click)="selectedIds.clear(); selectAll = false">
+            Désélectionner tout
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table Principale des Précomptes -->
+  <mat-card class="table-card">
+    @if (loading) {
+      <div class="loading-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Chargement des précomptes depuis PostgreSQL...</span>
+      </div>
+    } @else if (filteredList.length === 0) {
+      <div class="empty-state">
+        <mat-icon>credit_card_off</mat-icon>
+        <h3>Aucun précompte trouvé</h3>
+        <p>Cliquez sur "Nouveau Précompte" pour enregistrer un prêt ou une avance sur salaire.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="precompte-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" class="custom-checkbox">
+              </th>
+              <th>Agent</th>
+              <th style="text-align: right;">Montant Initial</th>
+              <th style="text-align: right;">Ret. Mens.</th>
+              <th style="width: 140px;">Progression</th>
+              <th style="text-align: right;">Mt. Remb.</th>
+              <th style="text-align: right;">Reste</th>
+              <th style="text-align: center; width: 110px;">Statut</th>
+              <th style="text-align: center; width: 100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of filteredList; track p.id) {
+              <tr class="table-row" [class.selected-row]="isSelected(p.id)">
+                <!-- Checkbox -->
+                <td style="text-align: center;" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="isSelected(p.id)" (change)="toggleSelect(p.id)" class="custom-checkbox">
+                </td>
+
+                <!-- Agent (Avatar + Nom cliquable + Matricule) -->
+                <td>
+                  <div class="agent-cell" (click)="openDetailModal(p)">
+                    <div class="agent-avatar">{{ (p.employeeName || 'A').charAt(0) }}</div>
+                    <div class="agent-info">
+                      <a class="agent-name" title="Afficher l'historique complet">{{ p.employeeName }}</a>
+                      <span class="agent-matricule">{{ p.matricule }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Montant Initial -->
+                <td style="text-align: right; font-weight: 600; color: var(--on-surface);">
+                  {{ p.amount | number:'1.2-2' }}
+                </td>
+
+                <!-- Retenue Mensuelle -->
+                <td style="text-align: right; color: #475569;">
+                  {{ p.retenueMensuelle | number:'1.2-2' }}
+                </td>
+
+                <!-- Barre de Progression visuelle (% remboursé) -->
+                <td>
+                  <div class="progress-col">
+                    <div class="progress-track">
+                      <div class="progress-fill" [style.width.%]="getProgress(p)"
+                           [class.fill-complete]="getProgress(p) >= 100"></div>
+                    </div>
+                    <span class="progress-label">{{ getProgress(p) }}%</span>
+                  </div>
+                </td>
+
+                <!-- Montant Remboursé -->
+                <td style="text-align: right; color: #0284c7; font-weight: 600;">
+                  {{ p.montantRembourse | number:'1.2-2' }}
+                </td>
+
+                <!-- Reste à payer -->
+                <td style="text-align: right; font-weight: 700;" [style.color]="(p.montantRestant || 0) > 0 ? '#d97706' : '#16a34a'">
+                  {{ p.montantRestant | number:'1.2-2' }}
+                </td>
+
+                <!-- Statut avec pastille lumineuse -->
+                <td style="text-align: center;">
+                  <span class="status-pill" [ngClass]="p.statut ? p.statut.toLowerCase() : 'en_cours'">
+                    <span class="dot"></span>
+                    {{ p.statut === 'EN_COURS' ? 'En cours' : (p.statut === 'SOLDE' ? 'Soldé' : p.statut) }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn view-btn" title="Voir l'historique et le détail" (click)="openDetailModal(p); $event.stopPropagation()">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn edit-btn" title="Modifier" (click)="openEditModal(p); $event.stopPropagation()">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" title="Supprimer" (click)="deletePrecompte(p); $event.stopPropagation()">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </mat-card>
+
+  <!-- MODALE MASTER : Vue Détail & Historique des Prélèvements -->
+  @if (showDetailModal && selectedPrecompte) {
+    <div class="modal-backdrop custom-modal-overlay" (click)="closeDetailModal()">
+      <div class="modal-container detail-modal" (click)="$event.stopPropagation()">
+        
+        <!-- En-tête Riche de la Modale -->
+        <div class="modal-header detail-header">
+          <div class="detail-header-left">
+            <div class="agent-avatar lg">{{ (selectedPrecompte.employeeName || 'A').charAt(0) }}</div>
+            <div class="mh-title">
+              <div class="mh-top">
+                <h2>{{ selectedPrecompte.employeeName }}</h2>
+                <span class="status-pill" [ngClass]="selectedPrecompte.statut ? selectedPrecompte.statut.toLowerCase() : 'en_cours'">
+                  <span class="dot"></span>
+                  {{ selectedPrecompte.statut === 'EN_COURS' ? 'En cours' : (selectedPrecompte.statut === 'SOLDE' ? 'Soldé' : selectedPrecompte.statut) }}
+                </span>
+              </div>
+              <span class="mh-sub">{{ selectedPrecompte.elementSalaryName }} • Matricule : <strong>{{ selectedPrecompte.matricule }}</strong></span>
+            </div>
+          </div>
+          <div class="detail-header-actions">
+            <button mat-stroked-button color="primary" class="btn-quick-edit" (click)="openEditModal(selectedPrecompte)">
+              <mat-icon>edit</mat-icon> Modifier
+            </button>
+            <button mat-icon-button class="btn-close" (click)="closeDetailModal()"><mat-icon>close</mat-icon></button>
+          </div>
+        </div>
+
+        <div class="modal-body detail-body">
+          <!-- 3 Blocs Métriques Financières (Bandeau de synthèse) -->
+          <div class="metrics-bar">
+            <div class="metric-card">
+              <span class="m-label">Montant Total Initial</span>
+              <div class="m-value">{{ selectedPrecompte.amount | number:'1.2-2' }} <span class="curr">FCFA</span></div>
+            </div>
+
+            <div class="metric-card highlight-blue">
+              <span class="m-label">Montant Déjà Remboursé</span>
+              <div class="m-value text-blue">{{ getMontantRembourseDetail() | number:'1.2-2' }} <span class="curr">FCFA</span></div>
+              <div class="m-progress">
+                <div class="m-progress-fill" [style.width.%]="getProgress(selectedPrecompte)"></div>
+              </div>
+            </div>
+
+            <div class="metric-card highlight-amber">
+              <span class="m-label">Solde Restant à Rembourser</span>
+              <div class="m-value text-amber">{{ getSoldeRestantDetail() | number:'1.2-2' }} <span class="curr">FCFA</span></div>
+            </div>
+          </div>
+
+          <!-- Grille d'Informations du Dossier -->
+          <div class="info-card">
+            <div class="info-grid">
+              <div class="info-col">
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>tag</mat-icon> N° Dossier</span>
+                  <span class="info-val font-mono">{{ selectedPrecompte.reference || '/' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>person</mat-icon> Agent débiteur</span>
+                  <span class="info-val val-link">{{ selectedPrecompte.employeeName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>category</mat-icon> Élément de retenue</span>
+                  <span class="info-val">{{ selectedPrecompte.elementSalaryName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>description</mat-icon> Motif</span>
+                  <span class="info-val">{{ selectedPrecompte.motif || '-' }}</span>
+                </div>
+              </div>
+
+              <div class="info-col">
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>calendar_today</mat-icon> Date de début</span>
+                  <span class="info-val">{{ selectedPrecompte.dateDebut ? (selectedPrecompte.dateDebut | date:'dd/MM/yyyy') : 'Dès le prochain bulletin' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>repeat</mat-icon> Échéances</span>
+                  <span class="info-val">{{ selectedPrecompte.echeance }} mois ({{ selectedPrecompte.retenueMensuelle | number:'1.2-2' }} FCFA / mois)</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>event</mat-icon> Date d'échéance</span>
+                  <span class="info-val">{{ selectedPrecompte.dateEcheance ? (selectedPrecompte.dateEcheance | date:'dd/MM/yyyy') : '-' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>verified</mat-icon> Statut dossier</span>
+                  <span class="info-val">{{ selectedPrecompte.statut }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Historique des Versements sur Bulletins -->
+          <div class="versement-section">
+            <div class="versement-tab-header">
+              <span class="tab-active">
+                <mat-icon>receipt_long</mat-icon> Historique des prélèvements sur fiches de paie
+              </span>
+            </div>
+
+            @if (loadingDetail) {
+              <div class="loading-box" style="padding: 24px;">
+                <mat-spinner diameter="28"></mat-spinner>
+                <span>Recherche de l'historique des prélèvements...</span>
+              </div>
+            } @else if (!selectedPrecompte.versements || selectedPrecompte.versements.length === 0) {
+              <div class="empty-versement">
+                <mat-icon>schedule</mat-icon>
+                <p>Aucun prélèvement n'a encore été effectué sur un bulletin généré.</p>
+                <span class="sub-text">La retenue mensuelle de {{ selectedPrecompte.retenueMensuelle | number:'1.2-2' }} FCFA s'inscrira automatiquement lors de la génération de chaque paie.</span>
+              </div>
+            } @else {
+              <div class="versement-table-wrapper">
+                <table class="versement-table">
+                  <thead>
+                    <tr>
+                      <th>Fiche de paie</th>
+                      <th>Période / Date</th>
+                      <th style="text-align: right;">Montant retenu</th>
+                      <th style="text-align: right;">Solde restant après</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (v of selectedPrecompte.versements; track $index) {
+                      <tr>
+                        <td>
+                          <div class="fiche-link">
+                            <mat-icon>description</mat-icon>
+                            <span>{{ v.fichePaie }}</span>
+                          </div>
+                        </td>
+                        <td style="color: #64748b;">
+                          {{ v.periode || (v.datePaiement | date:'MM/yyyy') }}
+                        </td>
+                        <td style="text-align: right; font-weight: 600; color: #0284c7;">
+                          {{ v.montant | number:'1.2-2' }} FCFA
+                        </td>
+                        <td style="text-align: right; font-weight: 500; color: #475569;">
+                          {{ v.soldeApres !== undefined ? (v.soldeApres | number:'1.2-2') + ' FCFA' : '-' }}
+                        </td>
+                      </tr>
+                    }
+                    <!-- Ligne Totale -->
+                    <tr class="total-row">
+                      <td colspan="2"><strong>Total des retenues effectuées</strong></td>
+                      <td style="text-align: right; font-weight: 800; color: #0284c7;">
+                        {{ getTotalVersements() | number:'1.2-2' }} FCFA
+                      </td>
+                      <td style="text-align: right; font-weight: 800;" [style.color]="getSoldeRestantDetail() > 0 ? '#d97706' : '#16a34a'">
+                        Reste : {{ getSoldeRestantDetail() | number:'1.2-2' }} FCFA
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-flat-button color="primary" class="btn-close-modal" (click)="closeDetailModal()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODALE : Création / Modification d'un Précompte -->
+  <!-- MODALE : Création / Modification d'un Précompte -->
+  @if (showDialog) {
+    <div class="modal-backdrop custom-modal-overlay">
+      <div class="modal-container form-modal">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>edit_note</mat-icon>
+            <h2>{{ editingPrecompte ? 'Modifier le Précompte' : 'Nouveau Précompte / Avance' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+
+            <!-- Bénéficiaire (Agent - Liste Déroulante) -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingPrecompte" placeholder="Sélectionner un agent...">
+                  @for (emp of employeesList; track emp.id) {
+                    <mat-option [value]="emp.id">
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Montant Total -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Montant Total *</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.amount" (ngModelChange)="onCalculationsChange()" placeholder="Ex: 500000">
+              </mat-form-field>
+            </div>
+
+            <!-- Montant Mensuel Autorisé -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Montant Mensuel Autorisé *</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.retenueMensuelle" (ngModelChange)="onCalculationsChange()" placeholder="Ex: 50000">
+              </mat-form-field>
+            </div>
+
+            <!-- Date de Début -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Date de début d'application *</mat-label>
+                <input matInput [matDatepicker]="pickerPrecompteDebut" [(ngModel)]="formModel.dateDebut" (ngModelChange)="onCalculationsChange()" placeholder="Choisir dans le calendrier">
+                <mat-datepicker-toggle matIconSuffix [for]="pickerPrecompteDebut"></mat-datepicker-toggle>
+                <mat-datepicker #pickerPrecompteDebut></mat-datepicker>
+              </mat-form-field>
+            </div>
+
+            <!-- Échéances -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Échéances</mat-label>
+                <input matInput type="number" [ngModel]="formModel.echeance" readonly>
+                <mat-icon matSuffix class="auto-calc-icon" title="Calculé automatiquement">auto_awesome</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <!-- Statut -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Statut</mat-label>
+                <mat-select [(ngModel)]="formModel.statut">
+                  <mat-option value="EN_COURS">En cours</mat-option>
+                  <mat-option value="SOLDE">Soldé</mat-option>
+                  <mat-option value="SUSPENDU">Suspendu</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" 
+                  [disabled]="!formModel.employeeId || !formModel.amount || !formModel.retenueMensuelle || isSaving" 
+                  (click)="savePrecompte()" class="btn-save">
+            <mat-icon>check</mat-icon> {{ editingPrecompte ? 'Mettre à jour' : 'Enregistrer le Précompte' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

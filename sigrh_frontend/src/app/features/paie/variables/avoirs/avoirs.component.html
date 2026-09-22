@@ -1,0 +1,431 @@
+<div class="avoirs-page">
+  <!-- En-tête de la Page -->
+  <div class="page-header">
+    <div class="ph-left">
+      <div class="ph-icon">
+        <mat-icon>history_edu</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Rappels & Avoirs</h1>
+        <p class="ph-subtitle">Suivi des rappels de salaire, gratifications et régularisations de gains sur bulletins</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-create" (click)="openAddModal()">
+        <mat-icon>add</mat-icon> Nouveau Rappel
+      </button>
+      <button mat-stroked-button class="btn-refresh" (click)="loadAvoirs()" title="Rafraîchir les données PostgreSQL">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Flash -->
+  @if (successMessage) {
+    <div class="alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-danger">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Cartes KPI Exécutives (Vue synthétique des Rappels) -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon icon-blue">
+        <mat-icon>folder_shared</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Rappels Actifs</span>
+        <div class="kpi-value">{{ countActifs }} <span class="kpi-sub">/ {{ filteredList.length }} total</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-emerald">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Montant Total</span>
+        <div class="kpi-value text-emerald">{{ totalEngage | number:'1.0-0' }} <span class="kpi-currency">FCFA</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-indigo">
+        <mat-icon>people_alt</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Bénéficiaires</span>
+        <div class="kpi-value">{{ countBeneficiaires }} <span class="kpi-sub">agents</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon icon-amber">
+        <mat-icon>query_stats</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Montant Moyen</span>
+        <div class="kpi-value text-amber">{{ montantMoyen | number:'1.0-0' }} <span class="kpi-currency">FCFA</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche & Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <div class="search-box">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" 
+                 placeholder="Rechercher un agent, matricule, élément, réf..." class="search-input">
+          @if (searchQuery) {
+            <button class="clear-btn" (click)="searchQuery=''; applyFilter()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+
+        <div class="filter-controls">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Statut</mat-label>
+            <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
+              <mat-option value="">— Tous les statuts —</mat-option>
+              <mat-option value="ACTIF">Actif</mat-option>
+              <mat-option value="SOLDE">Soldé</mat-option>
+              <mat-option value="SUSPENDU">Suspendu</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Élément de salaire</mat-label>
+            <mat-select [(ngModel)]="elementFilter" (selectionChange)="applyFilter()">
+              <mat-option value="">— Tous les éléments —</mat-option>
+              @for (elem of elementsList; track elem.id) {
+                <mat-option [value]="elem.name">{{ elem.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <div class="pagination-info">
+            <span>{{ filteredList.length > 0 ? '1-' + filteredList.length : '0' }} / {{ avoirsList.length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bandeau d'actions groupées si sélection active -->
+      @if (selectedIds.size > 0) {
+        <div class="selection-banner">
+          <div class="sb-text">
+            <mat-icon>check_circle</mat-icon>
+            <span><strong>{{ selectedIds.size }}</strong> rappel(s) sélectionné(s)</span>
+          </div>
+          <button mat-button class="sb-btn" (click)="selectedIds.clear(); selectAll = false">
+            Désélectionner tout
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table Principale des Rappels -->
+  <mat-card class="table-card">
+    @if (loading) {
+      <div class="loading-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Chargement des rappels depuis PostgreSQL...</span>
+      </div>
+    } @else if (filteredList.length === 0) {
+      <div class="empty-state">
+        <mat-icon>history_edu</mat-icon>
+        <h3>Aucun rappel trouvé</h3>
+        <p>Cliquez sur "Nouveau Rappel" pour ajouter un rappel de salaire ou une régularisation de gain.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="avoir-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" class="custom-checkbox">
+              </th>
+              <th>Agent</th>
+              <th>Élément de salaire</th>
+              <th>Date d'effet</th>
+              <th style="text-align: right;">Montant (FCFA)</th>
+              <th style="text-align: center; width: 110px;">Statut</th>
+              <th style="text-align: center; width: 100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of filteredList; track a.id) {
+              <tr class="table-row" [class.selected-row]="isSelected(a.id)">
+                <!-- Checkbox -->
+                <td style="text-align: center;" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="isSelected(a.id)" (change)="toggleSelect(a.id)" class="custom-checkbox">
+                </td>
+
+                <!-- Agent (Avatar + Nom cliquable + Matricule) -->
+                <td>
+                  <div class="agent-cell" (click)="openDetailModal(a)">
+                    <div class="agent-avatar">{{ (a.employeeName || 'A').charAt(0) }}</div>
+                    <div class="agent-info">
+                      <a class="agent-name" title="Afficher les détails du rappel">{{ a.employeeName }}</a>
+                      <span class="agent-matricule">{{ a.matricule }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Élément de salaire -->
+                <td>
+                  <span class="element-badge" (click)="openDetailModal(a)" title="Cliquer pour voir le détail">
+                    {{ a.salaryElementName }}
+                  </span>
+                </td>
+
+                <!-- Date d'effet -->
+                <td style="color: #475569; font-weight: 500;">
+                  {{ a.dateDebut ? (a.dateDebut | date:'dd/MM/yyyy') : 'Dès prochain bulletin' }}
+                </td>
+
+                <!-- Montant du Rappel -->
+                <td style="text-align: right; font-weight: 700; font-size: 14px; color: var(--on-surface);">
+                  {{ a.amount | number:'1.2-2' }}
+                </td>
+
+                <!-- Statut avec pastille lumineuse -->
+                <td style="text-align: center;">
+                  <span class="status-pill" [ngClass]="a.statut ? a.statut.toLowerCase() : 'actif'">
+                    <span class="dot"></span>
+                    {{ a.statut === 'ACTIF' ? 'Actif' : (a.statut === 'SOLDE' ? 'Soldé' : a.statut) }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn view-btn" title="Voir les détails du rappel" (click)="openDetailModal(a); $event.stopPropagation()">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn edit-btn" title="Modifier" (click)="openEditModal(a); $event.stopPropagation()">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" title="Supprimer" (click)="deleteAvoir(a); $event.stopPropagation()">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </mat-card>
+
+  <!-- MODALE MASTER : Vue Détail & Historique des Versements -->
+  @if (showDetailModal && selectedAvoir) {
+    <div class="modal-backdrop custom-modal-overlay" (click)="closeDetailModal()">
+      <div class="modal-container detail-modal" (click)="$event.stopPropagation()">
+        
+        <!-- En-tête Riche de la Modale -->
+        <div class="modal-header detail-header">
+          <div class="detail-header-left">
+            <div class="agent-avatar lg">{{ (selectedAvoir.employeeName || 'A').charAt(0) }}</div>
+            <div class="mh-title">
+              <div class="mh-top">
+                <h2>{{ selectedAvoir.employeeName }}</h2>
+                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'actif'">
+                  <span class="dot"></span>
+                  {{ selectedAvoir.statut === 'ACTIF' ? 'Actif' : (selectedAvoir.statut === 'SOLDE' ? 'Soldé' : selectedAvoir.statut) }}
+                </span>
+              </div>
+              <span class="mh-sub">{{ selectedAvoir.salaryElementName }} • Matricule : <strong>{{ selectedAvoir.matricule }}</strong></span>
+            </div>
+          </div>
+          <div class="detail-header-actions">
+            <button mat-stroked-button color="primary" class="btn-quick-edit" (click)="openEditModal(selectedAvoir)">
+              <mat-icon>edit</mat-icon> Modifier
+            </button>
+            <button mat-icon-button class="btn-close" (click)="closeDetailModal()"><mat-icon>close</mat-icon></button>
+          </div>
+        </div>
+
+        <div class="modal-body detail-body">
+          <!-- Synthèse Financière du Rappel -->
+          <div class="metrics-bar">
+            <div class="metric-card highlight-blue">
+              <span class="m-label">Montant du Rappel</span>
+              <div class="m-value text-blue">{{ selectedAvoir.amount | number:'1.2-2' }} <span class="curr">FCFA</span></div>
+            </div>
+
+            <div class="metric-card">
+              <span class="m-label">Date d'effet</span>
+              <div class="m-value" style="font-size: 16px; font-weight: 700;">
+                {{ selectedAvoir.dateDebut ? (selectedAvoir.dateDebut | date:'dd/MM/yyyy') : 'Dès prochain bulletin' }}
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <span class="m-label">Statut</span>
+              <div class="m-value">
+                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'actif'">
+                  <span class="dot"></span>
+                  {{ selectedAvoir.statut === 'ACTIF' ? 'Actif' : (selectedAvoir.statut === 'SOLDE' ? 'Soldé' : selectedAvoir.statut) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grille d'Informations du Rappel -->
+          <div class="info-card">
+            <div class="info-grid">
+              <div class="info-col">
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>tag</mat-icon> N° Dossier</span>
+                  <span class="info-val font-mono">{{ selectedAvoir.reference || '/' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>person</mat-icon> Bénéficiaire</span>
+                  <span class="info-val val-link">{{ selectedAvoir.employeeName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>badge</mat-icon> Matricule</span>
+                  <span class="info-val font-mono">{{ selectedAvoir.matricule }}</span>
+                </div>
+              </div>
+
+              <div class="info-col">
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>category</mat-icon> Élément de gain</span>
+                  <span class="info-val font-bold">{{ selectedAvoir.salaryElementName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>calendar_today</mat-icon> Date d'application</span>
+                  <span class="info-val">{{ selectedAvoir.dateDebut ? (selectedAvoir.dateDebut | date:'dd/MM/yyyy') : 'Dès le prochain bulletin' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><mat-icon>payments</mat-icon> Montant alloué</span>
+                  <span class="info-val font-bold text-blue">{{ selectedAvoir.amount | number:'1.2-2' }} FCFA</span>
+                </div>
+              </div>
+            </div>
+
+            @if (selectedAvoir.motif && selectedAvoir.motif !== '-') {
+              <div class="info-row motif-full" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border, #f1f5f9);">
+                <span class="info-label"><mat-icon>description</mat-icon> Motif / Justification :</span>
+                <span class="info-val" style="font-weight: 500;">{{ selectedAvoir.motif }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Note Explicative sur le Rappel -->
+          <div class="info-note-box">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>Traitement en Paie :</strong>
+              <p>Ce rappel de salaire ou régularisation de gain est payé en une seule fois et sera automatiquement imputé sur le prochain bulletin de paie de l'agent sans échelonnement mensuel.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-flat-button color="primary" class="btn-close-modal" (click)="closeDetailModal()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODALE : Création / Modification d'un Rappel -->
+  @if (showDialog) {
+    <div class="modal-backdrop custom-modal-overlay">
+      <div class="modal-container form-modal">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>edit_note</mat-icon>
+            <h2>{{ editingAvoir ? 'Modifier le Rappel' : 'Nouveau Rappel / Gain' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+
+            <!-- Bénéficiaire (Agent - Liste Déroulante) -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingAvoir" placeholder="Sélectionner un agent...">
+                  @for (emp of employeesList; track emp.id) {
+                    <mat-option [value]="emp.id">
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Élément de Salaire sur lequel porte le rappel -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Élément de Salaire du Rappel *</mat-label>
+                <mat-select [(ngModel)]="formModel.salaryElementId">
+                  @for (el of elementsList; track el.id) {
+                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Ex: Sur salaire de base, apparaîtra sous « Rappel Salaire de base » sur le bulletin</mat-hint>
+              </mat-form-field>
+            </div>
+
+            <!-- Montant Total -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Montant Total *</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.amount" placeholder="Ex: 75000">
+              </mat-form-field>
+            </div>
+
+            <!-- Date de début d'application -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Date de début d'application *</mat-label>
+                <input matInput [matDatepicker]="pickerAvoirDebut" [(ngModel)]="formModel.dateDebut" placeholder="Choisir dans le calendrier">
+                <mat-datepicker-toggle matIconSuffix [for]="pickerAvoirDebut"></mat-datepicker-toggle>
+                <mat-datepicker #pickerAvoirDebut></mat-datepicker>
+              </mat-form-field>
+            </div>
+
+            <!-- Statut -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Statut</mat-label>
+                <mat-select [(ngModel)]="formModel.statut">
+                  <mat-option value="ACTIF">Actif</mat-option>
+                  <mat-option value="SOLDE">Soldé</mat-option>
+                  <mat-option value="SUSPENDU">Suspendu</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" 
+                  [disabled]="!formModel.employeeId || !formModel.salaryElementId || !formModel.amount || isSaving" 
+                  (click)="saveAvoir()" class="btn-save">
+            <mat-icon>check</mat-icon> {{ editingAvoir ? 'Mettre à jour' : 'Enregistrer le Rappel' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

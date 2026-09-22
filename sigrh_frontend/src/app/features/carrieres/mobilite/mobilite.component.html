@@ -1,0 +1,143 @@
+<div class="section-page">
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Carrières & Compétences</span>
+    <span class="sep">›</span>
+    <span class="current">Mobilité interne</span>
+  </div>
+
+  <div class="header-container">
+    <div class="header-info">
+      <div class="header-icon"><mat-icon>transfer_within_a_station</mat-icon></div>
+      <div>
+        <h1>Mobilité interne & Évolutions</h1>
+        <p>Suivi des demandes de mutation géographique, promotion et reconversion de carrière</p>
+      </div>
+    </div>
+    
+    <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
+      <mat-icon>{{ showAddForm ? 'close' : 'add' }}</mat-icon>
+      {{ showAddForm ? 'Fermer' : 'Nouvelle demande' }}
+    </button>
+  </div>
+
+  <!-- Formulaire de demande -->
+  @if (showAddForm) {
+    @if (employees$ | async; as employees) {
+      <mat-card class="add-card animate-fade-in">
+        <mat-card-header>
+          <mat-card-title>Enregistrer une demande d'évolution ou de mobilité</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (!employees || employees.length === 0) {
+            <p class="warning-text">Aucun employé disponible.</p>
+          } @else {
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Collaborateur concerné *</mat-label>
+                <mat-select [(ngModel)]="newMobility.employeeId">
+                  @for (emp of employees; track emp.id) {
+                    <mat-option [value]="emp.id">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Type de mobilité *</mat-label>
+                <mat-select [(ngModel)]="newMobility.typeMobility">
+                  @for (t of typesMobility; track t) {
+                    <mat-option [value]="t">{{ t }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Poste visé/ciblé *</mat-label>
+                <input matInput [(ngModel)]="newMobility.posteCible" placeholder="Ex: Chef de projet senior">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Service/Département visé *</mat-label>
+                <input matInput [(ngModel)]="newMobility.serviceCible" placeholder="Ex: Informatique">
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Motivations, remarques et détails *</mat-label>
+              <textarea matInput [(ngModel)]="newMobility.commentaires" rows="3" placeholder="Indiquer les raisons de la demande ou les prérequis nécessaires..."></textarea>
+            </mat-form-field>
+
+            <div class="form-actions-row">
+              <button mat-button (click)="showAddForm = false">Annuler</button>
+              <button mat-flat-button color="primary" (click)="addMobility(employees)" [disabled]="!newMobility.employeeId || !newMobility.posteCible.trim() || !newMobility.serviceCible.trim() || !newMobility.commentaires.trim() || saving">
+                <mat-icon>check</mat-icon> Enregistrer la demande
+              </button>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  <!-- Liste des demandes de mobilité -->
+  <div class="mobilites-list">
+    @for (mob of mobilites$ | async; track mob.id) {
+      <mat-card class="mobility-card">
+        <mat-card-content>
+          <div class="mobility-card-header">
+            <div class="emp-profile">
+              <div class="emp-avatar">{{ getInitials(mob.employeeName) }}</div>
+              <div>
+                <h3 class="emp-name">{{ mob.employeeName }}</h3>
+                <span class="mobility-meta">Demande formulée le {{ mob.dateDemande | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+
+            <div class="header-badges">
+              <span class="type-badge">{{ mob.typeMobility }}</span>
+              <span class="status-badge" [attr.data-status]="mob.statut">
+                {{ mob.statut }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mobility-body">
+            <div class="target-info">
+              <div class="target-item">
+                <span class="target-lbl">Poste cible</span>
+                <strong class="target-val"><mat-icon>work_outline</mat-icon> {{ mob.posteCible }}</strong>
+              </div>
+              <div class="target-item">
+                <span class="target-lbl">Service cible</span>
+                <strong class="target-val"><mat-icon>business</mat-icon> {{ mob.serviceCible }}</strong>
+              </div>
+            </div>
+
+            <div class="mobility-notes">
+              <span class="notes-lbl">Commentaires & Remarques :</span>
+              <p class="notes-val">{{ mob.commentaires }}</p>
+            </div>
+
+            <!-- Boutons de décision -->
+            @if (mob.statut === 'En attente') {
+              <div class="decision-row">
+                <button mat-flat-button color="primary" (click)="changeStatus(mob.id, 'Validée')">
+                  <mat-icon>check_circle</mat-icon> Valider la demande
+                </button>
+                <button mat-stroked-button color="warn" (click)="changeStatus(mob.id, 'Refusée')">
+                  <mat-icon>cancel</mat-icon> Refuser
+                </button>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @empty {
+      <div class="empty-state">
+        <mat-icon>transfer_within_a_station</mat-icon>
+        <p>Aucune demande de mobilité interne enregistrée.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,75 @@
+<div class="section-page">
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span><span class="sep">›</span>
+    @if (employee) { <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span><span class="sep">›</span> }
+    <span class="current">Famille</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div><div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div><div class="emp-ctx-sub">{{ employee.matricule }}</div></div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">family_restroom</mat-icon>
+      <mat-card-title>Famille de l’employé</mat-card-title>
+      <mat-card-subtitle>Membres de famille et personnes à charge</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (message) { <div class="message success">{{ message }}</div> }
+      @if (error) { <div class="message error">{{ error }}</div> }
+
+      @if (employee) {
+        <div style="margin-bottom: 16px; padding: 12px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #0369a1; font-size: 14px;">
+            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">info</mat-icon>
+            <span>Situation matrimoniale de l'employé : <strong>{{ employee.situationFamiliale || employee.situationMatrimoniale || 'Célibataire' }}</strong></span>
+          </div>
+          <button mat-button color="primary" (click)="goToInfosPerso()" style="font-size: 12px;">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit</mat-icon> Modifier dans État civil
+          </button>
+        </div>
+      }
+
+      @if (!showForm) {
+        <div class="list-toolbar"><span>{{ membres.length }} membre(s)</span><button mat-raised-button color="primary" (click)="openCreate()"><mat-icon>add</mat-icon>Nouveau</button></div>
+        <div class="member-list">
+          @if (membres.length === 0) { <div class="empty-state"><mat-icon>family_restroom</mat-icon>Aucun membre de famille enregistré.</div> }
+          @for (member of membres; track member.id) {
+            <div class="member-row">
+              <div><strong>{{ member.prenom }} {{ member.nom }}</strong><span>{{ lienLabel(member.lienParente) }}</span></div>
+              <span>{{ member.dateNaissance ? (member.dateNaissance | date:'dd/MM/yyyy') : 'Date non renseignée' }}</span>
+              <span class="charge" [class.active]="member.estCharge">{{ member.estCharge ? 'À charge' : 'Non à charge' }}</span>
+              <span>{{ member.statut || '—' }}</span>
+              <div class="row-actions"><button mat-icon-button color="primary" (click)="openEdit(member)" matTooltip="Modifier"><mat-icon>edit</mat-icon></button><button mat-icon-button color="warn" (click)="deleteMember(member)" matTooltip="Supprimer"><mat-icon>delete</mat-icon></button></div>
+            </div>
+          }
+        </div>
+      } @else {
+        <form [formGroup]="form" class="member-form">
+          <h3>{{ editingMember ? 'Modifier le membre' : 'Nouveau membre' }}</h3>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline"><mat-label>Nom</mat-label><input matInput formControlName="nom">@if (form.get('nom')?.hasError('required')) { <mat-error>Le nom est obligatoire</mat-error> }</mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Prénom</mat-label><input matInput formControlName="prenom">@if (form.get('prenom')?.hasError('required')) { <mat-error>Le prénom est obligatoire</mat-error> }</mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Date de naissance</mat-label>
+              <input matInput [matDatepicker]="dateNaissancePicker" [max]="maxBirthDate" formControlName="dateNaissance" placeholder="JJ/MM/AAAA">
+              <mat-datepicker-toggle matIconSuffix [for]="dateNaissancePicker"></mat-datepicker-toggle>
+              <mat-datepicker #dateNaissancePicker></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Lien de parenté</mat-label><mat-select formControlName="lienParente">@for (lien of liens; track lien.value) { <mat-option [value]="lien.value">{{ lien.label }}</mat-option> }</mat-select>@if (form.get('lienParente')?.hasError('required')) { <mat-error>Le lien est obligatoire</mat-error> }</mat-form-field>
+            <mat-form-field appearance="outline" class="span-2"><mat-label>Statut</mat-label><input matInput formControlName="statut" placeholder="Ex : Scolarisé, Sans emploi, Actif"></mat-form-field>
+            <mat-checkbox formControlName="estCharge" color="primary" class="span-2">Cette personne est à charge</mat-checkbox>
+          </div>
+          <div class="form-actions"><button type="button" mat-button (click)="cancel()" [disabled]="saving">Annuler</button><button type="button" mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">{{ saving ? 'Enregistrement...' : 'Enregistrer' }}</button></div>
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions><div class="sec-actions"><button mat-stroked-button (click)="goBack()"><mat-icon>arrow_back</mat-icon>Retour au menu</button></div></mat-card-actions>
+  </mat-card>
+</div>

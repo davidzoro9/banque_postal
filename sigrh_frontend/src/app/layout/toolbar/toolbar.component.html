@@ -1,0 +1,122 @@
+<mat-toolbar class="app-toolbar">
+  <div class="toolbar-left">
+    <button mat-icon-button class="menu-btn" (click)="toggleDrawer()" matTooltip="Menu">
+      <mat-icon>menu</mat-icon>
+    </button>
+
+    <div class="brand" (click)="goHome()">
+      <img src="/bpbf-logo.png" class="brand-logo" alt="BPBF">
+    </div>
+
+    @if (moduleNav.activeModule$ | async; as mod) {
+      <div class="module-badge"
+           [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + '14, ' + mod.gradientTo + '24)'"
+           [style.border-color]="mod.color + '40'">
+        <div class="mod-icon"
+             [style.background]="'linear-gradient(135deg, ' + mod.gradientFrom + ', ' + mod.gradientTo + ')'">
+          <mat-icon>{{ mod.icon }}</mat-icon>
+        </div>
+        <span class="mod-name" [style.color]="mod.color">{{ mod.name }}</span>
+      </div>
+    }
+  </div>
+
+  <span class="flex-spacer"></span>
+
+  <div class="toolbar-right">
+
+    <!-- Notifications -->
+    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="action-btn" matTooltip="Notifications">
+      <mat-icon [matBadge]="notifService.unreadCount > 0 ? notifService.unreadCount : null"
+                [matBadgeHidden]="notifService.unreadCount === 0"
+                matBadgeColor="warn"
+                matBadgeSize="small">
+        notifications
+      </mat-icon>
+    </button>
+
+    <mat-menu #notifMenu="matMenu" class="notif-panel" xPosition="before">
+      <div class="notif-header" (click)="$event.stopPropagation()">
+        <span class="notif-title-hdr">Notifications</span>
+        <button mat-button color="primary" (click)="notifService.markAllAsRead()">
+          Tout lire
+        </button>
+      </div>
+      <mat-divider></mat-divider>
+      @for (n of notifService.notifications$ | async; track n.id) {
+        <button mat-menu-item class="notif-item" [class.unread]="!n.read"
+                (click)="notifService.markAsRead(n.id)">
+          <mat-icon class="notif-icon"
+            [class.warn]="n.type === 'warning'"
+            [class.success]="n.type === 'success'"
+            [class.info]="n.type === 'info'">
+            {{ n.icon }}
+          </mat-icon>
+          <div class="notif-body">
+            <span class="notif-item-title">{{ n.title }}</span>
+            <span class="notif-item-msg">{{ n.message }}</span>
+          </div>
+        </button>
+      }
+    </mat-menu>
+
+    <!-- Theme toggle -->
+    <button mat-icon-button class="action-btn theme-btn"
+            (click)="themeService.toggle()"
+            [matTooltip]="themeService.isDark ? 'Mode clair' : 'Mode sombre'">
+      <mat-icon>{{ themeService.isDark ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
+
+    <!-- Settings -->
+    <button mat-icon-button class="action-btn" matTooltip="Paramètres">
+      <mat-icon>settings</mat-icon>
+    </button>
+
+    <!-- User menu -->
+    <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
+      <div class="avatar">{{ authService.getInitials() }}</div>
+      @if (authService.currentUser$ | async; as user) {
+        <div class="user-info">
+          <span class="user-name">{{ user.prenom }} {{ user.nom }}</span>
+          <span class="user-role">{{ user.poste }}</span>
+        </div>
+      }
+      <mat-icon class="chevron">keyboard_arrow_down</mat-icon>
+    </button>
+
+    <mat-menu #userMenu="matMenu" xPosition="before">
+      <div class="user-menu-header" (click)="$event.stopPropagation()">
+        <div class="avatar avatar-lg">{{ authService.getInitials() }}</div>
+        @if (authService.currentUser$ | async; as user) {
+          <div>
+            <div class="uh-name">{{ user.prenom }} {{ user.nom }}</div>
+            <div class="uh-email">{{ user.email }}</div>
+          </div>
+        }
+      </div>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="goToMonEspace()">
+        <mat-icon style="color: #0284c7;">badge</mat-icon>
+        <span style="font-weight: 700; color: #0284c7;">Mon Espace Salarié</span>
+      </button>
+      <button mat-menu-item (click)="goToMonEspace()">
+        <mat-icon>person_outline</mat-icon>
+        Mon profil
+      </button>
+      <button mat-menu-item>
+        <mat-icon>manage_accounts</mat-icon>
+        Paramètres du compte
+      </button>
+      <button mat-menu-item>
+        <mat-icon>help_outline</mat-icon>
+        Aide & support
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logout()" class="logout-item">
+        <mat-icon>logout</mat-icon>
+        Déconnexion
+      </button>
+    </mat-menu>
+
+  </div>
+</mat-toolbar>

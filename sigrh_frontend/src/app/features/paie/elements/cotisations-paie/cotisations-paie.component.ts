@@ -1,0 +1,620 @@
+import { Component, OnInit } from '@angular/core';
+import { BaremeIutsService, BaremeIuts } from '../../services/bareme-iuts.service';
+import { RetenueService, RetenueDto } from '../../services/retenue.service';
+
+export interface CotisationItem {
+  id: number;
+  code: string;
+  nom: string;
+  typeOrganisme: string;
+  partEmploye: number;
+  partEmployeur: number;
+  assiette: string;
+  actif: boolean;
+  isEditing?: boolean;
+}
+
+export interface TrancheIuts {
+  min: number;
+  max: number | null;
+  taux: number;
+}
+
+@Component({
+  selector: 'app-cotisations-paie',
+  template: `
+    <div class="cotisations-container">
+      <!-- Header -->
+      <div class="page-header">
+        <div>
+          <h2>Paramétrage des Cotisations Sociales & Fiscalité (CNSS, CRRAE-UMOA, IUTS, TPA)</h2>
+          <p class="subtitle">Gestion des taux de cotisations salariales, patronales et régimes de retraite complémentaires du secteur bancaire.</p>
+        </div>
+        <div class="header-actions">
+          <button mat-raised-button color="primary" class="btn-add" (click)="openAddModal()">
+            <mat-icon>add</mat-icon> Nouvelle Cotisation
+          </button>
+          <button mat-raised-button color="accent" class="btn-save" (click)="sauvegarderTout()">
+            <mat-icon>save</mat-icon> Enregistrer les Taux
+          </button>
+        </div>
+      </div>
+
+      <!-- Toast Notification -->
+      <div class="alert-success" *ngIf="showSuccess">
+        <mat-icon style="margin-right: 8px;">check_circle</mat-icon>
+        {{ successMessage }}
+      </div>
+
+      <!-- Main Grid Cards -->
+      <div class="cards-grid">
+        <!-- 1. Tableau des Cotisations Sociales & Patronales -->
+        <mat-card class="config-card">
+          <div class="card-title">
+            <mat-icon style="color: #004080;">account_balance</mat-icon>
+            <h3>Taux des Organismes de Cotisation & Retraite (CNSS & CRRAE-UMOA)</h3>
+          </div>
+          
+          <table class="cotisations-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Cotisation / Organisme</th>
+                <th>Part Salariale (%)</th>
+                <th>Part Patronale (%)</th>
+                <th>Assiette de Calcul</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of cotisations">
+                <td><span class="badge-code">{{ item.code }}</span></td>
+                <td>
+                  <strong>{{ item.nom }}</strong>
+                  <div style="font-size: 11px; color: #64748b;">{{ item.typeOrganisme }}</div>
+                </td>
+                <td>
+                  <input type="number" step="0.1" [(ngModel)]="item.partEmploye" class="rate-input" [disabled]="!item.isEditing"> %
+                </td>
+                <td>
+                  <input type="number" step="0.1" [(ngModel)]="item.partEmployeur" class="rate-input" [disabled]="!item.isEditing"> %
+                </td>
+                <td>
+                  <select [(ngModel)]="item.assiette" class="select-input" [disabled]="!item.isEditing">
+                    <option value="Salaire brut imposable">Salaire brut imposable</option>
+                    <option value="Salaire de base">Salaire de base</option>
+                    <option value="Masse salariale brute">Masse salariale brute</option>
+                    <option value="Plafond CNSS">Plafond CNSS (600 000)</option>
+                  </select>
+                </td>
+                <td>
+                  <span class="status-chip" [class.active]="item.actif" (click)="toggleStatus(item)">
+                    {{ item.actif ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  <button mat-icon-button color="primary" *ngIf="!item.isEditing" (click)="item.isEditing = true" title="Modifier">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="accent" *ngIf="item.isEditing" (click)="item.isEditing = false" title="Valider">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="supprimer(item.id)" title="Supprimer">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </mat-card>
+
+        <!-- 2. Barème Progressif IUTS & Abattements -->
+        <mat-card class="config-card">
+          <div class="card-title">
+            <mat-icon style="color: #c62828;">request_quote</mat-icon>
+            <h3>Barème Progressif de l'IUTS & Abattements pour Charges Familiales</h3>
+          </div>
+
+          <p style="font-size: 13px; color: #475569; margin-bottom: 8px;">
+            L'IUTS est calculé par tranches progressives sur la <strong>Base Imposable Nette</strong> = Salaire Brut − Abattement Forfaitaire − Exonérations légales.<br>
+            La base imposable est arrondie à la <strong>centaine inférieure</strong> (TRUNC -2).
+          </p>
+          <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:12px; color:#92400e;">
+            <strong>⚖️ Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
+            • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000</strong>)<br>
+            • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000</strong>)<br>
+            • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000</strong>) — sans cumul
+          </div>
+
+          <div class="iuts-settings-row">
+            <div class="setting-item">
+              <label>Abattement Forfaitaire 20% (Art. 111 CGI) :</label>
+              <input type="number" [(ngModel)]="abattementPro" class="setting-input"> %
+            </div>
+            <div class="setting-item">
+              <label>Réduction 1 personne à charge :</label>
+              <input type="number" [(ngModel)]="reductionCharge1" class="setting-input"> %
+            </div>
+            <div class="setting-item">
+              <label>Réduction 2 personnes à charge :</label>
+              <input type="number" [(ngModel)]="reductionCharge2" class="setting-input"> %
+            </div>
+            <div class="setting-item">
+              <label>Réduction 3 personnes à charge :</label>
+              <input type="number" [(ngModel)]="reductionCharge3" class="setting-input"> %
+            </div>
+            <div class="setting-item">
+              <label>Réduction 4+ personnes à charge :</label>
+              <input type="number" [(ngModel)]="maxReductionCharge" class="setting-input"> %
+            </div>
+          </div>
+
+          <h4 style="margin-top: 20px; font-size: 14px; color: #1e293b;">Tranches de l'IUTS — Barème Officiel Burkina Faso (Circulaire MINEFID N°2020-0432)</h4>
+          <table class="iuts-table">
+            <thead>
+              <tr>
+                <th>Tranche de Base Imposable</th>
+                <th>Taux marginal (%)</th>
+                <th>Cumul Impôt sur tranche (indicatif)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of tranchesIuts; let i = index">
+                <td>
+                  <span *ngIf="t.max !== null">De {{ t.min | number }} à {{ t.max | number }}</span>
+                  <span *ngIf="t.max === null">Plus de {{ t.min | number }}</span>
+                </td>
+                <td>
+                  <input type="number" [(ngModel)]="t.taux" class="rate-input"> %
+                </td>
+                <td style="font-size:12px; color:#64748b;">
+                  <span *ngIf="i===0">0</span>
+                  <span *ngIf="i===1">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===2">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===3">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===4">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===5">max {{ (t.max! - t.min) * t.taux / 100 | number:'1.0-0' }}</span>
+                  <span *ngIf="i===6">illimité</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </mat-card>
+      </div>
+
+      <!-- Add New Cotisation Modal -->
+      <div class="modal-backdrop" *ngIf="showAddModal">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Nouveau Paramétrage de Cotisation</h3>
+            <button mat-icon-button (click)="closeAddModal()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Code Cotisation :</label>
+              <input type="text" [(ngModel)]="newCotisation.code" placeholder="Ex: CRRAE-01, MUT-01" class="modal-input">
+            </div>
+            <div class="form-group">
+              <label>Nom de la Cotisation / Organisme :</label>
+              <input type="text" [(ngModel)]="newCotisation.nom" placeholder="Ex: Retraite Complémentaire CRRAE-UMOA" class="modal-input">
+            </div>
+            <div class="form-group">
+              <label>Type d'Organisme :</label>
+              <input type="text" [(ngModel)]="newCotisation.typeOrganisme" placeholder="Ex: Caisse Régionale UMOA" class="modal-input">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Part Salariale (%) :</label>
+                <input type="number" step="0.1" [(ngModel)]="newCotisation.partEmploye" class="modal-input">
+              </div>
+              <div class="form-group">
+                <label>Part Patronale (%) :</label>
+                <input type="number" step="0.1" [(ngModel)]="newCotisation.partEmployeur" class="modal-input">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Assiette de Calcul :</label>
+              <select [(ngModel)]="newCotisation.assiette" class="modal-input">
+                <option value="Salaire brut imposable">Salaire brut imposable</option>
+                <option value="Salaire de base">Salaire de base</option>
+                <option value="Masse salariale brute">Masse salariale brute</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button mat-button (click)="closeAddModal()">Annuler</button>
+            <button mat-raised-button color="primary" (click)="ajouterCotisation()">Ajouter la Cotisation</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .cotisations-container {
+      padding: 24px;
+      max-width: 1300px;
+      margin: 0 auto;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      background: white;
+      padding: 20px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .page-header h2 {
+      margin: 0;
+      color: #004080;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .subtitle {
+      margin: 4px 0 0 0;
+      color: #64748b;
+      font-size: 13px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-add {
+      background: #2563eb !important;
+      color: white !important;
+    }
+    .btn-save {
+      background: #059669 !important;
+      color: white !important;
+    }
+    .alert-success {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .config-card {
+      border-radius: 12px !important;
+      padding: 24px !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .card-title h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .cotisations-table, .iuts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .cotisations-table th, .iuts-table th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 12px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .cotisations-table td, .iuts-table td {
+      padding: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    .badge-code {
+      background: #eff6ff;
+      color: #1d4ed8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .rate-input {
+      width: 70px;
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-weight: 700;
+      color: #0f172a;
+      text-align: right;
+    }
+    .rate-input:disabled {
+      background: #f8fafc;
+      border-color: transparent;
+    }
+    .select-input {
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .select-input:disabled {
+      background: transparent;
+      border-color: transparent;
+    }
+    .status-chip {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .status-chip.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .iuts-settings-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-item label {
+      font-size: 12px;
+      color: #475569;
+      font-weight: 600;
+    }
+    .setting-input {
+      width: 80px;
+      padding: 6px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* Modal Backdrop */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-card {
+      background: white;
+      width: 480px;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-header h3 {
+      margin: 0;
+      color: #1e293b;
+      font-size: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .modal-input {
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+    }
+  `],
+  standalone: false
+})
+export class CotisationsPaieComponent implements OnInit {
+  showSuccess = false;
+  successMessage = '';
+  showAddModal = false;
+
+  abattementPro = 20;         // 20% du salaire de base (Frais professionnels - Art. 111 CGI)
+  reductionCharge1 = 8;       // -8% IUTS pour 1 personne à charge
+  reductionCharge2 = 10;      // -10% IUTS pour 2 personnes à charge
+  reductionCharge3 = 12;      // -12% IUTS pour 3 personnes à charge
+  maxReductionCharge = 14;    // -14% IUTS pour 4+ personnes à charge (plafond)
+
+  cotisations: CotisationItem[] = [];
+  tranchesIuts: TrancheIuts[] = [];
+  loading = false;
+
+  newCotisation: Partial<CotisationItem> = {
+    code: '', nom: '', typeOrganisme: '', partEmploye: 0, partEmployeur: 0, assiette: 'Salaire brut imposable', actif: true
+  };
+
+  constructor(
+    private baremeIutsService: BaremeIutsService,
+    private retenueService: RetenueService
+  ) {}
+
+  ngOnInit(): void {
+    this.chargerDonnees();
+  }
+
+  chargerDonnees(): void {
+    this.loading = true;
+
+    // 1. Chargement des tranches IUTS depuis PostgreSQL
+    this.baremeIutsService.getAll().subscribe({
+      next: (baremes) => {
+        if (baremes && baremes.length > 0) {
+          this.tranchesIuts = baremes.map(b => ({
+            min: b.trancheMin,
+            max: b.trancheMax >= 999999999 ? null : b.trancheMax,
+            taux: b.tauxPercent
+          }));
+        } else {
+          this.tranchesIuts = [];
+        }
+      },
+      error: (err) => console.error('Erreur chargement baremes IUTS:', err)
+    });
+
+    // 2. Chargement des cotisations / retenues depuis PostgreSQL
+    this.retenueService.getAll().subscribe({
+      next: (retList) => {
+        if (retList && retList.length > 0) {
+          this.cotisations = retList.map(r => ({
+            id: r.id || 0,
+            code: r.code,
+            nom: r.libelle,
+            typeOrganisme: r.typeRetenueLibelle || 'Organisme de Sécurité Sociale',
+            partEmploye: (r.typeRetenueLibelle?.includes('Employeur') || r.typeRetenueLibelle?.includes('Patronale')) ? 0 : (r.taux || 0),
+            partEmployeur: (r.typeRetenueLibelle?.includes('Employeur') || r.typeRetenueLibelle?.includes('Patronale')) ? (r.taux || 0) : 0,
+            assiette: r.baseCalcul || 'Salaire brut imposable',
+            actif: r.actif !== false,
+            isEditing: false
+          }));
+        } else {
+          this.cotisations = [];
+        }
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement cotisations:', err);
+        this.loading = false;
+      }
+    });
+  }
+
+  toggleStatus(item: CotisationItem): void {
+    item.actif = !item.actif;
+    if (item.id) {
+      this.retenueService.update(item.id, { actif: item.actif }).subscribe({
+        next: () => this.showNotification('Statut mis à jour.'),
+        error: (err) => console.error('Erreur update statut:', err)
+      });
+    }
+  }
+
+  openAddModal(): void {
+    this.newCotisation = { code: '', nom: '', typeOrganisme: '', partEmploye: 0, partEmployeur: 0, assiette: 'Salaire brut imposable', actif: true };
+    this.showAddModal = true;
+  }
+
+  closeAddModal(): void {
+    this.showAddModal = false;
+  }
+
+  ajouterCotisation(): void {
+    if (!this.newCotisation.nom || !this.newCotisation.code) {
+      alert('Veuillez renseigner le nom et le code de la cotisation.');
+      return;
+    }
+
+    const payload: Partial<RetenueDto> = {
+      code: this.newCotisation.code.toUpperCase(),
+      libelle: this.newCotisation.nom,
+      taux: (this.newCotisation.partEmploye || 0) + (this.newCotisation.partEmployeur || 0),
+      actif: true,
+      description: this.newCotisation.typeOrganisme || 'Cotisation sociale'
+    };
+
+    this.retenueService.create(payload).subscribe({
+      next: () => {
+        this.closeAddModal();
+        this.chargerDonnees();
+        this.showNotification('Nouvelle cotisation enregistrée avec succès dans PostgreSQL !');
+      },
+      error: (err) => {
+        console.error('Erreur création cotisation:', err);
+        alert('Erreur lors de la création de la cotisation.');
+      }
+    });
+  }
+
+  supprimer(id: number): void {
+    if (confirm('Voulez-vous vraiment supprimer cette cotisation ?')) {
+      this.retenueService.delete(id).subscribe({
+        next: () => {
+          this.chargerDonnees();
+          this.showNotification('Cotisation supprimée avec succès.');
+        },
+        error: (err) => {
+          console.error('Erreur suppression cotisation:', err);
+          alert('Erreur lors de la suppression.');
+        }
+      });
+    }
+  }
+
+  sauvegarderTout(): void {
+    const editables = this.cotisations.filter(c => c.isEditing);
+    if (editables.length === 0) {
+      this.showNotification('Tous les taux sont déjà synchronisés avec PostgreSQL.');
+      return;
+    }
+
+    let completed = 0;
+    editables.forEach(c => {
+      const taux = (c.partEmploye || 0) + (c.partEmployeur || 0);
+      this.retenueService.update(c.id, { libelle: c.nom, taux: taux, actif: c.actif }).subscribe({
+        next: () => {
+          c.isEditing = false;
+          completed++;
+          if (completed === editables.length) {
+            this.chargerDonnees();
+            this.showNotification('Taux de cotisations enregistrés avec succès dans PostgreSQL !');
+          }
+        },
+        error: (err) => console.error('Erreur save cotisation:', err)
+      });
+    });
+  }
+
+  private showNotification(msg: string): void {
+    this.successMessage = msg;
+    this.showSuccess = true;
+    setTimeout(() => this.showSuccess = false, 4000);
+  }
+}
+

@@ -1,0 +1,785 @@
+<div class="organigramme-page" [class.fullscreen-mode]="isFullScreen">
+
+  <!-- =============================== -->
+  <!-- BARRE D'EN-TÊTE ET OUTILS RH   -->
+  <!-- =============================== -->
+  <div class="page-header no-print">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <mat-icon>account_tree</mat-icon>
+      </div>
+      <div>
+        <div class="header-title-row">
+          <h1 class="page-title">Organigramme Dynamique & Hiérarchique</h1>
+          <span class="badge-status-live">
+            <span class="pulse-dot"></span> PostgreSQL Direct
+          </span>
+        </div>
+        <p class="page-subtitle">Cartographie interactive BPBF — Arborescence managériale, structurelle et modification du rattachement en temps réel</p>
+      </div>
+    </div>
+
+    <!-- Actions & Outils -->
+    <div class="header-actions">
+      <!-- Recherche rapide avec dépliage automatique -->
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange()"
+          placeholder="Rechercher collaborateur, poste, direction..."
+          class="search-input"
+        />
+        @if (searchTerm) {
+          <button class="clear-btn" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <!-- Bascule d'onglets de vue -->
+      <div class="view-toggle">
+        <button
+          type="button"
+          class="toggle-btn"
+          [class.active]="activeTab === 'managerial'"
+          (click)="activeTab = 'managerial'"
+          matTooltip="Arbre Managériel (Managers & Subordonnés - Style Odoo)"
+        >
+          <mat-icon>people_outline</mat-icon>
+          <span>Vue Managériale</span>
+        </button>
+
+        <button
+          type="button"
+          class="toggle-btn"
+          [class.active]="activeTab === 'structural'"
+          (click)="activeTab = 'structural'"
+          matTooltip="Arbre Structurel (Directions, Départements, Services)"
+        >
+          <mat-icon>apartment</mat-icon>
+          <span>Vue Structurelle</span>
+        </button>
+
+        <button
+          type="button"
+          class="toggle-btn"
+          [class.active]="activeTab === 'directory'"
+          (click)="activeTab = 'directory'"
+          matTooltip="Annuaire & Affectations hiérarchiques rapides"
+        >
+          <mat-icon>table_chart</mat-icon>
+          <span>Annuaire & Affectations</span>
+        </button>
+      </div>
+
+      <!-- Contrôles de Dépliage (Vue Arbre) -->
+      @if (activeTab !== 'directory') {
+        <div class="tree-toggle-controls">
+          <button type="button" class="ctrl-btn" (click)="expandAll()" matTooltip="Tout déplier">
+            <mat-icon>unfold_more</mat-icon>
+            <span class="btn-text">Déplier</span>
+          </button>
+          <button type="button" class="ctrl-btn" (click)="collapseAll()" matTooltip="Tout replier">
+            <mat-icon>unfold_less</mat-icon>
+            <span class="btn-text">Replier</span>
+          </button>
+        </div>
+
+        <!-- Contrôles de Zoom -->
+        <div class="zoom-controls">
+          <button type="button" class="ctrl-btn" (click)="zoomOut()" matTooltip="Zoom arrière">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <span class="zoom-indicator">{{ (zoomLevel * 100).toFixed(0) }}%</span>
+          <button type="button" class="ctrl-btn" (click)="zoomIn()" matTooltip="Zoom avant">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button type="button" class="ctrl-btn" (click)="resetZoom()" matTooltip="Réinitialiser (100%)">
+            <mat-icon>restart_alt</mat-icon>
+          </button>
+        </div>
+      }
+
+      <!-- Plein écran -->
+      <button
+        type="button"
+        class="action-btn"
+        (click)="toggleFullScreen()"
+        [matTooltip]="isFullScreen ? 'Quitter le plein écran' : 'Mode Plein Écran'"
+      >
+        <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+
+      <!-- Impression -->
+      <button
+        type="button"
+        class="action-btn print-btn"
+        (click)="printChart()"
+        matTooltip="Imprimer ou Exporter en PDF"
+      >
+        <mat-icon>print</mat-icon>
+        <span>Imprimer</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- État de chargement -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Synchronisation des structures et liaisons hiérarchiques depuis PostgreSQL...</p>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- VUE 1 : HIÉRARCHIE MANAGÉRIALE (STYLE ODOO TREE)     -->
+  <!-- ==================================================== -->
+  @if (!isLoading && activeTab === 'managerial') {
+    <div class="tree-workspace">
+
+      <!-- Bandeau d'alerte collaborateurs en attente de rattachement -->
+      @if (unassignedEmployees.length > 0) {
+        <div class="unassigned-banner">
+          <div class="banner-left">
+            <mat-icon class="banner-icon">info</mat-icon>
+            <div>
+              <strong>{{ unassignedEmployees.length }} collaborateur(s) en attente de supérieur hiérarchique direct</strong>
+              <p>Ces agents ne sont pas encore reliés dans l'arbre hiérarchique. Cliquez sur un collaborateur ci-dessous pour lui désigner son responsable.</p>
+            </div>
+          </div>
+          <div class="banner-chips">
+            @for (emp of unassignedEmployees.slice(0, 8); track emp.id) {
+              <span class="unassigned-chip" (click)="openReassignModal({
+                id: '' + emp.id,
+                title: emp.nom + ' ' + emp.prenom,
+                subtitle: getEmployeeRole(emp),
+                data: emp,
+                type: 'EMPLOYEE',
+                level: 2,
+                avatarInitials: getInitials(emp.nom, emp.prenom),
+                avatarColor: '#475569',
+                isManager: false,
+                directReportsCount: 0,
+                totalSubordinatesCount: 0,
+                expanded: false,
+                children: []
+              })">
+                <mat-icon>person_add</mat-icon>
+                {{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }})
+              </span>
+            }
+            @if (unassignedEmployees.length > 8) {
+              <span class="unassigned-more" (click)="activeTab = 'directory'">
+                +{{ unassignedEmployees.length - 8 }} autres dans l'annuaire...
+              </span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Arbre de commande managérial -->
+      <div class="chart-viewport" #chartContainer>
+        <div
+          class="tree-canvas"
+          [style.transform]="'scale(' + zoomLevel + ')'"
+          [style.transform-origin]="'top center'"
+        >
+          <div class="org-tree-wrapper">
+            <ul class="tree-root-level">
+              @for (rootNode of managerialTree; track rootNode.id) {
+                <li>
+                  <ng-container *ngTemplateOutlet="managerialNodeTpl; context: { $implicit: rootNode }"></ng-container>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- VUE 2 : HIÉRARCHIE STRUCTURELLE (INSTITUTIONNELLE)   -->
+  <!-- ==================================================== -->
+  @if (!isLoading && activeTab === 'structural') {
+    <div class="tree-workspace">
+      <div class="chart-viewport">
+        <div
+          class="tree-canvas"
+          [style.transform]="'scale(' + zoomLevel + ')'"
+          [style.transform-origin]="'top center'"
+        >
+          <div class="org-tree-wrapper">
+            <ul class="tree-root-level">
+              @for (rootNode of structuralTree; track rootNode.id) {
+                <li>
+                  <ng-container *ngTemplateOutlet="structuralNodeTpl; context: { $implicit: rootNode }"></ng-container>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- VUE 3 : ANNUAIRE & AFFECTATIONS (TABLEAU RAPIDE)     -->
+  <!-- ==================================================== -->
+  @if (!isLoading && activeTab === 'directory') {
+    <div class="directory-container">
+      <div class="directory-card">
+        <div class="directory-header">
+          <div class="dir-title-box">
+            <h3>Annuaire Hiérarchique des Effectifs</h3>
+            <span class="count-badge">{{ employees.length }} collaborateurs</span>
+          </div>
+          <div class="dir-info">
+            <mat-icon>help_outline</mat-icon>
+            <span>Vous pouvez modifier directement le supérieur hiérarchique de chaque employé via le bouton d'action.</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="directory-table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Matricule</th>
+                <th>Poste & Fonction</th>
+                <th>Direction / Département</th>
+                <th>Service</th>
+                <th>Supérieur Direct (Superviseur)</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (emp of employees; track emp.id) {
+                <tr [class.highlight-row]="searchTerm && (emp.nom + ' ' + emp.prenom + ' ' + emp.matricule).toLowerCase().includes(searchTerm.toLowerCase())">
+                  <td>
+                    <div class="agent-identity">
+                      <div class="agent-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(emp), 2)">
+                        {{ getInitials(emp.nom, emp.prenom) }}
+                      </div>
+                      <div class="agent-names">
+                        <strong class="clickable-name" (click)="navigateToEmployee(emp)">{{ emp.nom }} {{ emp.prenom }}</strong>
+                        <span class="agent-email">{{ emp.email || emp.emailPro || '—' }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="matricule-badge">{{ emp.matricule }}</span></td>
+                  <td><span class="role-text">{{ getEmployeeRole(emp) }}</span></td>
+                  <td>{{ emp.direction || emp.departement || '—' }}</td>
+                  <td>{{ emp.service || '—' }}</td>
+                  <td>
+                    @if (emp.superviseurNom || emp.superviseurMatricule) {
+                      <div class="supervisor-pill">
+                        <mat-icon>person</mat-icon>
+                        <span>{{ emp.superviseurNom }} {{ emp.superviseurPrenom }}</span>
+                        @if (emp.superviseurMatricule) {
+                          <small>({{ emp.superviseurMatricule }})</small>
+                        }
+                      </div>
+                    } @else {
+                      <span class="no-supervisor-badge">Non défini</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    <button
+                      type="button"
+                      class="btn-edit-sup"
+                      (click)="openReassignModal({
+                        id: '' + emp.id,
+                        title: emp.nom + ' ' + emp.prenom,
+                        subtitle: getEmployeeRole(emp),
+                        data: emp,
+                        type: 'EMPLOYEE',
+                        level: 2,
+                        avatarInitials: getInitials(emp.nom, emp.prenom),
+                        avatarColor: '#475569',
+                        isManager: false,
+                        directReportsCount: 0,
+                        totalSubordinatesCount: 0,
+                        expanded: false,
+                        children: []
+                      })"
+                      matTooltip="Changer de supérieur hiérarchique"
+                    >
+                      <mat-icon>edit</mat-icon>
+                      <span>Rattacher</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- TEMPLATE RÉCURSIF : NŒUD MANAGÉRIAL (ODOO-STYLE)     -->
+  <!-- ==================================================== -->
+  <ng-template #managerialNodeTpl let-node>
+    <div
+      class="node-card"
+      [class.node-executive]="node.type === 'EXECUTIVE'"
+      [class.node-manager]="node.isManager"
+      [class.search-match]="node.isSearchMatch"
+      [class.selected-node]="selectedNode?.id === node.id"
+      (click)="openNodeDetails(node)"
+    >
+      <!-- En-tête de la carte -->
+      <div class="card-top-bar">
+        <span class="node-unit-badge" [class]="node.badgeClass">
+          {{ node.badgeLabel || 'BPBF' }}
+        </span>
+
+        <!-- Menu d'action rapide sur la carte (Modifier Odoo-style) -->
+        <div class="node-quick-actions" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="node-action-btn"
+            (click)="openReassignModal(node, $event)"
+            matTooltip="Modifier le supérieur ou rattachement"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="node-action-btn"
+            (click)="openAttachModal(node, $event)"
+            matTooltip="Rattacher un collaborateur sous ce responsable"
+          >
+            <mat-icon>person_add</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Corps : Avatar & Informations -->
+      <div class="card-main-body">
+        <div class="node-avatar" [style.background-color]="node.avatarColor">
+          {{ node.avatarInitials }}
+        </div>
+        <div class="node-content">
+          <h4 class="node-title" [matTooltip]="node.title">{{ node.title }}</h4>
+          <p class="node-subtitle">{{ node.subtitle }}</p>
+          @if (node.matricule) {
+            <span class="node-mat">{{ node.matricule }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- Pied de carte : Compteur et Toggle de branche -->
+      <div class="card-footer">
+        @if (node.directReportsCount > 0) {
+          <div class="subordinates-info">
+            <mat-icon>groups</mat-icon>
+            <span><strong>{{ node.directReportsCount }}</strong> direct(s) · {{ node.totalSubordinatesCount }} total</span>
+          </div>
+
+          <!-- Bouton Déplier/Replier la branche (+ / -) -->
+          <button
+            type="button"
+            class="toggle-branch-btn"
+            [class.collapsed]="!node.expanded"
+            (click)="toggleNode(node, $event)"
+            [matTooltip]="node.expanded ? 'Replier cette branche' : 'Déplier les subordonnés'"
+          >
+            <mat-icon>{{ node.expanded ? 'remove' : 'add' }}</mat-icon>
+          </button>
+        } @else {
+          <div class="leaf-agent-info">
+            <mat-icon>person</mat-icon>
+            <span>Collaborateur</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Branche des subordonnés directs (Récursive) -->
+    @if (node.children?.length > 0 && node.expanded) {
+      <ul class="tree-children-level">
+        @for (child of node.children; track child.id) {
+          <li>
+            <ng-container *ngTemplateOutlet="managerialNodeTpl; context: { $implicit: child }"></ng-container>
+          </li>
+        }
+      </ul>
+    }
+  </ng-template>
+
+  <!-- ==================================================== -->
+  <!-- TEMPLATE RÉCURSIF : NŒUD STRUCTUREL (INSTITUTIONNEL) -->
+  <!-- ==================================================== -->
+  <ng-template #structuralNodeTpl let-node>
+    <div
+      class="node-card structural-card"
+      [class.structural-root]="node.level === 0"
+      [class.structural-dir]="node.type === 'DIRECTION'"
+      [class.structural-srv]="node.type === 'SERVICE'"
+      [class.search-match]="node.isSearchMatch"
+      [class.selected-node]="selectedNode?.id === node.id"
+      (click)="openNodeDetails(node)"
+    >
+      <div class="card-top-bar">
+        <span class="node-unit-badge" [class]="node.badgeClass">
+          {{ node.badgeLabel }}
+        </span>
+      </div>
+
+      <div class="card-main-body">
+        <div class="node-avatar struct-avatar" [style.background-color]="node.avatarColor">
+          {{ node.avatarInitials }}
+        </div>
+        <div class="node-content">
+          <h4 class="node-title">{{ node.title }}</h4>
+          <p class="node-subtitle">{{ node.subtitle }}</p>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        @if (node.children?.length > 0) {
+          <div class="subordinates-info">
+            <mat-icon>account_balance</mat-icon>
+            <span><strong>{{ node.children.length }}</strong> sous-unité(s)</span>
+          </div>
+
+          <button
+            type="button"
+            class="toggle-branch-btn"
+            [class.collapsed]="!node.expanded"
+            (click)="toggleNode(node, $event)"
+          >
+            <mat-icon>{{ node.expanded ? 'remove' : 'add' }}</mat-icon>
+          </button>
+        } @else {
+          <div class="leaf-agent-info">
+            <mat-icon>business</mat-icon>
+            <span>Unité finale</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (node.children?.length > 0 && node.expanded) {
+      <ul class="tree-children-level">
+        @for (child of node.children; track child.id) {
+          <li>
+            <ng-container *ngTemplateOutlet="structuralNodeTpl; context: { $implicit: child }"></ng-container>
+          </li>
+        }
+      </ul>
+    }
+  </ng-template>
+
+  <!-- ==================================================== -->
+  <!-- VOLET LATÉRAL DE DÉTAILS (DRAWER)                    -->
+  <!-- ==================================================== -->
+  @if (selectedNode) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="details-drawer">
+      <div class="drawer-header">
+        <div class="drawer-header-left">
+          <div class="drawer-avatar" [style.background-color]="selectedNode.avatarColor">
+            {{ selectedNode.avatarInitials }}
+          </div>
+          <div>
+            <h3 class="drawer-name">{{ selectedNode.title }}</h3>
+            <p class="drawer-role">{{ selectedNode.subtitle }}</p>
+          </div>
+        </div>
+        <button type="button" class="drawer-close-btn" (click)="closeDrawer()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Informations clés -->
+        <div class="drawer-section">
+          <h5 class="section-title">Informations de rattachement</h5>
+          <div class="detail-row">
+            <span class="detail-label">Unité / Direction :</span>
+            <span class="detail-value">{{ selectedNode.unit || '—' }}</span>
+          </div>
+          @if (selectedNode.matricule) {
+            <div class="detail-row">
+              <span class="detail-label">Matricule :</span>
+              <span class="detail-value font-mono">{{ selectedNode.matricule }}</span>
+            </div>
+          }
+          @if (selectedNode.parentName) {
+            <div class="detail-row">
+              <span class="detail-label">Supérieur direct :</span>
+              <span class="detail-value highlight-sup">{{ selectedNode.parentName }}</span>
+            </div>
+          }
+          @if (selectedNode.email) {
+            <div class="detail-row">
+              <span class="detail-label">Email :</span>
+              <span class="detail-value">{{ selectedNode.email }}</span>
+            </div>
+          }
+          @if (selectedNode.telephone) {
+            <div class="detail-row">
+              <span class="detail-label">Téléphone :</span>
+              <span class="detail-value">{{ selectedNode.telephone }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Actions rapides de modification Odoo-style -->
+        @if (selectedNode.type === 'EMPLOYEE' || selectedNode.type === 'EXECUTIVE') {
+          <div class="drawer-actions-box">
+            <button
+              type="button"
+              class="btn-drawer-action primary"
+              (click)="openReassignModal(selectedNode)"
+            >
+              <mat-icon>edit</mat-icon>
+              <span>Changer de supérieur / affectation</span>
+            </button>
+            <button
+              type="button"
+              class="btn-drawer-action secondary"
+              (click)="openAttachModal(selectedNode)"
+            >
+              <mat-icon>person_add</mat-icon>
+              <span>Rattacher un subordonné</span>
+            </button>
+            @if (selectedNode.data) {
+              <button
+                type="button"
+                class="btn-drawer-action outline"
+                (click)="navigateToEmployee(selectedNode.data)"
+              >
+                <mat-icon>badge</mat-icon>
+                <span>Voir le dossier RH complet</span>
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Liste des subordonnés directs ou membres de l'unité -->
+        <div class="drawer-section">
+          <div class="sub-header-row">
+            <h5 class="section-title">
+              @if (selectedNode.type === 'EMPLOYEE' || selectedNode.type === 'EXECUTIVE') {
+                Collaborateurs directs ({{ selectedNodeEmployees.length }})
+              } @else {
+                Agents affectés à cette unité ({{ selectedNodeEmployees.length }})
+              }
+            </h5>
+          </div>
+
+          @if (selectedNodeEmployees.length === 0) {
+            <p class="empty-subs">Aucun collaborateur direct rattaché pour le moment.</p>
+          } @else {
+            <div class="subordinates-list">
+              @for (sub of selectedNodeEmployees; track sub.id) {
+                <div class="sub-item" (click)="navigateToEmployee(sub)">
+                  <div class="sub-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(sub), 2)">
+                    {{ getInitials(sub.nom, sub.prenom) }}
+                  </div>
+                  <div class="sub-info">
+                    <span class="sub-name">{{ sub.nom }} {{ sub.prenom }}</span>
+                    <span class="sub-role">{{ getEmployeeRole(sub) }}</span>
+                    <span class="sub-mat">{{ sub.matricule }}</span>
+                  </div>
+                  <mat-icon class="sub-arrow">chevron_right</mat-icon>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- MODAL 1 : CHANGER DE SUPÉRIEUR / RATTACHEMENT        -->
+  <!-- ==================================================== -->
+  @if (isReassignModalOpen && reassignTarget) {
+    <div class="modal-backdrop" (click)="closeReassignModal()">
+      <div class="reassign-dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <div class="dialog-icon-badge">
+              <mat-icon>supervisor_account</mat-icon>
+            </div>
+            <div>
+              <h3 class="dialog-title">Modifier le Rattachement Hiérarchique</h3>
+              <p class="dialog-subtitle">Sélectionnez le nouveau supérieur direct et les structures de rattachement</p>
+            </div>
+          </div>
+          <button type="button" class="close-dialog-btn" (click)="closeReassignModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="dialog-body">
+          <!-- Carte récapitulative de l'employé -->
+          <div class="target-emp-summary">
+            <div class="target-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(reassignTarget), 2)">
+              {{ getInitials(reassignTarget.nom, reassignTarget.prenom) }}
+            </div>
+            <div class="target-details">
+              <strong>{{ reassignTarget.nom }} {{ reassignTarget.prenom }}</strong>
+              <span class="target-role">{{ getEmployeeRole(reassignTarget) }} · {{ reassignTarget.matricule }}</span>
+              <span class="target-current-sup">
+                Supérieur actuel :
+                <em>
+                  @if (reassignTarget.superviseurNom) {
+                    {{ reassignTarget.superviseurNom }} {{ reassignTarget.superviseurPrenom }}
+                  } @else {
+                    Non défini (Direction Générale)
+                  }
+                </em>
+              </span>
+            </div>
+          </div>
+
+          @if (reassignSuccessMsg) {
+            <div class="success-alert">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ reassignSuccessMsg }}</span>
+            </div>
+          }
+
+          <!-- Formulaire de sélection -->
+          <div class="form-group">
+            <label class="form-label">Nouveau Supérieur Hiérarchique Direct :</label>
+            <div class="sup-search-filter">
+              <mat-icon>search</mat-icon>
+              <input
+                type="text"
+                [(ngModel)]="supervisorSearchQuery"
+                placeholder="Filtrer les responsables par nom, poste, matricule..."
+                class="filter-input"
+              />
+            </div>
+
+            <select [(ngModel)]="reassignSupervisorId" class="form-select-full">
+              <option [ngValue]="null">— Aucun supérieur direct (Rattachement Direction Générale) —</option>
+              @for (sup of getEligibleSupervisors(); track sup.id) {
+                <option [value]="sup.id">
+                  {{ sup.nom }} {{ sup.prenom }} — {{ getEmployeeRole(sup) }} ({{ sup.matricule }})
+                </option>
+              }
+            </select>
+            <span class="field-hint">Les subordonnés de cet employé sont automatiquement exclus pour éviter les boucles cycliques.</span>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Direction de rattachement :</label>
+              <select [(ngModel)]="reassignDirectionId" class="form-select">
+                <option [ngValue]="null">— Conserver la direction actuelle —</option>
+                @for (dir of directions; track dir.id) {
+                  <option [value]="dir.id">{{ dir.libelle || dir.name }} ({{ dir.code }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Service de rattachement :</label>
+              <select [(ngModel)]="reassignServiceId" class="form-select">
+                <option [ngValue]="null">— Conserver le service actuel —</option>
+                @for (srv of services; track srv.id) {
+                  <option [value]="srv.id">{{ srv.libelle || srv.name }} ({{ srv.code }})</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn-cancel" (click)="closeReassignModal()" [disabled]="isSavingReassign">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-save"
+            (click)="saveReassignment()"
+            [disabled]="isSavingReassign"
+          >
+            @if (isSavingReassign) {
+              <span class="mini-spinner"></span>
+              <span>Enregistrement...</span>
+            } @else {
+              <mat-icon>check</mat-icon>
+              <span>Enregistrer le rattachement</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- MODAL 2 : RATTACHER UN COLLABORATEUR SOUS UN MANAGER -->
+  <!-- ==================================================== -->
+  @if (isAttachModalOpen && attachTargetManager) {
+    <div class="modal-backdrop" (click)="closeAttachModal()">
+      <div class="reassign-dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <div class="dialog-icon-badge">
+              <mat-icon>person_add</mat-icon>
+            </div>
+            <div>
+              <h3 class="dialog-title">Rattacher un Collaborateur</h3>
+              <p class="dialog-subtitle">Affecter un agent sous la responsabilité de <strong>{{ attachTargetManager.nom }} {{ attachTargetManager.prenom }}</strong></p>
+            </div>
+          </div>
+          <button type="button" class="close-dialog-btn" (click)="closeAttachModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="dialog-body">
+          <div class="form-group">
+            <label class="form-label">Sélectionnez le collaborateur à placer sous ce responsable :</label>
+            <select [(ngModel)]="attachEmployeeId" class="form-select-full">
+              <option [ngValue]="null">— Choisissez un employé dans la liste —</option>
+              @for (emp of employees; track emp.id) {
+                @if (emp.id !== attachTargetManager.id) {
+                  <option [value]="emp.id">
+                    {{ emp.nom }} {{ emp.prenom }} — {{ getEmployeeRole(emp) }} ({{ emp.matricule }})
+                    @if (!emp.superviseurId) {
+                      [Sans supérieur]
+                    }
+                  </option>
+                }
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn-cancel" (click)="closeAttachModal()" [disabled]="isSavingAttach">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-save"
+            (click)="saveAttachment()"
+            [disabled]="!attachEmployeeId || isSavingAttach"
+          >
+            @if (isSavingAttach) {
+              <span class="mini-spinner"></span>
+              <span>Rattachement en cours...</span>
+            } @else {
+              <mat-icon>link</mat-icon>
+              <span>Valider le rattachement</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

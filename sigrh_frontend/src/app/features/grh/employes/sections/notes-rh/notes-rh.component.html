@@ -1,0 +1,148 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Notes RH</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">note_alt</mat-icon>
+      <mat-card-title>Notes RH</mat-card-title>
+      <mat-card-subtitle>Observations, évaluations et historique des actions</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">Observations générales</p>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Observations</mat-label>
+            <textarea matInput formControlName="observations" rows="4"
+                      placeholder="Remarques, points d'attention, informations importantes…"></textarea>
+          </mat-form-field>
+
+          <p class="form-section-label">Évaluations</p>
+          <div class="array-block">
+            <div class="array-block-header">
+              <span>{{ evaluations.length }} évaluation(s)</span>
+              @if (isEditing) {
+                <button mat-stroked-button type="button" (click)="addEvaluation()">
+                  <mat-icon>add</mat-icon> Ajouter une évaluation
+                </button>
+              }
+            </div>
+            <div formArrayName="evaluations">
+              @if (evaluations.length === 0) {
+                <p class="arr-empty">Aucune évaluation enregistrée</p>
+              }
+              @for (ev of evaluations.controls; track $index) {
+                <div [formGroupName]="$index" class="eval-row">
+                  <div class="form-grid-2">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Date</mat-label>
+                      <input matInput [matDatepicker]="evalPicker" formControlName="date">
+                      <mat-datepicker-toggle matIconSuffix [for]="evalPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #evalPicker></mat-datepicker>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Période</mat-label>
+                      <input matInput formControlName="periode" placeholder="Ex: 1er semestre 2024">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Note (/ 20)</mat-label>
+                      <input matInput formControlName="note" type="number" min="0" max="20">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Évaluateur</mat-label>
+                      <input matInput formControlName="evaluateur" placeholder="Nom du responsable">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="span-2">
+                      <mat-label>Commentaire</mat-label>
+                      <textarea matInput formControlName="commentaire" rows="2"></textarea>
+                    </mat-form-field>
+                  </div>
+                  @if (isEditing) {
+                    <div style="display:flex;justify-content:flex-end;margin-top:4px">
+                      <button mat-stroked-button color="warn" type="button" (click)="removeEvaluation($index)">
+                        <mat-icon>delete_outline</mat-icon> Supprimer
+                      </button>
+                    </div>
+                  }
+                  @if ($index < evaluations.length - 1) {
+                    <mat-divider style="margin:12px 0"></mat-divider>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (employee.historiqueActions.length > 0) {
+            <p class="form-section-label">Historique des actions</p>
+            <div class="historique-list">
+              @for (action of employee.historiqueActions; track action.date) {
+                <div class="historique-item">
+                  <mat-icon class="hist-icon">history</mat-icon>
+                  <div class="hist-body">
+                    <span class="hist-type">{{ action.type }}</span>
+                    <span class="hist-desc">{{ action.description }}</span>
+                    <span class="hist-meta">{{ action.date }} · {{ action.auteur }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
+        <div class="sec-right">
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
+

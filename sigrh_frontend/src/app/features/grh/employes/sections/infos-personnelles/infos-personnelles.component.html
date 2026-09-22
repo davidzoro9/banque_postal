@@ -1,0 +1,207 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Informations personnelles</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">person</mat-icon>
+      <mat-card-title>Informations personnelles</mat-card-title>
+      <mat-card-subtitle>État civil et coordonnées</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <form [formGroup]="form">
+
+          <p class="form-section-label">État civil</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom</mat-label>
+              <input matInput formControlName="nom">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Prénom</mat-label>
+              <input matInput formControlName="prenom">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nom de jeune fille</mat-label>
+              <input matInput formControlName="nomJeuneFille" placeholder="Optionnel">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Sexe</mat-label>
+              <mat-select formControlName="sexe">
+                @for (s of sexes; track s.value) {
+                  <mat-option [value]="s.value">{{ s.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Situation familiale</mat-label>
+              <mat-select formControlName="situationFamiliale">
+                @for (sit of situationsFamiliales; track sit.value) {
+                  <mat-option [value]="sit.value">{{ sit.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date de naissance</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="dateNaissance">
+              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Lieu de naissance</mat-label>
+              <input matInput formControlName="lieuNaissance" placeholder="Ex: Ouagadougou">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nationalité</mat-label>
+              <input matInput formControlName="nationalite" placeholder="Ex: Burkinabè">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Pièce d'identité</mat-label>
+              <input matInput formControlName="numeroCNI" placeholder="N° CNI ou Passeport">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Éducation</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Dernier diplôme</mat-label>
+              <input matInput formControlName="dernierDiplome" placeholder="Ex: Master / Licence">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Diplôme de recrutement</mat-label>
+              <input matInput formControlName="diplomeRecrutement" placeholder="Ex: Baccalauréat / BEPC">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Branche d'étude</mat-label>
+              <input matInput formControlName="brancheEtude" placeholder="Ex: Informatique, Gestion, Droit">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ecole / Université</mat-label>
+              <input matInput formControlName="ecoleUniversite" placeholder="Ex: Université Joseph Ki-Zerbo">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Coordonnées</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Adresse</mat-label>
+              <input matInput formControlName="adresse">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ville de résidence</mat-label>
+              <input matInput formControlName="ville" placeholder="Ex: Ouagadougou">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Code postal</mat-label>
+              <input matInput formControlName="codePostal">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Pays</mat-label>
+              <input matInput formControlName="pays">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Téléphone</mat-label>
+              <input matInput formControlName="telephone" placeholder="+226 70 00 00 00">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Email professionnel</mat-label>
+              <input matInput formControlName="email" type="email">
+            </mat-form-field>
+          </div>
+
+          <p class="form-section-label">Contact d'urgence</p>
+          <div class="form-grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Nom & Prénom du contact</mat-label>
+              <input matInput formControlName="contactUrgenceNom" placeholder="Ex: Sawadogo Jean">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Téléphone du contact</mat-label>
+              <input matInput formControlName="contactUrgenceTelephone" placeholder="+226 70 00 00 00">
+            </mat-form-field>
+          </div>
+
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      @if (saved) {
+        <div style="margin-bottom: 12px; padding: 10px 14px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+          Modifications enregistrées.
+        </div>
+      }
+      @if (saveError) {
+        <div style="margin-bottom: 12px; padding: 10px 14px; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+          {{ saveError }}
+        </div>
+      }
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
+        <div class="sec-right">
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
+

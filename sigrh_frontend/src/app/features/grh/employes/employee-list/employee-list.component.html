@@ -1,0 +1,194 @@
+<div class="emp-list-page">
+
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>badge</mat-icon></div>
+      <div>
+        <h1>Gestion des Employés</h1>
+        <p>{{ totalEmployes }} agent(s) enregistré(s)</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-export" matTooltip="Exporter la liste">
+        <mat-icon>download</mat-icon> Exporter
+      </button>
+      <button mat-raised-button class="btn-import" matTooltip="Importer des employés">
+        <mat-icon>upload</mat-icon> Importer
+      </button>
+      <button mat-raised-button class="btn-new" (click)="newEmployee()">
+        <mat-icon>person_add</mat-icon> Nouvel employé
+      </button>
+    </div>
+  </div>
+
+
+
+  <!-- Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilters()"
+                 placeholder="Nom, matricule, poste, service...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilters()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="selectedStatut" (ngModelChange)="applyFilters()">
+            <mat-option value="">Tous les statuts</mat-option>
+            @for (s of statuts.slice(1); track s) {
+              <mat-option [value]="s">{{ s }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Service</mat-label>
+          <mat-select [(ngModel)]="selectedService" (ngModelChange)="applyFilters()">
+            <mat-option value="">Tous les services</mat-option>
+            @for (s of services; track s) {
+              <mat-option [value]="s">{{ s }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (searchQuery || selectedStatut || selectedService) {
+          <button mat-stroked-button (click)="clearFilters()" class="clear-btn">
+            <mat-icon>filter_alt_off</mat-icon> Effacer
+          </button>
+        }
+      </div>
+      <span class="result-count">{{ dataSource.data.length }} résultat(s)</span>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" matSort class="emp-table">
+
+          <!-- Colonne matricule -->
+          <ng-container matColumnDef="matricule">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Matricule</th>
+            <td mat-cell *matCellDef="let emp">
+              <span class="matricule">{{ emp.matricule }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne nom -->
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom & Prénom</th>
+            <td mat-cell *matCellDef="let emp">
+              <div class="name-cell">
+                <span class="full-name">{{ emp.nom }} {{ emp.prenom }}</span>
+                <span class="emp-email">{{ emp.email }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Colonne grade (ex: C1E01) -->
+          <ng-container matColumnDef="grade">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Grade</th>
+            <td mat-cell *matCellDef="let emp">
+              <span class="grade-badge" style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-size: 12px; letter-spacing: 0.5px; white-space: nowrap;">
+                {{ getGradeConcat(emp) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne emploi (poste) -->
+          <ng-container matColumnDef="poste">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Emploi</th>
+            <td mat-cell *matCellDef="let emp">{{ emp.poste || '—' }}</td>
+          </ng-container>
+
+          <!-- Colonne fonction -->
+          <ng-container matColumnDef="fonction">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fonction</th>
+            <td mat-cell *matCellDef="let emp">{{ emp.fonction || '—' }}</td>
+          </ng-container>
+
+          <!-- Colonne service -->
+          <ng-container matColumnDef="service">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Service</th>
+            <td mat-cell *matCellDef="let emp">
+              <span class="service-chip">{{ emp.service || '—' }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne date de prise de fonction -->
+          <ng-container matColumnDef="dateEmbauche">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Prise de fonction</th>
+            <td mat-cell *matCellDef="let emp">{{ emp.dateEmbauche | date:'dd/MM/yyyy' }}</td>
+          </ng-container>
+
+          <!-- Colonne date de retraite calculée -->
+          <ng-container matColumnDef="dateRetraite">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Date de retraite</th>
+            <td mat-cell *matCellDef="let emp">
+              <span style="font-weight: 600; color: #0060B3;">
+                {{ getDateRetraite(emp).dateStr }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne statut (déplacée à la fin) -->
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+            <td mat-cell *matCellDef="let emp">
+              <span class="statut-badge"
+                    [style.background]="getStatutStyle(emp.statut).background"
+                    [style.color]="getStatutStyle(emp.statut).color">
+                {{ emp.statut }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Colonne actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let emp">
+              <div class="actions-cell">
+                <button mat-icon-button color="primary" (click)="viewEmployee(emp.id)"
+                        matTooltip="Voir la fiche">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button (click)="editEmployee(emp.id)"
+                        matTooltip="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteEmployee(emp.id, $event)"
+                        matTooltip="Supprimer">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let emp; columns: displayedColumns"
+              class="emp-row" (click)="viewEmployee(emp.id)"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td [attr.colspan]="displayedColumns.length" class="no-data">
+              <mat-icon>search_off</mat-icon>
+              <span>Aucun employé trouvé</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <mat-paginator [pageSizeOptions]="[10, 25, 50]" pageSize="10" showFirstLastButtons></mat-paginator>
+    </mat-card-content>
+  </mat-card>
+
+</div>
+

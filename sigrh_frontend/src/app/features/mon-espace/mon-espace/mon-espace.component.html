@@ -1,0 +1,429 @@
+<!-- Portail Employé - Mon Espace Paie BPBF -->
+<div style="min-height: 100vh; background: var(--app-bg); padding: 0;">
+
+  <!-- Barre de navigation employé -->
+  <nav style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-nav);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 38px; height: 38px; background: #0060B3; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0, 96, 179, 0.3);">
+        <mat-icon style="color: white; font-size: 22px; width: 22px; height: 22px;">account_balance</mat-icon>
+      </div>
+      <div>
+        <span style="color: var(--on-surface); font-weight: 800; font-size: 16px; letter-spacing: 0.3px;">BPBF — Mon Espace Collaborateur</span>
+        <div style="font-size: 11px; color: var(--on-surface-3); font-weight: 600;">Portail Personnel des Salaires & Absences</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="color: var(--on-surface); font-size: 13px; text-align: right;">
+        <div style="font-weight: 700;">{{ currentUser?.prenom }} {{ currentUser?.nom }}</div>
+        <div style="font-size: 11px; color: var(--on-surface-3);">{{ currentAgent?.matricule || currentUser?.matricule || currentUser?.username || currentUser?.email }}</div>
+      </div>
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(0, 96, 179, 0.12); border: 1.5px solid #0060B3; display: flex; align-items: center; justify-content: center; color: #0060B3; font-weight: 800; font-size: 14px;">
+        {{ (currentUser?.prenom?.charAt(0) || '') + (currentUser?.nom?.charAt(0) || '') }}
+      </div>
+      <button mat-icon-button style="color: var(--on-surface);" title="Se déconnecter" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Contenu principal -->
+  <div style="max-width: 960px; margin: 0 auto; padding: 28px 20px;">
+
+    <!-- Carte de bienvenue avec profil agent -->
+    <div style="background: linear-gradient(135deg, #0060B3 0%, #0284c7 100%); border-radius: 16px; padding: 22px 26px; margin-bottom: 22px; color: white; box-shadow: 0 8px 24px rgba(0, 96, 179, 0.25);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800;">
+              👋 Bonjour, {{ currentUser?.prenom }} !
+            </h1>
+            <span style="background: rgba(255,255,255,0.22); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+              {{ currentAgent?.matricule || currentUser?.matricule || currentUser?.username || 'AGENT' }}
+            </span>
+          </div>
+          <p style="margin: 0; opacity: 0.9; font-size: 13.5px;">
+            Consultez et téléchargez vos bulletins de paie officiels BPBF et suivez vos congés.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button mat-raised-button
+            style="background: rgba(255,255,255,0.2); color: white; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(8px);"
+            (click)="showChangerMdp = !showChangerMdp">
+            <mat-icon style="margin-right: 6px;">lock</mat-icon>
+            Changer mon mot de passe
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire changement de mot de passe -->
+    @if (showChangerMdp) {
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 22px; box-shadow: var(--shadow-card);">
+        <h3 style="margin: 0 0 14px; color: #0060B3; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+          <mat-icon>lock</mat-icon> Modifier mon mot de passe
+        </h3>
+        @if (mdpSuccess) {
+          <div style="background: #dcfce7; color: #166534; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; font-size: 13px;">{{ mdpSuccess }}</div>
+        }
+        @if (mdpError) {
+          <div style="background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; font-size: 13px;">{{ mdpError }}</div>
+        }
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: var(--on-surface-2); display: block; margin-bottom: 4px;">Nouveau mot de passe</label>
+            <input type="password" [(ngModel)]="newPassword" placeholder="Nouveau mot de passe"
+              style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); background: var(--surface-variant); color: var(--on-surface); border-radius: 8px; font-size: 13px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: var(--on-surface-2); display: block; margin-bottom: 4px;">Confirmer le mot de passe</label>
+            <input type="password" [(ngModel)]="confirmPassword" placeholder="Confirmer"
+              style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); background: var(--surface-variant); color: var(--on-surface); border-radius: 8px; font-size: 13px; box-sizing: border-box;" />
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button mat-button (click)="showChangerMdp = false">Annuler</button>
+          <button mat-raised-button color="primary" style="background: #0060B3; font-weight: 700;" (click)="changerMotDePasse()">
+            <mat-icon style="margin-right: 6px;">save</mat-icon> Enregistrer
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Widget Mes Congés & Absences -->
+    <div style="background: var(--surface); border-radius: 14px; padding: 18px 22px; margin-bottom: 22px; box-shadow: var(--shadow-card); border: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <span style="font-weight: 700; color: var(--on-surface); font-size: 15px; display: flex; align-items: center; gap: 8px;">
+          <mat-icon style="color: #0284c7;">beach_access</mat-icon> Mon Solde de Congés & Absences
+        </span>
+        <a mat-raised-button routerLink="/grh/conges/nouveau"
+           style="background: #0060B3; color: white; font-weight: 700; border-radius: 8px; font-size: 12.5px;">
+          <mat-icon style="margin-right: 4px; font-size: 18px; width: 18px; height: 18px;">add_circle</mat-icon> Demander un congé
+        </a>
+      </div>
+
+      <!-- KPI Solde -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px;">
+        <div style="background: var(--surface-variant); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;">
+          <div style="font-size: 11px; color: var(--on-surface-3); font-weight: 700; text-transform: uppercase;">DROIT ANNUEL</div>
+          <div style="font-size: 18px; font-weight: 800; color: var(--on-surface); margin-top: 2px;">{{ monSoldeConge?.droitAnnuel || 30 }} jours</div>
+        </div>
+
+        <div style="background: var(--surface-variant); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;">
+          <div style="font-size: 11px; color: #0284c7; font-weight: 700; text-transform: uppercase;">JOURS ACQUIS</div>
+          <div style="font-size: 18px; font-weight: 800; color: #0284c7; margin-top: 2px;">{{ (monSoldeConge?.joursAcquis || 0) | number:'1.0-1' }} j</div>
+        </div>
+
+        <div style="background: var(--surface-variant); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;">
+          <div style="font-size: 11px; color: #dc2626; font-weight: 700; text-transform: uppercase;">JOURS PRIS</div>
+          <div style="font-size: 18px; font-weight: 800; color: #dc2626; margin-top: 2px;">{{ monSoldeConge?.joursPris || 0 }} j</div>
+        </div>
+
+        <div style="background: rgba(22, 163, 74, 0.08); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: 10px; padding: 12px 16px;">
+          <div style="font-size: 11px; color: #15803d; font-weight: 800; text-transform: uppercase;">SOLDE RESTANT</div>
+          <div style="font-size: 20px; font-weight: 900; color: #15803d; margin-top: 2px;">{{ (monSoldeConge?.soldeRestant || 0) | number:'1.0-1' }} jours</div>
+        </div>
+      </div>
+
+      <!-- Mes demandes récentes -->
+      @if (mesConges && mesConges.length > 0) {
+        <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--on-surface-2); margin-bottom: 8px;">Mes demandes d'absence récentes :</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            @for (c of mesConges; track c.id) {
+              <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-variant); border-radius: 8px; padding: 8px 12px; font-size: 13px;">
+                <div>
+                  <strong style="color: #0060B3;">{{ c.type || 'Congé annuel' }}</strong> — 
+                  <span>Du {{ c.dateDebut | date:'dd/MM/yyyy' }} au {{ c.dateFin | date:'dd/MM/yyyy' }}</span>
+                  <span style="color: var(--on-surface-3); margin-left: 6px;">({{ c.nbJours }} j)</span>
+                </div>
+                <div>
+                  @if (c.statut === 'APPROUVE' || c.statut === 'Approuvé' || c.statut === 'VALIDE') {
+                    <span style="background: #ecfdf5; color: #047857; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">Approuvé</span>
+                  } @else if (c.statut === 'REJETE' || c.statut === 'Refusé') {
+                    <span style="background: #fef2f2; color: #b91c1c; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">Rejeté</span>
+                  } @else {
+                    <span style="background: #fffbeb; color: #b45309; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">En attente</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Périodes disponibles / Historique des bulletins de l'agent -->
+    @if (moisDisponibles && moisDisponibles.length > 0) {
+      <div class="available-months-bar">
+        <span class="amb-label">
+          <mat-icon>history_edu</mat-icon> Vos Bulletins Disponibles :
+        </span>
+        <div class="amb-pills">
+          @for (m of moisDisponibles; track m.label) {
+            <button type="button" class="month-pill"
+                    [class.active]="m.moisIndex === moisIndex && m.annee === selectedYear"
+                    (click)="selectionnerMoisDisponible(m)">
+              <span>{{ m.label }}</span>
+              @if (m.net) {
+                <span class="pill-net">{{ m.net | number:'1.0-0' }} F</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Sélecteur de Mois Principal -->
+    <div style="background: var(--surface); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-card); border: 1px solid var(--border); flex-wrap: wrap; gap: 12px;">
+      <span style="font-weight: 800; color: #0060B3; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+        <mat-icon style="color: #0284c7;">receipt_long</mat-icon> Mes Bulletins de Paie
+      </span>
+      <div style="display: flex; align-items: center; gap: 8px; background: var(--surface-variant); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <button mat-icon-button (click)="changerMois(-1)" style="color: var(--on-surface);" title="Mois précédent">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span style="font-weight: 800; color: #0060B3; min-width: 150px; text-align: center; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+          {{ periode }}
+        </span>
+        <button mat-icon-button (click)="changerMois(1)" style="color: var(--on-surface);" title="Mois suivant">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Affichage du Bulletin -->
+    @if (isLoading) {
+      <div style="background: var(--surface); border-radius: 14px; padding: 48px; text-align: center; box-shadow: var(--shadow-card); border: 1px solid var(--border);">
+        <mat-spinner diameter="40" style="margin: 0 auto 16px;"></mat-spinner>
+        <p style="color: #0060B3; font-weight: 700; font-size: 15px;">Chargement de votre bulletin de paie...</p>
+      </div>
+    } @else {
+      @for (b of bulletins; track b.code) {
+        <div class="payslip-official-card">
+          <!-- Header officiel Banque Postale -->
+          <div class="payslip-header">
+            <div class="bank-identity">
+              <div class="bank-badge">BPBF</div>
+              <div class="bank-text">
+                <h2>BANQUE POSTALE DU BURKINA FASO</h2>
+                <p>BULLETIN OFFICIEL DE PAIE • RÉF : {{ b.code }}</p>
+              </div>
+            </div>
+            <div class="header-actions">
+              @if (b.etat === 'VALIDE' || b.etat === 'CLOTURE') {
+                <span style="background: #15803d; color: white; padding: 5px 14px; border-radius: 20px; font-weight: 800; font-size: 11px; letter-spacing: 0.5px;">
+                  ✅ VALIDÉ
+                </span>
+              } @else {
+                <span style="background: #f59e0b; color: white; padding: 5px 14px; border-radius: 20px; font-weight: 800; font-size: 11px; letter-spacing: 0.5px;">
+                  ⏳ EN COURS
+                </span>
+              }
+
+              <!-- BOUTON TELECHARGER PDF OFFICIEL -->
+              <button mat-raised-button class="btn-download-pdf" (click)="telechargerPdf(b)" [disabled]="isDownloadingPdf" title="Télécharger le fichier PDF officiel émis par la BPBF">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>{{ isDownloadingPdf ? 'Téléchargement...' : 'Télécharger PDF' }}</span>
+              </button>
+
+              <!-- BOUTON OUVRIR / IMPRIMER -->
+              <button mat-stroked-button class="btn-view-pdf" (click)="ouvrirPdfEnLigne(b)" title="Visualiser dans un nouvel onglet">
+                <mat-icon>open_in_new</mat-icon>
+                <span>Ouvrir</span>
+              </button>
+
+              <button mat-icon-button (click)="exporterImpression()" title="Imprimer la page" style="color: var(--on-surface-2);">
+                <mat-icon>print</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="payslip-body">
+            <!-- Fiche Agent & Mode de règlement -->
+            <div class="emp-summary-box">
+              <div class="avatar-large">{{ b.employeeName.charAt(0) }}</div>
+              <div class="emp-details">
+                <h3 class="emp-name-title">{{ b.employeeName }}</h3>
+                <div class="emp-meta">
+                  Matricule : <strong>{{ b.matricule }}</strong> | 
+                  Fonction : <strong>{{ b.fonction }}</strong> | 
+                  Grade : <strong>{{ b.grade }}</strong>
+                </div>
+              </div>
+              <div class="payment-method-box">
+                <div class="pm-lbl">Mode de règlement</div>
+                <div class="pm-val">{{ b.modeReglement }}</div>
+                <div class="pm-rib">{{ b.numeroCompteBancaire }}</div>
+              </div>
+            </div>
+
+            <!-- Cartouche période & charges -->
+            <div class="cartouche-clean">
+              <div class="info-block">
+                <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ b.dateFrom }} au {{ b.dateTo }} ({{ periode }})</strong></div>
+                <div class="info-row"><span class="lbl">Jours Travaillés :</span> <strong>{{ b.workedDays }} / {{ b.scheduledWorkingDays }} Jours</strong></div>
+              </div>
+              <div class="info-block">
+                <div class="info-row"><span class="lbl">Siège Social :</span> <span>01 BP 600 Ouagadougou 01</span></div>
+                <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ b.nombreCharges }} charge(s)</strong></div>
+              </div>
+            </div>
+
+            <!-- Tableau Structuré des 7 Colonnes BPBF -->
+            <div class="table-lines-box">
+              <table class="grid-7-table">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">NOM</th>
+                    <th style="width: 14%;">CATÉGORIE</th>
+                    <th style="text-align: right; width: 8%;">QUANTITÉ</th>
+                    <th style="text-align: right; width: 9%;">TAUX (%)</th>
+                    <th style="width: 22%;">RÈGLE</th>
+                    <th style="text-align: right; width: 11%;">MONTANT</th>
+                    <th style="text-align: right; width: 11%;">TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of b.lines; track l.name) {
+                    <tr [class.row-net]="l.category === 'NET'" 
+                        [class.row-tot]="l.category?.includes('TOTAL') || l.name?.includes('BRUT')"
+                        [class.row-deduct]="l.category === 'DEDUCTION'">
+                      <td><strong>{{ l.name }}</strong></td>
+                      <td><span class="cat-pill pill-{{ (l.category || 'element').toLowerCase() }}">{{ l.category || 'ELEMENT' }}</span></td>
+                      <td style="text-align: right; font-family: monospace;">{{ (l.quantity || 1) | number:'1.2-2' }}</td>
+                      <td style="text-align: right; font-family: monospace;">{{ (l.rate || 100) | number:'1.2-2' }}</td>
+                      <td style="font-size: 11px; color: var(--on-surface-3);">{{ l.regle || '—' }}</td>
+                      <td style="text-align: right; font-family: monospace;" [class.text-neg]="l.amount < 0">
+                        {{ l.amount | number:'1.0-0' }}
+                      </td>
+                      <td style="text-align: right; font-family: monospace; font-weight: 700;" [class.text-neg]="l.amount < 0">
+                        {{ l.amount | number:'1.0-0' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Montant en Toutes Lettres -->
+            <div class="in-words-box">
+              <mat-icon style="font-size: 20px; width: 20px; height: 20px; color: #0060B3;">verified</mat-icon>
+              <span><strong>Montant Net à Payer en toutes lettres :</strong> {{ b.montantEnLettres }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- État Aucun Bulletin pour ce mois -->
+      @if (bulletins.length === 0) {
+        <div style="background: var(--surface); border-radius: 16px; padding: 48px 32px; text-align: center; box-shadow: var(--shadow-card); border: 1px dashed var(--border); margin-bottom: 24px;">
+          <div style="width: 68px; height: 68px; border-radius: 50%; background: rgba(0, 96, 179, 0.1); color: #0060B3; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+            <mat-icon style="font-size: 38px; width: 38px; height: 38px;">receipt_long</mat-icon>
+          </div>
+          <h3 style="margin: 0 0 8px 0; color: var(--on-surface); font-size: 18px; font-weight: 800;">Aucun bulletin disponible pour {{ periode }}</h3>
+          <p style="color: var(--on-surface-3); font-size: 14px; max-width: 540px; margin: 0 auto 20px; line-height: 1.5;">
+            Votre bulletin de paie pour ce mois n'a pas encore été clôturé ou mis à disposition par le service Paie & RH.
+          </p>
+
+          <!-- Raccourcis vers les autres mois disponibles -->
+          @if (moisDisponibles && moisDisponibles.length > 0) {
+            <div style="background: var(--surface-variant); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; max-width: 580px; margin: 0 auto 24px; text-align: left;">
+              <div style="font-size: 12.5px; font-weight: 700; color: var(--on-surface-2); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #0060B3;">history</mat-icon>
+                Consulter un bulletin déjà disponible :
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                @for (m of moisDisponibles; track m.label) {
+                  <button mat-stroked-button (click)="selectionnerMoisDisponible(m)" style="border-radius: 20px; font-size: 12px; font-weight: 700; color: #0060B3; border-color: #0060B3;">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">visibility</mat-icon>
+                    {{ m.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <button mat-raised-button color="primary" style="background: #0060B3; font-weight: 700; border-radius: 8px; padding: 0 22px; height: 42px;" (click)="ouvrirModalDemandeBulletin()">
+            <mat-icon style="margin-right: 8px;">mark_email_read</mat-icon> Faire une demande de bulletin RH
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- MODAL : DEMANDE DE BULLETIN RH -->
+  @if (showDemandeBulletinModal) {
+    <div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;">
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 540px; box-shadow: var(--shadow-card); overflow: hidden; color: var(--on-surface);">
+        <!-- Header modal -->
+        <div style="background: var(--surface-variant); border-bottom: 1px solid var(--border); padding: 18px 24px; color: var(--on-surface); display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="background: #0060B3; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <mat-icon style="color: white; font-size: 20px; width: 20px; height: 20px;">receipt_long</mat-icon>
+            </div>
+            <div>
+              <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--on-surface);">Demande de Bulletin de Paie</h3>
+              <p style="margin: 0; font-size: 12px; color: var(--on-surface-3);">Transmission directe au service Paie & RH</p>
+            </div>
+          </div>
+          <button mat-icon-button (click)="fermerModalDemandeBulletin()" style="color: var(--on-surface-3);">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Corps modal -->
+        <div style="padding: 24px;">
+          @if (demandeEnvoyeeSuccess) {
+            <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 16px; border-radius: 10px; text-align: center; margin-bottom: 16px;">
+              <mat-icon style="font-size: 32px; width: 32px; height: 32px; color: #16a34a; margin-bottom: 4px;">check_circle</mat-icon>
+              <h4 style="margin: 0 0 4px 0; font-weight: 800;">Demande transmise avec succès !</h4>
+              <p style="margin: 0; font-size: 13px;">Le service Paie a été notifié de votre demande pour {{ demandeBulletinForm.periode }}.</p>
+            </div>
+          } @else {
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <mat-form-field appearance="outline" style="width: 100%;">
+                <mat-label>Période demandée</mat-label>
+                <input matInput [(ngModel)]="demandeBulletinForm.periode" readonly style="font-weight: 700; color: #0060B3;">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" style="width: 100%;">
+                <mat-label>Motif de la demande</mat-label>
+                <mat-select [(ngModel)]="demandeBulletinForm.motif">
+                  <mat-option value="Justificatif personnel / Démarches administratives">Justificatif personnel / Démarches administratives</mat-option>
+                  <mat-option value="Dossier bancaire / Demande de prêt">Dossier bancaire / Demande de prêt</mat-option>
+                  <mat-option value="Demande de visa / Voyage">Demande de visa / Voyage</mat-option>
+                  <mat-option value="Régularisation / Vérification salariale">Régularisation / Vérification salariale</mat-option>
+                  <mat-option value="Autre motif">Autre motif</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" style="width: 100%;">
+                <mat-label>Niveau d'urgence</mat-label>
+                <mat-select [(ngModel)]="demandeBulletinForm.urgence">
+                  <mat-option value="NORMALE">Normale (sous 48h)</mat-option>
+                  <mat-option value="URGENTE">Urgente (sous 24h)</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" style="width: 100%;">
+                <mat-label>Précisions / Commentaire (optionnel)</mat-label>
+                <textarea matInput [(ngModel)]="demandeBulletinForm.commentaire" rows="3" placeholder="Ajouter une précision si nécessaire..."></textarea>
+              </mat-form-field>
+            </div>
+          }
+        </div>
+
+        <!-- Footer modal -->
+        @if (!demandeEnvoyeeSuccess) {
+          <div style="padding: 16px 24px; background: var(--surface-variant); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
+            <button mat-stroked-button (click)="fermerModalDemandeBulletin()">Annuler</button>
+            <button mat-raised-button color="primary" style="background: #0060B3; font-weight: 700;" (click)="envoyerDemandeBulletin()">
+              <mat-icon style="margin-right: 6px;">send</mat-icon> Transmettre la demande
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,226 @@
+<div class="params-page">
+
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>manage_accounts</mat-icon></div>
+      <div>
+        <h1>Paramètres RH</h1>
+        <p>Configuration des référentiels et paramètres de gestion des ressources humaines</p>
+      </div>
+    </div>
+  </div>
+
+  <mat-tab-group class="params-tabs" [(selectedIndex)]="activeTab" animationDuration="200ms">
+
+    <!-- ── Tabs génériques (typesContrats, statutsEmployes, motifsSortie, paramsSpecifiques) ── -->
+    @for (tab of tabs.slice(0, 4); track tab; let i = $index) {
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-lbl">
+            <mat-icon>{{ tabIcons[i] }}</mat-icon>
+            <span>{{ tabLabels[i] }}</span>
+            <span class="tab-count">{{ getItems(tab).length }}</span>
+          </div>
+        </ng-template>
+
+        <div class="tab-body">
+
+          <!-- Toolbar -->
+          <div class="tab-toolbar">
+            <span class="tab-info">{{ getItems(tab).length }} élément(s)</span>
+            <button mat-raised-button color="primary" (click)="toggleAdd(tab)">
+              <mat-icon>{{ showAddForm[tab] ? 'close' : 'add' }}</mat-icon>
+              {{ showAddForm[tab] ? 'Annuler' : 'Ajouter' }}
+            </button>
+          </div>
+
+          <!-- Formulaire d'ajout -->
+          @if (showAddForm[tab]) {
+            <mat-card class="add-form-card">
+              <mat-card-header>
+                <mat-card-title>Nouvel élément</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="addForm" class="add-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Libellé *</mat-label>
+                    <input matInput formControlName="libelle">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Code *</mat-label>
+                    <input matInput formControlName="code">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="col-span-2">
+                    <mat-label>Description</mat-label>
+                    <input matInput formControlName="description">
+                  </mat-form-field>
+                </form>
+              </mat-card-content>
+              <mat-card-actions align="end">
+                <button mat-button (click)="toggleAdd(tab)">Annuler</button>
+                <button mat-raised-button color="primary" (click)="addItem(tab)" [disabled]="addForm.invalid">
+                  <mat-icon>save</mat-icon> Enregistrer
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          }
+
+          <!-- Liste des éléments -->
+          <mat-card class="items-card">
+            <mat-card-content>
+              <div class="items-list">
+                <div class="item-header">
+                  <span>Libellé</span><span>Code</span><span>Description</span><span>Statut</span><span></span>
+                </div>
+                @for (item of getItems(tab); track item.id) {
+                  <div class="item-row" [class.inactive]="!item.actif">
+                    <span class="item-name">{{ item.libelle }}</span>
+                    <span class="item-code">{{ item.code }}</span>
+                    <span class="item-desc">{{ item.description || '—' }}</span>
+                    <span>
+                      <span class="actif-badge" [class.inactive]="!item.actif">
+                        {{ item.actif ? 'Actif' : 'Inactif' }}
+                      </span>
+                    </span>
+                    <span class="item-actions">
+                      <button mat-icon-button (click)="toggleActif(item)"
+                              [matTooltip]="item.actif ? 'Désactiver' : 'Activer'">
+                        <mat-icon>{{ item.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteItem(tab, item.id)"
+                              matTooltip="Supprimer">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </span>
+                  </div>
+                }
+                @if (getItems(tab).length === 0) {
+                  <div class="empty-state">
+                    <mat-icon>inbox</mat-icon>
+                    <span>Aucun élément configuré</span>
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+        </div>
+      </mat-tab>
+    }
+
+    <!-- ── Tab Comptes Utilisateurs ── -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-lbl">
+          <mat-icon>people_alt</mat-icon>
+          <span>Comptes Utilisateurs</span>
+          <span class="tab-count">{{ utilisateurs.length }}</span>
+        </div>
+      </ng-template>
+
+      <div class="tab-body">
+
+        <!-- Toolbar -->
+        <div class="tab-toolbar">
+          <span class="tab-info">{{ utilisateurs.length }} utilisateur(s)</span>
+          <button mat-raised-button color="primary" (click)="toggleUserAdd()">
+            <mat-icon>{{ showAddUserForm ? 'close' : 'person_add' }}</mat-icon>
+            {{ showAddUserForm ? 'Annuler' : 'Ajouter un utilisateur' }}
+          </button>
+        </div>
+
+        <!-- Formulaire ajout/édition utilisateur -->
+        @if (showAddUserForm) {
+          <mat-card class="add-form-card">
+            <mat-card-header>
+              <mat-card-title>{{ editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="userForm" class="add-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nom d'utilisateur *</mat-label>
+                  <input matInput formControlName="username">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Rôle / Profil *</mat-label>
+                  <mat-select formControlName="role">
+                    @for (p of profils; track p.id) {
+                      <mat-option [value]="p.code">{{ p.libelle }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Prénom *</mat-label>
+                  <input matInput formControlName="prenom">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Nom *</mat-label>
+                  <input matInput formControlName="nom">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Email *</mat-label>
+                  <input matInput formControlName="email" type="email">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ editingUser ? 'Nouveau mot de passe (laisser vide pour garder)' : 'Mot de passe *' }}</mat-label>
+                  <input matInput formControlName="password" type="password">
+                </mat-form-field>
+              </form>
+            </mat-card-content>
+            <mat-card-actions align="end">
+              <button mat-button (click)="toggleUserAdd()">Annuler</button>
+              <button mat-raised-button color="primary" (click)="saveUser()" [disabled]="userForm.invalid">
+                <mat-icon>save</mat-icon> {{ editingUser ? 'Mettre à jour' : 'Créer' }}
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+
+        <!-- Liste utilisateurs -->
+        <mat-card class="items-card">
+          <mat-card-content>
+            <div class="items-list">
+              <div class="item-header user-header">
+                <span>Identité</span><span>Username</span><span>Email</span><span>Rôle</span><span>Statut</span><span></span>
+              </div>
+              @for (u of utilisateurs; track u.id) {
+                <div class="item-row user-row" [class.inactive]="!u.actif">
+                  <span class="item-name">{{ u.prenom }} {{ u.nom }}</span>
+                  <span class="item-code">{{ u.username }}</span>
+                  <span class="item-desc">{{ u.email }}</span>
+                  <span><span class="role-badge role-{{ (u.role || '').toLowerCase() }}">{{ u.role }}</span></span>
+                  <span>
+                    <span class="actif-badge" [class.inactive]="!u.actif">
+                      {{ u.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                  </span>
+                  <span class="item-actions">
+                    <button mat-icon-button (click)="editUser(u)" matTooltip="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="toggleUserActif(u)"
+                            [matTooltip]="u.actif ? 'Désactiver' : 'Activer'">
+                      <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteUser(u.id)" matTooltip="Supprimer">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </span>
+                </div>
+              }
+              @if (utilisateurs.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>people_alt</mat-icon>
+                  <span>Aucun utilisateur configuré</span>
+                </div>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>

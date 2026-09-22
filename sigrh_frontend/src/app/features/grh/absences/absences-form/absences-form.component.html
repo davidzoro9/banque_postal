@@ -1,0 +1,108 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="cancel()">Absences</span>
+    <span class="sep">›</span>
+    <span class="current">Enregistrer une absence</span>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">event_busy</mat-icon>
+      <mat-card-title>Enregistrement d'une absence</mat-card-title>
+      <mat-card-subtitle>Remplissez le formulaire pour enregistrer une absence.</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="form">
+
+        <p class="form-section-label">Détails de l'absence</p>
+        <div class="form-grid-2">
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Employé concerné</mat-label>
+            <mat-select formControlName="employe">
+              <mat-option value="">— Moi-même (ou aucun) —</mat-option>
+              <div style="padding: 6px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; background: #fafafa;">
+                <mat-icon style="color: #888; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+                <input matInput placeholder="Rechercher un employé..." 
+                       formControlName="employeSearch" 
+                       (keydown)="$event.stopPropagation()"
+                       style="width: 100%; border: none; outline: none; font-size: 14px; background: transparent;">
+              </div>
+              @for (emp of filteredEmployees$ | async; track emp.id) {
+                <mat-option [value]="emp.prenom + ' ' + emp.nom">{{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }})</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Type d'absence</mat-label>
+            <mat-select formControlName="typeAbsence">
+              <mat-option value="">— Aucun —</mat-option>
+              @for (t of typesAbsence$ | async; track t.code) {
+                <mat-option [value]="t.libelle">{{ t.libelle }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de l'absence</mat-label>
+            <input matInput [matDatepicker]="absPicker" formControlName="dateAbsence">
+            <mat-datepicker-toggle matIconSuffix [for]="absPicker"></mat-datepicker-toggle>
+            <mat-datepicker #absPicker></mat-datepicker>
+          </mat-form-field>
+
+          <div class="duree-row">
+            <mat-form-field appearance="outline" class="duree-field">
+              <mat-label>Durée</mat-label>
+              <input matInput formControlName="duree" type="number" min="1">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="unite-field">
+              <mat-label>Unité</mat-label>
+              <mat-select formControlName="unite">
+                @for (u of unitesDuree; track u.value) {
+                  <mat-option [value]="u.value">{{ u.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+        </div>
+
+        <p class="form-section-label">Motif et justificatif</p>
+        <div class="form-grid-1">
+
+          <mat-form-field appearance="outline">
+            <mat-label>Motif</mat-label>
+            <textarea matInput formControlName="motif" rows="3"
+                      placeholder="Décrivez le motif de l'absence…"></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Référence justificatif</mat-label>
+            <input matInput formControlName="justificatif"
+                   placeholder="N° de certificat médical, référence pièce jointe…">
+          </mat-form-field>
+
+        </div>
+
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-button (click)="cancel()">Annuler</button>
+        <button mat-raised-button color="primary" (click)="save()"
+                [disabled]="saving || form.invalid">
+          @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+          @else { <mat-icon>save</mat-icon> }
+          Enregistrer
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
+

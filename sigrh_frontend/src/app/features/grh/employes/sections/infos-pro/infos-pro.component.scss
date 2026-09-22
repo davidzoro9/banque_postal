@@ -1,0 +1,81 @@
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.contrat-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #eef4fb;
+  border: 1px solid #b3cce8;
+  border-left: 4px solid #004080;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 8px 0 16px 0;
+
+  .banner-icon {
+    color: #004080;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .banner-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 4px;
+
+    .banner-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #004080;
+    }
+
+    .banner-desc {
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.5;
+    }
+  }
+
+  .banner-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    mat-icon { font-size: 18px; }
+  }
+}
+
+.salary-grid-net-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  margin: 6px 0 22px 0;
+  border-radius: 10px;
+  background: var(--surface, #1e222b);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease-in-out;
+
+  .net-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--on-surface, #e2e8f0);
+  }
+
+  .net-amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0284c7;
+    letter-spacing: 0.3px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+:host-context([data-theme='dark']) .salary-grid-net-card .net-amount,
+:host-context(.dark-theme) .salary-grid-net-card .net-amount {
+  color: #38bdf8;
+}
+
+

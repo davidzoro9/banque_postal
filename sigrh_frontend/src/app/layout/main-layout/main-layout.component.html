@@ -1,0 +1,54 @@
+<div class="app-shell">
+
+  <!-- ① Toolbar fixe en haut -->
+  <app-toolbar></app-toolbar>
+
+  <!-- ② Barre de navigation des modules (sous la toolbar) -->
+  <div class="module-navbar">
+    <div class="module-tabs">
+      @for (mod of moduleNav.modules; track mod.id) {
+        <button class="module-tab"
+                [class.active]="(moduleNav.activeModule$ | async)?.id === mod.id"
+                [style.--tab-color]="mod.color"
+                (click)="selectModule(mod)">
+          <div class="tab-icon"
+               [style.background]="(moduleNav.activeModule$ | async)?.id === mod.id
+                 ? 'linear-gradient(135deg, ' + mod.gradientFrom + ', ' + mod.gradientTo + ')'
+                 : ''">
+            <mat-icon>{{ mod.icon }}</mat-icon>
+          </div>
+          <span class="tab-label">{{ mod.shortName }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="navbar-right" style="display: flex; align-items: center; gap: 8px;">
+      <a class="nav-home-link" (click)="router.navigate(['/mon-espace'])"
+         style="background: #0060B3; color: white; border-radius: 8px; font-weight: 700; padding: 4px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">badge</mat-icon>
+        <span>Mon Espace</span>
+      </a>
+      <a class="nav-home-link" (click)="router.navigate(['/dashboard'])">
+        <mat-icon>dashboard</mat-icon>
+        <span>Accueil</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ③ Zone principale : Drawer gauche + Contenu -->
+  <mat-sidenav-container class="sidenav-container" autosize>
+
+    <!-- Drawer gauche : menu du module actif -->
+    <mat-sidenav #leftSidenav mode="side" opened class="left-sidenav">
+      <app-nav-drawer></app-nav-drawer>
+    </mat-sidenav>
+
+    <!-- Contenu principal -->
+    <mat-sidenav-content class="main-content">
+      <div class="page-wrapper">
+        <router-outlet></router-outlet>
+      </div>
+    </mat-sidenav-content>
+
+  </mat-sidenav-container>
+</div>

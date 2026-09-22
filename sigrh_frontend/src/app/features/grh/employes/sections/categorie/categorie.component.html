@@ -1,0 +1,111 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Situation salariale</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">military_tech</mat-icon>
+      <mat-card-title>Situation salariale</mat-card-title>
+      <mat-card-subtitle>Résumé de la grille salariale, classification et niveau de rémunération (Lecture seule)</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (isLoading || !employee) {
+        <div style="text-align:center;padding:40px">
+          <mat-spinner diameter="40" style="margin: 0 auto;"></mat-spinner>
+          <div style="margin-top: 12px; color: #64748b; font-size: 14px;">Chargement de la situation salariale...</div>
+        </div>
+      } @else if (summary) {
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Grade</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0060B3;">{{ summary.grade || 'Non défini' }}</span>
+            </div>
+
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Catégorie / Classe</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ summary.categorie || 'Non définie' }}</span>
+            </div>
+
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <span style="display: block; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Échelon</span>
+              <span style="font-size: 18px; font-weight: 800; color: #0f172a;">{{ summary.echelon || 'Non défini' }}</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+              <span style="display: block; font-size: 12px; color: #475569; font-weight: 700; text-transform: uppercase;">Salaire de Base</span>
+              <span style="font-size: 20px; font-weight: 800; color: #1e293b;">{{ summary.salaireBase | number:'1.0-0' }} FCFA</span>
+            </div>
+
+            <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+              <span style="display: block; font-size: 12px; color: #475569; font-weight: 700; text-transform: uppercase;">Total des Indemnités</span>
+              <span style="font-size: 20px; font-weight: 800; color: #166534;">+ {{ summary.totalIndemnites | number:'1.0-0' }} FCFA</span>
+            </div>
+          </div>
+
+          <!-- Détail des Indemnités de la Situation Salariale -->
+          @if (summary.indemnitesBareme && summary.indemnitesBareme.length > 0) {
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 10px;">
+              <span style="display: block; font-size: 13px; color: #0f172a; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #64748b;">payments</mat-icon>
+                Détail des indemnités rattachées {{ summary.fonction ? '(' + summary.fonction + ')' : '' }}
+              </span>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                @for (ind of summary.indemnitesBareme; track ind.id || ind.code) {
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;">
+                    <span style="font-weight: 600; color: #1e293b;">{{ ind.typeIndemnite || ind.libelle || ind.fonction || ind.code }}</span>
+                    <span style="font-weight: 800; color: #0f172a;">+ {{ ind.taux | number:'1.0-0' }} FCFA</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div style="text-align: center; padding: 18px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b; font-size: 13px; margin-top: 10px;">
+              Aucune indemnité active associée à cet employé.
+            </div>
+          }
+
+        </div>
+      } @else {
+        <div style="text-align: center; padding: 40px; color: #64748b;">
+          <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #94a3b8;">info</mat-icon>
+          <div style="font-size: 15px; font-weight: 600; margin-top: 10px;">Situation salariale non renseignée</div>
+          <div style="font-size: 13px; margin-top: 4px;">Les données salariales ne sont pas encore configurées pour cet employé.</div>
+        </div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
+

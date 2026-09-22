@@ -1,0 +1,357 @@
+/* Mon Espace Employé - Styles spécifiques & Bulletin Officiel BPBF (Theme Adaptive) */
+
+.payslip-official-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  color: var(--on-surface);
+  margin-bottom: 24px;
+
+  .payslip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0284c7;
+    padding: 18px 24px;
+    background: var(--surface-variant);
+    flex-wrap: wrap;
+    gap: 14px;
+
+    .bank-identity {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .bank-badge {
+        background: #0284c7;
+        color: white;
+        font-weight: 900;
+        font-size: 15px;
+        padding: 6px 14px;
+        border-radius: 8px;
+        letter-spacing: 1px;
+      }
+
+      .bank-text {
+        h2 { margin: 0; font-size: 17px; font-weight: 900; color: #0284c7; letter-spacing: 0.5px; }
+        p { margin: 2px 0 0 0; font-size: 11.5px; color: var(--on-surface-3); font-family: monospace; font-weight: 700; }
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .btn-print-payslip {
+        background: #0284c7 !important;
+        color: white !important;
+        font-weight: 700;
+        border-radius: 8px;
+      }
+    }
+  }
+
+  .payslip-body {
+    padding: 24px;
+  }
+
+  .emp-summary-box {
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    .avatar-large {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #0284c7;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-right: 14px;
+    }
+
+    .emp-details {
+      flex: 1;
+      min-width: 200px;
+      .emp-name-title { font-size: 17px; font-weight: 800; color: var(--on-surface); margin: 0 0 2px 0; }
+      .emp-meta { font-size: 12.5px; color: var(--on-surface-3); strong { color: var(--on-surface); } }
+    }
+
+    .payment-method-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      text-align: right;
+      flex-shrink: 0;
+
+      .pm-lbl { font-size: 10px; color: var(--on-surface-3); font-weight: 600; text-transform: uppercase; }
+      .pm-val { font-size: 12px; font-weight: 700; color: #0284c7; }
+      .pm-rib { font-size: 11px; font-family: monospace; color: var(--on-surface-2); }
+    }
+  }
+
+  .cartouche-clean {
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    font-size: 12px;
+
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      .lbl { color: var(--on-surface-3); }
+      strong { color: var(--on-surface); }
+      span { color: var(--on-surface-2); }
+    }
+  }
+
+  .table-lines-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 14px;
+    background: var(--surface);
+
+    .grid-7-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+
+      thead tr {
+        background: #0284c7;
+        color: white;
+        text-transform: uppercase;
+        font-weight: 800;
+        font-size: 10.5px;
+        letter-spacing: 0.5px;
+
+        th { padding: 10px 12px; text-align: left; }
+      }
+
+      tbody tr {
+        border-bottom: 1px solid var(--border);
+        color: var(--on-surface);
+        transition: background 0.1s;
+
+        &:hover { background: var(--surface-hover); }
+        td { padding: 9px 12px; vertical-align: middle; }
+
+        &.row-tot {
+          background: var(--surface-variant);
+          font-weight: 700;
+          color: var(--on-surface);
+          border-top: 1px solid var(--border);
+          border-bottom: 1px solid var(--border);
+        }
+
+        &.row-deduct td {
+          color: #c084fc;
+        }
+
+        &.row-net {
+          background: #15803d !important;
+          color: #ffffff !important;
+          font-weight: 800;
+          font-size: 13px;
+
+          td {
+            color: #ffffff !important;
+            padding: 12px 12px;
+          }
+        }
+      }
+    }
+  }
+
+  .in-words-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(2, 132, 199, 0.12);
+    border-left: 3px solid #0284c7;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: #0284c7;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .payslip-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .emp-summary-box {
+      flex-direction: column;
+      align-items: flex-start;
+
+      .payment-method-box {
+        text-align: left;
+        width: 100%;
+      }
+    }
+
+    .cartouche-clean {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.cat-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+
+  &.pill-element { background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.25); }
+  &.pill-indemnites { background: rgba(74, 222, 128, 0.15); color: #16a34a; border: 1px solid rgba(74, 222, 128, 0.3); }
+  &.pill-deduction { background: rgba(192, 132, 252, 0.15); color: #7c3aed; border: 1px solid rgba(192, 132, 252, 0.3); }
+  &.pill-bi { background: rgba(251, 146, 60, 0.15); color: #ea580c; border: 1px solid rgba(251, 146, 60, 0.3); }
+  &.pill-retenue { background: rgba(248, 113, 113, 0.15); color: #dc2626; border: 1px solid rgba(248, 113, 113, 0.3); }
+  &.pill-precompte { background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); }
+  &.pill-total_retenue { background: rgba(239, 68, 68, 0.25); color: #991b1b; font-weight: 900; }
+  &.pill-charges_pat { background: rgba(148, 163, 184, 0.2); color: #475569; }
+  &.pill-total_pat { background: rgba(148, 163, 184, 0.3); color: #334155; font-weight: 900; }
+  &.pill-net { background: #16a34a; color: white; font-weight: 900; }
+}
+
+.text-neg {
+  color: #dc2626 !important;
+}
+
+/* Barre des bulletins & mois disponibles */
+.available-months-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+
+  .amb-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--on-surface-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #0284c7;
+    }
+  }
+
+  .amb-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+
+    .month-pill {
+      background: var(--surface-variant);
+      border: 1px solid var(--border);
+      color: var(--on-surface);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(2, 132, 199, 0.1);
+        border-color: #0284c7;
+        color: #0284c7;
+        transform: translateY(-1px);
+      }
+
+      &.active {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: white;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+
+        .pill-net {
+          background: rgba(255, 255, 255, 0.25);
+          color: white;
+        }
+      }
+
+      .pill-net {
+        background: rgba(2, 132, 199, 0.12);
+        color: #0284c7;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-family: monospace;
+      }
+    }
+  }
+}
+
+.btn-download-pdf {
+  background: #0284c7 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.btn-view-pdf {
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+

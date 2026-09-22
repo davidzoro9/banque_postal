@@ -1,0 +1,284 @@
+<div class="element-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>format_list_numbered</mat-icon></div>
+      <div>
+        <h1>Éléments de Salaire</h1>
+      </div>
+    </div>
+    <div class="ph-actions" style="display: flex; gap: 10px; align-items: center;">
+      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Générer les éléments de salaire bancaires BPBF" style="border-radius: 8px;">
+        <mat-icon>auto_awesome</mat-icon> Données Banque BPBF
+      </button>
+      <button mat-raised-button class="btn-new" (click)="openAddModal()">
+        <mat-icon>add</mat-icon> Nouvel Élément de Salaire
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages d'alerte -->
+  @if (successMessage) {
+    <div class="alert-banner alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+      <button mat-icon-button (click)="successMessage=''"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-banner alert-danger">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMessage }}</span>
+      <button mat-icon-button (click)="errorMessage=''"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+
+  <!-- Barre de Recherche & Filtres -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher un élément</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: SAL_BASE, CNSS, Logement...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Catégorie Parente</mat-label>
+          <mat-select [(ngModel)]="categoryFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Toutes les catégories —</mat-option>
+            @for (cat of categoriesList; track cat.id) {
+              <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Type</mat-label>
+          <mat-select [(ngModel)]="typeFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous —</mat-option>
+            <mat-option value="GAIN">Gains & Salaires</mat-option>
+            <mat-option value="RETENUE">Retenues & Impôts</mat-option>
+            <mat-option value="PATRONALE">Patronales</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table des Éléments de Salaire -->
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th style="width: 45px; text-align: center;">Ordre</th>
+            <th style="width: 110px;">Code</th>
+            <th>Libellé / Nom</th>
+            <th style="width: 160px;">Catégorie Parente</th>
+            <th style="width: 110px;">Méthode</th>
+            <th style="width: 140px;">Formule / Règle</th>
+            <th style="text-align: center; width: 55px;">Cotis.</th>
+            <th style="text-align: center; width: 55px;">Impos.</th>
+            <th style="text-align: center; width: 75px;">Statut</th>
+            <th class="col-actions" style="text-align: center; width: 120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (el of filteredList; track el.id) {
+            <tr (dblclick)="openEditModal(el)" title="Double-cliquez pour modifier">
+              <td style="text-align: center; font-weight: 700; color: #94a3b8; font-family: monospace;">
+                {{ el.ordre }}
+              </td>
+              <td><code class="code-pill">{{ el.code }}</code></td>
+              <td>
+                <strong class="el-name">{{ el.name }}</strong>
+              </td>
+              <td>
+                <span class="cat-pill" [class.gain]="el.type === 'GAIN'" [class.ret]="el.type === 'RETENUE'" [class.pat]="el.type === 'PATRONALE'">
+                  {{ el.categoryName || '—' }}
+                </span>
+              </td>
+              <td>
+                <span class="method-chip">{{ el.calculationMethod }}</span>
+              </td>
+              <td>
+                <code class="formula-code">{{ el.formule || '—' }}</code>
+              </td>
+              <td style="text-align: center;">
+                <mat-icon [style.color]="el.isCotisable ? '#4ade80' : '#475569'" style="font-size: 18px; width: 18px; height: 18px;">
+                  {{ el.isCotisable ? 'check_circle' : 'remove_circle_outline' }}
+                </mat-icon>
+              </td>
+              <td style="text-align: center;">
+                <mat-icon [style.color]="el.isImposable ? '#4ade80' : '#475569'" style="font-size: 18px; width: 18px; height: 18px;">
+                  {{ el.isImposable ? 'check_circle' : 'remove_circle_outline' }}
+                </mat-icon>
+              </td>
+              <td style="text-align: center;">
+                <span class="status-chip" [class.active]="el.statut" [class.inactive]="!el.statut">
+                  {{ el.statut ? 'Actif' : 'Inactif' }}
+                </span>
+              </td>
+              <td class="col-actions" style="text-align: center;">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary" title="Modifier l'élément" (click)="openEditModal(el); $event.stopPropagation()">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button [title]="el.statut ? 'Désactiver' : 'Activer'" (click)="toggleStatut(el); $event.stopPropagation()">
+                    <mat-icon [style.color]="el.statut ? '#4ade80' : '#94a3b8'">{{ el.statut ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" title="Supprimer l'élément" (click)="deleteElement(el); $event.stopPropagation()">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- MODAL : Création / Modification Élément de Salaire -->
+  @if (showDialog) {
+    <div class="modal-backdrop custom-modal-overlay" (click)="closeModal()">
+      <div class="modal-container large-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>{{ editingElement ? 'edit_note' : 'add_circle' }}</mat-icon>
+            <h2>{{ editingElement ? 'Modifier l\'Élément de Salaire' : 'Nouvel Élément de Salaire' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- Nom -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Nom *</mat-label>
+                <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Indemnité de Logement, Avance sur salaire...">
+              </mat-form-field>
+            </div>
+
+            <!-- Code -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Code *</mat-label>
+                <input matInput [(ngModel)]="formModel.code" placeholder="Ex: IND_LOGE, AV_SAL..." style="text-transform: uppercase;">
+              </mat-form-field>
+            </div>
+
+            <!-- Catégorie Parente -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Catégorie Parente *</mat-label>
+                <mat-select [(ngModel)]="formModel.categoryId" (selectionChange)="onCategoryChange($event.value)">
+                  @for (cat of categoriesList; track cat.id) {
+                    <mat-option [value]="cat.id">
+                      {{ cat.name }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Type / Nature -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Type *</mat-label>
+                <mat-select [(ngModel)]="formModel.type">
+                  <mat-option value="GAIN">Gain</mat-option>
+                  <mat-option value="RETENUE">Retenue</mat-option>
+                  <mat-option value="PATRONALE">Patronale</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Méthode de Calcul -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Méthode de Calcul *</mat-label>
+                <mat-select [(ngModel)]="formModel.calculationMethod">
+                  <mat-option value="MONTANT_FIXE">Montant Fixe</mat-option>
+                  <mat-option value="POURCENTAGE">Pourcentage</mat-option>
+                  <mat-option value="FORMULE_COMPLEXE">Formule Complexe</mat-option>
+                  <mat-option value="SAISIE_MANUELLE">Saisie Manuelle</mat-option>
+                  <mat-option value="GRILLE">Grille Salariale</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Ordre -->
+            <div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Ordre d'affichage sur bulletin</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.ordre" placeholder="1, 2, 10, 20...">
+              </mat-form-field>
+            </div>
+
+            <!-- Paramètre de la Formule / Valeur selon la Méthode -->
+            @if (formModel.calculationMethod === 'POURCENTAGE') {
+              <div class="full-col">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Taux en % *</mat-label>
+                  <input matInput type="number" step="0.01" [(ngModel)]="formModel.rate" placeholder="Ex: 5.5">
+                </mat-form-field>
+              </div>
+            } @else if (formModel.calculationMethod === 'MONTANT_FIXE' || formModel.calculationMethod === 'FIXE') {
+              <div class="full-col">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Montant Fixe par défaut</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000">
+                </mat-form-field>
+              </div>
+            } @else if (formModel.calculationMethod === 'SAISIE_MANUELLE') {
+              <div class="full-col">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Valeur par défaut</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0">
+                </mat-form-field>
+              </div>
+            } @else {
+              <div class="full-col">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Formule de calcul</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: SAL_BASE * 0.10, BRUT_COTISABLE * 0.055...">
+                </mat-form-field>
+              </div>
+            }
+
+            <!-- Options Checkboxes -->
+            <div class="full-col checkbox-group">
+              <label class="cb-item">
+                <input type="checkbox" [(ngModel)]="formModel.isCotisable">
+                <span><strong>Est cotisable</strong></span>
+              </label>
+              <label class="cb-item">
+                <input type="checkbox" [(ngModel)]="formModel.isImposable">
+                <span><strong>Est imposable</strong></span>
+              </label>
+              <label class="cb-item">
+                <input type="checkbox" [(ngModel)]="formModel.statut">
+                <span><strong>Élément actif</strong></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()" [disabled]="isSaving">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.code || !formModel.name || isSaving" (click)="saveElement()" class="btn-save">
+            <mat-icon>{{ isSaving ? 'hourglass_empty' : 'check' }}</mat-icon>
+            {{ isSaving ? 'Enregistrement...' : (editingElement ? 'Enregistrer les modifications' : 'Créer l\'Élément') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

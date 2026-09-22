@@ -1,0 +1,115 @@
+<div class="roles-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>badge</mat-icon></div>
+      <div>
+        <h1>Profils & Rôles Applicatifs</h1>
+        <p>{{ rolesList.length }} profils et rôles configurés dans le système</p>
+      </div>
+    </div>
+    <button mat-raised-button class="btn-new" (click)="openAddModal()">
+      <mat-icon>add</mat-icon> Nouveau Profil
+    </button>
+  </div>
+
+  <!-- Table des rôles -->
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Code Profil</th>
+            <th>Libellé du Rôle</th>
+            <th>Description & Étendue</th>
+            <th style="text-align: center;">Utilisateurs</th>
+            <th style="text-align: center;">Statut</th>
+            <th style="text-align: center; min-width: 120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rolesList; track r.id) {
+            <tr>
+              <td>
+                <span class="role-chip" [style.background]="r.badgeColor + '18'" [style.color]="r.badgeColor" [style.border-color]="r.badgeColor + '40'">
+                  {{ r.code }}
+                </span>
+              </td>
+              <td>
+                <strong style="color: #1e293b; font-size: 14px;">{{ r.libelle }}</strong>
+              </td>
+              <td style="color: #475569; max-width: 380px;">
+                {{ r.description }}
+                <div class="perm-tags">
+                  @for (p of r.permissions; track p) {
+                    <span class="tag">{{ p }}</span>
+                  }
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <span class="users-count-chip">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
+                  {{ r.nbUsers }} utilisateur(s)
+                </span>
+              </td>
+              <td style="text-align: center;">
+                @if (r.actif) {
+                  <span class="status-chip active">Actif</span>
+                } @else {
+                  <span class="status-chip inactive">Inactif</span>
+                }
+              </td>
+              <td style="text-align: center;">
+                <div class="action-btns">
+                  <button mat-icon-button color="primary" title="Modifier le profil" (click)="openEditModal(r)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button [title]="r.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(r)">
+                    <mat-icon>{{ r.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteRole(r)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- Modal Édition / Ajout -->
+  @if (showDialog) {
+    <div class="modal-backdrop">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>{{ editingRole ? 'Modifier le Profil' : 'Créer un Nouveau Profil' }}</h2>
+          <button mat-icon-button (click)="closeModal()"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Code du Profil (ex: DRH, GESTIONNAIRE)</mat-label>
+            <input matInput [(ngModel)]="formModel.code" placeholder="CODE_PROFIL">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Libellé Intitulé du Rôle</mat-label>
+            <input matInput [(ngModel)]="formModel.libelle" placeholder="Nom du rôle">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description détaillée des responsabilités</mat-label>
+            <textarea matInput [(ngModel)]="formModel.description" rows="3" placeholder="Étendue des droits et responsabilités..."></textarea>
+          </mat-form-field>
+        </div>
+        <div class="modal-footer">
+          <button mat-button (click)="closeModal()">Annuler</button>
+          <button mat-raised-button color="primary" (click)="saveRole()">
+            <mat-icon>save</mat-icon> Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

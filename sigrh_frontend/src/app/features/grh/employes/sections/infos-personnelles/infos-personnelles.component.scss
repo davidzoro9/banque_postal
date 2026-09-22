@@ -1,0 +1,48 @@
+﻿.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.contact-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #eef4fb;
+  border: 1px solid #b3cce8;
+  border-left: 4px solid #004080;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 8px 0 16px 0;
+
+  .banner-icon {
+    color: #004080;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .banner-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 4px;
+
+    .banner-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #004080;
+    }
+
+    .banner-desc {
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.5;
+    }
+  }
+
+  .banner-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    mat-icon { font-size: 18px; }
+  }
+}
+

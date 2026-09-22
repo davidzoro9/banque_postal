@@ -1,0 +1,70 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Exonérations</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">receipt_long</mat-icon>
+      <mat-card-title>Exonérations</mat-card-title>
+      <mat-card-subtitle>Exonérations calculées depuis la liste des indemnités</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <p class="form-section-label">Exonérations calculées</p>
+        <div class="simple-list">
+          <div class="list-head">
+            <span>Indemnité</span><span>Taux</span><span>Plafond</span><span>Exo autorisée</span><span>Montant exonéré</span>
+          </div>
+          @if (exonerations.length === 0) {
+            <div class="empty-state"><mat-icon>receipt_long</mat-icon><span>Aucune exonération applicable.</span></div>
+          }
+          @for (item of exonerations; track item.id) {
+            <div class="simple-row">
+              <div class="indemnite-cell"><span class="code-badge">{{ item.typeIndemniteCode || 'IND' }}</span><span class="row-label">{{ item.libelle }}</span></div>
+              <span>{{ item.tauxExonere | number:'1.0-2' }} %</span>
+              <span>{{ item.plafondExonere > 0 ? (item.plafondExonere | number:'1.0-0') : 'Sans plafond' }}</span>
+              <span class="row-amount-auto" [class.full]="item.montantAutorise != null && item.montant != null && item.montant >= item.montantAutorise">
+                {{ item.montantAutorise != null ? (item.montantAutorise | number:'1.0-0') : '—' }}
+              </span>
+              <span class="row-amount">{{ item.montant | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+        <div class="total-box"><span class="total-lbl">Total des exonérations</span><span class="total-val">{{ totalExonerations | number:'1.0-0' }}</span></div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

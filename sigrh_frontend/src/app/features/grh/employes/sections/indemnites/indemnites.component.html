@@ -1,0 +1,163 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Indemnités</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">paid</mat-icon>
+      <mat-card-title>Indemnités</mat-card-title>
+      <mat-card-subtitle>Gestion des indemnités et des avantages en nature de l'employé</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+        <!-- Toast message alert -->
+        @if (avantageSaved) {
+          <div class="toast-alert">
+            <mat-icon>check_circle</mat-icon>
+            <span>{{ toastMessage }}</span>
+          </div>
+        }
+
+        <div class="table-header-row">
+          <p class="form-section-label" style="margin:0;">Indemnités attribuées</p>
+          <span class="table-hint">Indemnités actives attribuées selon le poste, la fonction et le grade.</span>
+        </div>
+
+        <div class="simple-list">
+          @if (indemnites.length === 0) {
+            <div class="empty-state">
+              <mat-icon>payments</mat-icon>
+              <span>Aucune indemnité configurée pour cet employé.</span>
+            </div>
+          }
+          @for (item of indemnites; track item.id) {
+            <div class="simple-row" [class.row-inactive]="item.actif === false">
+              <span class="code-badge">{{ item.typeIndemniteCode || 'IND' }}</span>
+              <div class="row-info">
+                <span class="row-label">{{ item.libelle }}</span>
+                @if (item.actif === false) {
+                  <span class="status-chip chip-inactive">Retirée</span>
+                } @else {
+                  <span class="status-chip chip-active">Active</span>
+                }
+              </div>
+              <div class="row-amount" [class.amount-inactive]="item.actif === false">
+                @if (item.actif === false) {
+                  <span class="zero-amount">0 F CFA</span>
+                  <span class="original-amount">({{ item.montant | number:'1.0-0' }} F)</span>
+                } @else {
+                  <span>{{ item.montant | number:'1.0-0' }} F CFA</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="total-box">
+          <span class="total-lbl">Total indemnités actives</span>
+          <span class="total-val">{{ totalIndemnites | number:'1.0-0' }} F CFA</span>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             AVANTAGES EN NATURE FOURNIS PAR L'EMPLOYEUR
+             ═══════════════════════════════════════════════════════════════ -->
+        <div style="margin-top: 28px;">
+          <p class="form-section-label">Avantages en nature fournis par l'employeur</p>
+          <p style="font-size:12px; color:#64748b; margin-bottom:14px;">
+            Cliquez pour attribuer ou retirer un avantage en nature. Cela réduit automatiquement l'indemnité correspondante et adapte les exonérations IUTS.
+          </p>
+
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+
+            <!-- Véhicule fourni -->
+            <div
+              (click)="toggleVehicule()"
+              class="advantage-card"
+              [class.active]="employee.vehiculeFourni"
+              [class.saving]="savingAvantage"
+              title="Cliquer pour basculer l'attribution du véhicule">
+              <mat-icon class="advantage-icon"
+                [style.color]="employee.vehiculeFourni ? '#0060B3' : '#94a3b8'">
+                directions_car
+              </mat-icon>
+              <div class="advantage-text">
+                <div class="advantage-title"
+                  [style.color]="employee.vehiculeFourni ? '#0060B3' : '#334155'">
+                  Véhicule de fonction fourni
+                </div>
+                <div class="advantage-desc">
+                  {{ employee.vehiculeFourni ? '✅ Attribué (indemnité transport déduite)' : '⬜ Non attribué' }}
+                </div>
+              </div>
+              <mat-icon class="toggle-icon"
+                [style.color]="employee.vehiculeFourni ? '#0060B3' : '#cbd5e1'">
+                {{ employee.vehiculeFourni ? 'toggle_on' : 'toggle_off' }}
+              </mat-icon>
+            </div>
+
+            <!-- Logement fourni -->
+            <div
+              (click)="toggleLogement()"
+              class="advantage-card"
+              [class.active]="employee.logementFourni"
+              [class.saving]="savingAvantage"
+              title="Cliquer pour basculer l'attribution du logement">
+              <mat-icon class="advantage-icon"
+                [style.color]="employee.logementFourni ? '#0060B3' : '#94a3b8'">
+                home
+              </mat-icon>
+              <div class="advantage-text">
+                <div class="advantage-title"
+                  [style.color]="employee.logementFourni ? '#0060B3' : '#334155'">
+                  Logement de fonction fourni
+                </div>
+                <div class="advantage-desc">
+                  {{ employee.logementFourni ? '✅ Attribué (indemnité logement déduite)' : '⬜ Non attribué' }}
+                </div>
+              </div>
+              <mat-icon class="toggle-icon"
+                [style.color]="employee.logementFourni ? '#0060B3' : '#cbd5e1'">
+                {{ employee.logementFourni ? 'toggle_on' : 'toggle_off' }}
+              </mat-icon>
+            </div>
+
+          </div>
+        </div>
+
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour à la fiche employé
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

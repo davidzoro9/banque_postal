@@ -1,0 +1,70 @@
+<div class="manuel-page">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon"><mat-icon>auto_stories</mat-icon></div>
+      <div>
+        <h1>Manuel d'Utilisation & Documentation Technique</h1>
+        <p>Guides explicatifs complets, procédures étape par étape et documentation d'utilisation pour le SIGRH</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button class="btn-download" (click)="downloadManual('Manuel_Global_SIGRH.pdf')">
+        <mat-icon>picture_as_pdf</mat-icon> Télécharger le Manuel (PDF)
+      </button>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche dans le Manuel -->
+  <mat-card class="search-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher dans la documentation (ex: bulletin, catégorie, échelon, clôture)...</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applySearch()" placeholder="Tapez un mot clé...">
+        @if (searchQuery) {
+          <button matSuffix mat-icon-button (click)="searchQuery=''; applySearch()"><mat-icon>close</mat-icon></button>
+        }
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Fiches Guides -->
+  <div class="guides-list">
+    @for (g of filteredGuides; track g.id) {
+      <mat-card class="guide-card">
+        <mat-card-header>
+          <div class="guide-icon"><mat-icon>{{ g.icon }}</mat-icon></div>
+          <div>
+            <mat-card-title>{{ g.title }}</mat-card-title>
+            <mat-card-subtitle>{{ g.summary }}</mat-card-subtitle>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <h4 class="guide-subtitle">Points Clés & Instructions :</h4>
+          <ul class="guide-bullets">
+            @for (c of g.content; track c) {
+              <li>{{ c }}</li>
+            }
+          </ul>
+
+          @if (g.workflow && g.workflow.length > 0) {
+            <div class="workflow-box">
+              <span class="wf-title">🔄 Procédure recommandée :</span>
+              <div class="wf-steps">
+                @for (w of g.workflow; track w) {
+                  <span class="step-chip">{{ w }}</span>
+                }
+              </div>
+            </div>
+          }
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary" (click)="downloadManual(g.id + '_Guide.pdf')">
+            <mat-icon>download</mat-icon> Télécharger la fiche (PDF)
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+</div>

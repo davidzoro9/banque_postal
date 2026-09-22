@@ -1,0 +1,89 @@
+<div class="profils-overview-page">
+  <!-- En-tête -->
+  <div class="header-banner">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>admin_panel_settings</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Profils, Habilitations & Documentation</h1>
+        <p>Administration centralisée des accès, rôles utilisateurs, matrice des permissions et manuel d'utilisation de l'application SIGRH.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e3f2fd; color: #0288d1;">
+          <mat-icon>badge</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.rolesCount ?? 0) }}</span>
+          <span class="stat-label">Profils & Rôles</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+          <mat-icon>people</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ isLoading ? '...' : ((stats?.activeUsers ?? 0) + ' / ' + (stats?.usersCount ?? 0)) }}</span>
+          <span class="stat-label">Utilisateurs Actifs</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #fff3e0; color: #f57c00;">
+          <mat-icon>rule</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.permissionsCount ?? 0) }}</span>
+          <span class="stat-label">Droits d'Actions Gérés</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon" style="background: #f3e5f5; color: #7b1fa2;">
+          <mat-icon>menu_book</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ isLoading ? '...' : (stats?.manualsCount ?? 0) }}</span>
+          <span class="stat-label">Guides & Manuel</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Sections principales -->
+  <h2 class="section-title">Espaces d'Administration</h2>
+  <div class="sections-grid">
+    @for (s of sections; track s.title) {
+      <mat-card class="section-card" (click)="navigateTo(s.route)" matRipple>
+        <mat-card-header>
+          <div class="card-header-icon" [style.background]="s.color">
+            <mat-icon>{{ s.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ s.title }}</mat-card-title>
+          <span class="badge-chip">{{ s.badge }}</span>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ s.description }}</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary">
+            Accéder à la gestion <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+</div>

@@ -1,0 +1,150 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="goBack()">Employés</span>
+    <span class="sep">›</span>
+    @if (employee) {
+      <span class="link" (click)="goBack()">{{ employee.prenom }} {{ employee.nom }}</span>
+      <span class="sep">›</span>
+    }
+    <span class="current">Dossier individuel</span>
+  </div>
+
+  @if (employee) {
+    <div class="emp-ctx">
+      <div class="emp-ctx-avatar">{{ initials }}</div>
+      <div>
+        <div class="emp-ctx-name">{{ employee.prenom }} {{ employee.nom }}</div>
+        <div class="emp-ctx-sub">{{ employee.matricule }}</div>
+      </div>
+    </div>
+  }
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3">folder_open</mat-icon>
+      <mat-card-title>Dossier individuel</mat-card-title>
+      <mat-card-subtitle>Contrats, diplômes et pièces administratives</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!employee) {
+        <div style="text-align:center;padding:40px"><mat-icon class="spin-icon">sync</mat-icon></div>
+      }
+
+      @if (employee) {
+
+        <div class="doc-toolbar">
+          <span class="doc-count">{{ documents.length }} document(s)</span>
+          @if (isEditing) {
+            <button mat-raised-button color="primary" (click)="showAddForm = !showAddForm">
+              <mat-icon>add</mat-icon> Ajouter un document
+            </button>
+          }
+        </div>
+
+        @if (showAddForm) {
+          <div class="add-doc-form" style="display: flex; flex-direction: column; gap: 12px; background: var(--surface-variant); padding: 16px; border-radius: 8px; margin-bottom: 16px; width: 100%;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; width: 100%;">
+              <mat-form-field appearance="outline" style="flex:1; min-width: 250px;">
+                <mat-label>Libellé du document *</mat-label>
+                <input matInput [(ngModel)]="newDoc.libelle" placeholder="Ex: Contrat CDI signé 2023, Diplôme Master, CNI...">
+              </mat-form-field>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+              <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" accept="image/*,application/pdf">
+              
+              <button mat-stroked-button type="button" (click)="fileInput.click()" style="color: var(--active-color); border-color: var(--active-color);">
+                <mat-icon>upload_file</mat-icon> Choisir un fichier (PDF, Image...)
+              </button>
+
+              @if (selectedFileName) {
+                <span style="font-size: 13px; color: var(--on-surface-2); font-weight: 500; display: inline-flex; align-items: center;">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">attach_file</mat-icon>
+                  {{ selectedFileName }}
+                </span>
+              } @else {
+                <span style="font-size: 12px; color: var(--on-surface-3); font-style: italic;">Aucun fichier sélectionné</span>
+              }
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button mat-button (click)="showAddForm = false">Annuler</button>
+              <button mat-flat-button color="primary" (click)="addDoc()" [disabled]="!newDoc.libelle.trim()">
+                <mat-icon>check</mat-icon> Valider
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (documents.length === 0 && !showAddForm) {
+          <div class="empty-docs">
+            <mat-icon>folder_open</mat-icon>
+            <p>Aucun document dans ce dossier</p>
+            <span>Cliquez sur "Ajouter un document" pour commencer</span>
+          </div>
+        }
+
+        <div class="doc-list" style="display: flex; flex-direction: column; gap: 10px;">
+          @for (doc of documents; track doc.id) {
+            <div class="doc-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0;" [style.cursor]="doc.url ? 'pointer' : 'default'" (click)="doc.url && openFile(doc)" [matTooltip]="doc.url ? 'Cliquez pour ouvrir/télécharger' : ''">
+                <div class="doc-icon" style="color: var(--active-color); display: flex; align-items: center; justify-content: center; background: rgba(22,48,89,0.06); width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;">
+                  <mat-icon>description</mat-icon>
+                </div>
+                <div class="doc-body" style="display: flex; flex-direction: column; min-width: 0;">
+                  <span class="doc-libelle" style="font-weight: 600; font-size: 13px;" [style.color]="doc.url ? 'var(--active-color)' : 'var(--on-surface)'" [style.text-decoration]="doc.url ? 'underline' : 'none'">{{ doc.libelle }}</span>
+                  <div class="doc-meta" style="display: flex; gap: 12px; font-size: 11px; margin-top: 4px; flex-wrap: wrap;">
+                    <span class="doc-date" style="color: var(--on-surface-3);">Ajouté le {{ doc.dateAjout }}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                @if (doc.url) {
+                  <button mat-icon-button color="primary" (click)="openFile(doc)" matTooltip="Ouvrir le fichier">
+                    <mat-icon>open_in_new</mat-icon>
+                  </button>
+                }
+                @if (isEditing) {
+                  <button mat-icon-button color="warn" (click)="removeDoc(doc.id)" matTooltip="Supprimer">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+      }
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="sec-actions">
+        <button mat-stroked-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au menu
+        </button>
+
+        <div class="sec-right">
+          @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="enableEdit()">
+              <mat-icon>edit</mat-icon>
+              Modifier
+            </button>
+          } @else {
+            <button mat-button (click)="cancelEdit()" [disabled]="saving">
+              Annuler
+            </button>
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">
+              @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+              Enregistrer
+            </button>
+          }
+        </div>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+</div>
+

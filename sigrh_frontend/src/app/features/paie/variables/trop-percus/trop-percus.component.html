@@ -1,0 +1,262 @@
+<div class="trop-percus-page">
+
+  <!-- En-tête Adaptatif -->
+  <div class="page-header">
+    <div class="ph-content">
+      <div class="ph-icon">
+        <mat-icon>history_toggle_drop_down</mat-icon>
+      </div>
+      <div>
+        <h1>Gestion des Trop-perçus</h1>
+        <p>Régularisation et retenue spontanée en 1 fois des montants indûment perçus</p>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button mat-raised-button class="btn-new" (click)="openAddModal()">
+        <mat-icon>add</mat-icon>
+        <span>Nouveau Trop-perçu</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Flash -->
+  @if (successMessage) {
+    <div class="alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert-danger">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Barre de Recherche & Filtres Responsives -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher par agent, matricule, motif...</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: Zongo, EMP-002, prime transport...">
+          @if (searchQuery) {
+            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Mois d'imputation</mat-label>
+          <mat-select [(ngModel)]="moisFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous les mois —</mat-option>
+            @for (m of moisList; track m.code) {
+              <mat-option [value]="m.code">{{ m.label }} ({{ m.code }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">— Tous les statuts —</mat-option>
+            <mat-option value="EN_ATTENTE">En attente de paie</mat-option>
+            <mat-option value="APPLIQUE">Appliqué sur bulletin</mat-option>
+            <mat-option value="ANNULE">Annulé</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Table des Trop-perçus -->
+  <mat-card class="table-card">
+    @if (loading) {
+      <div class="loading-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Chargement des trop-perçus depuis PostgreSQL...</span>
+      </div>
+    } @else if (filteredList.length === 0) {
+      <div class="empty-state">
+        <mat-icon>assignment_late</mat-icon>
+        <h3>Aucun trop-perçu enregistré</h3>
+        <p>Utilisez le bouton "Nouveau Trop-perçu" pour déclarer une régularisation spontanée.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Motif / Justification</th>
+              <th style="text-align: center;">Mois de l'Erreur (Origine)</th>
+              <th style="text-align: center;">Mois de Retenue (Application)</th>
+              <th style="text-align: right;">Montant (FCFA)</th>
+              <th style="text-align: center;">Statut</th>
+              <th style="text-align: center; min-width: 120px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filteredList; track item.id) {
+              <tr class="data-row">
+                <!-- Agent -->
+                <td>
+                  <div class="agent-cell">
+                    <div class="agent-avatar">{{ (item.employeeName || 'A').charAt(0).toUpperCase() }}</div>
+                    <div>
+                      <div class="agent-name">{{ item.employeeName || 'Agent indéfini' }}</div>
+                      <div class="agent-matricule">{{ item.matricule || 'EMP-' + item.employeeId }}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Motif / Justification -->
+                <td>
+                  <div class="element-cell">
+                    <strong style="color: var(--on-surface);">{{ item.motif || 'Régularisation trop-perçu sur salaire' }}</strong>
+                  </div>
+                </td>
+
+                <!-- Mois Origine -->
+                <td style="text-align: center;">
+                  <span class="badge-period origin">{{ item.moisOrigine || 'N/A' }}</span>
+                </td>
+
+                <!-- Mois Application -->
+                <td style="text-align: center;">
+                  <span class="badge-period target">{{ item.moisApplication }}</span>
+                </td>
+
+                <!-- Montant (en 1 fois) -->
+                <td style="text-align: right;">
+                  <span class="amount-val">-{{ (item.amount || 0) | number:'1.0-0' }}</span>
+                  <div class="amount-type">En 1 seule fois</div>
+                </td>
+
+                <!-- Statut -->
+                <td style="text-align: center;">
+                  @if (item.statut === 'APPLIQUE') {
+                    <span class="badge-statut applique">
+                      <mat-icon>check_circle</mat-icon> Appliqué
+                    </span>
+                  } @else if (item.statut === 'ANNULE') {
+                    <span class="badge-statut annule">Annulé</span>
+                  } @else {
+                    <span class="badge-statut attente">
+                      <mat-icon>schedule</mat-icon> En attente
+                    </span>
+                  }
+                </td>
+
+                <!-- Actions -->
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button [title]="item.statut === 'APPLIQUE' ? 'Marquer en attente' : 'Valider comme appliqué'" (click)="marquerApplique(item)">
+                      <mat-icon [style.color]="item.statut === 'APPLIQUE' ? '#10b981' : '#94a3b8'">
+                        {{ item.statut === 'APPLIQUE' ? 'check_circle' : 'radio_button_unchecked' }}
+                      </mat-icon>
+                    </button>
+                    <button mat-icon-button color="primary" title="Modifier" (click)="openEditModal(item)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" title="Supprimer" (click)="deleteItem(item)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </mat-card>
+
+  <!-- Modal Formulaire Trop-perçu Responsive -->
+  @if (showDialog) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="mh-title">
+            <mat-icon>history_toggle_drop_down</mat-icon>
+            <h2>{{ editingItem ? 'Modifier le Trop-perçu' : 'Nouveau Trop-perçu' }}</h2>
+          </div>
+          <button mat-icon-button (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- Sélection Agent -->
+            <div class="form-group full-width">
+              <label>Agent concerné <span class="required">*</span></label>
+              <select class="custom-select" [(ngModel)]="formModel.employeeId" (ngModelChange)="onEmployeeSelect()">
+                <option [ngValue]="undefined" disabled>— Sélectionner un agent —</option>
+                @for (emp of employeesList; track emp.id) {
+                  <option [ngValue]="emp.id">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Mois Origine -->
+            <div class="form-group">
+              <label>Mois d'origine</label>
+              <select class="custom-select" [(ngModel)]="formModel.moisOrigine">
+                @for (m of moisList; track m.code) {
+                  <option [value]="m.code">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Mois Application -->
+            <div class="form-group">
+              <label>Mois d'application <span class="required">*</span></label>
+              <select class="custom-select" [(ngModel)]="formModel.moisApplication">
+                @for (m of moisList; track m.code) {
+                  <option [value]="m.code">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Montant à retenir -->
+            <div class="form-group">
+              <label>Montant à retenir <span class="required">*</span></label>
+              <input type="number" class="custom-input amount-input" placeholder="Ex: 35000"
+                     [(ngModel)]="formModel.amount" min="1" step="1000">
+            </div>
+
+            <!-- Statut -->
+            <div class="form-group">
+              <label>Statut</label>
+              <select class="custom-select" [(ngModel)]="formModel.statut">
+                <option value="EN_ATTENTE">En attente de paie</option>
+                <option value="APPLIQUE">Déjà appliqué sur bulletin</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+            </div>
+
+            <!-- Motif / Justification -->
+            <div class="form-group full-width">
+              <label>Motif / Justification du trop-perçu</label>
+              <input type="text" class="custom-input" placeholder="Ex: Trop-perçu indemnité kilométrique suite à absence non déduite..."
+                     [(ngModel)]="formModel.motif">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-stroked-button (click)="closeModal()" class="btn-cancel">Annuler</button>
+          <button mat-raised-button color="primary" [disabled]="!formModel.employeeId || !formModel.amount || !formModel.moisApplication || isSaving"
+                  (click)="saveItem()" class="btn-save">
+            <mat-icon>check</mat-icon>
+            <span>{{ editingItem ? 'Mettre à jour' : 'Enregistrer le Trop-perçu' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

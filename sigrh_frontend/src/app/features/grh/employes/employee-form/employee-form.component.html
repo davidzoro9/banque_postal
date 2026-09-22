@@ -1,0 +1,181 @@
+<div class="section-page">
+
+  <div class="sec-breadcrumb">
+    <span class="link" (click)="cancel()">Employés</span>
+    <span class="sep">›</span>
+    <span class="current">{{ isEdit ? 'Modifier ' + form.get('prenom')?.value + ' ' + form.get('nom')?.value : 'Nouvel employé' }}</span>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar style="color:#0060B3; font-size: 28px; width: 28px; height: 28px;">person</mat-icon>
+      <mat-card-title>Informations personnelles</mat-card-title>
+      <mat-card-subtitle>État civil et coordonnées</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content style="padding-top: 16px;">
+      @if (formError || errorMessage) {
+        <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+          <mat-icon style="color: #dc2626;">warning</mat-icon>
+          <span>{{ formError || errorMessage }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form">
+
+        <!-- SECTION ÉTAT CIVIL -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">ÉTAT CIVIL DE L'EMPLOYÉ</p>
+        
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Nom de l'employé *</mat-label>
+            <input matInput formControlName="nom" placeholder="Ex: SAWADOGO">
+            @if (form.get('nom')?.hasError('required')) {
+              <mat-error>Le nom de l'employé est obligatoire</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Prénom de l'employé *</mat-label>
+            <input matInput formControlName="prenom" placeholder="Ex: Abdoulaye">
+            @if (form.get('prenom')?.hasError('required')) {
+              <mat-error>Le prénom de l'employé est obligatoire</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nom de jeune fille</mat-label>
+            <input matInput formControlName="nomJeuneFille" placeholder="Nom de jeune fille">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Sexe</mat-label>
+            <mat-select formControlName="sexe">
+              <mat-option value="M">Masculin</mat-option>
+              <mat-option value="F">Féminin</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Situation familiale</mat-label>
+            <mat-select formControlName="situationFamiliale">
+              @for (sit of situationsFamiliales; track sit.value) {
+                <mat-option [value]="sit.value">{{ sit.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de naissance</mat-label>
+            <input matInput [matDatepicker]="pickerNaissance" formControlName="dateNaissance" placeholder="JJ/MM/AAAA">
+            <mat-datepicker-toggle matIconSuffix [for]="pickerNaissance"></mat-datepicker-toggle>
+            <mat-datepicker #pickerNaissance></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Lieu de naissance</mat-label>
+            <input matInput formControlName="lieuNaissance" placeholder="Ex: Ouagadougou">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nationalité</mat-label>
+            <input matInput formControlName="nationalite" placeholder="Burkinabè">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Pièce d'identité</mat-label>
+            <input matInput formControlName="numeroCNI" placeholder="N° CNI ou Passeport">
+          </mat-form-field>
+        </div>
+
+        <!-- SECTION ÉDUCATION -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">ÉDUCATION</p>
+
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Dernier diplôme</mat-label>
+            <input matInput formControlName="dernierDiplome" placeholder="Ex: Master / Licence">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Diplôme de recrutement</mat-label>
+            <input matInput formControlName="diplomeRecrutement" placeholder="Ex: Baccalauréat / BEPC">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Branche d'étude</mat-label>
+            <input matInput formControlName="brancheEtude" placeholder="Ex: Informatique, Management">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ecole / Université</mat-label>
+            <input matInput formControlName="ecoleUniversite" placeholder="Ex: Université Joseph Ki-Zerbo">
+          </mat-form-field>
+        </div>
+
+        <!-- SECTION COORDONNÉES -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">COORDONNÉES</p>
+        
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <mat-form-field appearance="outline" style="grid-column: span 2;">
+            <mat-label>Adresse</mat-label>
+            <input matInput formControlName="adresse" placeholder="Avenue Kwamé Nkrumah, Zone Commerciale">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ville de résidence</mat-label>
+            <input matInput formControlName="ville" placeholder="Ex: Ouagadougou">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Code postal</mat-label>
+            <input matInput formControlName="codePostal" placeholder="Code postal">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Pays</mat-label>
+            <input matInput formControlName="pays" placeholder="Burkina Faso">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone</mat-label>
+            <input matInput formControlName="telephone" placeholder="+226 70 20 11 22">
+          </mat-form-field>
+        </div>
+
+        <!-- SECTION CONTACT D'URGENCE -->
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">PERSONNE À CONTACTER EN CAS D'URGENCE (OPTIONNEL)</p>
+        
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <mat-form-field appearance="outline">
+            <mat-label>Nom & Prénom du contact d'urgence</mat-label>
+            <input matInput formControlName="contactUrgenceNom" placeholder="Ex: Sawadogo Jean (Père / Conjoint)">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone du contact d'urgence</mat-label>
+            <input matInput formControlName="contactUrgenceTelephone" placeholder="+226 70 00 00 00">
+          </mat-form-field>
+        </div>
+
+      </form>
+
+      @if (formError || errorMessage) {
+        <div style="margin-top: 20px; padding: 12px 16px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+          <mat-icon style="color: #dc2626;">warning</mat-icon>
+          <span>{{ formError || errorMessage }}</span>
+        </div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; background-color: #fafafa; border-top: 1px solid #e2e8f0;">
+      <button mat-button (click)="cancel()">Annuler</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving" style="border-radius: 8px; font-weight: 600;">
+        @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
+        @else { <mat-icon style="margin-right: 4px;">arrow_forward</mat-icon> }
+        {{ isEdit ? 'Enregistrer les modifications' : 'Enregistrer et continuer' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+</div>

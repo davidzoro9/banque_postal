@@ -1,0 +1,222 @@
+﻿.section-page {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.sec-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--on-surface-3);
+  margin-bottom: 24px;
+  
+  .link {
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.2s;
+    &:hover { color: var(--active-color); text-decoration: underline; }
+  }
+  .sep { color: var(--on-surface-4); }
+  .current { color: var(--on-surface); font-weight: 600; }
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  
+  .header-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(27, 58, 107, 0.08);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1b3a6b;
+    mat-icon { font-size: 24px; width: 24px; height: 24px; }
+  }
+  
+  h1 { font-size: 22px; font-weight: 700; color: var(--on-surface); margin: 0; }
+  p { font-size: 14px; color: var(--on-surface-2); margin: 4px 0 0 0; }
+}
+
+.add-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  
+  mat-card-header {
+    margin-bottom: 16px;
+    mat-card-title { font-size: 16px; font-weight: 700; color: #004080; }
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.form-row-score {
+  margin-bottom: 8px;
+}
+
+.w-100 { width: 100%; }
+
+.form-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.warning-text {
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.evals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.eval-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s;
+  
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    border-color: rgba(27, 58, 107, 0.15);
+  }
+}
+
+.eval-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.emp-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.emp-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--active-color);
+  color: var(--on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(22, 48, 89, 0.2);
+}
+
+.emp-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.eval-meta {
+  font-size: 12px;
+  color: var(--on-surface-3);
+  display: block;
+  margin-top: 3px;
+  
+  strong { color: var(--on-surface-2); }
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  
+  mat-icon { font-size: 20px; width:20px; height:20px; }
+}
+
+.eval-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.eval-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sec-lbl {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--on-surface-3);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  mat-icon { font-size: 16px; width:16px; height:16px; color: var(--on-surface-3); }
+}
+
+.sec-val {
+  font-size: 13.5px;
+  color: var(--on-surface-2);
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--on-surface-3);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  
+  mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; }
+  p { font-size: 14px; font-weight: 500; margin: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
