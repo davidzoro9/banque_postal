@@ -4,8 +4,8 @@
     <div class="ph-content">
       <div class="ph-badge">BPBF</div>
       <div>
-        <h1>Manuel d'Utilisation & Documentation Technique Complète</h1>
-        <p>Guide de référence exhaustif conforme au standard ResHum Dz et aux procédures opérationnelles de la Banque Postale du Burkina Faso</p>
+        <h1>Manuel d'Utilisation & Guide Opérationnel Complet</h1>
+        <p>Documentation technique exhaustive, démarches et manipulations pas-à-pas pour chaque module du SIGRH</p>
       </div>
     </div>
     <div class="header-actions">
@@ -15,16 +15,16 @@
     </div>
   </div>
 
-  <!-- Barre d'indicateurs de documentation -->
+  <!-- Indicateurs de Couverture & Standard -->
   <div class="doc-stats-banner">
     <div class="stat-item">
       <span class="stat-number">11</span>
-      <span class="stat-label">Chapitres Exhaustifs</span>
+      <span class="stat-label">Modules & Chapitres</span>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
       <span class="stat-number">100%</span>
-      <span class="stat-label">Processus RH & Paie Couverts</span>
+      <span class="stat-label">Manipulations Pas-à-Pas Détaillées</span>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
@@ -34,11 +34,11 @@
     <div class="stat-divider"></div>
     <div class="stat-item">
       <span class="stat-number">BPBF</span>
-      <span class="stat-label">Conformité Bancaire & Fiscale 2024</span>
+      <span class="stat-label">Conformité Bancaire & Barème IUTS 2024</span>
     </div>
   </div>
 
-  <!-- Barre de Recherche et Filtres par Catégorie -->
+  <!-- Barre de Recherche et Filtres -->
   <mat-card class="search-card">
     <mat-card-content>
       <div class="search-box-row">
@@ -48,7 +48,7 @@
             class="search-input-custom"
             [(ngModel)]="searchQuery"
             (ngModelChange)="applyFilter()"
-            placeholder="Rechercher dans la documentation (ex: bulletin, cnss, échelon, mission, calcul paie, iuts, clôture)..."
+            placeholder="Rechercher une manipulation, un champ, une étape (ex: matricule, virement, échelon, calcul paie, cnss, bon de soins)..."
           />
           @if (searchQuery) {
             <button type="button" class="btn-clear-search" (click)="resetSearch()">Effacer</button>
@@ -75,10 +75,10 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Table des Matières Express (Accès Rapide par Chapitre) -->
+  <!-- Table des Matières Express (Accès Rapide) -->
   <div class="toc-container">
     <div class="toc-header">
-      <span class="toc-title">Table des matières — Accès direct aux 11 chapitres :</span>
+      <span class="toc-title">Table des matières — Accès direct aux manipulations de chaque module :</span>
     </div>
     <div class="toc-grid">
       @for (c of chapters; track c.id) {
@@ -90,7 +90,7 @@
     </div>
   </div>
 
-  <!-- Liste Complète des 11 Chapitres -->
+  <!-- Liste des Chapitres avec Détails Opérationnels -->
   <div class="guides-list">
     @for (chapter of filteredChapters; track chapter.id) {
       <div class="chapter-card" [id]="chapter.id">
@@ -106,6 +106,10 @@
             </div>
             <h2 class="chapter-title">{{ chapter.title }}</h2>
             <p class="chapter-summary">{{ chapter.summary }}</p>
+            <div class="chapter-access-path">
+              <span class="path-label">Accès dans l'application :</span>
+              <span class="path-value">{{ chapter.accessPath }}</span>
+            </div>
           </div>
         </div>
 
@@ -114,20 +118,103 @@
           <div class="subsections-list">
             @for (sub of chapter.subsections; track sub.title) {
               <div class="subsection-item">
-                <h3 class="subsection-title">{{ sub.title }}</h3>
-                <ul class="subsection-points">
-                  @for (pt of sub.points; track pt) {
-                    <li>{{ pt }}</li>
+                <div class="sub-header-block">
+                  <h3 class="subsection-title">{{ sub.title }}</h3>
+                  @if (sub.accessPath) {
+                    <div class="sub-access-tag">
+                      <span class="tag-title">Chemin :</span> {{ sub.accessPath }}
+                    </div>
                   }
-                </ul>
+                </div>
+
+                @if (sub.description) {
+                  <p class="sub-description">{{ sub.description }}</p>
+                }
+
+                <!-- Points clés d'explication -->
+                @if (sub.points && sub.points.length > 0) {
+                  <ul class="subsection-points">
+                    @for (pt of sub.points; track pt) {
+                      <li>{{ pt }}</li>
+                    }
+                  </ul>
+                }
+
+                <!-- Tableau exhaustif des champs de formulaire -->
+                @if (sub.fields && sub.fields.length > 0) {
+                  <div class="fields-section">
+                    <h4 class="section-label">Champs du formulaire & Règles de saisie :</h4>
+                    <div class="table-responsive">
+                      <table class="fields-table">
+                        <thead>
+                          <tr>
+                            <th>Nom du Champ</th>
+                            <th>Type de Donnée</th>
+                            <th>Obligation</th>
+                            <th>Description & Règle de Gestion</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (field of sub.fields; track field.name) {
+                            <tr>
+                              <td class="field-name">{{ field.name }}</td>
+                              <td class="field-type">{{ field.type }}</td>
+                              <td class="field-req">
+                                <span [class.req-yes]="field.required" [class.req-no]="!field.required">
+                                  {{ field.required ? 'Obligatoire' : 'Optionnel' }}
+                                </span>
+                              </td>
+                              <td class="field-desc">{{ field.description }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                <!-- Manipulations pas-à-pas -->
+                @if (sub.steps && sub.steps.length > 0) {
+                  <div class="steps-section">
+                    <h4 class="section-label">Manipulations & Clics étape par étape :</h4>
+                    <div class="steps-container">
+                      @for (st of sub.steps; track st; let i = $index) {
+                        <div class="step-card-row">
+                          <span class="step-idx">{{ i + 1 }}</span>
+                          <span class="step-content">{{ st }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- Comportement & Contrôles du système -->
+                @if (sub.systemBehavior) {
+                  <div class="system-behavior-box">
+                    <span class="sys-label">Comportement & Contrôles automatiques du système :</span>
+                    <span class="sys-text">{{ sub.systemBehavior }}</span>
+                  </div>
+                }
+
+                <!-- Vérifications préalables & contrôles qualité -->
+                @if (sub.controls && sub.controls.length > 0) {
+                  <div class="controls-checklist-box">
+                    <span class="ctrl-label">Vérifications obligatoires :</span>
+                    <ul class="ctrl-list">
+                      @for (ctrl of sub.controls; track ctrl) {
+                        <li>{{ ctrl }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
               </div>
             }
           </div>
 
-          <!-- Procédure Recommandée Pas-à-Pas (Workflow) -->
+          <!-- Procédure Recommandée Pas-à-Pas (Workflow Général) -->
           @if (chapter.workflow && chapter.workflow.length > 0) {
             <div class="workflow-box">
-              <span class="wf-title">Procédure Opérationnelle Recommandée :</span>
+              <span class="wf-title">Cycle Global Opérationnel Recommandé :</span>
               <div class="wf-steps-list">
                 @for (step of chapter.workflow; track step) {
                   <div class="wf-step-card">
@@ -138,10 +225,10 @@
             </div>
           }
 
-          <!-- Note / Bonne Pratique Institutionnelle -->
+          <!-- Note / Bonne Pratique Institutionnelle BPBF -->
           @if (chapter.tips) {
             <div class="tips-box">
-              <span class="tips-tag">Règle Métier & Bonne Pratique :</span>
+              <span class="tips-tag">Règle Métier & Conformité Bancaire BPBF :</span>
               <span class="tips-text">{{ chapter.tips }}</span>
             </div>
           }
@@ -150,7 +237,7 @@
         <!-- Actions de Chapitre -->
         <div class="chapter-footer">
           <button type="button" class="btn-print-chapter" (click)="printChapter(chapter)">
-            <span>Imprimer la Fiche de ce Chapitre</span>
+            <span>Imprimer la Fiche Manipulations</span>
           </button>
           <button type="button" class="btn-download-guide" (click)="downloadManual('Guide_Utilisateur_SIGRH_BPBF.pdf')">
             <span>Télécharger le Guide PDF Complet</span>
