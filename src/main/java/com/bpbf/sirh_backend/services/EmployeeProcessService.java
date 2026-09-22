@@ -27,6 +27,7 @@ public class EmployeeProcessService {
     private final BulletinRepository bulletinRepository;
     private final AvoirRepository avoirRepository;
     private final PrecompteRepository precompteRepository;
+    private final GrilleSalarialeRepository grilleSalarialeRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
@@ -40,18 +41,38 @@ public class EmployeeProcessService {
         Long gradeId = idOf(employee.getGradeObj());
         Long categorieId = idOf(employee.getCategorieObj());
         List<ParametrageIndemnite> applicable = resolveApplicableIndemnites(employee, fonctionId, emploiId, gradeId, categorieId);
-        Map<Long, IndemniteEmploye> existing = indemniteRepository.findByEmployeeId(employee.getId()).stream()
-                .filter(i -> i.getParametrageIndemnite() != null)
-                .collect(Collectors.toMap(i -> i.getParametrageIndemnite().getId(), Function.identity()));
+        List<IndemniteEmploye> existingList = indemniteRepository.findByEmployeeId(employee.getId());
+        Map<Long, IndemniteEmploye> existingByParamId = new LinkedHashMap<>();
+        Map<Long, IndemniteEmploye> existingByTypeId = new LinkedHashMap<>();
+        for (IndemniteEmploye ie : existingList) {
+            if (ie.getParametrageIndemnite() != null && ie.getParametrageIndemnite().getId() != null) {
+                existingByParamId.put(ie.getParametrageIndemnite().getId(), ie);
+            }
+            if (ie.getTypeIndemnite() != null && ie.getTypeIndemnite().getId() != null) {
+                existingByTypeId.put(ie.getTypeIndemnite().getId(), ie);
+            }
+        }
 
         List<IndemniteEmploye> current = new ArrayList<>();
+        Set<Long> processedIds = new HashSet<>();
         for (ParametrageIndemnite parametrage : applicable) {
-            IndemniteEmploye indemnite = existing.remove(parametrage.getId());
+            if (parametrage.getTypeIndemniteObj() == null) continue;
+            Long typeId = parametrage.getTypeIndemniteObj().getId();
+
+            IndemniteEmploye indemnite = existingByParamId.get(parametrage.getId());
+            if (indemnite == null && typeId != null) {
+                indemnite = existingByTypeId.get(typeId);
+            }
+
             if (indemnite == null) {
                 indemnite = new IndemniteEmploye();
                 indemnite.setEmployee(employee);
                 indemnite.setParametrageIndemnite(parametrage);
+                indemnite.setActif(true);
+            } else {
+                indemnite.setParametrageIndemnite(parametrage);
             }
+
             TypeIndemnite type = parametrage.getTypeIndemniteObj();
             indemnite.setTypeIndemnite(type);
             indemnite.setLibelle(type.getName());
@@ -61,59 +82,101 @@ public class EmployeeProcessService {
             boolean isTransport = tCode.contains("TRP") || tCode.contains("TRANS") || tName.contains("TRANSPORT") || tName.contains("DÉPLACEMENT") || tName.contains("DEPLACEMENT");
             boolean isLogement = tCode.contains("LOG") || tCode.contains("MAISON") || tName.contains("LOGEMENT");
 
-            if (Boolean.TRUE.equals(employee.getVehiculeFourni()) && isTransport) {
-                indemnite.setMontant(0.0);
-                indemnite.setActif(false);
-            } else if (Boolean.TRUE.equals(employee.getLogementFourni()) && isLogement) {
-                indemnite.setMontant(0.0);
-                indemnite.setActif(false);
+            if (isTransport) {
+                indemnite.setMontant(valueOrZero(parametrage.getTaux()));
+                if (Boolean.TRUE.equals(employee.getVehiculeFourni())) {
+                    indemnite.setActif(false);
+                } else {
+                    indemnite.setActif(true);
+                }
+            } else if (isLogement) {
+                indemnite.setMontant(valueOrZero(parametrage.getTaux()));
+                if (Boolean.TRUE.equals(employee.getLogementFourni())) {
+                    indemnite.setActif(false);
+                } else {
+                    indemnite.setActif(true);
+                }
             } else {
                 indemnite.setMontant(valueOrZero(parametrage.getTaux()));
                 if (indemnite.getActif() == null) {
                     indemnite.setActif(true);
-                } else if (isTransport && !Boolean.TRUE.equals(employee.getVehiculeFourni()) && (indemnite.getMontant() == null || indemnite.getMontant() == 0.0)) {
-                    indemnite.setMontant(valueOrZero(parametrage.getTaux()));
-                    indemnite.setActif(true);
-                } else if (isLogement && !Boolean.TRUE.equals(employee.getLogementFourni()) && (indemnite.getMontant() == null || indemnite.getMontant() == 0.0)) {
-                    indemnite.setMontant(valueOrZero(parametrage.getTaux()));
-                    indemnite.setActif(true);
                 }
             }
-            current.add(indemniteRepository.save(indemnite));
+
+            IndemniteEmploye saved = indemniteRepository.save(indemnite);
+            current.add(saved);
+            if (saved.getId() != null) {
+                processedIds.add(saved.getId());
+            }
         }
 
-        // Exemptions reference indemnities, so obsolete children must be removed first.
-        for (IndemniteEmploye obsolete : existing.values()) {
-            exonerationRepository.deleteByIndemniteEmployeId(obsolete.getId());
+        // Supprimer uniquement les indemnités obsolètes qui étaient liées à un paramétrage qui ne s'applique plus
+        for (IndemniteEmploye obsolete : existingList) {
+            if (obsolete.getId() != null && !processedIds.contains(obsolete.getId()) && obsolete.getParametrageIndemnite() != null) {
+                exonerationRepository.deleteByIndemniteEmployeId(obsolete.getId());
+                indemniteRepository.delete(obsolete);
+            }
         }
         exonerationRepository.flush();
-        indemniteRepository.deleteAll(existing.values());
         indemniteRepository.flush();
 
         double totalIndemnites = current.stream()
                 .filter(i -> !Boolean.FALSE.equals(i.getActif()))
                 .mapToDouble(i -> valueOrZero(i.getMontant())).sum();
-        if (employee.getGrilleSalariale() != null) {
-            SituationSalariale situation = situationRepository.findByEmployeeId(employee.getId())
-                    .orElseGet(SituationSalariale::new);
-            situation.setEmployee(employee);
-            situation.setGrilleSalariale(employee.getGrilleSalariale());
-            situation.setCategorie(employee.getCategorieObj());
-            situation.setEchelon(employee.getEchelonObj());
-            situation.setGrade(employee.getGradeObj());
-            double base = valueOrZero(employee.getGrilleSalariale().getSalaireBase());
-            Double surSalaire = employee.getSurSalaire() != null ? employee.getSurSalaire() : (dto != null ? dto.getSurSalaire() : 0.0);
-            if (surSalaire != null && surSalaire < 0.0) {
-                surSalaire = 0.0;
+
+        // Résolution de la Grille Salariale si non rattachée directement à l'employé
+        GrilleSalariale grille = employee.getGrilleSalariale();
+        if (grille == null && employee.getCategorieObj() != null && employee.getEchelonObj() != null) {
+            grille = grilleSalarialeRepository.findByCategorieObjIdAndEchelonObjId(
+                    employee.getCategorieObj().getId(), employee.getEchelonObj().getId()
+            ).orElse(null);
+            if (grille != null) {
+                employee.setGrilleSalariale(grille);
             }
-            situation.setSalaireBase(base);
-            situation.setSurSalaire(surSalaire);
-            situation.setTotalIndemnites(totalIndemnites);
-            situation.setSalaireBrut(base + (surSalaire != null ? surSalaire : 0.0) + totalIndemnites);
-            situationRepository.save(situation);
-        } else {
-            situationRepository.deleteByEmployeeId(employee.getId());
         }
+        if (grille == null && employee.getGradeObj() != null) {
+            List<GrilleSalariale> byGrade = grilleSalarialeRepository.findByGradeObjId(employee.getGradeObj().getId());
+            if (!byGrade.isEmpty()) {
+                grille = byGrade.get(0);
+                employee.setGrilleSalariale(grille);
+            }
+        }
+
+        SituationSalariale situation = situationRepository.findByEmployeeId(employee.getId())
+                .orElseGet(SituationSalariale::new);
+        situation.setEmployee(employee);
+        situation.setGrilleSalariale(grille);
+        situation.setCategorie(employee.getCategorieObj() != null ? employee.getCategorieObj() : (grille != null ? grille.getCategorieObj() : null));
+        situation.setEchelon(employee.getEchelonObj() != null ? employee.getEchelonObj() : (grille != null ? grille.getEchelonObj() : null));
+        situation.setGrade(employee.getGradeObj() != null ? employee.getGradeObj() : (grille != null ? grille.getGradeObj() : null));
+
+        double base = 0.0;
+        if (grille != null && grille.getSalaireBase() != null) {
+            base = valueOrZero(grille.getSalaireBase());
+        } else if (dto != null && dto.getSalaireBase() != null) {
+            base = valueOrZero(dto.getSalaireBase());
+        }
+        Double surSalaire = 0.0;
+        if (employee.getSurSalaire() != null) {
+            surSalaire = employee.getSurSalaire();
+        } else if (dto != null && dto.getSurSalaire() != null) {
+            surSalaire = dto.getSurSalaire();
+        }
+        if (surSalaire < 0.0) {
+            surSalaire = 0.0;
+        }
+        double salBrut = base + (surSalaire != null ? surSalaire : 0.0) + totalIndemnites;
+        situation.setSalaireBase(base);
+        situation.setSurSalaire(surSalaire);
+        situation.setTotalIndemnites(totalIndemnites);
+        situation.setSalaireBrut(salBrut);
+        situationRepository.save(situation);
+
+        // Brut fiscal = Salaire brut total - CNSS employé (5.5%)
+        // C'est la base de référence pour calculer les limites d'exonération (guide ResHum : "Base d'exo")
+        double brutTotal = base + (employee.getSurSalaire() != null ? employee.getSurSalaire() : 0.0) + totalIndemnites;
+        double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
+        double brutFiscal = brutTotal - cnssAgent; // Brut après CNSS = base des taux d'exonération
 
         for (IndemniteEmploye indemnite : current) {
             if (Boolean.FALSE.equals(indemnite.getActif()) || valueOrZero(indemnite.getMontant()) == 0.0) {
@@ -121,17 +184,34 @@ public class EmployeeProcessService {
                 continue;
             }
             TypeIndemnite type = indemnite.getTypeIndemnite();
-            ExonerationEmploye exoneration = exonerationRepository.findByIndemniteEmployeId(indemnite.getId())
-                    .orElseGet(ExonerationEmploye::new);
+            if (type == null) continue;
             double taux = valueOrZero(type.getTauxExoneration());
             double plafond = valueOrZero(type.getPlafondExoneration());
+
+            if (taux <= 0.0 && plafond <= 0.0) {
+                exonerationRepository.deleteByIndemniteEmployeId(indemnite.getId());
+                continue;
+            }
+
+            ExonerationEmploye exoneration = exonerationRepository.findByIndemniteEmployeId(indemnite.getId())
+                    .orElseGet(ExonerationEmploye::new);
             exoneration.setEmployee(employee);
             exoneration.setTypeIndemnite(type);
             exoneration.setIndemniteEmploye(indemnite);
             exoneration.setLibelle(type.getName());
             exoneration.setTauxExonere(taux);
             exoneration.setPlafondExonere(plafond);
-            exoneration.setMontant(calculateExoneration(indemnite.getMontant(), taux, plafond));
+            // Guide ResHum / CGI BF : Exo = MIN(Montant servi, Taux% × Brut fiscal, Plafond)
+            // Le taux est appliqué sur le BRUT FISCAL (brut global - CNSS), pas sur le montant de l'indemnité
+            double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+            double exoReelle;
+            if (exoneration.getId() != null && exoneration.getMontant() != null && exoneration.getMontant() > 0 && exoneration.getMontant() <= exoAutorisee) {
+                exoReelle = exoneration.getMontant();
+            } else {
+                exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
+            }
+            exoneration.setMontantAutorise(exoAutorisee); // limite théorique affichée dans le tableau
+            exoneration.setMontant(exoReelle);            // exonération réellement accordée
             exonerationRepository.save(exoneration);
         }
 
@@ -198,9 +278,38 @@ public class EmployeeProcessService {
         }
     }
 
+    /**
+     * Calcule le montant d'exonération autorisé (limite théorique) sur la base du brut fiscal.
+     * Formule guide ResHum / CGI BF : MIN(taux% × brutFiscal, plafond)
+     * C'est la limite maximale accordée AVANT comparaison avec le montant réellement servi.
+     */
+    static double calculateExonerationAutorisee(double brutFiscal, double taux, double plafond) {
+        if (taux <= 0.0 && plafond <= 0.0) return 0.0;
+        double premiereLimite = (taux > 0.0) ? (brutFiscal * taux / 100.0) : Double.MAX_VALUE;
+        double deuxiemeLimite = (plafond > 0.0) ? plafond : Double.MAX_VALUE;
+        return Math.min(premiereLimite, deuxiemeLimite);
+    }
+
     static double calculateExoneration(Double montant, Double taux, Double plafond) {
-        double calculated = valueOrZero(montant) * valueOrZero(taux) / 100.0;
-        return valueOrZero(plafond) > 0 ? Math.min(calculated, plafond) : calculated;
+        return calculateExoneration(montant, null, taux, plafond);
+    }
+
+    static double calculateExoneration(Double montant, Double brut, Double taux, Double plafond) {
+        double m = valueOrZero(montant);
+        if (m <= 0.0) return 0.0;
+        double t = valueOrZero(taux);
+        double p = valueOrZero(plafond);
+        if (t <= 0.0 && p <= 0.0) return 0.0;
+
+        // CGI Burkina Faso — Circulaire d'application ministérielle :
+        // Première limite : Taux légal calculé sur le Salaire Brut fiscal (SB = Brut global - CNSS)
+        // Deuxième limite : Plafond légal en valeur absolue (FCFA)
+        // Exonération autorisée = MIN(Montant servi, Première limite, Deuxième limite)
+        double baseRef = (brut != null && brut > 0.0) ? brut : m;
+        double premiereLimite = (t > 0.0) ? (baseRef * t / 100.0) : Double.MAX_VALUE;
+        double deuxiemeLimite = (p > 0.0) ? p : Double.MAX_VALUE;
+
+        return Math.min(m, Math.min(premiereLimite, deuxiemeLimite));
     }
 
     @Transactional(readOnly = true)
@@ -260,29 +369,42 @@ public class EmployeeProcessService {
     @Transactional
     public InformationSalarialeDto recalculateInformation(String idOrMatricule) {
         Employee employee = resolveEmployee(idOrMatricule);
+        try {
+            sync(employee, null);
+        } catch (Exception ignored) {}
         return informationCalculService.toDto(informationCalculService.recalculate(employee));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public InformationSalarialeDto simulateSalary(String idOrMatricule, Double customSalaireBase, Double customSurSalaire) {
-        Employee employee = resolveEmployee(idOrMatricule);
-        return informationCalculService.simulate(employee, customSalaireBase, customSurSalaire);
+        return simulateSalary(idOrMatricule, customSalaireBase, customSurSalaire, null);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public InformationSalarialeDto simulateSalary(String idOrMatricule, Double customSalaireBase, Double customSurSalaire, Integer customAncienneteReprise) {
+        Employee employee = resolveEmployee(idOrMatricule);
+        try {
+            sync(employee, null);
+        } catch (Exception ignored) {}
+        return informationCalculService.simulate(employee, customSalaireBase, customSurSalaire, customAncienneteReprise);
+    }
+
+    @Transactional
     public SituationSalarialeDto getSituation(String idOrMatricule) {
         Employee employee = resolveEmployee(idOrMatricule);
+        try {
+            sync(employee, null);
+        } catch (Exception ignored) {}
         return situationRepository.findByEmployeeId(employee.getId()).map(this::toDto)
-                .orElseGet(() -> {
-                    SituationSalarialeDto dto = new SituationSalarialeDto();
-                    dto.setEmployeeId(employee.getId());
-                    return dto;
-                });
+                .orElseGet(() -> buildFallbackSituationDto(employee));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<IndemniteEmployeDto> getIndemnites(String idOrMatricule) {
         Employee employee = resolveEmployee(idOrMatricule);
+        try {
+            sync(employee, null);
+        } catch (Exception ignored) {}
         return indemniteRepository.findByEmployeeId(employee.getId()).stream().map(this::toDto).toList();
     }
 
@@ -298,30 +420,60 @@ public class EmployeeProcessService {
 
         boolean nouveauStatut = Boolean.FALSE.equals(indemnite.getActif()) ? true : false;
         indemnite.setActif(nouveauStatut);
+        if (nouveauStatut && (indemnite.getMontant() == null || indemnite.getMontant() == 0.0)) {
+            if (indemnite.getParametrageIndemnite() != null && indemnite.getParametrageIndemnite().getTaux() != null) {
+                indemnite.setMontant(indemnite.getParametrageIndemnite().getTaux());
+            }
+        }
+
+        TypeIndemnite type = indemnite.getTypeIndemnite();
+        if (type != null) {
+            String tCode = (type.getCode() != null ? type.getCode() : "").toUpperCase();
+            String tName = (type.getName() != null ? type.getName() : "").toUpperCase();
+            boolean isTransport = tCode.contains("TRP") || tCode.contains("TRANS") || tName.contains("TRANSPORT") || tName.contains("DÉPLACEMENT") || tName.contains("DEPLACEMENT");
+            boolean isLogement = tCode.contains("LOG") || tCode.contains("MAISON") || tName.contains("LOGEMENT");
+
+            if (isTransport) {
+                employee.setVehiculeFourni(!nouveauStatut);
+                employeeRepository.save(employee);
+            }
+            if (isLogement) {
+                employee.setLogementFourni(!nouveauStatut);
+                employeeRepository.save(employee);
+            }
+        }
+
         IndemniteEmploye saved = indemniteRepository.save(indemnite);
 
         // Mettre à jour l'exonération correspondante
         if (Boolean.FALSE.equals(saved.getActif()) || valueOrZero(saved.getMontant()) == 0.0) {
             exonerationRepository.deleteByIndemniteEmployeId(saved.getId());
         } else {
-            TypeIndemnite type = saved.getTypeIndemnite();
+            type = saved.getTypeIndemnite();
             if (type != null) {
                 ExonerationEmploye exoneration = exonerationRepository.findByIndemniteEmployeId(saved.getId())
                         .orElseGet(ExonerationEmploye::new);
                 double taux = valueOrZero(type.getTauxExoneration());
                 double plafond = valueOrZero(type.getPlafondExoneration());
-                exoneration.setEmployee(employee);
-                exoneration.setTypeIndemnite(type);
-                exoneration.setIndemniteEmploye(saved);
-                exoneration.setLibelle(type.getName());
-                exoneration.setTauxExonere(taux);
-                exoneration.setPlafondExonere(plafond);
-                exoneration.setMontant(calculateExoneration(saved.getMontant(), taux, plafond));
+                double brutTotal = valueOrZero(employee.getGrilleSalariale() != null
+                        ? employee.getGrilleSalariale().getSalaireBase() : null)
+                        + (employee.getSurSalaire() != null ? employee.getSurSalaire() : 0.0)
+                        + indemniteRepository.findByEmployeeId(employee.getId()).stream()
+                                .filter(i -> !Boolean.FALSE.equals(i.getActif()))
+                                .mapToDouble(i -> valueOrZero(i.getMontant())).sum();
+                double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
+                double brutFiscal = brutTotal - cnssAgent;
+
+                double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+                double exoReelle = Math.min(valueOrZero(saved.getMontant()), exoAutorisee);
+                exoneration.setMontantAutorise(exoAutorisee);
+                exoneration.setMontant(exoReelle);
                 exonerationRepository.save(exoneration);
             }
         }
 
         recalculateSituationIndemnites(employee.getId());
+        informationCalculService.recalculate(employee);
 
         return toDto(saved);
     }
@@ -339,6 +491,7 @@ public class EmployeeProcessService {
         exonerationRepository.deleteByIndemniteEmployeId(indemniteId);
         indemniteRepository.delete(indemnite);
         recalculateSituationIndemnites(employee.getId());
+        informationCalculService.recalculate(employee);
     }
 
     @Transactional
@@ -428,21 +581,101 @@ public class EmployeeProcessService {
     }
 
     private SituationSalarialeDto toDto(SituationSalariale e) {
-        return new SituationSalarialeDto(e.getId(), e.getEmployee().getId(), idOf(e.getGrilleSalariale()),
-                e.getGrilleSalariale() == null ? null : e.getGrilleSalariale().getCode(), idOf(e.getCategorie()),
-                label(e.getCategorie()), idOf(e.getEchelon()), label(e.getEchelon()), idOf(e.getGrade()),
-                label(e.getGrade()), e.getSalaireBase(), e.getSurSalaire(), e.getTotalIndemnites(), e.getSalaireBrut());
+        Employee emp = e.getEmployee();
+        GrilleSalariale grille = e.getGrilleSalariale() != null ? e.getGrilleSalariale() : (emp != null ? emp.getGrilleSalariale() : null);
+        Categorie cat = e.getCategorie() != null ? e.getCategorie() : (emp != null ? emp.getCategorieObj() : (grille != null ? grille.getCategorieObj() : null));
+        Echelon ech = e.getEchelon() != null ? e.getEchelon() : (emp != null ? emp.getEchelonObj() : (grille != null ? grille.getEchelonObj() : null));
+        Grade grade = e.getGrade() != null ? e.getGrade() : (emp != null ? emp.getGradeObj() : (grille != null ? grille.getGradeObj() : null));
+
+        Double sb = e.getSalaireBase();
+        if ((sb == null || sb == 0.0) && grille != null && grille.getSalaireBase() != null) {
+            sb = grille.getSalaireBase();
+        }
+        Double surSalaire = e.getSurSalaire() != null ? e.getSurSalaire() : (emp != null && emp.getSurSalaire() != null ? emp.getSurSalaire() : 0.0);
+        Double totalInd = e.getTotalIndemnites() != null ? e.getTotalIndemnites() : 0.0;
+        Double brut = (sb != null ? sb : 0.0) + (surSalaire != null ? surSalaire : 0.0) + totalInd;
+
+        String gradeLib = label(grade);
+        if (gradeLib == null && grille != null) {
+            gradeLib = grille.getGrade();
+        }
+
+        return new SituationSalarialeDto(e.getId(), emp != null ? emp.getId() : null, idOf(grille),
+                grille == null ? null : grille.getCode(), idOf(cat),
+                label(cat), idOf(ech), label(ech), idOf(grade),
+                gradeLib, sb, surSalaire, totalInd, brut);
+    }
+
+    private SituationSalarialeDto buildFallbackSituationDto(Employee employee) {
+        GrilleSalariale grille = employee.getGrilleSalariale();
+        if (grille == null && employee.getCategorieObj() != null && employee.getEchelonObj() != null) {
+            grille = grilleSalarialeRepository.findByCategorieObjIdAndEchelonObjId(
+                    employee.getCategorieObj().getId(), employee.getEchelonObj().getId()
+            ).orElse(null);
+        }
+        if (grille == null && employee.getGradeObj() != null) {
+            List<GrilleSalariale> list = grilleSalarialeRepository.findByGradeObjId(employee.getGradeObj().getId());
+            if (!list.isEmpty()) grille = list.get(0);
+        }
+
+        Categorie cat = employee.getCategorieObj() != null ? employee.getCategorieObj() : (grille != null ? grille.getCategorieObj() : null);
+        Echelon ech = employee.getEchelonObj() != null ? employee.getEchelonObj() : (grille != null ? grille.getEchelonObj() : null);
+        Grade grade = employee.getGradeObj() != null ? employee.getGradeObj() : (grille != null ? grille.getGradeObj() : null);
+
+        Double sb = (grille != null && grille.getSalaireBase() != null) ? grille.getSalaireBase() : 0.0;
+        Double surSalaire = employee.getSurSalaire() != null ? employee.getSurSalaire() : 0.0;
+
+        double totalInd = indemniteRepository.findByEmployeeId(employee.getId()).stream()
+                .filter(i -> !Boolean.FALSE.equals(i.getActif()))
+                .mapToDouble(i -> valueOrZero(i.getMontant()))
+                .sum();
+
+        Double brut = sb + surSalaire + totalInd;
+
+        String gradeLib = label(grade);
+        if (gradeLib == null && grille != null) {
+            gradeLib = grille.getGrade();
+        }
+
+        return new SituationSalarialeDto(
+                null,
+                employee.getId(),
+                idOf(grille),
+                grille == null ? null : grille.getCode(),
+                idOf(cat),
+                label(cat),
+                idOf(ech),
+                label(ech),
+                idOf(grade),
+                gradeLib,
+                sb,
+                surSalaire,
+                totalInd,
+                brut
+        );
     }
 
     private IndemniteEmployeDto toDto(IndemniteEmploye e) {
-        return new IndemniteEmployeDto(e.getId(), e.getTypeIndemnite().getId(), e.getTypeIndemnite().getCode(),
-                e.getTypeIndemnite().getName(), e.getEmployee().getId(), idOf(e.getParametrageIndemnite()), e.getMontant(), e.getActif());
+        Long typeId = e.getTypeIndemnite() != null ? e.getTypeIndemnite().getId() : null;
+        String typeCode = e.getTypeIndemnite() != null ? e.getTypeIndemnite().getCode() : null;
+        String typeName = e.getTypeIndemnite() != null ? e.getTypeIndemnite().getName() : (e.getLibelle() != null ? e.getLibelle() : "Indemnité");
+        return new IndemniteEmployeDto(e.getId(), typeId, typeCode,
+                typeName, e.getEmployee() != null ? e.getEmployee().getId() : null, idOf(e.getParametrageIndemnite()), e.getMontant(), e.getActif());
     }
 
     private ExonerationEmployeDto toDto(ExonerationEmploye e) {
-        return new ExonerationEmployeDto(e.getId(), e.getTypeIndemnite().getId(), e.getTypeIndemnite().getCode(),
-                e.getTypeIndemnite().getName(), e.getEmployee().getId(), idOf(e.getIndemniteEmploye()), e.getMontant(),
-                e.getTauxExonere(), e.getPlafondExonere());
+        ExonerationEmployeDto dto = new ExonerationEmployeDto();
+        dto.setId(e.getId());
+        dto.setTypeIndemniteId(e.getTypeIndemnite().getId());
+        dto.setTypeIndemniteCode(e.getTypeIndemnite().getCode());
+        dto.setLibelle(e.getTypeIndemnite().getName());
+        dto.setEmployeeId(e.getEmployee().getId());
+        dto.setIndemniteEmployeId(idOf(e.getIndemniteEmploye()));
+        dto.setMontant(e.getMontant());
+        dto.setMontantAutorise(e.getMontantAutorise()); // limite théorique exposée au frontend
+        dto.setTauxExonere(e.getTauxExonere());
+        dto.setPlafondExonere(e.getPlafondExonere());
+        return dto;
     }
 
     /**
@@ -455,58 +688,109 @@ public class EmployeeProcessService {
      */
     private List<ParametrageIndemnite> resolveApplicableIndemnites(Employee employee, Long fonctionId, Long emploiId, Long gradeId, Long categorieId) {
         List<ParametrageIndemnite> applicable = new ArrayList<>();
+        List<ParametrageIndemnite> allActive = parametrageRepository.findAll().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getActif()) && p.getTypeIndemniteObj() != null)
+                .toList();
 
-        // RÈGLE 1 (Tableau 2) : Fonction Nominative exclusive
-        List<ParametrageIndemnite> nominationIndemnites = fonctionId != null
-                ? parametrageRepository.findNominationByFonction(fonctionId)
-                : Collections.emptyList();
+        // 1. RÈGLE NOMINATION (Tableau 2) : Si la fonction de l'employé possède des indemnités de nomination configurées en base
+        List<ParametrageIndemnite> nominationIndemnites = new ArrayList<>();
+        if (fonctionId != null) {
+            for (ParametrageIndemnite p : allActive) {
+                if ("NOMINATION".equalsIgnoreCase(p.getRegleType())) {
+                    if (p.getFonctionObj() != null && p.getFonctionObj().getId().equals(fonctionId)) {
+                        nominationIndemnites.add(p);
+                    }
+                }
+            }
+        }
 
         if (!nominationIndemnites.isEmpty()) {
             applicable.addAll(nominationIndemnites);
-            return applicable;
-        }
+        } else {
+            // 2. RÈGLE STATUTAIRE (Tableau 1) : Indemnités Statutaires du Grade et de la Catégorie
+            List<ParametrageIndemnite> statutaires = new ArrayList<>();
+            for (ParametrageIndemnite p : allActive) {
+                if ("ORDINAIRE".equalsIgnoreCase(p.getRegleType()) || (p.getFonctionObj() == null && p.getEmploiObj() == null)) {
+                    boolean matchGrade = (gradeId != null && p.getGradeObj() != null && p.getGradeObj().getId().equals(gradeId));
+                    boolean matchCat = (categorieId != null && p.getCategorieObj() != null && p.getCategorieObj().getId().equals(categorieId));
 
-        // RÈGLE 2 (Tableau 1) : Indemnités Statutaires du Grade
-        List<ParametrageIndemnite> statutaires = parametrageRepository.findStatutairesByGradeAndCategorie(gradeId, categorieId);
-        if (statutaires.isEmpty() && (gradeId != null || categorieId != null || employee != null)) {
-            // Fallback textuel sur grade/catégorie
-            String catCode = (employee != null && employee.getCategorieObj() != null && employee.getCategorieObj().getCode() != null)
-                    ? employee.getCategorieObj().getCode().toUpperCase(Locale.ROOT) : "";
-            List<ParametrageIndemnite> all = parametrageRepository.findAll();
-            for (ParametrageIndemnite p : all) {
-                if (!Boolean.TRUE.equals(p.getActif()) || p.getTypeIndemniteObj() == null) continue;
-                if ("ORDINAIRE".equalsIgnoreCase(p.getRegleType())) {
-                    if (p.getCode() != null && catCode.length() > 0 && p.getCode().toUpperCase(Locale.ROOT).contains(catCode)) {
+                    if (matchGrade && (p.getCategorieObj() == null || matchCat)) {
+                        statutaires.add(p);
+                    } else if (matchCat && p.getGradeObj() == null) {
                         statutaires.add(p);
                     }
                 }
             }
+            applicable.addAll(deduplicateStatutaires(statutaires));
         }
-        applicable.addAll(deduplicateStatutaires(statutaires));
 
-        // RÈGLE 3 (Tableau 3) : Primes Spécifiques d'Emploi cumulées au Grade
+        // 3. RÈGLE SPÉCIFIQUE (Tableau 3) : Primes Spécifiques rattachées au Poste / Emploi ou à la Fonction en base
+        String empNom = (employee != null && employee.getEmploi() != null && employee.getEmploi().getName() != null)
+                ? normalizeText(employee.getEmploi().getName()) : "";
+        String empCode = (employee != null && employee.getEmploi() != null && employee.getEmploi().getCode() != null)
+                ? normalizeText(employee.getEmploi().getCode()) : "";
+        String fctNom = (employee != null && employee.getFonction() != null && employee.getFonction().getName() != null)
+                ? normalizeText(employee.getFonction().getName()) : "";
+        String fctCode = (employee != null && employee.getFonction() != null && employee.getFonction().getCode() != null)
+                ? normalizeText(employee.getFonction().getCode()) : "";
+
         List<ParametrageIndemnite> specifiques = new ArrayList<>();
-        if (emploiId != null || fonctionId != null) {
-            specifiques = parametrageRepository.findSpecifiqueByEmploiOrFonction(emploiId, fonctionId);
-        }
-        if (specifiques.isEmpty() && employee != null) {
-            String empNom = (employee.getEmploi() != null && employee.getEmploi().getName() != null)
-                    ? employee.getEmploi().getName().toUpperCase(Locale.ROOT) : "";
-            String fctNom = (employee.getFonction() != null && employee.getFonction().getName() != null)
-                    ? employee.getFonction().getName().toUpperCase(Locale.ROOT) : "";
-            if (empNom.contains("CASH POINT") || fctNom.contains("CASH POINT") || empNom.contains("CASHPOINT") || fctNom.contains("CASHPOINT")) {
-                List<ParametrageIndemnite> all = parametrageRepository.findAll();
-                for (ParametrageIndemnite p : all) {
-                    if (!Boolean.TRUE.equals(p.getActif()) || p.getTypeIndemniteObj() == null) continue;
-                    if ("SPECIFIQUE".equalsIgnoreCase(p.getRegleType()) && p.getCode() != null && p.getCode().contains("GCP")) {
-                        specifiques.add(p);
-                    }
+        for (ParametrageIndemnite p : allActive) {
+            boolean isSpec = "SPECIFIQUE".equalsIgnoreCase(p.getRegleType()) || p.getEmploiObj() != null ||
+                    (p.getFonctionObj() != null && !"NOMINATION".equalsIgnoreCase(p.getRegleType()));
+
+            if (!isSpec) continue;
+
+            boolean matched = false;
+
+            // A. Correspondance par Clé Primaire de l'Emploi (Poste)
+            if (p.getEmploiObj() != null) {
+                Long pEmpId = p.getEmploiObj().getId();
+                String pEmpNom = normalizeText(p.getEmploiObj().getName());
+                String pEmpCode = normalizeText(p.getEmploiObj().getCode());
+
+                if (emploiId != null && pEmpId.equals(emploiId)) {
+                    matched = true;
+                } else if (!pEmpNom.isEmpty() && (pEmpNom.equals(empNom) || pEmpNom.equals(fctNom))) {
+                    matched = true;
+                } else if (!pEmpCode.isEmpty() && (pEmpCode.equals(empCode) || pEmpCode.equals(fctCode))) {
+                    matched = true;
                 }
             }
+
+            // B. Correspondance par Clé Primaire de la Fonction
+            if (!matched && p.getFonctionObj() != null) {
+                Long pFctId = p.getFonctionObj().getId();
+                String pFctNom = normalizeText(p.getFonctionObj().getName());
+                String pFctCode = normalizeText(p.getFonctionObj().getCode());
+
+                if (fonctionId != null && pFctId.equals(fonctionId)) {
+                    matched = true;
+                } else if (!pFctNom.isEmpty() && (pFctNom.equals(fctNom) || pFctNom.equals(empNom))) {
+                    matched = true;
+                } else if (!pFctCode.isEmpty() && (pFctCode.equals(fctCode) || pFctCode.equals(empCode))) {
+                    matched = true;
+                }
+            }
+
+            if (matched) {
+                specifiques.add(p);
+            }
         }
-        applicable.addAll(specifiques);
+
+        // Ajouter toutes les primes spécifiques trouvées (sans doublon de paramétrage)
+        for (ParametrageIndemnite spec : specifiques) {
+            if (!applicable.contains(spec)) {
+                applicable.add(spec);
+            }
+        }
 
         return applicable;
+    }
+
+    private static String normalizeText(String s) {
+        if (s == null) return "";
+        return s.trim().toUpperCase(Locale.ROOT).replaceAll("[\\s_-]+", " ");
     }
 
     private List<ParametrageIndemnite> deduplicateStatutaires(List<ParametrageIndemnite> list) {
@@ -554,4 +838,83 @@ public class EmployeeProcessService {
     private static String label(Echelon e) { return e == null ? null : (e.getLibelle() != null ? e.getLibelle() : e.getCode()); }
     private static String label(Grade e) { return e == null ? null : (e.getLibelle() != null ? e.getLibelle() : e.getCode()); }
     private static double valueOrZero(Double value) { return value == null ? 0.0 : value; }
+
+    /**
+     * Recalcule les exonérations fiscales de TOUS les employés actifs.
+     * À appeler après une modification des taux d'exonération des TypeIndemnite
+     * ou après une correction de la formule de calcul.
+     *
+     * Formule appliquée (CGI Burkina Faso) :
+     *   Exonération = MIN(Montant_Indemnité × Taux_Exo%, Plafond_Légal)
+     *
+     * @return Map avec les statistiques du recalcul
+     */
+    @Transactional
+    public java.util.Map<String, Object> recalculerToutesLesExonerations() {
+        List<Employee> employes = employeeRepository.findAll();
+        int nbEmployes = 0;
+        int nbExonerations = 0;
+        int nbErreurs = 0;
+
+        for (Employee emp : employes) {
+            try {
+                List<IndemniteEmploye> indemnites = indemniteRepository.findByEmployeeId(emp.getId());
+                for (IndemniteEmploye indemnite : indemnites) {
+                    if (Boolean.FALSE.equals(indemnite.getActif()) || valueOrZero(indemnite.getMontant()) == 0.0) {
+                        exonerationRepository.deleteByIndemniteEmployeId(indemnite.getId());
+                        continue;
+                    }
+                    TypeIndemnite type = indemnite.getTypeIndemnite();
+                    if (type == null) continue;
+
+                    double taux = valueOrZero(type.getTauxExoneration());
+                    double plafond = valueOrZero(type.getPlafondExoneration());
+
+                    if (taux <= 0.0 && plafond <= 0.0) {
+                        // Aucune exonération → supprimer l'entrée si elle existe
+                        exonerationRepository.deleteByIndemniteEmployeId(indemnite.getId());
+                        continue;
+                    }
+
+                    ExonerationEmploye exoneration = exonerationRepository
+                            .findByIndemniteEmployeId(indemnite.getId())
+                            .orElseGet(ExonerationEmploye::new);
+
+                    exoneration.setEmployee(emp);
+                    exoneration.setTypeIndemnite(type);
+                    exoneration.setIndemniteEmploye(indemnite);
+                    exoneration.setLibelle(type.getName());
+                    exoneration.setTauxExonere(taux);
+                    double brutTotal = valueOrZero(emp.getGrilleSalariale() != null
+                            ? emp.getGrilleSalariale().getSalaireBase() : null)
+                            + (emp.getSurSalaire() != null ? emp.getSurSalaire() : 0.0)
+                            + indemnites.stream().filter(i -> !Boolean.FALSE.equals(i.getActif())).mapToDouble(i -> valueOrZero(i.getMontant())).sum();
+                    double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
+                    double brutFiscal = brutTotal - cnssAgent;
+
+                    double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+                    double exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
+                    exoneration.setMontantAutorise(exoAutorisee);
+                    exoneration.setMontant(exoReelle);
+                    exonerationRepository.save(exoneration);
+                    nbExonerations++;
+                }
+
+                // Recalculer aussi l'information salariale (base imposable, IUTS, etc.)
+                informationCalculService.recalculate(emp);
+                nbEmployes++;
+            } catch (Exception e) {
+                nbErreurs++;
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("statut", nbErreurs == 0 ? "SUCCÈS" : "PARTIEL");
+        result.put("employesTraites", nbEmployes);
+        result.put("exonerationsRecalculees", nbExonerations);
+        result.put("erreurs", nbErreurs);
+        result.put("message", "Exonérations recalculées avec la formule corrigée : Montant × Taux% plafonné");
+        return result;
+    }
 }
+

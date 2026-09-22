@@ -201,7 +201,7 @@ public class BulletinLotService {
                 lines.add(BulletinLine.builder()
                         .bulletin(b)
                         .code("GRAT_ANN")
-                        .libelle("Gratification Annuelle (13ème Mois)")
+                        .libelle("Gratification Annuelle 13ème Mois")
                         .typeLigne("GAIN")
                         .baseCalcul(salaireBase)
                         .taux(new BigDecimal("100.00"))

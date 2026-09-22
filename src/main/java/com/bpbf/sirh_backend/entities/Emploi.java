@@ -26,4 +26,6 @@ public class Emploi {
     @Column(unique = true, nullable = false)
     private String code;
     private String name;
+    private String description;
+    private Integer ordre;
 }

@@ -21,6 +21,8 @@ public class ParametrageIndemniteService {
     private final GradeRepository gradeRepository;
     private final CategorieRepository categorieRepository;
     private final EmploiRepository emploiRepository;
+    @org.springframework.context.annotation.Lazy
+    private final EmployeeProcessService employeeProcessService;
 
     public List<ParametrageIndemniteDto> getAll() {
         List<ParametrageIndemnite> list = repository.findAll();
@@ -59,6 +61,11 @@ public class ParametrageIndemniteService {
 
         resolveRelationships(entity, dto);
         ParametrageIndemnite saved = repository.save(entity);
+        try {
+            employeeProcessService.syncAllEmployees();
+        } catch (Exception e) {
+            System.err.println("Warn: Erreur syncAllEmployees après création: " + e.getMessage());
+        }
         return mapper.toDto(saved);
     }
 
@@ -78,6 +85,11 @@ public class ParametrageIndemniteService {
         resolveRelationships(entity, dto);
 
         ParametrageIndemnite saved = repository.save(entity);
+        try {
+            employeeProcessService.syncAllEmployees();
+        } catch (Exception e) {
+            System.err.println("Warn: Erreur syncAllEmployees après modification: " + e.getMessage());
+        }
         return mapper.toDto(saved);
     }
 
@@ -128,5 +140,10 @@ public class ParametrageIndemniteService {
 
     public void delete(Long id) {
         repository.deleteById(id);
+        try {
+            employeeProcessService.syncAllEmployees();
+        } catch (Exception e) {
+            System.err.println("Warn: Erreur syncAllEmployees après suppression: " + e.getMessage());
+        }
     }
 }

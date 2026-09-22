@@ -207,6 +207,7 @@ public class SalaryParametrageService {
                 .name(el.getName())
                 .categoryId(el.getSalaryCategory() != null ? el.getSalaryCategory().getId() : null)
                 .categoryName(el.getSalaryCategory() != null ? el.getSalaryCategory().getName() : null)
+                .categoryCode(el.getSalaryCategory() != null ? el.getSalaryCategory().getCode() : null)
                 .type(type)
                 .rate(el.getRate())
                 .isCotisable(el.getIsCotisable())

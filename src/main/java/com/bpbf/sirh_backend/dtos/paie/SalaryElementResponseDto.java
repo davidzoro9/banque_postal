@@ -8,6 +8,7 @@ public class SalaryElementResponseDto {
     private String name;
     private Long categoryId;
     private String categoryName;
+    private String categoryCode;
     private String type;
     private BigDecimal rate;
     private Boolean isCotisable;
@@ -29,6 +30,7 @@ public class SalaryElementResponseDto {
         private String name;
         private Long categoryId;
         private String categoryName;
+        private String categoryCode;
         private String type;
         private BigDecimal rate;
         private Boolean isCotisable;
@@ -43,6 +45,7 @@ public class SalaryElementResponseDto {
         public Builder name(String name) { this.name = name; return this; }
         public Builder categoryId(Long categoryId) { this.categoryId = categoryId; return this; }
         public Builder categoryName(String categoryName) { this.categoryName = categoryName; return this; }
+        public Builder categoryCode(String categoryCode) { this.categoryCode = categoryCode; return this; }
         public Builder type(String type) { this.type = type; return this; }
         public Builder rate(BigDecimal rate) { this.rate = rate; return this; }
         public Builder isCotisable(Boolean isCotisable) { this.isCotisable = isCotisable; return this; }
@@ -59,6 +62,7 @@ public class SalaryElementResponseDto {
             dto.name = this.name;
             dto.categoryId = this.categoryId;
             dto.categoryName = this.categoryName;
+            dto.categoryCode = this.categoryCode;
             dto.type = this.type != null ? this.type : "GAIN";
             dto.rate = this.rate;
             dto.isCotisable = this.isCotisable;
@@ -85,6 +89,9 @@ public class SalaryElementResponseDto {
 
     public String getCategoryName() { return categoryName; }
     public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    public String getCategoryCode() { return categoryCode; }
+    public void setCategoryCode(String categoryCode) { this.categoryCode = categoryCode; }
 
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }

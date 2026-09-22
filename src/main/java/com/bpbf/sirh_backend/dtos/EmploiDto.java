@@ -13,4 +13,6 @@ public class EmploiDto {
     private Long id;
     private String code;
     private String name;
+    private String description;
+    private Integer ordre;
 }

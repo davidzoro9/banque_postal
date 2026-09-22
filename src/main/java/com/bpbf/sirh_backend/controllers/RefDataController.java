@@ -33,6 +33,10 @@ public class RefDataController {
         existing.setCode(data.getCode());
         existing.setLibelle(data.getLibelle());
         existing.setDescription(data.getDescription());
+        existing.setGrade(data.getGrade());
+        existing.setCategorie(data.getCategorie());
+        existing.setTaux(data.getTaux());
+        existing.setTypeRetenue(data.getTypeRetenue());
         existing.setActif(data.isActif());
         return repository.save(existing);
     }

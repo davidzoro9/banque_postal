@@ -16,6 +16,11 @@ public class TypeIndemniteService {
 
     private final TypeIndemniteMapper typeIndemniteMapper;
     private final TypeIndemniteRepository typeIndemniteRepository;
+    private final org.springframework.beans.factory.ObjectProvider<EmployeeProcessService> employeeProcessServiceProvider;
+
+    private EmployeeProcessService getEmployeeProcessService() {
+        return employeeProcessServiceProvider.getIfAvailable();
+    }
 
     public List<TypeIndemniteDto> getAllTypeIndemnite(){
         List<TypeIndemnite> typeIndemnites = typeIndemniteRepository.findAll();
@@ -25,6 +30,10 @@ public class TypeIndemniteService {
     public TypeIndemniteDto createTypeIndemnite(TypeIndemniteDto typeIndemniteDto){
         TypeIndemnite typeIndemnite = typeIndemniteMapper.toEntity(typeIndemniteDto);
         TypeIndemnite saved = typeIndemniteRepository.save(typeIndemnite);
+        try {
+            EmployeeProcessService eps = getEmployeeProcessService();
+            if (eps != null) eps.syncAllEmployees();
+        } catch (Exception ignored) {}
         return typeIndemniteMapper.toDto(saved);
     }
 
@@ -39,11 +48,19 @@ public class TypeIndemniteService {
         typeIndemnite.setPlafondExoneration(typeIndemniteDto.getPlafondExoneration());
 
         TypeIndemnite saved = typeIndemniteRepository.save(typeIndemnite);
+        try {
+            EmployeeProcessService eps = getEmployeeProcessService();
+            if (eps != null) eps.syncAllEmployees();
+        } catch (Exception ignored) {}
 
         return typeIndemniteMapper.toDto(saved);
     }
 
     public void delete(Long id){
         typeIndemniteRepository.deleteById(id);
+        try {
+            EmployeeProcessService eps = getEmployeeProcessService();
+            if (eps != null) eps.syncAllEmployees();
+        } catch (Exception ignored) {}
     }
 }

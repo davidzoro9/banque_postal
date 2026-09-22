@@ -40,6 +40,21 @@ public class BulletinController {
         return ResponseEntity.ok(bulletinService.updateJustification(id, justification));
     }
 
+    @PostMapping("/recalculer-tout")
+    public ResponseEntity<List<BulletinDto>> recalculerTousLesBulletins() {
+        return ResponseEntity.ok(bulletinService.recalculerTousLesBulletins());
+    }
+
+    @PostMapping("/session/{sessionPaieId}/recalculer")
+    public ResponseEntity<List<BulletinDto>> recalculerSession(@PathVariable Long sessionPaieId) {
+        return ResponseEntity.ok(bulletinService.recalculerBulletinsSession(sessionPaieId));
+    }
+
+    @PostMapping("/{id}/recalculer")
+    public ResponseEntity<BulletinDto> recalculerBulletin(@PathVariable Long id) {
+        return ResponseEntity.ok(bulletinService.recalculerBulletin(id));
+    }
+
     @PostMapping("/generer/session/{sessionPaieId}")
     public ResponseEntity<List<BulletinDto>> generateForSession(
             @PathVariable Long sessionPaieId,

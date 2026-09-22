@@ -54,69 +54,86 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
     }
 
     private void seedOrganigramme() {
-        // ─── 1. DIRECTIONS DE CONTRÔLE (Rattachées au DG + Liens fonctionnels aux Comités) ───
-        Direction dirAudit = getOrCreateDirection(
+        // ─── 1. DGA : Directeur Général Adjoint (nœud intermédiaire entre DG et les Directions/Dép.) ───
+        Direction dga = getOrCreateDirection(
+                "DIR_DGA",
+                "Direction Générale Adjointe (DGA)",
+                "Directeur Général Adjoint — coordonne les directions et départements opérationnels"
+        );
+
+        // ─── 2. DIRECTIONS DE CONTRÔLE (Rattachées directement au DG, pas sous DGA) ───
+        Direction dirAudit = getOrCreateDirectionWithParent(
                 "DIR_AUDIT",
                 "Direction Audit Interne",
-                "Direction de contrôle rattachée au DG, avec lien fonctionnel au Comité Audit"
+                "Direction de contrôle rattachée au DG, avec lien fonctionnel au Comité Audit",
+                null
         );
 
-        Direction dirRisques = getOrCreateDirection(
+        Direction dirRisques = getOrCreateDirectionWithParent(
                 "DIR_RISQUES",
                 "Direction Risque et conformité",
-                "Direction de contrôle rattachée au DG, avec lien fonctionnel au Comité Risques"
+                "Direction de contrôle rattachée au DG, avec lien fonctionnel au Comité Risques",
+                null
         );
 
-        // ─── 2. DIRECTIONS OPÉRATIONNELLES (Sous la coordination du DGA / DG) ───
-        Direction dirEntr = getOrCreateDirection(
+        // ─── 3. DIRECTIONS OPÉRATIONNELLES (Rattachées à la DGA) ───
+        Direction dirEntr = getOrCreateDirectionWithParent(
                 "DIR_ENTREPRISES",
                 "Direction des Entreprises et institutionnels",
-                "Gestion commerciale entreprises, PME/PMI et grands comptes institutionnels"
+                "Gestion commerciale entreprises, PME/PMI et grands comptes institutionnels",
+                dga
         );
 
-        Direction dirReseau = getOrCreateDirection(
+        Direction dirReseau = getOrCreateDirectionWithParent(
                 "DIR_RESEAU",
                 "Direction Réseau",
-                "Animation et pilotage du réseau d'agences, cash points et services digitaux"
+                "Animation et pilotage du réseau d'agences, cash points et services digitaux",
+                dga
         );
 
-        Direction dirEngag = getOrCreateDirection(
+        Direction dirEngag = getOrCreateDirectionWithParent(
                 "DIR_ENGAGEMENTS",
                 "Direction des Engagements",
-                "Instruction, analyse de crédits, suivi des engagements et précontentieux"
+                "Instruction, analyse de crédits, suivi des engagements et précontentieux",
+                dga
         );
 
-        Direction dirOps = getOrCreateDirection(
+        Direction dirOps = getOrCreateDirectionWithParent(
                 "DIR_OPERATIONS",
                 "Direction des Opérations bancaires",
-                "Traitement et supervision des opérations domestiques et internationales"
+                "Traitement et supervision des opérations domestiques et internationales",
+                dga
         );
 
-        Direction dirJuridique = getOrCreateDirection(
+        Direction dirJuridique = getOrCreateDirectionWithParent(
                 "DIR_JURIDIQUE",
                 "Direction Affaires juridiques & contentieux",
-                "Affaires juridiques, conformité des actes, gouvernance et recouvrement"
+                "Affaires juridiques, conformité des actes, gouvernance et recouvrement",
+                dga
         );
 
-        Direction dirDsi = getOrCreateDirection(
+        Direction dirDsi = getOrCreateDirectionWithParent(
                 "DIR_DSI",
                 "Direction des Systèmes d'informations",
-                "Gestion des infrastructures, bases de données, applications et support technique"
+                "Gestion des infrastructures, bases de données, applications et support technique",
+                dga
         );
 
-        Direction dirDamg = getOrCreateDirection(
+        Direction dirDamg = getOrCreateDirectionWithParent(
                 "DIR_DAMG",
                 "Direction Administration et Moyens Généraux",
-                "Administration générale, moyens généraux, sécurité et capital humain"
+                "Administration générale, moyens généraux, sécurité et capital humain",
+                dga
         );
 
-        Direction dirDfc = getOrCreateDirection(
+        Direction dirDfc = getOrCreateDirectionWithParent(
                 "DIR_DFC",
                 "Direction Financière et comptable",
-                "Comptabilité générale, fiscalité, contrôle de gestion et états financiers"
+                "Comptabilité générale, fiscalité, contrôle de gestion et états financiers",
+                dga
         );
 
-        // ─── 3. DÉPARTEMENTS AU MÊME NIVEAU (Directement rattachés sous DGA) ───
+        // ─── 4. DÉPARTEMENTS AU MÊME NIVEAU (Directement rattachés sous DGA) ───
         Department depMarketing = getOrCreateDepartment(
                 "DEP_MARKETING",
                 "Département Marketing, commercial et communication"
@@ -127,7 +144,7 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
                 "Département Trésorerie"
         );
 
-        // ─── 4. SERVICES OFFICIELS RATTACHÉS AUX DIRECTIONS ───
+        // ─── 5. SERVICES OFFICIELS RATTACHÉS AUX DIRECTIONS ───
         // Direction des Entreprises et institutionnels
         getOrCreateService("SRV_PME_PMI", "Service PME/PMI", "Accompagnement et financements PME/PMI", dirEntr, null);
         getOrCreateService("SRV_GRANDES_ENTR", "Service Grandes entreprises", "Gestion des grands comptes d'entreprises", dirEntr, null);
@@ -183,6 +200,25 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
             dir.setDescription(description);
             return directionRepository.save(dir);
         }
+    }
+
+    private Direction getOrCreateDirectionWithParent(String code, String name, String description, Direction parent) {
+        Optional<Direction> existing = directionRepository.findByCode(code);
+        if (existing.isEmpty()) {
+            existing = directionRepository.findByNameIgnoreCase(name);
+        }
+
+        Direction dir;
+        if (existing.isPresent()) {
+            dir = existing.get();
+        } else {
+            dir = new Direction();
+            dir.setCode(code);
+        }
+        dir.setName(name);
+        dir.setDescription(description);
+        dir.setParentDirection(parent);
+        return directionRepository.save(dir);
     }
 
     private Department getOrCreateDepartment(String code, String name) {

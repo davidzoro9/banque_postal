@@ -29,6 +29,7 @@ public class Fonction {
     /** "NOMMEE" ou "NON_NOMMEE" */
     private String typeNomination;
     private Boolean actif = true;
+    private Integer ordre;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -42,4 +43,6 @@ public class Fonction {
     public void setTypeNomination(String typeNomination) { this.typeNomination = typeNomination; }
     public Boolean getActif() { return actif; }
     public void setActif(Boolean actif) { this.actif = actif; }
+    public Integer getOrdre() { return ordre; }
+    public void setOrdre(Integer ordre) { this.ordre = ordre; }
 }

@@ -54,6 +54,7 @@ public class EmployeeDto {
 
     // Job / Position dates & status
     private String dateEmbauche;
+    private Integer ancienneteReprise;
     private String numeroCnss;
     private String statut;
     private String niveau;
@@ -358,4 +359,11 @@ public class EmployeeDto {
 
     public Object getEnfants() { return enfants; }
     public void setEnfants(Object enfants) { this.enfants = enfants; }
+
+    public Integer getAncienneteReprise() { return ancienneteReprise != null ? ancienneteReprise : 0; }
+    public void setAncienneteReprise(Integer ancienneteReprise) { this.ancienneteReprise = ancienneteReprise; }
+
+    private Integer anciennete;
+    public Integer getAnciennete() { return anciennete != null ? anciennete : 0; }
+    public void setAnciennete(Integer anciennete) { this.anciennete = anciennete; }
 }

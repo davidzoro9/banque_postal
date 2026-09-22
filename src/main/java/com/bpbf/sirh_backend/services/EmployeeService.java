@@ -62,6 +62,19 @@ public class EmployeeService {
     @Transactional
     public EmployeeDto createEmployee(EmployeeDto employeeDto) {
         Employee employee = employeeMapper.toEntity(employeeDto);
+
+        // Sécurisation du matricule : génération automatique garantie unique si manquant ou en conflit
+        if (employee.getMatricule() == null || employee.getMatricule().trim().isEmpty()
+                || employeeRepository.existsByMatricule(employee.getMatricule().trim())) {
+            long count = employeeRepository.count() + 1;
+            String generated = String.format("EMP-%03d", count);
+            while (employeeRepository.existsByMatricule(generated)) {
+                count++;
+                generated = String.format("EMP-%03d", count);
+            }
+            employee.setMatricule(generated);
+        }
+
         resolveRelationships(employee, employeeDto);
         Employee saved = employeeRepository.save(employee);
         updateExtraDataFromEntity(saved, employeeDto);
@@ -167,8 +180,21 @@ public class EmployeeService {
                 Utilisateur newUser = new Utilisateur();
                 newUser.setNom(emp.getNom() != null ? emp.getNom() : "");
                 newUser.setPrenom(emp.getPrenom() != null ? emp.getPrenom() : "");
-                newUser.setEmail(email);
-                newUser.setUsername(!matricule.isEmpty() ? matricule : email);
+                
+                String targetUsername = !matricule.isEmpty() ? matricule : email;
+                String username = targetUsername;
+                int suffix = 1;
+                while (utilisateurRepository.existsByUsername(username)) {
+                    username = targetUsername + "_" + suffix++;
+                }
+                newUser.setUsername(username);
+
+                String userEmail = email;
+                int emailSuffix = 1;
+                while (utilisateurRepository.existsByEmail(userEmail)) {
+                    userEmail = "agent_" + (emp.getId() != null ? emp.getId() : System.currentTimeMillis()) + "_" + emailSuffix++ + "@bpbf.bf";
+                }
+                newUser.setEmail(userEmail);
                 newUser.setPassword("1234"); // Mot de passe initial par défaut
                 
                 // Rôle adapté selon le poste et les attributions
@@ -219,6 +245,15 @@ public class EmployeeService {
         dto.setVehiculeFourni(entity.getVehiculeFourni());
         dto.setLogementFourni(entity.getLogementFourni());
         dto.setDateEmbauche(entity.getDateEmbauche());
+        dto.setAncienneteReprise(entity.getAncienneteReprise() != null ? entity.getAncienneteReprise() : 0);
+        int ancTot = (entity.getAncienneteReprise() != null ? entity.getAncienneteReprise() : 0);
+        if (entity.getDateEmbauche() != null && !entity.getDateEmbauche().isBlank()) {
+            try {
+                java.time.LocalDate dEmb = java.time.LocalDate.parse(entity.getDateEmbauche().trim());
+                ancTot += Math.max(0, java.time.Period.between(dEmb, java.time.LocalDate.now()).getYears());
+            } catch (Exception ignored) {}
+        }
+        dto.setAnciennete(ancTot);
         dto.setStatut(entity.getStatut());
         dto.setNumeroCnss(entity.getNumeroCnss());
         dto.setSituationFamiliale(entity.getSituationFamiliale());
@@ -623,5 +658,24 @@ public class EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + matricule));
         employeeProcessService.deleteForEmployee(employee.getId());
         employeeRepository.deleteById(employee.getId());
+    }
+
+    @Transactional
+    public EmployeeDto updateSuperviseur(Long employeeId, Long superviseurId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'ID : " + employeeId));
+
+        if (superviseurId != null && superviseurId > 0) {
+            Employee sup = employeeRepository.findById(superviseurId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Superviseur non trouvé avec l'ID : " + superviseurId));
+            employee.setSuperviseur(sup);
+        } else {
+            employee.setSuperviseur(null);
+        }
+
+        Employee saved = employeeRepository.save(employee);
+        EmployeeDto dto = employeeMapper.toDto(saved);
+        updateDtoFromEntity(saved, dto);
+        return dto;
     }
 }

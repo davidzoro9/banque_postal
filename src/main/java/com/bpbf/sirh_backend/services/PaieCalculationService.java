@@ -105,7 +105,7 @@ public class PaieCalculationService {
 
         Double salaireBrut = salaireBase + totalIndemnites;
         Double salaireImposable = Math.max(0.0, salaireBrut - totalExonere);
-        Double cotisationCNSS = Math.round(salaireImposable * 0.055 * 100.0) / 100.0;
+        Double cotisationCNSS = Math.round(Math.min(salaireBrut, 800000.0) * 0.055 * 100.0) / 100.0;
         Double impotIUTS = Math.round(salaireImposable * 0.10 * 100.0) / 100.0;
         Double totalRetenues = cotisationCNSS + impotIUTS;
         Double salaireNet = salaireBrut - totalRetenues;

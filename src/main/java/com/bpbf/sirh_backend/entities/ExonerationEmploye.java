@@ -28,6 +28,7 @@ public class ExonerationEmploye {
 
     private String libelle;
     private Double montant;
+    private Double montantAutorise;  // Limite théorique = MIN(taux%×brutFiscal, plafond)
     private Double tauxExonere;
     private Double plafondExonere;
 
@@ -48,6 +49,9 @@ public class ExonerationEmploye {
 
     public Double getMontant() { return montant; }
     public void setMontant(Double montant) { this.montant = montant; }
+
+    public Double getMontantAutorise() { return montantAutorise; }
+    public void setMontantAutorise(Double montantAutorise) { this.montantAutorise = montantAutorise; }
 
     public Double getTauxExonere() { return tauxExonere; }
     public void setTauxExonere(Double tauxExonere) { this.tauxExonere = tauxExonere; }

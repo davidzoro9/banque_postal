@@ -21,9 +21,11 @@ public class FonctionService {
     private final FonctionRepository fonctionRepository;
     private final ParametrageIndemniteRepository parametrageIndemniteRepository;
     private final TypeIndemniteRepository typeIndemniteRepository;
+    @org.springframework.context.annotation.Lazy
+    private final EmployeeProcessService employeeProcessService;
 
     public List<FonctionDto> getAllFonction(){
-        List<Fonction> fonctions = fonctionRepository.findAll();
+        List<Fonction> fonctions = fonctionRepository.findAllByOrderByOrdreAscIdAsc();
         List<FonctionDto> dtos = fonctionMapper.toDtos(fonctions);
         List<ParametrageIndemnite> allParams = parametrageIndemniteRepository.findAll();
 
@@ -62,6 +64,7 @@ public class FonctionService {
         existingFonction.setDescription(fonctionDto.getDescription());
         existingFonction.setTypeNomination(fonctionDto.getTypeNomination());
         existingFonction.setActif(fonctionDto.getActif() != null ? fonctionDto.getActif() : true);
+        existingFonction.setOrdre(fonctionDto.getOrdre());
 
         Fonction saved = fonctionRepository.save(existingFonction);
 
@@ -99,6 +102,11 @@ public class FonctionService {
                         parametrageIndemniteRepository.save(pi);
                     }
                 }
+            }
+            try {
+                employeeProcessService.syncAllEmployees();
+            } catch (Exception e) {
+                System.err.println("Warn: Erreur syncAllEmployees après modification indemnités fonction: " + e.getMessage());
             }
         }
     }

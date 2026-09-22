@@ -61,7 +61,13 @@ public class SituationSalariale {
     public void setSalaireBase(Double salaireBase) { this.salaireBase = salaireBase; }
 
     public Double getSurSalaire() { return surSalaire; }
-    public void setSurSalaire(Double surSalaire) { this.surSalaire = (surSalaire != null && surSalaire < 0.0) ? 0.0 : surSalaire; }
+    public void setSurSalaire(Double surSalaire) {
+        if (surSalaire == null || surSalaire < 0.0) {
+            this.surSalaire = 0.0;
+        } else {
+            this.surSalaire = surSalaire;
+        }
+    }
 
     public Double getTotalIndemnites() { return totalIndemnites; }
     public void setTotalIndemnites(Double totalIndemnites) { this.totalIndemnites = totalIndemnites; }

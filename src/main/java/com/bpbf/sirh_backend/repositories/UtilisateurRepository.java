@@ -15,6 +15,9 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     Optional<Utilisateur> login(@Param("login") String login, @Param("password") String password);
 
     Optional<Utilisateur> findByEmail(String email);
+    Optional<Utilisateur> findByUsername(String username);
+    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
 
     long countByRole(String role);
 

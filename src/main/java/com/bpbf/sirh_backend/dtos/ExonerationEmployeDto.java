@@ -1,7 +1,5 @@
 package com.bpbf.sirh_backend.dtos;
 
-import lombok.*;
-
 public class ExonerationEmployeDto {
 
     private Long id;
@@ -10,23 +8,12 @@ public class ExonerationEmployeDto {
     private String libelle;
     private Long employeeId;
     private Long indemniteEmployeId;
-    private Double montant;
+    private Double montant;          // Exonération réellement accordée = min(montant_servi, autorisee)
+    private Double montantAutorise;  // Limite théorique = min(taux%×brutFiscal, plafond)
     private Double tauxExonere;
     private Double plafondExonere;
 
     public ExonerationEmployeDto() {}
-
-    public ExonerationEmployeDto(Long id, Long typeIndemniteId, String typeIndemniteCode, String libelle, Long employeeId, Long indemniteEmployeId, Double montant, Double tauxExonere, Double plafondExonere) {
-        this.id = id;
-        this.typeIndemniteId = typeIndemniteId;
-        this.typeIndemniteCode = typeIndemniteCode;
-        this.libelle = libelle;
-        this.employeeId = employeeId;
-        this.indemniteEmployeId = indemniteEmployeId;
-        this.montant = montant;
-        this.tauxExonere = tauxExonere;
-        this.plafondExonere = plafondExonere;
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -49,10 +36,12 @@ public class ExonerationEmployeDto {
     public Double getMontant() { return montant; }
     public void setMontant(Double montant) { this.montant = montant; }
 
+    public Double getMontantAutorise() { return montantAutorise; }
+    public void setMontantAutorise(Double montantAutorise) { this.montantAutorise = montantAutorise; }
+
     public Double getTauxExonere() { return tauxExonere; }
     public void setTauxExonere(Double tauxExonere) { this.tauxExonere = tauxExonere; }
 
     public Double getPlafondExonere() { return plafondExonere; }
     public void setPlafondExonere(Double plafondExonere) { this.plafondExonere = plafondExonere; }
 }
-

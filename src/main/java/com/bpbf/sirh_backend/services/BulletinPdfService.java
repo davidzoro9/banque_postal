@@ -368,7 +368,7 @@ public class BulletinPdfService {
                 try {
                     boolean hasConjoint = familleRepository.findByEmployeeId(emp.getId()).stream()
                             .anyMatch(m -> m.getLienParente() == com.bpbf.sirh_backend.entities.LienParente.CONJOINT);
-                    sitFamille = hasConjoint ? "Marié(e)" : "Célibataire";
+                    sitFamille = hasConjoint ? "Marié" : "Célibataire";
                 } catch (Exception ignored) {
                     sitFamille = "Célibataire";
                 }
@@ -385,23 +385,23 @@ public class BulletinPdfService {
         }
 
         int partsFiscales;
-        if (dto != null && dto.getPartsFiscales() != null && dto.getPartsFiscales() > 0) {
+        if (dto != null && dto.getPartsFiscales() != null) {
             partsFiscales = dto.getPartsFiscales();
         } else {
-            partsFiscales = (sitFamille.toUpperCase(Locale.ROOT).contains("MARI")) ? (2 + charges) : (1 + charges);
+            partsFiscales = charges;
         }
 
         String classification = grp != null && !grp.isEmpty() && !grp.equals("—") 
                 ? grp 
                 : (dto != null && dto.getClassification() != null && !dto.getClassification().equals("—") ? dto.getClassification() : computeGradeCode(emp));
 
-        int anciennete = 0;
+        int anciennete = (emp != null && emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
         if (rawDateEmb != null && !rawDateEmb.isBlank()) {
             try {
                 String cleanDateIso = rawDateEmb.contains("T") ? rawDateEmb.split("T")[0] : rawDateEmb.trim();
                 LocalDate dEmb = LocalDate.parse(cleanDateIso);
                 LocalDate target = refDate != null ? refDate : LocalDate.now();
-                anciennete = Math.max(0, java.time.Period.between(dEmb, target).getYears());
+                anciennete += Math.max(0, java.time.Period.between(dEmb, target).getYears());
             } catch (Exception ignored) {}
         }
         if (anciennete == 0 && dto != null) {
@@ -487,15 +487,32 @@ public class BulletinPdfService {
 
         String daysStr = b.getWorkedDays() != null ? b.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
+        List<BulletinLine> existingLines = b.getLines() != null ? b.getLines() : List.of();
 
         // 1. Salaire de base
-        if (b.getSalaireBase() != null && b.getSalaireBase().compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(b.getSalaireBase()), daysStr, b.getSalaireBase(), null, 0));
+        BulletinLine salBaseL = existingLines.stream().filter(l -> "SAL_BASE".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
+        BigDecimal salBaseAmount = b.getSalaireBase();
+        BigDecimal salBaseBase = (salBaseL != null && salBaseL.getBaseCalcul() != null && salBaseL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
+                ? salBaseL.getBaseCalcul()
+                : (b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO);
+        String salBaseDays = (salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
+                : daysStr;
+        if (salBaseAmount != null && salBaseAmount.compareTo(BigDecimal.ZERO) > 0) {
+            displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(salBaseBase), salBaseDays, salBaseAmount, null, 0));
         }
 
         // 2. Sursalaire
-        if (b.getSurSalaire() != null && b.getSurSalaire().compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(b.getSurSalaire()), daysStr, b.getSurSalaire(), null, 1));
+        BulletinLine surSalL = existingLines.stream().filter(l -> "SUR_SALAIRE".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
+        BigDecimal surSalAmount = b.getSurSalaire();
+        BigDecimal surSalBase = (surSalL != null && surSalL.getBaseCalcul() != null && surSalL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
+                ? surSalL.getBaseCalcul()
+                : (b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO);
+        String surSalDays = (surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                ? surSalL.getTaux().stripTrailingZeros().toPlainString()
+                : daysStr;
+        if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            displayLines.add(new DisplayLine("SUR_SALAIRE", "SUR-SALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }
 
         // 3. Examiner les lignes du bulletin
@@ -503,10 +520,10 @@ public class BulletinPdfService {
         boolean hasIndividualIndemnites = false;
         boolean hasCrraeLine = false;
 
-        List<BulletinLine> existingLines = b.getLines() != null ? b.getLines() : List.of();
         for (BulletinLine l : existingLines) {
             String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
-            String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+            String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
+            String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
             if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 
@@ -529,8 +546,24 @@ public class BulletinPdfService {
 
             String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
             String tauxStr = "";
-            if (code.contains("IUTS") && l.getTaux() != null) {
-                tauxStr = l.getTaux().stripTrailingZeros().toPlainString();
+            if (code.contains("IUTS") || lib.contains("IUTS")) {
+                lib = "RETENUE IUTS";
+                if (l.getTaux() != null) {
+                    tauxStr = String.valueOf(l.getTaux().intValue());
+                } else {
+                    tauxStr = "0";
+                }
+            } else if (code.contains("CNSS") || lib.contains("CNSS")) {
+                lib = "COTISATION CNSS";
+                tauxStr = "5,5 %";
+            } else if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                lib = "COTISATION CRRAE/RCPNC";
+                tauxStr = "6 %";
+            } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
+                lib = "RETENUE FONDS DE SOLIDARITE";
+                tauxStr = "1 %";
+            } else if (code.contains("ANC")) {
+                tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
             } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                 tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
             }
@@ -542,6 +575,8 @@ public class BulletinPdfService {
             int weight = BulletinService.getOverallLineSortWeight(code, lib, l.getTypeLigne());
             displayLines.add(new DisplayLine(code, lib, baseStr, tauxStr, avoir, retenue, weight));
         }
+
+        displayLines.removeIf(dl -> (dl.avoir == null || dl.avoir.compareTo(BigDecimal.ZERO) <= 0) && (dl.retenue == null || dl.retenue.compareTo(BigDecimal.ZERO) <= 0));
 
         // 4. Si indemnités agrégées ou manquantes alors que totalIndemnites > 0, ventiler les indemnités réelles
         if ((hasAggregatedIndemnites || !hasIndividualIndemnites) && b.getTotalIndemnites() != null && b.getTotalIndemnites().compareTo(BigDecimal.ZERO) > 0 && b.getEmployee() != null) {
@@ -555,7 +590,9 @@ public class BulletinPdfService {
                 if (Boolean.TRUE.equals(b.getEmployee().getLogementFourni()) && (iCode.contains("LOG") || iLib.contains("LOGEMENT"))) continue;
 
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
-                displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                if (mnt.compareTo(BigDecimal.ZERO) > 0) {
+                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                }
             }
         }
 
@@ -613,13 +650,32 @@ public class BulletinPdfService {
 
         String daysStr = dto.getWorkedDays() != null ? dto.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
+        List<com.bpbf.sirh_backend.dtos.BulletinLineDto> dLines = dto.getLines() != null ? dto.getLines() : List.of();
 
-        if (dto.getSalaireBase() != null && dto.getSalaireBase().compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(dto.getSalaireBase()), daysStr, dto.getSalaireBase(), null, 0));
+        // 1. Salaire de base
+        com.bpbf.sirh_backend.dtos.BulletinLineDto salBaseL = dLines.stream().filter(l -> "SAL_BASE".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
+        BigDecimal salBaseAmount = dto.getSalaireBase();
+        BigDecimal salBaseBase = (salBaseL != null && salBaseL.getBaseCalcul() != null && salBaseL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
+                ? salBaseL.getBaseCalcul()
+                : (dto.getSalaireBase() != null ? dto.getSalaireBase() : BigDecimal.ZERO);
+        String salBaseDays = (salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
+                : daysStr;
+        if (salBaseAmount != null && salBaseAmount.compareTo(BigDecimal.ZERO) > 0) {
+            displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(salBaseBase), salBaseDays, salBaseAmount, null, 0));
         }
 
-        if (dto.getSurSalaire() != null && dto.getSurSalaire().compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(dto.getSurSalaire()), daysStr, dto.getSurSalaire(), null, 1));
+        // 2. Sursalaire
+        com.bpbf.sirh_backend.dtos.BulletinLineDto surSalL = dLines.stream().filter(l -> "SUR_SALAIRE".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
+        BigDecimal surSalAmount = dto.getSurSalaire();
+        BigDecimal surSalBase = (surSalL != null && surSalL.getBaseCalcul() != null && surSalL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
+                ? surSalL.getBaseCalcul()
+                : (dto.getSurSalaire() != null ? dto.getSurSalaire() : BigDecimal.ZERO);
+        String surSalDays = (surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                ? surSalL.getTaux().stripTrailingZeros().toPlainString()
+                : daysStr;
+        if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            displayLines.add(new DisplayLine("SUR_SALAIRE", "SUR-SALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }
 
         boolean hasAggregatedIndemnites = false;
@@ -629,7 +685,8 @@ public class BulletinPdfService {
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             for (com.bpbf.sirh_backend.dtos.BulletinLineDto l : dto.getLines()) {
                 String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
-                String lib = (l.getLibelle() != null ? l.getLibelle() : (l.getName() != null ? l.getName() : code)).toUpperCase(Locale.ROOT);
+                String rawLib = l.getLibelle() != null ? l.getLibelle() : (l.getName() != null ? l.getName() : code);
+                String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
                 if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 
@@ -652,8 +709,14 @@ public class BulletinPdfService {
 
                 String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
                 String tauxStr = "";
-                if (code.contains("IUTS") && l.getTaux() != null) {
-                    tauxStr = l.getTaux().stripTrailingZeros().toPlainString();
+                if (code.contains("IUTS")) {
+                    if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
+                        tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
+                    } else {
+                        tauxStr = "Barème";
+                    }
+                } else if (code.contains("ANC")) {
+                    tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
                 } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                     tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
                 }
@@ -667,6 +730,8 @@ public class BulletinPdfService {
             }
         }
 
+        displayLines.removeIf(dl -> (dl.avoir == null || dl.avoir.compareTo(BigDecimal.ZERO) <= 0) && (dl.retenue == null || dl.retenue.compareTo(BigDecimal.ZERO) <= 0));
+
         // Si indemnités agrégées ou manquantes
         if ((hasAggregatedIndemnites || !hasIndividualIndemnites) && dto.getTotalIndemnites() != null && dto.getTotalIndemnites().compareTo(BigDecimal.ZERO) > 0 && emp != null) {
             List<IndemniteEmploye> realIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
@@ -679,7 +744,9 @@ public class BulletinPdfService {
                 if (Boolean.TRUE.equals(emp.getLogementFourni()) && (iCode.contains("LOG") || iLib.contains("LOGEMENT"))) continue;
 
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
-                displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                if (mnt.compareTo(BigDecimal.ZERO) > 0) {
+                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                }
             }
         }
 
@@ -728,7 +795,7 @@ public class BulletinPdfService {
         PdfPCell payCell = new PdfPCell();
         payCell.setBorder(Rectangle.NO_BORDER);
         payCell.setPadding(4f);
-        payCell.addElement(new Paragraph("REGLEMENTS  : " + (banqueNom != null && !banqueNom.isBlank() ? banqueNom : "Banque Postale du Burkina Faso (BPBF)"), FONT_CELL_BOLD));
+        payCell.addElement(new Paragraph("REGLEMENTS  : " + (banqueNom != null && !banqueNom.isBlank() ? banqueNom.replaceAll("[()]", "") : "Banque Postale du Burkina Faso - BPBF"), FONT_CELL_BOLD));
         
         String cleanIban = "—";
         if (iban != null && !iban.isBlank() && !iban.equals("—") && !iban.contains("0000000000") && !iban.equals("08000002501")) {
@@ -1156,7 +1223,8 @@ public class BulletinPdfService {
         if (amount == null) return "0";
         NumberFormat nf = NumberFormat.getInstance(Locale.FRANCE);
         nf.setMaximumFractionDigits(0);
-        return nf.format(amount.doubleValue()).replace('\u00A0', ' ');
+        long val = amount.setScale(0, RoundingMode.CEILING).longValue();
+        return nf.format(val).replace('\u00A0', ' ');
     }
 
     public static String formatPeriode(LocalDate from, LocalDate to) {

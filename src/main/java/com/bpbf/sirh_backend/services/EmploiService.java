@@ -19,7 +19,7 @@ public class EmploiService {
     private final EmploiRepository emploiRepository;
 
     public List<EmploiDto> getAllEmploi(){
-        List<Emploi> emplois = emploiRepository.findAll();
+        List<Emploi> emplois = emploiRepository.findAllByOrderByOrdreAscIdAsc();
         return emploiMapper.toDtos(emplois);
     }
 
@@ -35,6 +35,8 @@ public class EmploiService {
 
         existingEmploi.setCode(emploiDto.getCode());
         existingEmploi.setName(emploiDto.getName());
+        existingEmploi.setDescription(emploiDto.getDescription());
+        existingEmploi.setOrdre(emploiDto.getOrdre());
 
         Emploi saved = emploiRepository.save(existingEmploi);
 

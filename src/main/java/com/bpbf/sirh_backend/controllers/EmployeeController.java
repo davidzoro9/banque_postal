@@ -77,8 +77,9 @@ public class EmployeeController {
     public InformationSalarialeDto simulateInformationsSalariales(
             @PathVariable String id,
             @RequestParam(required = false) Double salaireBase,
-            @RequestParam(required = false) Double surSalaire) {
-        return employeeProcessService.simulateSalary(id, salaireBase, surSalaire);
+            @RequestParam(required = false) Double surSalaire,
+            @RequestParam(required = false) Integer ancienneteReprise) {
+        return employeeProcessService.simulateSalary(id, salaireBase, surSalaire, ancienneteReprise);
     }
 
     @GetMapping("/{id}/indemnites")
@@ -120,6 +121,11 @@ public class EmployeeController {
         } catch (NumberFormatException e) {
             return employeeService.updateEmployeeByMatricule(id, employeeDto);
         }
+    }
+
+    @PutMapping("/{id}/superviseur")
+    public EmployeeDto updateSuperviseur(@PathVariable Long id, @RequestParam(required = false) Long superviseurId) {
+        return employeeService.updateSuperviseur(id, superviseurId);
     }
 
     @DeleteMapping("/{id}")

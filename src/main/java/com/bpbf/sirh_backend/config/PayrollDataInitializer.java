@@ -30,6 +30,8 @@ public class PayrollDataInitializer implements CommandLineRunner {
     private final com.bpbf.sirh_backend.repositories.BaremeIUTSRepository baremeIutsRepository;
     private final com.bpbf.sirh_backend.repositories.TypeRetenueRepository typeRetenueRepository;
     private final com.bpbf.sirh_backend.repositories.RetenueRepository retenueRepository;
+    private final com.bpbf.sirh_backend.services.BulletinService bulletinService;
+    private final com.bpbf.sirh_backend.services.InformationSalarialeCalculService informationSalarialeCalculService;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -76,6 +78,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'RETENUE' WHERE code IN ('CAT_COTIS_SOC', 'CAT_IUTS', 'CAT_RETENUES', 'CAT_COTIS_NON_REV', 'CAT_PRECOMPTE') OR LOWER(name) LIKE '%retenue%' OR LOWER(name) LIKE '%cotis%' OR LOWER(name) LIKE '%iuts%' OR LOWER(name) LIKE '%précompte%' OR LOWER(name) LIKE '%precompte%'");
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'PATRONALE' WHERE code IN ('CAT_CHG_PATRONALES', 'CAT_COTIS_PATRONALES') OR LOWER(name) LIKE '%patronal%' OR LOWER(name) LIKE '%tpa%'");
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'GAIN' WHERE code = 'CAT_AVOIR' OR LOWER(name) LIKE '%avoir%' OR type IS NULL OR type = ''");
+            jdbcTemplate.execute("UPDATE element_salary_category SET name = 'AVOIR' WHERE code = 'CAT_AVOIR' OR name = 'Avoir (Rappel / Régularisation)'");
 
             // Suppression systématique de toute contrainte d'unicité bloquante sur session_paie (mois, annee)
             try {
@@ -95,6 +98,35 @@ public class PayrollDataInitializer implements CommandLineRunner {
                         "END $$;");
             } catch (Exception ex) {
                 log.debug("Nettoyage contrainte session_paie (non bloquant): {}", ex.getMessage());
+            }
+
+            // Auto-migration de la contrainte check sur retenue pour accepter SALAIRE_BASE_SUR_SALAIRE
+            try {
+                jdbcTemplate.execute("ALTER TABLE retenue DROP CONSTRAINT IF EXISTS retenue_base_calcul_check");
+                jdbcTemplate.execute("ALTER TABLE information_salariale_retenue DROP CONSTRAINT IF EXISTS isr_base_calcul_check");
+                jdbcTemplate.execute("ALTER TABLE information_salariale_retenue DROP CONSTRAINT IF EXISTS information_salariale_retenue_base_calcul_check");
+                jdbcTemplate.execute("ALTER TABLE retenue ADD CONSTRAINT retenue_base_calcul_check CHECK (base_calcul IN ('SALAIRE_BASE', 'REMUNERATION_BRUTE', 'NET_A_PAYER', 'SALAIRE_BASE_SUR_SALAIRE'))");
+                // CORRECTION CRITIQUE : Base CRRAE = SB + Sursalaire + Prime Ancienneté (pas uniquement le SB)
+                jdbcTemplate.execute("UPDATE retenue SET base_calcul = 'SALAIRE_BASE_SUR_SALAIRE', libelle = 'COTISATION CRRAE/RCPNC' WHERE (UPPER(code) LIKE '%CRRAE%' OR UPPER(libelle) LIKE '%CRRAE%') AND (base_calcul IS NULL OR base_calcul != 'SALAIRE_BASE_SUR_SALAIRE')");
+                jdbcTemplate.execute("UPDATE information_salariale_retenue SET base_calcul = 'SALAIRE_BASE_SUR_SALAIRE', libelle = 'COTISATION CRRAE/RCPNC' WHERE retenue_id IN (SELECT id FROM retenue WHERE UPPER(code) LIKE '%CRRAE%' OR UPPER(libelle) LIKE '%CRRAE%')");
+                // CORRECTION CRITIQUE CNSS : Base CNSS = Rémunération Brute (Salaire de base + toutes les indemnités)
+                jdbcTemplate.execute("UPDATE retenue SET base_calcul = 'REMUNERATION_BRUTE', libelle = 'COTISATION CNSS' WHERE (UPPER(code) LIKE '%CNSS%' OR UPPER(libelle) LIKE '%CNSS%') AND base_calcul != 'REMUNERATION_BRUTE'");
+                jdbcTemplate.execute("UPDATE information_salariale_retenue SET base_calcul = 'REMUNERATION_BRUTE', libelle = 'COTISATION CNSS' WHERE retenue_id IN (SELECT id FROM retenue WHERE UPPER(code) LIKE '%CNSS%' OR UPPER(libelle) LIKE '%CNSS%')");
+                jdbcTemplate.execute("UPDATE retenue SET libelle = 'RETENUE FONDS DE SOLIDARITE' WHERE UPPER(code) LIKE '%SOLIDAR%' OR UPPER(libelle) LIKE '%SOLIDAR%' OR UPPER(code) LIKE '%FSP%'");
+            } catch (Exception ex) {
+                log.debug("Auto-migration contrainte retenue base_calcul (non bloquant): {}", ex.getMessage());
+            }
+
+            // Taux d'exonération : Respect strict des valeurs configurées par l'administrateur en base
+            // (Aucun écrasement automatique à 5% de Caisse et Sujétion lors du démarrage de l'application)
+            try {
+                // Uniquement pour initialiser si les valeurs sont strictement NULL (première création)
+                jdbcTemplate.execute(
+                    "UPDATE type_indemnite SET taux_exoneration = 0.0 WHERE taux_exoneration IS NULL"
+                );
+                log.info("Vérification des taux d'exonération des indemnités effectuée.");
+            } catch (Exception ex) {
+                log.debug("Initialisation taux exonération (non bloquant): {}", ex.getMessage());
             }
 
             // Colonnes profil employé (Situation familiale, N° CNSS, Avantages véhicule & logement)
@@ -125,7 +157,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
         SalaryCategory catSalBase = getOrCreateCategory("CAT_SAL_BASE", "Salaire de base", "GAIN");
         SalaryCategory catIndem = getOrCreateCategory("CAT_INDEMNITES", "Indemnités", "GAIN");
         SalaryCategory catPrimes = getOrCreateCategory("CAT_PRIMES", "Primes", "GAIN");
-        SalaryCategory catAvoir = getOrCreateCategory("CAT_AVOIR", "Avoir (Rappel / Régularisation)", "GAIN");
+        SalaryCategory catAvoir = getOrCreateCategory("CAT_AVOIR", "AVOIR", "GAIN");
         SalaryCategory catPrecompte = getOrCreateCategory("CAT_PRECOMPTE", "Précompte", "RETENUE");
         SalaryCategory catCotisSoc = getOrCreateCategory("CAT_COTIS_SOC", "Cotisation sécurité sociale", "RETENUE");
         SalaryCategory catIuts = getOrCreateCategory("CAT_IUTS", "IUTS", "RETENUE");
@@ -235,6 +267,17 @@ public class PayrollDataInitializer implements CommandLineRunner {
         // 7. Retenues salariales et patronales officielles
         seedRetenues();
 
+        // 8. Recalcul automatique de tous les bulletins existants avec le moteur conforme CGI BF
+        try {
+            log.info("Recalcul automatique de toutes les fiches salariales selon la circulaire CGI...");
+            informationSalarialeCalculService.recalculateAll();
+            log.info("Recalcul automatique de tous les bulletins existants selon la circulaire CGI...");
+            bulletinService.recalculerTousLesBulletins();
+            log.info("Tous les bulletins et fiches salariales ont été recalculés avec succès.");
+        } catch (Exception e) {
+            log.warn("Recalcul automatique des bulletins au démarrage (non bloquant): {}", e.getMessage());
+        }
+
         log.info("Les données de base (catégories, éléments, congés, fériés, IUTS, retenues) ont été initialisées avec succès.");
     }
 
@@ -242,12 +285,12 @@ public class PayrollDataInitializer implements CommandLineRunner {
         if (baremeIutsRepository.count() == 0) {
             log.info("Initialisation du barème officiel IUTS Burkina Faso (Circulaire MINEFID N°2020-0432)...");
             saveBareme("IUTS_TR1", 0.0, 30000.0, 0.0, 0.0);
-            saveBareme("IUTS_TR2", 30001.0, 50000.0, 10.0, 3000.0);
-            saveBareme("IUTS_TR3", 50001.0, 80000.0, 15.0, 5500.0);
-            saveBareme("IUTS_TR4", 80001.0, 120000.0, 18.0, 7900.0);
-            saveBareme("IUTS_TR5", 120001.0, 170000.0, 21.0, 11500.0);
-            saveBareme("IUTS_TR6", 170001.0, 250000.0, 23.0, 14900.0);
-            saveBareme("IUTS_TR7", 250001.0, 999999999.0, 25.0, 19900.0);
+            saveBareme("IUTS_TR2", 30001.0, 50000.0, 12.1, 0.0);
+            saveBareme("IUTS_TR3", 50001.0, 80000.0, 13.9, 0.0);
+            saveBareme("IUTS_TR4", 80001.0, 120000.0, 15.7, 0.0);
+            saveBareme("IUTS_TR5", 120001.0, 170000.0, 18.4, 0.0);
+            saveBareme("IUTS_TR6", 170001.0, 250000.0, 21.7, 0.0);
+            saveBareme("IUTS_TR7", 250001.0, 999999999.0, 25.0, 0.0);
         }
     }
 
@@ -277,8 +320,8 @@ public class PayrollDataInitializer implements CommandLineRunner {
             saveRetenue("RET-002", "Cotisation Sociale CNSS (Part Employeur)", tPatronale, 16.0, "Sécurité sociale obligatoire - Part patronale prise en charge directement (Plafond 600 000)");
             saveRetenue("RET-003", "Cotisation CARFO (Part Agent)", tAgent, 8.0, "Caisse Autonome de Retraite des Fonctionnaires - Part Salariale");
             saveRetenue("RET-004", "Cotisation CARFO (Part Employeur)", tPatronale, 14.0, "Caisse Autonome de Retraite des Fonctionnaires - Part Patronale");
-            saveRetenue("RET-005", "Retraite Complémentaire CRRAE-UMOA (Part Agent)", tAgent, 6.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Agent");
-            saveRetenue("RET-006", "Retraite Complémentaire CRRAE-UMOA (Part Employeur)", tPatronale, 10.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Employeur");
+            saveRetenue("RET-005", "Retraite Complémentaire CRRAE-UMOA (Part Agent)", tAgent, 6.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Agent", com.bpbf.sirh_backend.entities.BaseCalculRetenue.SALAIRE_BASE_SUR_SALAIRE);
+            saveRetenue("RET-006", "Retraite Complémentaire CRRAE-UMOA (Part Employeur)", tPatronale, 10.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Employeur", com.bpbf.sirh_backend.entities.BaseCalculRetenue.SALAIRE_BASE_SUR_SALAIRE);
             saveRetenue("RET-007", "Impôt Unique sur Traitements et Salaires (IUTS)", tFiscale, 10.0, "Impôt direct retenu à la source selon le barème progressif officiel (2% à 30%)");
             saveRetenue("RET-008", "Taxe Patronale sur les Salaires (TPA/TFP)", tTaxe, 3.0, "Taxe patronale d'apprentissage et de formation professionnelle versée au Trésor");
             saveRetenue("RET-009", "Assurance Maladie Groupe (Part Agent)", tAgent, 50.0, "Couverture santé complémentaire groupe entreprise - Part Agent (50%)");
@@ -291,7 +334,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
         } else {
             // Garantir la présence des 3 retenues obligatoires BPBF
             saveRetenue("RET-001", "Cotisation Sociale CNSS (Part Agent)", tAgent, 5.5, "Sécurité sociale obligatoire - Part salariale prélevée à la source (Plafond 600 000)");
-            saveRetenue("RET-005", "Retraite Complémentaire CRRAE-UMOA (Part Agent)", tAgent, 6.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Agent");
+            saveRetenue("RET-005", "Retraite Complémentaire CRRAE-UMOA (Part Agent)", tAgent, 6.0, "Retraite complémentaire bancaire UMOA par répartition avec épargne - Part Agent", com.bpbf.sirh_backend.entities.BaseCalculRetenue.SALAIRE_BASE_SUR_SALAIRE);
             saveRetenue("RET-015", "Retenue Fonds de Solidarité", tAgent, 1.0, "Contribution patriotique obligatoire de 1% sur le salaire imposable");
         }
     }
@@ -308,6 +351,10 @@ public class PayrollDataInitializer implements CommandLineRunner {
     }
 
     private void saveRetenue(String code, String libelle, com.bpbf.sirh_backend.entities.TypeRetenue type, Double taux, String desc) {
+        saveRetenue(code, libelle, type, taux, desc, com.bpbf.sirh_backend.entities.BaseCalculRetenue.REMUNERATION_BRUTE);
+    }
+
+    private void saveRetenue(String code, String libelle, com.bpbf.sirh_backend.entities.TypeRetenue type, Double taux, String desc, com.bpbf.sirh_backend.entities.BaseCalculRetenue baseCalcul) {
         if (!retenueRepository.existsByCode(code)) {
             com.bpbf.sirh_backend.entities.Retenue r = new com.bpbf.sirh_backend.entities.Retenue();
             r.setCode(code);
@@ -316,7 +363,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
             r.setTaux(taux);
             r.setDescription(desc);
             r.setActif(true);
-            r.setBaseCalcul(com.bpbf.sirh_backend.entities.BaseCalculRetenue.REMUNERATION_BRUTE);
+            r.setBaseCalcul(baseCalcul != null ? baseCalcul : com.bpbf.sirh_backend.entities.BaseCalculRetenue.REMUNERATION_BRUTE);
             retenueRepository.save(r);
         }
     }

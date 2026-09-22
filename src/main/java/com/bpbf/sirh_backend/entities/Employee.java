@@ -42,6 +42,8 @@ public class Employee {
     private String pays;
     private String telephone;
     private String dateEmbauche;
+    @Column(name = "anciennete_reprise")
+    private Integer ancienneteReprise = 0;
     @Column(name = "numero_cnss", length = 50)
     private String numeroCnss;
     private String statut;
@@ -257,7 +259,13 @@ public class Employee {
     public void setGrilleSalariale(GrilleSalariale grilleSalariale) { this.grilleSalariale = grilleSalariale; }
 
     public Double getSurSalaire() { return surSalaire; }
-    public void setSurSalaire(Double surSalaire) { this.surSalaire = (surSalaire != null && surSalaire < 0.0) ? 0.0 : surSalaire; }
+    public void setSurSalaire(Double surSalaire) {
+        if (surSalaire == null || surSalaire < 0.0) {
+            this.surSalaire = 0.0;
+        } else {
+            this.surSalaire = surSalaire;
+        }
+    }
 
     public Boolean getVehiculeFourni() { return vehiculeFourni; }
     public void setVehiculeFourni(Boolean vehiculeFourni) { this.vehiculeFourni = vehiculeFourni; }
@@ -272,6 +280,9 @@ public class Employee {
     public void setSituationFamiliale(String situationFamiliale) { this.situationFamiliale = situationFamiliale; }
     public String getSituationMatrimoniale() { return situationFamiliale; }
     public void setSituationMatrimoniale(String situationMatrimoniale) { this.situationFamiliale = situationMatrimoniale; }
+
+    public Integer getAncienneteReprise() { return ancienneteReprise != null ? ancienneteReprise : 0; }
+    public void setAncienneteReprise(Integer ancienneteReprise) { this.ancienneteReprise = (ancienneteReprise != null && ancienneteReprise >= 0) ? ancienneteReprise : 0; }
 }
 
 
