@@ -1,70 +1,173 @@
 <div class="manuel-page">
-  <!-- En-tête -->
+  <!-- En-tête Institutionnel -->
   <div class="page-header">
     <div class="ph-content">
-      <div class="ph-icon"><mat-icon>auto_stories</mat-icon></div>
+      <div class="ph-badge">BPBF</div>
       <div>
-        <h1>Manuel d'Utilisation & Documentation Technique</h1>
-        <p>Guides explicatifs complets, procédures étape par étape et documentation d'utilisation pour le SIGRH</p>
+        <h1>Manuel d'Utilisation & Documentation Technique Complète</h1>
+        <p>Guide de référence exhaustif conforme au standard ResHum Dz et aux procédures opérationnelles de la Banque Postale du Burkina Faso</p>
       </div>
     </div>
     <div class="header-actions">
-      <button mat-raised-button class="btn-download" (click)="downloadManual('Manuel_Global_SIGRH.pdf')">
-        <mat-icon>picture_as_pdf</mat-icon> Télécharger le Manuel (PDF)
+      <button type="button" class="btn-download-main" (click)="downloadManual('Guide_Utilisateur_SIGRH_BPBF.pdf')">
+        <span>Télécharger le Manuel Officiel (PDF - 79 pages)</span>
       </button>
     </div>
   </div>
 
-  <!-- Barre de Recherche dans le Manuel -->
+  <!-- Barre d'indicateurs de documentation -->
+  <div class="doc-stats-banner">
+    <div class="stat-item">
+      <span class="stat-number">11</span>
+      <span class="stat-label">Chapitres Exhaustifs</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-number">100%</span>
+      <span class="stat-label">Processus RH & Paie Couverts</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-number">v12.0.7</span>
+      <span class="stat-label">Référentiel ResHum Dz / SIGRH v3</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-number">BPBF</span>
+      <span class="stat-label">Conformité Bancaire & Fiscale 2024</span>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche et Filtres par Catégorie -->
   <mat-card class="search-card">
     <mat-card-content>
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Rechercher dans la documentation (ex: bulletin, catégorie, échelon, clôture)...</mat-label>
-        <mat-icon matPrefix>search</mat-icon>
-        <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applySearch()" placeholder="Tapez un mot clé...">
-        @if (searchQuery) {
-          <button matSuffix mat-icon-button (click)="searchQuery=''; applySearch()"><mat-icon>close</mat-icon></button>
-        }
-      </mat-form-field>
+      <div class="search-box-row">
+        <div class="search-input-container">
+          <input
+            type="text"
+            class="search-input-custom"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="applyFilter()"
+            placeholder="Rechercher dans la documentation (ex: bulletin, cnss, échelon, mission, calcul paie, iuts, clôture)..."
+          />
+          @if (searchQuery) {
+            <button type="button" class="btn-clear-search" (click)="resetSearch()">Effacer</button>
+          }
+        </div>
+      </div>
+
+      <!-- Filtres par catégorie -->
+      <div class="categories-bar">
+        <span class="cat-label">Domaines :</span>
+        <div class="cat-chips">
+          @for (cat of categories; track cat) {
+            <button
+              type="button"
+              class="cat-chip"
+              [class.active]="selectedCategory === cat"
+              (click)="setCategory(cat)"
+            >
+              {{ cat }}
+            </button>
+          }
+        </div>
+      </div>
     </mat-card-content>
   </mat-card>
 
-  <!-- Fiches Guides -->
-  <div class="guides-list">
-    @for (g of filteredGuides; track g.id) {
-      <mat-card class="guide-card">
-        <mat-card-header>
-          <div class="guide-icon"><mat-icon>{{ g.icon }}</mat-icon></div>
-          <div>
-            <mat-card-title>{{ g.title }}</mat-card-title>
-            <mat-card-subtitle>{{ g.summary }}</mat-card-subtitle>
-          </div>
-        </mat-card-header>
-        <mat-card-content>
-          <h4 class="guide-subtitle">Points Clés & Instructions :</h4>
-          <ul class="guide-bullets">
-            @for (c of g.content; track c) {
-              <li>{{ c }}</li>
-            }
-          </ul>
+  <!-- Table des Matières Express (Accès Rapide par Chapitre) -->
+  <div class="toc-container">
+    <div class="toc-header">
+      <span class="toc-title">Table des matières — Accès direct aux 11 chapitres :</span>
+    </div>
+    <div class="toc-grid">
+      @for (c of chapters; track c.id) {
+        <button type="button" class="toc-item-btn" (click)="scrollToChapter(c.id)">
+          <span class="toc-num">{{ c.number }}</span>
+          <span class="toc-text">{{ c.title.split(':')[1] || c.title }}</span>
+        </button>
+      }
+    </div>
+  </div>
 
-          @if (g.workflow && g.workflow.length > 0) {
+  <!-- Liste Complète des 11 Chapitres -->
+  <div class="guides-list">
+    @for (chapter of filteredChapters; track chapter.id) {
+      <div class="chapter-card" [id]="chapter.id">
+        <!-- En-tête de Chapitre -->
+        <div class="chapter-header">
+          <div class="chapter-badge-wrapper">
+            <span class="chapter-badge">{{ chapter.number }}</span>
+          </div>
+          <div class="chapter-title-wrapper">
+            <div class="chapter-meta">
+              <span class="chapter-tag">{{ chapter.category }}</span>
+              <span class="chapter-ref">SIGRH-BPBF-DOC-{{ chapter.number }}</span>
+            </div>
+            <h2 class="chapter-title">{{ chapter.title }}</h2>
+            <p class="chapter-summary">{{ chapter.summary }}</p>
+          </div>
+        </div>
+
+        <!-- Corps du Chapitre : Sous-sections détaillées -->
+        <div class="chapter-body">
+          <div class="subsections-list">
+            @for (sub of chapter.subsections; track sub.title) {
+              <div class="subsection-item">
+                <h3 class="subsection-title">{{ sub.title }}</h3>
+                <ul class="subsection-points">
+                  @for (pt of sub.points; track pt) {
+                    <li>{{ pt }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+
+          <!-- Procédure Recommandée Pas-à-Pas (Workflow) -->
+          @if (chapter.workflow && chapter.workflow.length > 0) {
             <div class="workflow-box">
-              <span class="wf-title">🔄 Procédure recommandée :</span>
-              <div class="wf-steps">
-                @for (w of g.workflow; track w) {
-                  <span class="step-chip">{{ w }}</span>
+              <span class="wf-title">Procédure Opérationnelle Recommandée :</span>
+              <div class="wf-steps-list">
+                @for (step of chapter.workflow; track step) {
+                  <div class="wf-step-card">
+                    <span class="step-text">{{ step }}</span>
+                  </div>
                 }
               </div>
             </div>
           }
-        </mat-card-content>
-        <mat-card-actions align="end">
-          <button mat-button color="primary" (click)="downloadManual(g.id + '_Guide.pdf')">
-            <mat-icon>download</mat-icon> Télécharger la fiche (PDF)
+
+          <!-- Note / Bonne Pratique Institutionnelle -->
+          @if (chapter.tips) {
+            <div class="tips-box">
+              <span class="tips-tag">Règle Métier & Bonne Pratique :</span>
+              <span class="tips-text">{{ chapter.tips }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Actions de Chapitre -->
+        <div class="chapter-footer">
+          <button type="button" class="btn-print-chapter" (click)="printChapter(chapter)">
+            <span>Imprimer la Fiche de ce Chapitre</span>
           </button>
-        </mat-card-actions>
-      </mat-card>
+          <button type="button" class="btn-download-guide" (click)="downloadManual('Guide_Utilisateur_SIGRH_BPBF.pdf')">
+            <span>Télécharger le Guide PDF Complet</span>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- État Aucun Résultat -->
+    @if (filteredChapters.length === 0) {
+      <div class="empty-results-card">
+        <h3>Aucun chapitre ne correspond à votre recherche</h3>
+        <p>Aucun résultat pour le mot-clé « <strong>{{ searchQuery }}</strong> » dans la catégorie sélectionnée.</p>
+        <button type="button" class="btn-reset-filter" (click)="resetSearch()">
+          <span>Réinitialiser la recherche</span>
+        </button>
+      </div>
     }
   </div>
 </div>

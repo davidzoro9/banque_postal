@@ -1,13 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-
-export interface GuideSection {
-  id: string;
-  title: string;
-  icon: string;
-  summary: string;
-  content: string[];
-  workflow: string[];
-}
+import { GUIDE_CHAPTERS, GuideChapter } from './guide-data';
 
 @Component({
   selector: 'app-manuel-utilisateur',
@@ -17,95 +9,156 @@ export interface GuideSection {
 })
 export class ManuelUtilisateurComponent implements OnInit {
   searchQuery = '';
-  selectedTab = 'donnees-base';
-
-  guides: GuideSection[] = [
-    {
-      id: 'donnees-base',
-      title: '1. Données de Base & Paramétrage Général',
-      icon: 'storage',
-      summary: 'Configuration des catégories (1..7 et I..VIII), des groupes (GROUPE I, II, III), de la grille salariale et des indemnités.',
-      content: [
-        'Accédez au menu "Données de Base" depuis la barre supérieure ou la barre latérale.',
-        'Catégories Professionnelles : Les catégories du Groupe I sont notées par les chiffres 1 à 7. Les catégories des Groupes II et III sont notées par les chiffres romains I à VIII.',
-        'Groupes Salariaux : Tous les anciens grades sont renommés en Groupe I, Groupe II et Groupe III.',
-        'Grille Salariale : Chaque ligne associe un Groupe, une Catégorie (1..7 / I..VIII) et un Échelon (1 à 15) au montant du salaire de base officiel.',
-        'Paramétrage des Indemnités : Définition des taux et montants par poste ou par groupe (Logement, Transport, Sujétion, Représentation).'
-      ],
-      workflow: [
-        'Étape 1 : Créer ou vérifier les Catégories (1..7, I..VIII)',
-        'Étape 2 : Vérifier la Grille Salariale (15 échelons par catégorie)',
-        'Étape 3 : Configurer les indemnités obligatoires et spécifiques'
-      ]
-    },
-    {
-      id: 'grh-employes',
-      title: '2. Gestion Administrative & Fiches Employés',
-      icon: 'badge',
-      summary: 'Création des fiches collaborateurs, affectation organisationnelle, historique de carrière et gestion des contrats.',
-      content: [
-        'Pour inscrire un nouveau collaborateur, naviguez vers "Gestion Administrative" -> "Employés" et cliquez sur "Nouveau".',
-        'Fiche Personnelle : Saisissez l\'état civil, le matricule, l\'adresse et les pièces d\'identité.',
-        'Informations professionnelles : Rattaché l\'employé à une Direction, un Département, un Service et un Emploi.',
-        'Carrière & Rémunération : Sélectionnez le Groupe (I, II, III), la Catégorie (1..7 ou I..VIII) et l\'Échelon (1..15). Le salaire de base et les indemnités seront automatiquement calculés.',
-        'Documents & Contrat : Joignez les contrats numérisés et définissez les dates d\'embauche et d\'essai.'
-      ],
-      workflow: [
-        'Saisie des informations d\'état civil -> Affectation au service -> Sélection Groupe/Catégorie/Échelon -> Validation de la fiche'
-      ]
-    },
-    {
-      id: 'paie-bulletins',
-      title: '3. Gestion de la Paie & Bulletins de Salaire',
-      icon: 'payments',
-      summary: 'Cycle de paie mensuel, saisie des variables, calcul brut/net, validation, prévisualisation et clôture.',
-      content: [
-        'Naviguez vers le module "Gestion de la Paie".',
-        'Génération des Bulletins : Cliquez sur "Générer la paie du mois". Le système applique la grille salariale et les indemnités enregistrées.',
-        'Calcul Automatique : Calcul automatique du Salaire Brut, des retenues (CNSS, IUTS) et du Net à Payer.',
-        'Mode Comparatif (M-1 vs M) : Activez le commutateur comparatif pour faire ressortir les variations de salaire brut/net entre le mois précédent et le mois courant.',
-        'Validation & Clôture : Chaque bulletin peut être validé individuellement ou globalement. Une fois validée, la session est fermée avec verrouillage de la modification.'
-      ],
-      workflow: [
-        'Mois N-1 -> Saisie éléments variables -> Génération -> Vérification des écarts M-1/M -> Validation DRH -> Clôture & Impression'
-      ]
-    },
-    {
-      id: 'profils-securite',
-      title: '4. Sécurité, Profils & Matrice des Habilitations',
-      icon: 'admin_panel_settings',
-      summary: 'Gestion des rôles utilisateurs, attribution des droits d\'accès et contrôle des privilèges d\'exécution.',
-      content: [
-        'Profils & Rôles : Consultation et création des rôles applicatifs (ADMIN, DRH, GESTIONNAIRE_PAIE, VALIDATEUR, CONSULTANT).',
-        'Matrice des Habilitations : Cochez/décocher les permissions pour accorder ou restreindre les actions (Création, Modification, Suppression, Validation, Clôture).',
-        'Comptes Utilisateurs : Gestion des identifiants, réinitialisation de mots de passe et suspension des accès.'
-      ],
-      workflow: [
-        'Création du Rôle -> Ajustement dans la Matrice d\'Habilitations -> Affectation de l\'Utilisateur -> Attribution des identifiants'
-      ]
-    }
+  selectedCategory = 'TOUS';
+  
+  categories: string[] = [
+    'TOUS',
+    'Vue d\'ensemble',
+    'Architecture',
+    'Interface & Prise en main',
+    'Portail Employé',
+    'Ressources Humaines',
+    'Gestion des Talents',
+    'Développement RH',
+    'Protection Sociale',
+    'Politique Rémunération',
+    'Moteur de Paie',
+    'Administration Système'
   ];
 
-  filteredGuides: GuideSection[] = [];
+  chapters: GuideChapter[] = GUIDE_CHAPTERS;
+  filteredChapters: GuideChapter[] = [];
 
   ngOnInit(): void {
-    this.filteredGuides = [...this.guides];
+    this.filteredChapters = [...this.chapters];
   }
 
-  applySearch(): void {
-    if (!this.searchQuery) {
-      this.filteredGuides = [...this.guides];
+  setCategory(category: string): void {
+    this.selectedCategory = category;
+    this.applyFilter();
+  }
+
+  applyFilter(): void {
+    let result = [...this.chapters];
+
+    if (this.selectedCategory && this.selectedCategory !== 'TOUS') {
+      result = result.filter(c => c.category === this.selectedCategory);
+    }
+
+    if (this.searchQuery && this.searchQuery.trim()) {
+      const q = this.searchQuery.trim().toLowerCase();
+      result = result.filter(c =>
+        c.number.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q) ||
+        c.summary.toLowerCase().includes(q) ||
+        c.category.toLowerCase().includes(q) ||
+        (c.tips && c.tips.toLowerCase().includes(q)) ||
+        c.workflow.some(w => w.toLowerCase().includes(q)) ||
+        c.subsections.some(sub =>
+          sub.title.toLowerCase().includes(q) ||
+          sub.points.some(p => p.toLowerCase().includes(q))
+        )
+      );
+    }
+
+    this.filteredChapters = result;
+  }
+
+  resetSearch(): void {
+    this.searchQuery = '';
+    this.selectedCategory = 'TOUS';
+    this.filteredChapters = [...this.chapters];
+  }
+
+  scrollToChapter(id: string): void {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  downloadManual(fileName: string = 'Guide_Utilisateur_SIGRH_BPBF.pdf'): void {
+    const link = document.createElement('a');
+    link.href = 'docs/Guide_Utilisateur_SIGRH_BPBF.pdf';
+    link.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  printChapter(chapter: GuideChapter): void {
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Veuillez autoriser les fenêtres pop-up pour imprimer cette fiche.');
       return;
     }
-    const q = this.searchQuery.toLowerCase();
-    this.filteredGuides = this.guides.filter(g =>
-      g.title.toLowerCase().includes(q) ||
-      g.summary.toLowerCase().includes(q) ||
-      g.content.some(c => c.toLowerCase().includes(q))
-    );
-  }
 
-  downloadManual(type: string): void {
-    alert(`Téléchargement de la documentation [${type}] lancé au format PDF.`);
+    let subHtml = '';
+    chapter.subsections.forEach(sub => {
+      subHtml += `
+        <div style="margin-bottom: 18px;">
+          <h3 style="font-size: 15px; color: #004d80; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">${sub.title}</h3>
+          <ul style="line-height: 1.6; font-size: 13.5px; color: #1e293b; padding-left: 20px;">
+            ${sub.points.map(p => `<li style="margin-bottom: 5px;">${p}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    });
+
+    let wfHtml = '';
+    if (chapter.workflow && chapter.workflow.length > 0) {
+      wfHtml = `
+        <div style="background: #f1f5f9; border-left: 4px solid #0284c7; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+          <strong style="color: #0f172a; font-size: 13px;">Procédure recommandée :</strong>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #334155;">${chapter.workflow.join(' &rarr; ')}</p>
+        </div>
+      `;
+    }
+
+    let tipsHtml = '';
+    if (chapter.tips) {
+      tipsHtml = `
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 14px; border-radius: 6px; margin-top: 14px; font-size: 12.5px; color: #065f46;">
+          <strong>Bonne pratique / Règle :</strong> ${chapter.tips}
+        </div>
+      `;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${chapter.title} - SIGRH BPBF</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 30px; color: #0f172a; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #004d80; padding-bottom: 15px; margin-bottom: 25px; }
+          .title { font-size: 20px; font-weight: bold; color: #004d80; margin: 0; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .category { background: #004d80; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="title">${chapter.title}</h1>
+            <div class="subtitle">SIGRH Banque Postale du Burkina Faso (BPBF) • ${chapter.summary}</div>
+          </div>
+          <div>
+            <span class="category">${chapter.category}</span>
+          </div>
+        </div>
+        ${subHtml}
+        ${wfHtml}
+        ${tipsHtml}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
   }
 }
