@@ -78,36 +78,51 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
+  private refreshMenuItems(): void {
+    const rawItems = this.moduleNav.getMenuForActiveModule();
+    this.menuItems = rawItems
+      .filter(item => this.isItemPermitted(item.id))
+      .map(item => {
+        if (!item.children) return item;
+        const filteredChildren = item.children.filter(child => this.isItemPermitted(child.id));
+        return { ...item, children: filteredChildren };
+      })
+      .filter(item => !item.children || item.children.length > 0);
+  }
+
   ngOnInit(): void {
     this.moduleNav.activeModule$.pipe(takeUntil(this.destroy$)).subscribe(mod => {
       const isSameModule = this.activeModule?.id === mod?.id;
       this.activeModule = mod;
       
-      const rawItems = this.moduleNav.getMenuForActiveModule();
-      this.menuItems = rawItems
-        .filter(item => this.isItemPermitted(item.id))
-        .map(item => {
-          if (!item.children) return item;
-          const filteredChildren = item.children.filter(child => this.isItemPermitted(child.id));
-          return { ...item, children: filteredChildren };
-        })
-        .filter(item => !item.children || item.children.length > 0);
+      this.refreshMenuItems();
 
       if (!isSameModule) {
         this.expandedItems.clear();
         this.expandedItems.add('employes');
+        if (mod?.id === 'paie') {
+          this.expandedItems.add('etats-synthese');
+        }
       }
+    });
+
+    this.moduleNav.menuUpdated$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.refreshMenuItems();
     });
 
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       takeUntil(this.destroy$)
     ).subscribe((e: any) => {
-      const empId = this.extractEmpId(e.urlAfterRedirects || e.url);
+      const url = e.urlAfterRedirects || e.url;
+      const empId = this.extractEmpId(url);
       this.currentEmpId = empId;
       if (empId) {
         this.lastEmpId = empId;
         this.expandedItems.add('employes');
+      }
+      if (url.includes('/paie/etats-synthese')) {
+        this.expandedItems.add('etats-synthese');
       }
     });
 
@@ -116,6 +131,9 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     if (initEmpId) {
       this.lastEmpId = initEmpId;
       this.expandedItems.add('employes');
+    }
+    if (this.router.url.includes('/paie/etats-synthese')) {
+      this.expandedItems.add('etats-synthese');
     }
   }
 

@@ -65,6 +65,14 @@
   }
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
 .main-title {
   font-size: 1.35rem;
   font-weight: 700;
@@ -72,10 +80,34 @@
   margin: 0;
 }
 
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid #bae6fd;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid #fecaca;
+}
+
 .subtitle {
   font-size: 0.85rem;
   color: #64748b;
-  margin: 2px 0 0 0;
+  margin: 4px 0 0 0;
 }
 
 .header-actions {
@@ -951,6 +983,28 @@
     padding: 14px 22px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
+
+    .btn-delete-modal {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 14px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+      &:hover:not(:disabled) {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+    }
 
     .btn-cancel {
       padding: 8px 16px;

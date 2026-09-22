@@ -20,9 +20,10 @@ import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.componen
 const routes: Routes = [
   { path: '', component: PaieOverviewComponent },
   
-  // États de synthèse
+  // États de synthèse (sous-menus individuels)
   { path: 'etats-synthese', component: EtatsSyntheseComponent },
-  { path: 'etats', redirectTo: 'etats-synthese', pathMatch: 'full' },
+  { path: 'etats-synthese/:code', component: EtatsSyntheseComponent },
+  { path: 'etats', redirectTo: 'etats-synthese/livre-paie', pathMatch: 'full' },
   
   // 1. Traitements & Bulletins
   { path: 'lots', component: GenererBulletinsComponent },

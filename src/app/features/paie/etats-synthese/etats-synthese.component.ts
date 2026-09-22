@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { EtatSyntheseService, EtatSyntheseWrapper, EtatSyntheseFilter, EtatSyntheseConfig } from '../services/etat-synthese.service';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { EtatSyntheseService, EtatSyntheseWrapper, EtatSyntheseFilter, EtatSyntheseConfig } from '../services/etat-synthese.service';
+import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -50,9 +52,9 @@ export class EtatsSyntheseComponent implements OnInit {
 
   availableIcons: string[] = [
     'assessment', 'menu_book', 'badge', 'payments', 'account_balance',
-    'health_and_safety', 'receipt_long', 'credit_card_off', 'flag', 'shield',
-    'groups', 'pie_chart', 'rule', 'trending_up', 'savings', 'calculate',
-    'attach_money', 'price_check', 'domain'
+    'security', 'receipt_long', 'credit_card_off', 'flag', 'shield',
+    'groups', 'people', 'pie_chart', 'rule', 'trending_up', 'savings', 'calculate',
+    'health_and_safety', 'price_check', 'domain'
   ];
 
   availableCategories: string[] = [
@@ -63,10 +65,42 @@ export class EtatsSyntheseComponent implements OnInit {
 
   constructor(
     private etatService: EtatSyntheseService,
-    private http: HttpClient
+    private http: HttpClient,
+    private route: ActivatedRoute,
+    private router: Router,
+    private moduleNav: ModuleNavService
   ) {}
 
   ngOnInit(): void {
+    this.route.paramMap.subscribe(params => {
+      const slug = params.get('code');
+      if (slug) {
+        const resolvedCode = this.resolveCodeFromSlug(slug);
+        if (resolvedCode !== this.selectedEtat) {
+          this.selectedEtat = resolvedCode;
+          if (this.selectedSessionId) {
+            this.loadEtatData();
+          }
+        }
+      } else {
+        const defaultSlug = this.resolveSlugFromCode(this.selectedEtat || 'LIVRE_PAIE');
+        this.router.navigate(['/paie/etats-synthese', defaultSlug], { replaceUrl: true });
+      }
+    });
+
+    this.route.queryParamMap.subscribe(queryParams => {
+      const qType = queryParams.get('type') || queryParams.get('code');
+      if (qType) {
+        const resolvedCode = this.resolveCodeFromSlug(qType);
+        if (resolvedCode !== this.selectedEtat) {
+          this.selectedEtat = resolvedCode;
+          if (this.selectedSessionId) {
+            this.loadEtatData();
+          }
+        }
+      }
+    });
+
     this.loadConfigs();
     this.loadFiltersData();
   }
@@ -79,13 +113,22 @@ export class EtatsSyntheseComponent implements OnInit {
         this.etatsConfigs = configs || [];
         this.isLoadingConfigs = false;
 
-        // Si l'état sélectionné n'existe pas ou n'est plus actif, choisir le premier actif
-        const activeOnes = this.activeConfigs;
-        if (activeOnes.length > 0) {
-          const exists = activeOnes.find(c => c.code === this.selectedEtat);
-          if (!exists) {
-            this.selectedEtat = activeOnes[0].code;
+        // Synchroniser immédiatement les sous-menus du menu gauche
+        this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
+
+        // Si l'URL contient un code d'état, l'activer
+        const routeSlug = this.route.snapshot.paramMap.get('code');
+        if (routeSlug) {
+          this.selectedEtat = this.resolveCodeFromSlug(routeSlug);
+        } else {
+          const activeOnes = this.activeConfigs;
+          if (activeOnes.length > 0) {
+            const exists = activeOnes.find(c => c.code === this.selectedEtat);
+            if (!exists) {
+              this.selectedEtat = activeOnes[0].code;
+            }
           }
+          this.router.navigate(['/paie/etats-synthese', this.resolveSlugFromCode(this.selectedEtat)], { replaceUrl: true });
         }
         this.loadEtatData();
       },
@@ -151,7 +194,8 @@ export class EtatsSyntheseComponent implements OnInit {
 
   selectEtat(key: string): void {
     this.selectedEtat = key;
-    this.loadEtatData();
+    const slug = this.resolveSlugFromCode(key);
+    this.router.navigate(['/paie/etats-synthese', slug]);
   }
 
   onFilterChange(): void {
@@ -238,10 +282,15 @@ export class EtatsSyntheseComponent implements OnInit {
         next: (saved) => {
           this.isSaving = false;
           this.formSuccess = 'État mis à jour avec succès dans PostgreSQL !';
+          const idx = this.etatsConfigs.findIndex(c => c.id === saved.id);
+          if (idx !== -1) {
+            this.etatsConfigs[idx] = saved;
+          }
+          this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
           setTimeout(() => {
             this.closeFormModal();
-            this.loadConfigs();
-          }, 800);
+            this.loadEtatData();
+          }, 600);
         },
         error: (err) => {
           this.isSaving = false;
@@ -261,11 +310,12 @@ export class EtatsSyntheseComponent implements OnInit {
         next: (created) => {
           this.isSaving = false;
           this.formSuccess = 'Nouvel état de synthèse créé avec succès !';
+          this.etatsConfigs.push(created);
+          this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
           setTimeout(() => {
             this.closeFormModal();
-            this.loadConfigs();
-            this.selectedEtat = created.code;
-          }, 800);
+            this.selectEtat(created.code);
+          }, 600);
         },
         error: (err) => {
           this.isSaving = false;
@@ -275,12 +325,13 @@ export class EtatsSyntheseComponent implements OnInit {
     }
   }
 
-  toggleConfigActive(config: EtatSyntheseConfig, event: Event): void {
-    event.stopPropagation();
+  toggleConfigActive(config: EtatSyntheseConfig, event?: Event): void {
+    if (event) event.stopPropagation();
     if (!config.id) return;
     this.etatService.toggleConfig(config.id).subscribe({
       next: (updated) => {
         config.actif = updated.actif;
+        this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
         // Si l'état actuellement affiché vient d'être désactivé, basculer vers un actif
         if (!config.actif && this.selectedEtat === config.code) {
           const firstActive = this.activeConfigs[0];
@@ -293,8 +344,8 @@ export class EtatsSyntheseComponent implements OnInit {
     });
   }
 
-  deleteConfig(config: EtatSyntheseConfig, event: Event): void {
-    event.stopPropagation();
+  deleteConfig(config: EtatSyntheseConfig, event?: Event): void {
+    if (event) event.stopPropagation();
     if (!config.id) return;
     if (config.isSystem) {
       alert('Cet état est un état réglementaire du système et ne peut pas être supprimé. Vous pouvez toutefois le désactiver.');
@@ -304,11 +355,99 @@ export class EtatsSyntheseComponent implements OnInit {
     if (confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'état "${config.libelle}" ?`)) {
       this.etatService.deleteConfig(config.id).subscribe({
         next: () => {
-          this.loadConfigs();
+          this.etatsConfigs = this.etatsConfigs.filter(c => c.id !== config.id);
+          this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
+          if (this.selectedEtat === config.code) {
+            this.selectEtat('LIVRE_PAIE');
+          }
         },
         error: (err) => alert(err?.error?.message || 'Erreur lors de la suppression de l\'état.')
       });
     }
+  }
+
+  deleteFromModal(): void {
+    if (!this.configForm.id) return;
+    const cfg = this.etatsConfigs.find(c => c.id === this.configForm.id);
+    if (!cfg || !cfg.id) return;
+    if (cfg.isSystem) {
+      alert('Cet état est un état réglementaire du système et ne peut pas être supprimé. Vous pouvez toutefois le désactiver.');
+      return;
+    }
+    if (confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'état "${cfg.libelle}" ?`)) {
+      this.etatService.deleteConfig(cfg.id!).subscribe({
+        next: () => {
+          this.closeFormModal();
+          this.etatsConfigs = this.etatsConfigs.filter(c => c.id !== cfg.id);
+          this.moduleNav.updateEtatsSyntheseSubmenus(this.etatsConfigs);
+          if (this.selectedEtat === cfg.code) {
+            this.selectEtat('LIVRE_PAIE');
+          }
+        },
+        error: (err) => {
+          this.formError = err?.error?.message || 'Erreur lors de la suppression de l\'état.';
+        }
+      });
+    }
+  }
+
+  resolveCodeFromSlug(slug: string): string {
+    if (!slug) return 'LIVRE_PAIE';
+    const clean = slug.toLowerCase().replace(/_/g, '-');
+    const SLUG_MAP: Record<string, string> = {
+      'livre-paie': 'LIVRE_PAIE',
+      'nominatif': 'ETAT_NOMINATIF',
+      'etat-nominatif': 'ETAT_NOMINATIF',
+      'direction': 'ETAT_SALAIRE',
+      'salaire': 'ETAT_SALAIRE',
+      'etat-salaire': 'ETAT_SALAIRE',
+      'banque': 'ETAT_BANQUE',
+      'virements': 'ETAT_BANQUE',
+      'etat-banque': 'ETAT_BANQUE',
+      'cnss': 'ETAT_CNSS',
+      'etat-cnss': 'ETAT_CNSS',
+      'iuts': 'ETAT_IUTS',
+      'etat-iuts': 'ETAT_IUTS',
+      'precompte': 'ETAT_PRECOMPTE',
+      'etat-precompte': 'ETAT_PRECOMPTE',
+      'fsp': 'ETAT_FSP',
+      'etat-fsp': 'ETAT_FSP',
+      'mutuelle': 'ETAT_MUTUELLE',
+      'etat-mutuelle': 'ETAT_MUTUELLE',
+      'type-employe': 'ETAT_TYPE_EMPLOYE',
+      'etat-type-employe': 'ETAT_TYPE_EMPLOYE',
+      'elements-salaire': 'ETAT_ELEMENT_SALAIRE',
+      'etat-elements-salaire': 'ETAT_ELEMENT_SALAIRE',
+      'bulletin': 'ETAT_BULLETIN',
+      'etat-bulletin': 'ETAT_BULLETIN'
+    };
+    if (SLUG_MAP[clean]) {
+      return SLUG_MAP[clean];
+    }
+    const directMatch = this.etatsConfigs.find(c =>
+      c.code.toLowerCase() === slug.toLowerCase() ||
+      c.code.toLowerCase().replace(/_/g, '-') === clean
+    );
+    return directMatch ? directMatch.code : slug.toUpperCase().replace(/-/g, '_');
+  }
+
+  resolveSlugFromCode(code: string): string {
+    const CODE_TO_SLUG: Record<string, string> = {
+      'LIVRE_PAIE': 'livre-paie',
+      'ETAT_NOMINATIF': 'nominatif',
+      'ETAT_SALAIRE': 'direction',
+      'ETAT_BANQUE': 'banque',
+      'ETAT_CNSS': 'cnss',
+      'ETAT_IUTS': 'iuts',
+      'ETAT_PRECOMPTE': 'precompte',
+      'ETAT_FSP': 'fsp',
+      'ETAT_MUTUELLE': 'mutuelle',
+      'ETAT_TYPE_EMPLOYE': 'type-employe',
+      'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
+      'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
+      'ETAT_BULLETIN': 'bulletin'
+    };
+    return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }
 
   // ─── EXPORTS ─────────────────────────────────────────────────────────────

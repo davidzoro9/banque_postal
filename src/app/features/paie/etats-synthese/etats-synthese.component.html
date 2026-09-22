@@ -6,15 +6,25 @@
   <div class="header-card">
     <div class="header-left">
       <div class="icon-avatar">
-        <mat-icon>assessment</mat-icon>
+        <mat-icon>{{ getSelectedEtatObj().icon || 'assessment' }}</mat-icon>
       </div>
       <div>
         <div class="breadcrumbs">
           <span>Gestion de la Paie</span>
           <mat-icon class="bc-sep">chevron_right</mat-icon>
-          <span class="active">États de synthèse</span>
+          <span>États de synthèse</span>
+          <mat-icon class="bc-sep">chevron_right</mat-icon>
+          <span class="active">{{ getSelectedEtatObj().libelle }}</span>
         </div>
-        <h1 class="main-title">{{ getSelectedEtatObj().libelle }}</h1>
+        <div class="title-row">
+          <h1 class="main-title">{{ getSelectedEtatObj().libelle }}</h1>
+          <span class="category-badge" *ngIf="getSelectedEtatObj().categorie">
+            {{ getSelectedEtatObj().categorie }}
+          </span>
+          <span class="status-badge" *ngIf="!getSelectedEtatObj().actif">
+            Désactivé
+          </span>
+        </div>
         <p class="subtitle">{{ getSelectedEtatObj().description }}</p>
       </div>
     </div>
@@ -34,7 +44,7 @@
         type="button"
         class="btn-export btn-cfg"
         (click)="openEditModal(getSelectedEtatObj())"
-        matTooltip="Modifier la configuration de cet état"
+        matTooltip="Paramétrer / Configurer cet état"
       >
         <mat-icon>tune</mat-icon>
         <span>Paramétrer</span>
@@ -61,59 +71,6 @@
         <mat-icon>picture_as_pdf</mat-icon>
         <span>Télécharger PDF</span>
       </button>
-    </div>
-  </div>
-
-  <!-- ========================================== -->
-  <!-- SÉLECTEUR D'ÉTATS DYNAMIQUE (POSTGRESQL)   -->
-  <!-- ========================================== -->
-  <div class="etat-selector-bar">
-    <div class="selector-scroll">
-      <div
-        *ngFor="let cfg of etatsConfigs"
-        class="etat-tab-wrapper"
-        [class.active]="selectedEtat === cfg.code"
-        [class.inactive-tab]="!cfg.actif"
-      >
-        <button
-          type="button"
-          class="etat-tab-btn"
-          (click)="selectEtat(cfg.code)"
-        >
-          <mat-icon class="tab-icon">{{ cfg.icon || 'assessment' }}</mat-icon>
-          <span class="tab-label">{{ cfg.libelle }}</span>
-          <span *ngIf="cfg.categorie" class="tab-badge">{{ cfg.categorie }}</span>
-          <span *ngIf="!cfg.actif" class="tab-badge badge-off">Désactivé</span>
-        </button>
-
-        <div class="tab-actions-menu" (click)="$event.stopPropagation()">
-          <button
-            type="button"
-            class="tab-action-icon"
-            (click)="openEditModal(cfg, $event)"
-            matTooltip="Modifier cet état"
-          >
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button
-            type="button"
-            class="tab-action-icon"
-            (click)="toggleConfigActive(cfg, $event)"
-            [matTooltip]="cfg.actif ? 'Désactiver cet état' : 'Activer cet état'"
-          >
-            <mat-icon>{{ cfg.actif ? 'visibility' : 'visibility_off' }}</mat-icon>
-          </button>
-          <button
-            *ngIf="!cfg.isSystem"
-            type="button"
-            class="tab-action-icon danger"
-            (click)="deleteConfig(cfg, $event)"
-            matTooltip="Supprimer définitivement cet état"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -863,12 +820,25 @@
           <label class="switch-label">
             <input type="checkbox" [(ngModel)]="configForm.actif" />
             <span class="slider"></span>
-            <span class="label-text">État actif et visible dans les onglets de sélection</span>
+            <span class="label-text">État actif et visible dans les sous-menus de navigation</span>
           </label>
         </div>
       </div>
 
       <div class="dialog-footer">
+        <button
+          *ngIf="isEditing && !configForm.isSystem"
+          type="button"
+          class="btn-delete-modal"
+          (click)="deleteFromModal()"
+          [disabled]="isSaving"
+        >
+          <mat-icon>delete</mat-icon>
+          <span>Supprimer</span>
+        </button>
+
+        <div style="flex: 1;"></div>
+
         <button type="button" class="btn-cancel" (click)="closeFormModal()" [disabled]="isSaving">
           Annuler
         </button>

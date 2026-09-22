@@ -100,8 +100,26 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
         { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
         { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' },
-        { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' },
-        { id: 'etats-synthese', label: 'États de synthèse', icon: 'assessment', route: '/paie/etats-synthese' }
+        { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' }
+      ]
+    },
+    {
+      id: 'etats-synthese',
+      label: 'États de synthèse',
+      icon: 'assessment',
+      children: [
+        { id: 'etat-livre-paie', label: 'Livre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
+        { id: 'etat-nominatif', label: 'État nominatif de paie', icon: 'badge', route: '/paie/etats-synthese/nominatif' },
+        { id: 'etat-direction', label: 'État salaire par direction', icon: 'payments', route: '/paie/etats-synthese/direction' },
+        { id: 'etat-banque', label: 'État par banque (Virements)', icon: 'account_balance', route: '/paie/etats-synthese/banque' },
+        { id: 'etat-cnss', label: 'État Cotisation CNSS', icon: 'security', route: '/paie/etats-synthese/cnss' },
+        { id: 'etat-iuts', label: 'État IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
+        { id: 'etat-precompte', label: 'État Précompte', icon: 'credit_card_off', route: '/paie/etats-synthese/precompte' },
+        { id: 'etat-fsp', label: 'État FSP (Soutien Patriotique)', icon: 'shield', route: '/paie/etats-synthese/fsp' },
+        { id: 'etat-mutuelle', label: 'État Mutuelle', icon: 'health_and_safety', route: '/paie/etats-synthese/mutuelle' },
+        { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
+        { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
+        { id: 'etat-bulletin', label: 'État Bulletin (Contrôle exhaustif)', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
       ]
     }
   ],
@@ -208,9 +226,48 @@ export class ModuleNavService {
     this.toggleDrawer();
   }
 
+  private menuUpdatedSubject = new BehaviorSubject<void>(undefined);
+  menuUpdated$: Observable<void> = this.menuUpdatedSubject.asObservable();
+
   getMenuForActiveModule(): MenuItem[] {
     const mod = this.activeModule;
     if (!mod) return [];
     return MODULE_MENUS[mod.id] || [];
+  }
+
+  updateEtatsSyntheseSubmenus(configs: Array<{ code: string; libelle: string; icon?: string; actif?: boolean }>): void {
+    const paieMenus = MODULE_MENUS['paie'];
+    if (!paieMenus) return;
+    const etatsGroup = paieMenus.find(m => m.id === 'etats-synthese');
+    if (etatsGroup) {
+      etatsGroup.children = configs
+        .filter(c => c.actif !== false)
+        .map(c => ({
+          id: `etat-${c.code.toLowerCase().replace(/_/g, '-')}`,
+          label: c.libelle,
+          icon: c.icon || 'assessment',
+          route: `/paie/etats-synthese/${this.slugifyCode(c.code)}`
+        }));
+      this.menuUpdatedSubject.next();
+    }
+  }
+
+  private slugifyCode(code: string): string {
+    const CODE_TO_SLUG: Record<string, string> = {
+      'LIVRE_PAIE': 'livre-paie',
+      'ETAT_NOMINATIF': 'nominatif',
+      'ETAT_SALAIRE': 'direction',
+      'ETAT_BANQUE': 'banque',
+      'ETAT_CNSS': 'cnss',
+      'ETAT_IUTS': 'iuts',
+      'ETAT_PRECOMPTE': 'precompte',
+      'ETAT_FSP': 'fsp',
+      'ETAT_MUTUELLE': 'mutuelle',
+      'ETAT_TYPE_EMPLOYE': 'type-employe',
+      'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
+      'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
+      'ETAT_BULLETIN': 'bulletin'
+    };
+    return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }
 }
