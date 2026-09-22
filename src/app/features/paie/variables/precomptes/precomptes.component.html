@@ -155,9 +155,7 @@
               <th style="width: 40px; text-align: center;">
                 <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" class="custom-checkbox">
               </th>
-              <th style="width: 60px; text-align: center;">N°</th>
               <th>Agent</th>
-              <th>Élément</th>
               <th style="text-align: right;">Montant Initial</th>
               <th style="text-align: right;">Ret. Mens.</th>
               <th style="width: 140px;">Progression</th>
@@ -175,11 +173,6 @@
                   <input type="checkbox" [checked]="isSelected(p.id)" (change)="toggleSelect(p.id)" class="custom-checkbox">
                 </td>
 
-                <!-- N° / Réf -->
-                <td style="text-align: center; color: #64748b; font-weight: 500; font-family: monospace;">
-                  {{ p.numero || p.reference || '/' }}
-                </td>
-
                 <!-- Agent (Avatar + Nom cliquable + Matricule) -->
                 <td>
                   <div class="agent-cell" (click)="openDetailModal(p)">
@@ -189,13 +182,6 @@
                       <span class="agent-matricule">{{ p.matricule }}</span>
                     </div>
                   </div>
-                </td>
-
-                <!-- Élément de salaire -->
-                <td>
-                  <span class="element-badge" (click)="openDetailModal(p)" title="Cliquer pour voir le détail">
-                    {{ p.elementSalaryName }}
-                  </span>
                 </td>
 
                 <!-- Montant Initial -->
@@ -442,72 +428,17 @@
         <div class="modal-body">
           <div class="form-grid">
 
-            <!-- Sélection Agent -->
-            <div class="full-col agent-search-group">
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Rechercher un Agent *</mat-label>
-                <input matInput 
-                       [(ngModel)]="agentSearchText" 
-                       (input)="onAgentSearchInput()"
-                       (focus)="showAgentDropdown = true"
-                       placeholder="Taper le matricule ou le nom de l'agent..." 
-                       [disabled]="!!editingPrecompte">
-                @if (formModel.employeeId && !editingPrecompte) {
-                  <button matSuffix mat-icon-button (click)="clearSelectedAgent()" title="Changer d'agent">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                }
-              </mat-form-field>
-
-              @if (!editingPrecompte && showAgentDropdown && agentSearchText) {
-                <div class="agent-select-list">
-                  @for (emp of filteredEmployeesForSelect; track emp.id) {
-                    <div class="agent-option" (click)="selectEmployee(emp)">
-                      <span class="emp-matricule"><strong>{{ emp.matricule }}</strong></span> — 
-                      <span class="emp-name">{{ emp.nom }} {{ emp.prenom }}</span> 
-                      <span class="emp-fct text-muted">{{ emp.fonction || 'Agent' }}</span>
-                    </div>
-                  }
-                  @if (filteredEmployeesForSelect.length === 0) {
-                    <div class="agent-option text-muted">Aucun agent correspondant à "{{ agentSearchText }}"</div>
-                  }
-                </div>
-              }
-
-              @if (formModel.employeeId) {
-                <div class="agent-confirmed-badge">
-                  <mat-icon>check_circle</mat-icon>
-                  <span>Agent sélectionné : <strong>{{ formModel.matricule }}</strong> — {{ formModel.employeeName }}</span>
-                </div>
-              }
-            </div>
-
-            <!-- Élément de Salaire -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Élément de Salaire *</mat-label>
-                <mat-select [(ngModel)]="formModel.elementSalaryId">
-                  @for (el of elementsList; track el.id) {
-                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            <!-- Référence / N° dossier -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Référence / N° dossier</mat-label>
-                <input matInput [(ngModel)]="formModel.reference" readonly placeholder="Génération automatique...">
-                <mat-icon matSuffix class="auto-lock-icon" title="N° de dossier unique généré automatiquement">lock</mat-icon>
-              </mat-form-field>
-            </div>
-
-            <!-- Motif -->
+            <!-- Bénéficiaire (Agent - Liste Déroulante) -->
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Motif</mat-label>
-                <input matInput [(ngModel)]="formModel.motif" placeholder="Ex: Avance quinzaine, Prêt scolarité, Achat groupé...">
+                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingPrecompte" placeholder="Sélectionner un agent...">
+                  @for (emp of employeesList; track emp.id) {
+                    <mat-option [value]="emp.id">
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                    </mat-option>
+                  }
+                </mat-select>
               </mat-form-field>
             </div>
 
@@ -564,7 +495,7 @@
         <div class="modal-footer">
           <button mat-stroked-button (click)="closeModal()">Annuler</button>
           <button mat-raised-button color="primary" 
-                  [disabled]="!formModel.employeeId || !formModel.elementSalaryId || !formModel.amount || !formModel.retenueMensuelle || isSaving" 
+                  [disabled]="!formModel.employeeId || !formModel.amount || !formModel.retenueMensuelle || isSaving" 
                   (click)="savePrecompte()" class="btn-save">
             <mat-icon>check</mat-icon> {{ editingPrecompte ? 'Mettre à jour' : 'Enregistrer le Précompte' }}
           </button>

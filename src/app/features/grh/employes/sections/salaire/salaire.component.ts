@@ -62,6 +62,7 @@ export class SalaireComponent implements OnInit {
 
   baseLabel(base: string): string {
     if (base === 'SALAIRE_BASE') return 'Salaire de base';
+    if (base === 'SALAIRE_BASE_SUR_SALAIRE') return 'Salaire de base + Sur-salaire';
     if (base === 'BASE_IMPOSABLE') return 'Base imposable';
     return 'Rémunération brute';
   }

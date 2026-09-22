@@ -155,11 +155,9 @@
               <th style="width: 40px; text-align: center;">
                 <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" class="custom-checkbox">
               </th>
-              <th style="width: 110px; text-align: center;">N°</th>
               <th>Agent</th>
-              <th>Élément</th>
+              <th>Élément de salaire</th>
               <th>Date d'effet</th>
-              <th>Motif</th>
               <th style="text-align: right;">Montant (FCFA)</th>
               <th style="text-align: center; width: 110px;">Statut</th>
               <th style="text-align: center; width: 100px;">Actions</th>
@@ -171,11 +169,6 @@
                 <!-- Checkbox -->
                 <td style="text-align: center;" (click)="$event.stopPropagation()">
                   <input type="checkbox" [checked]="isSelected(a.id)" (change)="toggleSelect(a.id)" class="custom-checkbox">
-                </td>
-
-                <!-- N° / Réf -->
-                <td style="text-align: center; color: #64748b; font-weight: 600; font-family: monospace;">
-                  {{ a.numero || a.reference || '/' }}
                 </td>
 
                 <!-- Agent (Avatar + Nom cliquable + Matricule) -->
@@ -199,11 +192,6 @@
                 <!-- Date d'effet -->
                 <td style="color: #475569; font-weight: 500;">
                   {{ a.dateDebut ? (a.dateDebut | date:'dd/MM/yyyy') : 'Dès prochain bulletin' }}
-                </td>
-
-                <!-- Motif -->
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b;" [title]="a.motif || '-'">
-                  {{ a.motif && a.motif !== '-' ? a.motif : '—' }}
                 </td>
 
                 <!-- Montant du Rappel -->
@@ -369,72 +357,30 @@
         <div class="modal-body">
           <div class="form-grid">
 
-            <!-- Sélection Agent -->
-            <div class="full-col agent-search-group">
+            <!-- Bénéficiaire (Agent - Liste Déroulante) -->
+            <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Rechercher un Agent *</mat-label>
-                <input matInput 
-                       [(ngModel)]="agentSearchText" 
-                       (input)="onAgentSearchInput()"
-                       (focus)="showAgentDropdown = true"
-                       placeholder="Taper le matricule ou le nom de l'agent..." 
-                       [disabled]="!!editingAvoir">
-                @if (formModel.employeeId && !editingAvoir) {
-                  <button matSuffix mat-icon-button (click)="clearSelectedAgent()" title="Changer d'agent">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                }
-              </mat-form-field>
-
-              @if (!editingAvoir && showAgentDropdown && agentSearchText) {
-                <div class="agent-select-list">
-                  @for (emp of filteredEmployeesForSelect; track emp.id) {
-                    <div class="agent-option" (click)="selectEmployee(emp)">
-                      <span class="emp-matricule"><strong>{{ emp.matricule }}</strong></span> — 
-                      <span class="emp-name">{{ emp.nom }} {{ emp.prenom }}</span> 
-                      <span class="emp-fct text-muted">{{ emp.fonction || 'Agent' }}</span>
-                    </div>
-                  }
-                  @if (filteredEmployeesForSelect.length === 0) {
-                    <div class="agent-option text-muted">Aucun agent correspondant à "{{ agentSearchText }}"</div>
-                  }
-                </div>
-              }
-
-              @if (formModel.employeeId) {
-                <div class="agent-confirmed-badge">
-                  <mat-icon>check_circle</mat-icon>
-                  <span>Agent sélectionné : <strong>{{ formModel.matricule }}</strong> — {{ formModel.employeeName }}</span>
-                </div>
-              }
-            </div>
-
-            <!-- Élément de Salaire -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Élément de Salaire *</mat-label>
-                <mat-select [(ngModel)]="formModel.salaryElementId">
-                  @for (el of elementsList; track el.id) {
-                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
+                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingAvoir" placeholder="Sélectionner un agent...">
+                  @for (emp of employeesList; track emp.id) {
+                    <mat-option [value]="emp.id">
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                    </mat-option>
                   }
                 </mat-select>
               </mat-form-field>
             </div>
 
-            <!-- Référence / N° Dossier -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Référence / N° dossier</mat-label>
-                <input matInput [(ngModel)]="formModel.reference" readonly placeholder="Génération automatique...">
-                <mat-icon matSuffix class="auto-lock-icon" title="N° de dossier unique généré automatiquement">lock</mat-icon>
-              </mat-form-field>
-            </div>
-
-            <!-- Motif -->
+            <!-- Élément de Salaire sur lequel porte le rappel -->
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Motif</mat-label>
-                <input matInput [(ngModel)]="formModel.motif" placeholder="Ex: Heures supplémentaires de nuit, Régularisation promotion...">
+                <mat-label>Élément de Salaire du Rappel *</mat-label>
+                <mat-select [(ngModel)]="formModel.salaryElementId">
+                  @for (el of elementsList; track el.id) {
+                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Ex: Sur salaire de base, apparaîtra sous « Rappel Salaire de base » sur le bulletin</mat-hint>
               </mat-form-field>
             </div>
 

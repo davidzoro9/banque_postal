@@ -17,6 +17,7 @@ export interface SalaryElementDto {
   categoryId?: number;
   salaryCategoryId?: number;
   categoryName?: string;
+  categoryCode?: string;
   rate?: number;
   isCotisable?: boolean;
   isImposable?: boolean;

@@ -157,27 +157,7 @@ export class TropPercusComponent implements OnInit {
         return (a.name || '').localeCompare(b.name || '');
       });
 
-      if (retenues.length > 0) {
-        this.elementsList = retenues;
-      } else {
-        this.elementsList = [
-          { id: 34, name: 'Trop-perçu sur salaire de base', code: 'RET_TROP_PERCU_SAL' },
-          { id: 35, name: 'Trop-perçu sur primes & indemnités', code: 'RET_TROP_PERCU_PRIME' },
-          { id: 36, name: 'Trop-perçu & Régularisation diverse', code: 'RET_TROP_PERCU' },
-          { id: 25, name: 'Prêt Équipement & Personnel BPBF', code: 'PRET_EQUIP' },
-          { id: 26, name: 'Avance sur Salaire (Quinzaine / Acompte)', code: 'AVANCE_SAL' },
-          { id: 27, name: 'Prêt Scolarité / Fêtes / Tabaski', code: 'PRET_SCOLAIRE' },
-          { id: 28, name: 'Prêt Véhicule / Immobilier', code: 'PRET_VEHICULE' },
-          { id: 29, name: 'Cotisation Mutuelle de Santé des Banques', code: 'RET_MUTUELLE' },
-          { id: 30, name: 'Assurance Groupe / Prévoyance', code: 'RET_ASSURANCE' },
-          { id: 31, name: 'Saisie-arrêt sur salaire', code: 'SAISIE_ARRET' },
-          { id: 32, name: 'Remboursement Vivres & Achats groupés', code: 'RET_VIVRES' },
-          { id: 33, name: 'Autre retenue sur salaire net', code: 'RET_DIVERS' },
-          { id: 19, name: 'Cotisation CNSS (Salariale)', code: 'COTIS_CNSS' },
-          { id: 20, name: 'Cotisation CARFO (Salariale)', code: 'COTIS_CARFO' },
-          { id: 23, name: 'Retenue IUTS', code: 'RETENUE_IUTS' }
-        ];
-      }
+      this.elementsList = retenues || [];
 
       if (!this.formModel.salaryElementId && this.elementsList.length > 0) {
         const defaultElem = this.elementsList.find(e => e.code?.includes('TROP_PERCU')) || this.elementsList[0];

@@ -10,7 +10,11 @@
         <p>Génération, consultation et impression des fiches de paie conformes BPBF</p>
       </div>
     </div>
-    <div class="ph-actions">
+    <div class="ph-actions" style="display: flex; gap: 10px; align-items: center;">
+      <button mat-stroked-button color="warn" (click)="recalculerTous()" [disabled]="isCalculating"
+        style="font-weight: 700; height: 40px; border-radius: 8px;" title="Recalculer tous les bulletins selon les règles officielles du CGI">
+        <mat-icon style="margin-right: 4px;">published_with_changes</mat-icon> Recalculer tous les bulletins
+      </button>
       <button mat-flat-button class="btn-new" (click)="openCreateModal()">
         <mat-icon>add</mat-icon> Nouveau Bulletin Individuel
       </button>
@@ -94,8 +98,11 @@
               </td>
               <td style="text-align: center;" class="cell-nowrap">
                 <div class="actions-cell">
-                  <button mat-icon-button class="action-btn edit" title="Ajuster les variables (Jours, Primes, Heures Sup, Précomptes)" (click)="ouvrirModalModifierVariables(b)">
+                  <button mat-icon-button class="action-btn edit" title="Ajuster les variables" (click)="ouvrirModalModifierVariables(b)">
                     <mat-icon>tune</mat-icon>
+                  </button>
+                  <button mat-icon-button style="color: #f59e0b;" class="action-btn" title="Recalculer ce bulletin (règles officielles CGI)" (click)="recalculerBulletin(b)">
+                    <mat-icon>published_with_changes</mat-icon>
                   </button>
                   <button mat-icon-button class="action-btn view" title="Aperçu officiel de la fiche de paie" (click)="voirBulletin(b)">
                     <mat-icon>visibility</mat-icon>
@@ -149,7 +156,7 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Type de Session</mat-label>
-              <mat-select [(ngModel)]="formModel.typeSession" (selectionChange)="onFormChange()">
+              <mat-select [(ngModel)]="formModel.typeSession" (selectionChange)="onDateOrTypeChange()">
                 <mat-option value="PAIE_NORMALE">Paie normale</mat-option>
                 <mat-option value="GRATIFICATION">Gratification annuelle</mat-option>
               </mat-select>
@@ -162,12 +169,12 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Date Début Période</mat-label>
-              <input matInput type="date" [(ngModel)]="formModel.dateFrom" (ngModelChange)="onFormChange()">
+              <input matInput type="date" [(ngModel)]="formModel.dateFrom" (ngModelChange)="onDateOrTypeChange()">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Date Fin Période</mat-label>
-              <input matInput type="date" [(ngModel)]="formModel.dateTo" (ngModelChange)="onFormChange()">
+              <input matInput type="date" [(ngModel)]="formModel.dateTo" (ngModelChange)="onDateOrTypeChange()">
             </mat-form-field>
           </div>
 
@@ -254,7 +261,7 @@
                   <div class="info-item">
                     <span class="item-label">PARTS FISCALES</span>
                     <span class="item-sep">:</span>
-                    <span class="item-value">{{ previewCalcul.partsFiscales != null ? previewCalcul.partsFiscales : ((previewCalcul.situationFamiliale || previewCalcul.situationMatrimoniale || '').toUpperCase().includes('MARI') ? 2 : 1) }}</span>
+                    <span class="item-value">{{ previewCalcul.partsFiscales != null ? previewCalcul.partsFiscales : (previewCalcul.nombreCharges != null ? previewCalcul.nombreCharges : 0) }}</span>
                   </div>
                   <div class="info-item">
                     <span class="item-label">CLASSIFICATION</span>
@@ -282,13 +289,15 @@
                 </thead>
                 <tbody>
                   @for (line of previewCalcul.lines; track line.code) {
-                    <tr>
-                      <td class="col-element">{{ line.name || line.libelle }}</td>
-                      <td class="col-base">{{ (line.baseCalcul != null && line.baseCalcul > 0 ? line.baseCalcul : (line.gain || line.montant || '')) | number:'1.0-0' }}</td>
-                      <td class="col-taux">{{ line.tauxFormatted || '' }}</td>
-                      <td class="col-avoirs">{{ (line.gain != null ? line.gain : (line.typeLigne === 'GAIN' ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
-                      <td class="col-retenues">{{ (line.retenue != null ? line.retenue : (line.typeLigne !== 'GAIN' ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
-                    </tr>
+                    @if ((line.gain != null && line.gain > 0) || (line.retenue != null && line.retenue > 0) || (line.montant != null && line.montant > 0)) {
+                      <tr>
+                        <td class="col-element">{{ line.name || line.libelle }}</td>
+                        <td class="col-base">{{ (line.baseCalcul != null && line.baseCalcul > 0 ? line.baseCalcul : (line.gain || line.montant || '')) | number:'1.0-0' }}</td>
+                        <td class="col-taux">{{ line.tauxFormatted || '' }}</td>
+                        <td class="col-avoirs">{{ (line.gain != null && line.gain > 0 ? line.gain : (line.typeLigne === 'GAIN' && (line.montant || line.amount) > 0 ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
+                        <td class="col-retenues">{{ (line.retenue != null && line.retenue > 0 ? line.retenue : (line.typeLigne !== 'GAIN' && (line.montant || line.amount) > 0 ? (line.montant || line.amount) : '')) | number:'1.0-0' }}</td>
+                      </tr>
+                    }
                   }
                 </tbody>
                 <tfoot>
@@ -473,7 +482,7 @@
               <div class="info-item">
                 <span class="item-label">PARTS FISCALES</span>
                 <span class="item-sep">:</span>
-                <span class="item-value">{{ selectedBulletin.partsFiscales != null ? selectedBulletin.partsFiscales : ((selectedBulletin.situationFamiliale || selectedBulletin.situationMatrimoniale || '').toUpperCase().includes('MARI') ? 2 : 1) }}</span>
+                <span class="item-value">{{ selectedBulletin.partsFiscales != null ? selectedBulletin.partsFiscales : (selectedBulletin.nombreCharges != null ? selectedBulletin.nombreCharges : 0) }}</span>
               </div>
               <div class="info-item">
                 <span class="item-label">CLASSIFICATION</span>
@@ -596,45 +605,140 @@
   }
 
   <!-- MODAL 3 : Ajustement des Variables de Paie (Jours, Primes, Heures Sup, Précomptes) -->
-  <!-- Modal Ajuster le Temps Travaillé de l'Agent -->
+  <!-- Modal Ajuster les Variables de Paie (Taux & Nombre) de l'Agent -->
   @if (showEditVariablesModal && selectedBulletinForEdit) {
-    <div class="modal-backdrop">
-      <div class="modal-card" style="max-width: 550px;">
-        <div class="modal-header">
-          <div class="header-title">
-            <mat-icon style="color: #0284c7;">schedule</mat-icon>
+    <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+      <div style="background: #ffffff; border-radius: 14px; max-width: 860px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        
+        <!-- Modal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding: 16px 24px; background: #ffffff;">
+          <div style="display: flex; align-items: center; gap: 10px; color: #0060B3;">
+            <mat-icon style="font-size: 24px; width: 24px; height: 24px;">tune</mat-icon>
             <div>
-              <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Ajuster le Temps Travaillé</h2>
-              <div style="font-size: 11px; color: #94a3b8;">
-                {{ selectedBulletinForEdit.employeeName }} ({{ selectedBulletinForEdit.matricule }})
+              <h2 style="margin: 0; font-size: 17px; font-weight: 700; color: #0060B3;">Ajuster les Jours Travaillés &bull; Paie de l'Agent</h2>
+              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                Seul le <strong style="color: #0060B3;">Nombre de Jours Travaillés (sur 30)</strong> est modifiable. Le recalcul officiel BPBF est appliqué automatiquement en temps réel.
               </div>
             </div>
           </div>
           <button mat-icon-button (click)="fermerModalModifierVariables()"><mat-icon>close</mat-icon></button>
         </div>
 
-        <div class="modal-body">
-          <div class="form-grid">
-            <!-- Jours Travaillés -->
-            <mat-form-field appearance="outline">
-              <mat-label>Jours Travaillés *</mat-label>
-              <input matInput type="number" [(ngModel)]="editVariablesForm.workedDays" min="0" max="31">
-            </mat-form-field>
-
-            <!-- Jours Ouvrables -->
-            <mat-form-field appearance="outline">
-              <mat-label>Jours Prévus du Mois</mat-label>
-              <input matInput type="number" [(ngModel)]="editVariablesForm.scheduledWorkingDays" min="1" max="31">
-            </mat-form-field>
+        <!-- Agent Info Banner -->
+        <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 700; color: #0f172a;">{{ selectedBulletinForEdit.employeeName }}</div>
+            <div style="font-size: 12px; color: #64748b; font-family: monospace;">Matricule: {{ selectedBulletinForEdit.matricule }} &bull; Grade: {{ selectedBulletinForEdit.grade || '—' }} &bull; Fonction: {{ selectedBulletinForEdit.fonction || '—' }}</div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;">
+              Période: {{ selectedBulletinForEdit.dateFrom || 'Mois en cours' }}
+            </span>
           </div>
         </div>
 
-        <div class="modal-footer">
+        <!-- Scrollable Lines Table -->
+        <div style="flex: 1; overflow-y: auto; padding: 16px 24px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                <th style="text-align: left; padding: 8px 12px; color: #1e293b; font-weight: 700; font-size: 11px; text-transform: uppercase;">ÉLÉMENT DE SALAIRE</th>
+                <th style="text-align: right; padding: 8px 12px; color: #1e293b; font-weight: 700; font-size: 11px; text-transform: uppercase; width: 125px;">BASE</th>
+                <th style="text-align: center; padding: 8px 12px; background: #e0f2fe; color: #0060B3; font-weight: 800; font-size: 11px; text-transform: uppercase; width: 130px; border-left: 2px solid #bae6fd; border-right: 2px solid #bae6fd;">
+                  TAUX / NB
+                </th>
+                <th style="text-align: right; padding: 8px 12px; color: #1e293b; font-weight: 700; font-size: 11px; text-transform: uppercase; width: 115px;">AVOIRS</th>
+                <th style="text-align: right; padding: 8px 12px; color: #1e293b; font-weight: 700; font-size: 11px; text-transform: uppercase; width: 115px;">RETENUES</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of editableLines; track line.code) {
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#fbfcfe'" onmouseout="this.style.background='transparent'">
+                  <!-- Element Name (Read-only) -->
+                  <td style="padding: 7px 12px; font-weight: 600; color: #1e293b;">
+                    {{ line.name }}
+                  </td>
+
+                  <!-- Base (Read-only) -->
+                  <td style="padding: 7px 12px; text-align: right; font-family: monospace; color: #64748b; font-size: 12px;">
+                    {{ (line.baseCalcul != null && line.baseCalcul > 0 ? line.baseCalcul : '') | number:'1.0-0' }}
+                  </td>
+
+                  <!-- TAUX / NB (SEULS LES JOURS SONT MODIFIABLES) -->
+                  <td style="padding: 4px 8px; text-align: center;" [style.background]="isDayLine(line) ? '#f0f9ff' : 'transparent'" [style.border-left]="isDayLine(line) ? '1px solid #e0f2fe' : 'none'" [style.border-right]="isDayLine(line) ? '1px solid #e0f2fe' : 'none'">
+                    @if (isDayLine(line)) {
+                      <div style="display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+                        <input type="number" step="1" min="0" max="31" [(ngModel)]="line.tauxOrNb" (input)="recalculerLignesVariables()"
+                               style="width: 65px; text-align: right; padding: 4px 6px; border: 2px solid #0060B3; border-radius: 6px; font-weight: 800; color: #0060B3; background: #ffffff; outline: none; font-size: 13px;" />
+                        <span style="font-weight: 800; font-size: 12px; color: #0369a1;">j</span>
+                      </div>
+                    } @else {
+                      <span style="font-weight: 600; font-size: 12px; color: #475569; font-family: monospace;">
+                        {{ getLineDisplayTaux(line) }}
+                      </span>
+                    }
+                  </td>
+
+                  <!-- Avoirs (Dynamic Calculated) -->
+                  <td style="padding: 7px 12px; text-align: right; font-family: monospace; font-weight: 700; color: #16a34a; font-size: 12px;">
+                    {{ (line.gain != null ? line.gain : '') | number:'1.0-0' }}
+                  </td>
+
+                  <!-- Retenues (Dynamic Calculated) -->
+                  <td style="padding: 7px 12px; text-align: right; font-family: monospace; font-weight: 700; color: #dc2626; font-size: 12px;">
+                    {{ (line.retenue != null ? line.retenue : '') | number:'1.0-0' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1;">
+                <td colspan="2" style="padding: 10px 12px; text-align: right; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; color: #334155;">TOTAL</td>
+                <td style="background: #e0f2fe; border-left: 2px solid #bae6fd; border-right: 2px solid #bae6fd;"></td>
+                <td style="padding: 10px 12px; text-align: right; font-family: monospace; color: #16a34a; font-size: 13px;">
+                  {{ modalSalaireBrut | number:'1.0-0' }}
+                </td>
+                <td style="padding: 10px 12px; text-align: right; font-family: monospace; color: #dc2626; font-size: 13px;">
+                  {{ modalTotalRetenues | number:'1.0-0' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- Live Totals Summary Strip -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; margin-top: 16px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Salaire Brut</div>
+              <div style="font-size: 16px; font-weight: 800; color: #0f172a; font-family: monospace; margin-top: 2px;">
+                {{ modalSalaireBrut | number:'1.0-0' }} <span style="font-size: 11px; font-weight: 600;">FCFA</span>
+              </div>
+            </div>
+
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px;">
+              <div style="font-size: 11px; font-weight: 700; color: #991b1b; text-transform: uppercase;">Total Retenues</div>
+              <div style="font-size: 16px; font-weight: 800; color: #dc2626; font-family: monospace; margin-top: 2px;">
+                -{{ modalTotalRetenues | number:'1.0-0' }} <span style="font-size: 11px; font-weight: 600;">FCFA</span>
+              </div>
+            </div>
+
+            <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; padding: 10px 14px;">
+              <div style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase;">Net à Payer (Calculé)</div>
+              <div style="font-size: 18px; font-weight: 900; color: #15803d; font-family: monospace; margin-top: 2px;">
+                {{ modalSalaireNet | number:'1.0-0' }} <span style="font-size: 12px; font-weight: 700;">FCFA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #ffffff;">
           <button mat-stroked-button (click)="fermerModalModifierVariables()">Annuler</button>
-          <button mat-flat-button color="primary" (click)="sauvegarderVariablesEtRecalculer()">
-            <mat-icon>calculate</mat-icon> Recalculer & Mettre à Jour
+          <button mat-raised-button color="primary" (click)="sauvegarderVariablesEtRecalculer()"
+                  style="background: #0060B3; color: white; font-weight: 700; border-radius: 8px; padding: 0 18px;">
+            <mat-icon style="margin-right: 4px;">save</mat-icon> Enregistrer & Mettre à Jour
           </button>
         </div>
+
       </div>
     </div>
   }

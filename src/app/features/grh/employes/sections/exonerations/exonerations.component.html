@@ -36,7 +36,7 @@
         <p class="form-section-label">Exonérations calculées</p>
         <div class="simple-list">
           <div class="list-head">
-            <span>Indemnité</span><span>Taux</span><span>Plafond</span><span>Montant exonéré</span>
+            <span>Indemnité</span><span>Taux</span><span>Plafond</span><span>Exo autorisée</span><span>Montant exonéré</span>
           </div>
           @if (exonerations.length === 0) {
             <div class="empty-state"><mat-icon>receipt_long</mat-icon><span>Aucune exonération applicable.</span></div>
@@ -46,6 +46,9 @@
               <div class="indemnite-cell"><span class="code-badge">{{ item.typeIndemniteCode || 'IND' }}</span><span class="row-label">{{ item.libelle }}</span></div>
               <span>{{ item.tauxExonere | number:'1.0-2' }} %</span>
               <span>{{ item.plafondExonere > 0 ? (item.plafondExonere | number:'1.0-0') : 'Sans plafond' }}</span>
+              <span class="row-amount-auto" [class.full]="item.montantAutorise != null && item.montant != null && item.montant >= item.montantAutorise">
+                {{ item.montantAutorise != null ? (item.montantAutorise | number:'1.0-0') : '—' }}
+              </span>
               <span class="row-amount">{{ item.montant | number:'1.0-0' }}</span>
             </div>
           }

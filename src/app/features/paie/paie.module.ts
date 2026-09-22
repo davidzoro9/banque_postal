@@ -20,6 +20,7 @@ import { DsnComponent } from './declarations/dsn/dsn.component';
 import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
 import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
+import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.component';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,6 +28,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @NgModule({
   declarations: [
@@ -44,7 +46,8 @@ import { MatNativeDateModule } from '@angular/material/core';
     DsnComponent,
     UrssafComponent,
     ParametragePaieComponent,
-    TypesRetenuesComponent
+    TypesRetenuesComponent,
+    EtatsSyntheseComponent
   ],
   imports: [
     CommonModule,
@@ -59,7 +62,8 @@ import { MatNativeDateModule } from '@angular/material/core';
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatTooltipModule
   ]
 })
 export class PaieModule {}

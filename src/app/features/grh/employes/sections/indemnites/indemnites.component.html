@@ -43,7 +43,7 @@
 
         <div class="table-header-row">
           <p class="form-section-label" style="margin:0;">Indemnités attribuées</p>
-          <span class="table-hint">Vous pouvez retirer ou réactiver une indemnité individuellement.</span>
+          <span class="table-hint">Indemnités actives attribuées selon le poste, la fonction et le grade.</span>
         </div>
 
         <div class="simple-list">
@@ -71,27 +71,6 @@
                 } @else {
                   <span>{{ item.montant | number:'1.0-0' }} F CFA</span>
                 }
-              </div>
-              <div class="row-action">
-                <button
-                  mat-stroked-button
-                  [color]="item.actif === false ? 'primary' : 'warn'"
-                  class="action-btn"
-                  [disabled]="togglingIndemniteId === item.id"
-                  (click)="toggleIndemnite(item)">
-                  @if (togglingIndemniteId === item.id) {
-                    <mat-icon class="spin-icon">sync</mat-icon>
-                    <span>En cours...</span>
-                  } @else if (item.actif === false) {
-                    <span>
-                      <mat-icon style="vertical-align:middle;margin-right:4px;">add_circle_outline</mat-icon>Réactiver
-                    </span>
-                  } @else {
-                    <span>
-                      <mat-icon style="vertical-align:middle;margin-right:4px;">remove_circle_outline</mat-icon>Retirer
-                    </span>
-                  }
-                </button>
               </div>
             </div>
           }

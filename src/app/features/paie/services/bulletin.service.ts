@@ -121,6 +121,18 @@ export class BulletinService {
     return this.http.post<BulletinDto[]>(`${this.apiUrl}/generer/session/${sessionId}`, employeeIds || []);
   }
 
+  recalculerTous(): Observable<BulletinDto[]> {
+    return this.http.post<BulletinDto[]>(`${this.apiUrl}/recalculer-tout`, {});
+  }
+
+  recalculerSession(sessionId: number): Observable<BulletinDto[]> {
+    return this.http.post<BulletinDto[]>(`${this.apiUrl}/session/${sessionId}/recalculer`, {});
+  }
+
+  recalculerBulletin(bulletinId: number): Observable<BulletinDto> {
+    return this.http.post<BulletinDto>(`${this.apiUrl}/${bulletinId}/recalculer`, {});
+  }
+
   validateSession(sessionId: number): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/valider/session/${sessionId}`, {});
   }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee, EmployeeIndemnity, EmployeeSalarySituation } from '../../models/employee.model';
 
@@ -15,6 +16,7 @@ export class CategorieComponent implements OnInit {
   empId = '';
   situationSalarialeData?: EmployeeSalarySituation;
   indemnites: EmployeeIndemnity[] = [];
+  isLoading = true;
 
   constructor(
     private route: ActivatedRoute,
@@ -24,20 +26,29 @@ export class CategorieComponent implements OnInit {
 
   ngOnInit(): void {
     this.empId = this.route.snapshot.paramMap.get('id')!;
-    this.employeeService.getById(this.empId).subscribe(e => {
-      if (!e) { this.router.navigate(['/grh/employes']); return; }
-      this.employee = e;
+    this.isLoading = true;
+    this.employeeService.getById(this.empId).subscribe({
+      next: e => {
+        if (!e) { this.router.navigate(['/grh/employes']); return; }
+        this.employee = e;
 
-      forkJoin({
-        situation: this.employeeService.getSalarySituation(this.empId),
-        indemnites: this.employeeService.getEmployeeIndemnities(this.empId)
-      }).subscribe({
-        next: ({ situation, indemnites }) => {
-          this.situationSalarialeData = situation;
-          this.indemnites = indemnites || [];
-        },
-        error: () => {}
-      });
+        forkJoin({
+          situation: this.employeeService.getSalarySituation(this.empId).pipe(catchError(() => of(null))),
+          indemnites: this.employeeService.getEmployeeIndemnities(this.empId).pipe(catchError(() => of([])))
+        }).subscribe({
+          next: ({ situation, indemnites }) => {
+            this.situationSalarialeData = situation || undefined;
+            this.indemnites = indemnites || [];
+            this.isLoading = false;
+          },
+          error: () => {
+            this.isLoading = false;
+          }
+        });
+      },
+      error: () => {
+        this.isLoading = false;
+      }
     });
   }
 
@@ -47,26 +58,37 @@ export class CategorieComponent implements OnInit {
   }
 
   get summary() {
+    if (!this.employee) return null;
     const situation = this.situationSalarialeData;
-    if (!this.employee || !situation) return null;
+
+    const grade = situation?.gradeLibelle || this.employee.grade || '';
+    const categorie = situation?.categorieLibelle || this.employee.categoriePro || '';
+    const echelon = situation?.echelonLibelle || this.employee.echelon || '';
+    const salaireBase = situation?.salaireBase ?? this.employee.salaireBase ?? 0;
+
+    const activeIndemnites = (this.indemnites || [])
+      .filter(indemnite => indemnite.actif !== false);
+
+    const computedTotalIndemnites = activeIndemnites.reduce((sum, ind) => sum + (Number(ind.montant) || 0), 0);
+    const totalIndemnites = (situation?.totalIndemnites && situation.totalIndemnites > 0)
+      ? situation.totalIndemnites
+      : computedTotalIndemnites;
 
     return {
-      grade: situation.gradeLibelle || '',
-      categorie: situation.categorieLibelle || '',
-      echelon: situation.echelonLibelle || '',
+      grade,
+      categorie,
+      echelon,
       fonction: this.employee.fonction || '',
-      salaireBase: situation.salaireBase || 0,
-      totalIndemnites: situation.totalIndemnites || 0,
-      indemnitesBareme: this.indemnites
-        .filter(indemnite => indemnite.actif !== false)
-        .map(indemnite => ({
-          id: indemnite.id,
-          code: indemnite.typeIndemniteCode,
-          typeIndemnite: indemnite.libelle,
-          libelle: indemnite.libelle,
-          fonction: this.employee?.fonction || '',
-          taux: Number(indemnite.montant) || 0
-        }))
+      salaireBase,
+      totalIndemnites,
+      indemnitesBareme: activeIndemnites.map(indemnite => ({
+        id: indemnite.id,
+        code: indemnite.typeIndemniteCode,
+        typeIndemnite: indemnite.libelle || indemnite.typeIndemniteCode || 'Indemnité',
+        libelle: indemnite.libelle,
+        fonction: this.employee?.fonction || '',
+        taux: Number(indemnite.montant) || 0
+      }))
     };
   }
 

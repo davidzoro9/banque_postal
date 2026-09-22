@@ -10,6 +10,8 @@ import { EmployeeService } from '../services/employee.service';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
 
+import { DbRefService, RefItem } from '../../../donnees-base/services/db-ref.service';
+
 @Component({
   selector: 'app-employee-list',
   templateUrl: './employee-list.component.html',
@@ -31,11 +33,14 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   readonly statuts: (StatutEmploye | '')[] = ['', 'Actif', 'Inactif', 'Suspendu', "Période d'essai", 'Congé maladie', 'Détaché'];
   services: string[] = [];
+  paramGroupes: RefItem[] = [];
+  paramRetraite: RefItem[] = [];
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private employeeService: EmployeeService,
+    private dbRefService: DbRefService,
     private moduleNav: ModuleNavService,
     private router: Router
   ) {}
@@ -49,6 +54,12 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
     this.services = this.employeeService.getServices();
     this.employeeService.employees$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.applyFilters();
+    });
+    this.dbRefService.getItems('param-groupe').pipe(takeUntil(this.destroy$)).subscribe(list => {
+      this.paramGroupes = list || [];
+    });
+    this.dbRefService.getItems('param-retraite').pipe(takeUntil(this.destroy$)).subscribe(list => {
+      this.paramRetraite = list || [];
     });
     this.applyFilters();
   }
@@ -220,16 +231,10 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 1. Détermination du Groupe de l'employé via le Paramétrage Groupe (catégories rattachées)
     let groupe = '';
-    try {
-      const storedParamGroupes = localStorage.getItem('ref_param-groupe') || localStorage.getItem('ref_grade');
-      if (storedParamGroupes) {
-        const pgList = JSON.parse(storedParamGroupes);
-        const match = pgList.find((g: any) => Array.isArray(g.categories) && g.categories.includes(cat));
-        if (match) {
-          groupe = match.grade || match.libelle || match.code || '';
-        }
-      }
-    } catch (e) {}
+    const match = (this.paramGroupes || []).find((g: any) => Array.isArray(g.categories) && g.categories.includes(cat));
+    if (match) {
+      groupe = match.grade || match.libelle || match.code || '';
+    }
 
     if (!groupe) {
       if (cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8')) {
@@ -245,18 +250,14 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 2. Récupération de l'âge de retraite paramétré dans les données de base pour ce Groupe
     let ageRetraite = 60;
-    try {
-      const storedParams = localStorage.getItem('ref_param-retraite');
-      if (storedParams) {
-        const list = JSON.parse(storedParams);
-        const param = list.find((p: any) => (p.libelle && p.libelle.includes(groupe)) || (p.grade && p.grade.includes(groupe)) || (p.code && p.code.includes(groupe)));
-        if (param && (param.taux || param.montant)) {
-          ageRetraite = Number(param.taux || param.montant);
-        }
-      } else {
-        ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
-      }
-    } catch (e) {
+    const param = (this.paramRetraite || []).find((p: any) =>
+      (p.libelle && p.libelle.includes(groupe)) ||
+      (p.grade && p.grade.includes(groupe)) ||
+      (p.code && p.code.includes(groupe))
+    );
+    if (param && (param.taux || param.montant)) {
+      ageRetraite = Number(param.taux || param.montant);
+    } else {
       ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
     }
 

@@ -5,7 +5,7 @@ import { EmployeeService } from '../../../grh/employes/services/employee.service
 import { Employee } from '../../../grh/employes/models/employee.model';
 import { environment } from '../../../../../environments/environment';
 import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { of, forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-avoirs',
@@ -94,50 +94,50 @@ export class AvoirsComponent implements OnInit {
   }
 
   loadElements(): void {
-    this.http.get<any[]>(`${environment.apiUrl}/salary-elements`).pipe(
-      catchError(() => of([]))
-    ).subscribe(data => {
-      const list = data || [];
+    forkJoin({
+      categories: this.http.get<any[]>(`${environment.apiUrl}/salary-categories`).pipe(catchError(() => of([]))),
+      elements: this.http.get<any[]>(`${environment.apiUrl}/salary-elements`).pipe(catchError(() => of([])))
+    }).subscribe(({ categories, elements }) => {
+      const catList = categories || [];
+      const elList = elements || [];
 
-      const isAvoir = (d: any): boolean => {
-        const code = (d.code || d.codeRubrique || '').toUpperCase().trim();
-        const name = (d.name || d.libelle || '').toLowerCase().trim();
-        const catName = (d.categoryName || d.salaryCategory?.name || d.salaryCategory?.libelle || '').toLowerCase().trim();
+      // Identifie les catégories parentes "AVOIR"
+      const avoirCatIds = new Set(
+        catList
+          .filter(c => {
+            const name = (c.name || '').toUpperCase().trim();
+            const code = (c.code || '').toUpperCase().trim();
+            return name.includes('AVOIR') || code.includes('AVOIR');
+          })
+          .map(c => Number(c.id))
+      );
+
+      // Ne retenir STRICTEMENT que les éléments de salaire paramétrés avec la catégorie parente AVOIR
+      const filtered = elList.filter(d => {
         const type = (d.type || '').toUpperCase().trim();
+        if (type === 'RETENUE' || type === 'PATRONALE') return false;
 
-        // Exclusion stricte des charges patronales et des retenues
-        if (type === 'PATRONALE' || type === 'RETENUE') return false;
-        if (code.includes('PAT') || code.startsWith('CHG_') || code.startsWith('COT_PAT')) return false;
-        if (code.startsWith('PRET_') || code.startsWith('AVANCE_') || code.startsWith('RET_') || code.startsWith('SAISIE_') || code.startsWith('COTIS_')) return false;
-        if (catName.includes('patronal') || catName.includes('retenue') || catName.includes('cotis') || catName.includes('iuts')) return false;
+        const catId = Number(d.categoryId != null ? d.categoryId : d.salaryCategoryId);
+        if (catId && avoirCatIds.has(catId)) return true;
 
-        // Identification de type Avoir / Gain / Rappel
-        if (type === 'GAIN' || type === 'AVOIR') return true;
-        if (catName.includes('base') || catName.includes('prime') || catName.includes('indemnit') || catName.includes('gain') || catName.includes('remuneration') || catName.includes('rémunération')) return true;
-        if (code.includes('RAPPEL') || code.includes('SURSALAIRE') || code.includes('HEURE_SUP') || code.includes('PRIME') || code.includes('INDEM') || code.includes('GRATIF') || code.includes('ALLOC')) return true;
-        if (name.includes('rappel') || name.includes('sursalaire') || name.includes('heure') || name.includes('prime') || name.includes('indemnité') || name.includes('indemnite') || name.includes('gratification')) return true;
+        const catName = (d.categoryName || d.salaryCategory?.name || '').toUpperCase().trim();
+        const catCode = (d.categoryCode || d.salaryCategory?.code || '').toUpperCase().trim();
+        if (catName.includes('AVOIR') || catCode.includes('AVOIR')) return true;
 
         return false;
-      };
-
-      const filtered = list.filter(isAvoir).map((d: any) => ({
+      }).map((d: any) => ({
         id: d.id,
         name: d.name || d.libelle || '',
         code: d.code || d.codeRubrique || ''
       }));
 
-      // Ordonner : Avoirs & Rappels en priorité, puis Sursalaire, Heures sup, Gratifications, Primes, Indemnités
-      filtered.sort((a: any, b: any) => {
+      // Tri : Salaire de base en premier, puis Sursalaire, puis tri alphabétique
+      filtered.sort((a, b) => {
         const getIdx = (item: any) => {
           const c = (item.code || '').toUpperCase();
           const n = (item.name || '').toLowerCase();
-          if (c.includes('AVOIR') || n.includes('avoir')) return 1;
-          if (c.includes('RAPPEL') || n.includes('rappel')) return 2;
-          if (c.includes('SURSALAIRE') || n.includes('sursalaire')) return 3;
-          if (c.includes('HEURE') || n.includes('heure')) return 4;
-          if (c.includes('GRATIF') || n.includes('gratif')) return 5;
-          if (c.includes('PRIME') || n.includes('prime')) return 6;
-          if (c.includes('INDEM') || n.includes('indem')) return 7;
+          if (c.includes('SAL_BASE') || (n.includes('salaire') && n.includes('base'))) return 0;
+          if (c.includes('SURSALAIRE') || n.includes('sursalaire')) return 1;
           return 10;
         };
         const diff = getIdx(a) - getIdx(b);
@@ -360,6 +360,15 @@ export class AvoirsComponent implements OnInit {
     this.editingAvoir = null;
     this.isSaving = false;
     this.showAgentDropdown = false;
+  }
+
+  selectEmployeeById(empId: any): void {
+    const emp = this.employeesList.find(e => String(e.id) === String(empId));
+    if (emp) {
+      this.formModel.employeeId = emp.id;
+      this.formModel.employeeName = `${emp.nom} ${emp.prenom}`;
+      this.formModel.matricule = emp.matricule;
+    }
   }
 
   selectEmployee(emp: Employee): void {

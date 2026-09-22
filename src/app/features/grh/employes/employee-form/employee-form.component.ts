@@ -15,10 +15,19 @@ export class EmployeeFormComponent implements OnInit {
   isEdit = false;
   saving = false;
   empId?: string;
+  formError = '';
+  errorMessage = '';
 
   readonly sexes = [
     { value: 'M', label: 'Masculin' },
     { value: 'F', label: 'Féminin' }
+  ];
+
+  readonly situationsFamiliales = [
+    { value: 'Célibataire', label: 'Célibataire' },
+    { value: 'Marié(e)', label: 'Marié(e)' },
+    { value: 'Divorcé(e)', label: 'Divorcé(e)' },
+    { value: 'Veuf(ve)', label: 'Veuf(ve)' }
   ];
 
   readonly villes = [
@@ -51,6 +60,7 @@ export class EmployeeFormComponent implements OnInit {
       prenom:                 ['', Validators.required],
       nomJeuneFille:          [''],
       sexe:                   ['M'],
+      situationFamiliale:     ['Célibataire'],
       dateNaissance:          [''],
       lieuNaissance:          ['Ouagadougou'],
       nationalite:            ['Burkinabè'],
@@ -86,6 +96,7 @@ export class EmployeeFormComponent implements OnInit {
             prenom:                 emp.prenom,
             nomJeuneFille:          emp.nomJeuneFille || '',
             sexe:                   emp.sexe || 'M',
+            situationFamiliale:     emp.situationFamiliale || emp.situationMatrimoniale || 'Célibataire',
             dateNaissance:          emp.dateNaissance || '',
             lieuNaissance:          emp.lieuNaissance || '',
             nationalite:            emp.nationalite || 'Burkinabè',
@@ -127,7 +138,19 @@ export class EmployeeFormComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) return;
+    this.formError = '';
+    this.errorMessage = '';
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      const missing: string[] = [];
+      if (this.form.get('nom')?.invalid) missing.push('Nom de l\'employé (en haut)');
+      if (this.form.get('prenom')?.invalid) missing.push('Prénom de l\'employé (en haut)');
+      this.formError = `Veuillez renseigner les champs obligatoires : ${missing.join(', ')}.`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     this.saving = true;
     const val = this.form.value;
 
@@ -145,6 +168,8 @@ export class EmployeeFormComponent implements OnInit {
         prenom:                 val.prenom,
         nomJeuneFille:          val.nomJeuneFille,
         sexe:                   val.sexe,
+        situationFamiliale:     val.situationFamiliale || 'Célibataire',
+        situationMatrimoniale:  val.situationFamiliale || 'Célibataire',
         dateNaissance:          dob,
         lieuNaissance:          val.lieuNaissance,
         nationalite:            val.nationalite,
@@ -168,7 +193,11 @@ export class EmployeeFormComponent implements OnInit {
           this.saving = false;
           this.router.navigate(['/grh/employes', this.empId, 'infos-pro']);
         },
-        error: () => this.saving = false
+        error: (err) => {
+          this.saving = false;
+          this.errorMessage = err?.error?.message || err?.message || 'Erreur lors de la mise à jour de l\'employé.';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       });
     } else {
       const newMatricule = this.employeeService.generateMatricule();
@@ -180,6 +209,8 @@ export class EmployeeFormComponent implements OnInit {
         prenom: val.prenom,
         nomJeuneFille: val.nomJeuneFille,
         sexe: val.sexe || 'M',
+        situationFamiliale: val.situationFamiliale || 'Célibataire',
+        situationMatrimoniale: val.situationFamiliale || 'Célibataire',
         dateNaissance: dob || '',
         lieuNaissance: val.lieuNaissance || '',
         nationalite: val.nationalite || 'Burkinabè',
@@ -225,7 +256,11 @@ export class EmployeeFormComponent implements OnInit {
           // Redirection vers le formulaire Informations professionnelles en mode création
           this.router.navigate(['/grh/employes', created.id, 'infos-pro'], { queryParams: { mode: 'creation' } });
         },
-        error: () => this.saving = false
+        error: (err) => {
+          this.saving = false;
+          this.errorMessage = err?.error?.message || err?.message || 'Erreur lors de l\'enregistrement de l\'employé.';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       });
     }
   }

@@ -1,0 +1,884 @@
+<div class="etats-synthese-container">
+
+  <!-- ========================================== -->
+  <!-- EN-TÊTE PRINCIPAL & ACTIONS D'EXPORTATION -->
+  <!-- ========================================== -->
+  <div class="header-card">
+    <div class="header-left">
+      <div class="icon-avatar">
+        <mat-icon>assessment</mat-icon>
+      </div>
+      <div>
+        <div class="breadcrumbs">
+          <span>Gestion de la Paie</span>
+          <mat-icon class="bc-sep">chevron_right</mat-icon>
+          <span class="active">États de synthèse</span>
+        </div>
+        <h1 class="main-title">{{ getSelectedEtatObj().libelle }}</h1>
+        <p class="subtitle">{{ getSelectedEtatObj().description }}</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn-export btn-new-state"
+        (click)="openCreateModal()"
+        matTooltip="Créer et configurer un nouvel état de synthèse via un formulaire"
+      >
+        <mat-icon>add_circle</mat-icon>
+        <span>+ Nouvel État</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-export btn-cfg"
+        (click)="openEditModal(getSelectedEtatObj())"
+        matTooltip="Modifier la configuration de cet état"
+      >
+        <mat-icon>tune</mat-icon>
+        <span>Paramétrer</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-export btn-excel"
+        (click)="exportExcel()"
+        [disabled]="isExporting || isLoading"
+        matTooltip="Télécharger au format Excel / CSV avec BOM UTF-8"
+      >
+        <mat-icon>table_view</mat-icon>
+        <span>Exporter Excel</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-export btn-pdf"
+        (click)="exportPdf()"
+        [disabled]="isExporting || isLoading"
+        matTooltip="Télécharger le bordereau officiel au format PDF signé"
+      >
+        <mat-icon>picture_as_pdf</mat-icon>
+        <span>Télécharger PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- SÉLECTEUR D'ÉTATS DYNAMIQUE (POSTGRESQL)   -->
+  <!-- ========================================== -->
+  <div class="etat-selector-bar">
+    <div class="selector-scroll">
+      <div
+        *ngFor="let cfg of etatsConfigs"
+        class="etat-tab-wrapper"
+        [class.active]="selectedEtat === cfg.code"
+        [class.inactive-tab]="!cfg.actif"
+      >
+        <button
+          type="button"
+          class="etat-tab-btn"
+          (click)="selectEtat(cfg.code)"
+        >
+          <mat-icon class="tab-icon">{{ cfg.icon || 'assessment' }}</mat-icon>
+          <span class="tab-label">{{ cfg.libelle }}</span>
+          <span *ngIf="cfg.categorie" class="tab-badge">{{ cfg.categorie }}</span>
+          <span *ngIf="!cfg.actif" class="tab-badge badge-off">Désactivé</span>
+        </button>
+
+        <div class="tab-actions-menu" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="tab-action-icon"
+            (click)="openEditModal(cfg, $event)"
+            matTooltip="Modifier cet état"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="tab-action-icon"
+            (click)="toggleConfigActive(cfg, $event)"
+            [matTooltip]="cfg.actif ? 'Désactiver cet état' : 'Activer cet état'"
+          >
+            <mat-icon>{{ cfg.actif ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          <button
+            *ngIf="!cfg.isSystem"
+            type="button"
+            class="tab-action-icon danger"
+            (click)="deleteConfig(cfg, $event)"
+            matTooltip="Supprimer définitivement cet état"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- BARRE DE FILTRES UNIFIÉE                   -->
+  <!-- ========================================== -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <!-- Session de Paie -->
+      <div class="filter-item">
+        <label class="filter-label">
+          <mat-icon>date_range</mat-icon>
+          <span>Session / Période de paie</span>
+        </label>
+        <select
+          class="form-select"
+          [(ngModel)]="selectedSessionId"
+          (change)="onFilterChange()"
+        >
+          <option *ngFor="let s of sessions" [value]="s.id">
+            {{ s.codeSession || s.name }} ({{ s.mois ? s.mois + ' ' + s.annee : s.dateFrom }}) — {{ s.typeSession || 'NORMALE' }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Direction -->
+      <div class="filter-item">
+        <label class="filter-label">
+          <mat-icon>domain</mat-icon>
+          <span>Direction</span>
+        </label>
+        <select
+          class="form-select"
+          [(ngModel)]="selectedDirectionId"
+          (change)="onFilterChange()"
+        >
+          <option [ngValue]="null">Toutes les directions</option>
+          <option *ngFor="let d of directions" [value]="d.id">
+            {{ d.name || d.libelle }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Banque -->
+      <div class="filter-item">
+        <label class="filter-label">
+          <mat-icon>account_balance</mat-icon>
+          <span>Banque de virement</span>
+        </label>
+        <select
+          class="form-select"
+          [(ngModel)]="selectedBanque"
+          (change)="onFilterChange()"
+        >
+          <option *ngFor="let bq of banques" [value]="bq">
+            {{ bq }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Recherche textuelle -->
+      <div class="filter-item search-item">
+        <label class="filter-label">
+          <mat-icon>search</mat-icon>
+          <span>Recherche rapide</span>
+        </label>
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="searchTerm"
+            placeholder="Matricule, nom, emploi..."
+          />
+          <button *ngIf="searchTerm" type="button" class="clear-search-btn" (click)="searchTerm = ''">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- CARTES KPI SYNTHÉTIQUES                    -->
+  <!-- ========================================== -->
+  <div class="kpi-grid" *ngIf="etatData">
+    <div class="kpi-card kpi-brut">
+      <div class="kpi-icon-box">
+        <mat-icon>trending_up</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Masse Salariale Brute</span>
+        <span class="kpi-val">{{ formatFcfa(etatData.totalBrut) }}</span>
+        <span class="kpi-sub">{{ etatData.nombreBulletins }} bulletin(s) calculé(s)</span>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-net">
+      <div class="kpi-icon-box">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Total Net à Virer</span>
+        <span class="kpi-val highlight">{{ formatFcfa(etatData.totalNet) }}</span>
+        <span class="kpi-sub">Virements bancaires BPBF & Réseau</span>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-retenues">
+      <div class="kpi-icon-box">
+        <mat-icon>remove_circle_outline</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Total Retenues (CNSS, IUTS, Prêts)</span>
+        <span class="kpi-val">{{ formatFcfa(etatData.totalRetenues) }}</span>
+        <span class="kpi-sub">Prélèvements fiscaux et sociaux</span>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-patronales">
+      <div class="kpi-icon-box">
+        <mat-icon>corporate_fare</mat-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-label">Charges Patronales & Coût Total</span>
+        <span class="kpi-val">{{ formatFcfa(etatData.totalMasseSalariale) }}</span>
+        <span class="kpi-sub">Patronal : {{ formatFcfa(etatData.totalCotisationsPatronales) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- CONTENU DES DONNÉES / TABLEAUX             -->
+  <!-- ========================================== -->
+  <div class="data-card">
+
+    <!-- État de chargement -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>Calcul et agrégation en temps réel depuis PostgreSQL...</p>
+    </div>
+
+    <!-- Aucun résultat -->
+    <div class="empty-state" *ngIf="!isLoading && (!filteredRows || filteredRows.length === 0)">
+      <mat-icon class="empty-icon">search_off</mat-icon>
+      <h3>Aucune donnée disponible pour les filtres sélectionnés</h3>
+      <p>Vérifiez que la session choisie contient des bulletins générés.</p>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. TABLEAU : LIVRE DE PAIE (REGISTRE)      -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'LIVRE_PAIE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Emploi / Poste</th>
+            <th>Direction</th>
+            <th class="text-right">Sal. Base</th>
+            <th class="text-right">Sursalaire</th>
+            <th class="text-right">Indemnités</th>
+            <th class="text-right">Sal. Brut</th>
+            <th class="text-right">CNSS</th>
+            <th class="text-right">IUTS</th>
+            <th class="text-right">Précomptes</th>
+            <th class="text-right">Total Ret.</th>
+            <th class="text-right col-net">Net à Payer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.emploi }}</td>
+            <td>{{ row.direction }}</td>
+            <td class="text-right">{{ formatFcfa(row.salaireBase) }}</td>
+            <td class="text-right">{{ formatFcfa(row.surSalaire) }}</td>
+            <td class="text-right">{{ formatFcfa(row.indemnites) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right">{{ formatFcfa(row.cotisationCnss) }}</td>
+            <td class="text-right">{{ formatFcfa(row.impotIuts) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalPrecomptes) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireNet) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="4" class="font-bold">TOTAL GÉNÉRAL DU LIVRE DE PAIE</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalBrut) }}</td>
+            <td class="text-right">—</td>
+            <td class="text-right">—</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalBrut) }}</td>
+            <td class="text-right">—</td>
+            <td class="text-right">—</td>
+            <td class="text-right">—</td>
+            <td class="text-right font-bold text-danger">{{ formatFcfa(etatData?.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(etatData?.totalNet) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. TABLEAU : ÉTAT PAR BANQUE (VIREMENTS)   -->
+    <!-- ========================================== -->
+    <div class="bank-view" *ngIf="!isLoading && selectedEtat === 'ETAT_BANQUE' && filteredRows.length > 0">
+      <div class="bank-group-card" *ngFor="let bq of filteredRows">
+        <div class="bank-group-header">
+          <div class="bg-title">
+            <mat-icon>account_balance</mat-icon>
+            <span class="bq-name">{{ bq.banqueNom }}</span>
+            <span class="badge-code">{{ bq.codeBanque }}</span>
+          </div>
+          <div class="bg-metrics">
+            <span class="metric-benef">{{ bq.nombreBeneficiaires }} virement(s)</span>
+            <span class="metric-total">{{ formatFcfa(bq.totalNet) }}</span>
+          </div>
+        </div>
+
+        <div class="table-responsive inner-table">
+          <table class="bpbf-table">
+            <thead>
+              <tr>
+                <th>N° Mat</th>
+                <th>Bénéficiaire</th>
+                <th>Fonction</th>
+                <th>Numéro de Compte / IBAN</th>
+                <th class="text-right">Montant Net à Virer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let vir of bq.virements">
+                <td class="font-mono">{{ vir.matricule }}</td>
+                <td class="font-bold">{{ vir.nomPrenom }}</td>
+                <td>{{ vir.emploi }}</td>
+                <td class="font-mono">{{ vir.numeroCompte }}</td>
+                <td class="text-right font-bold col-net">{{ formatFcfa(vir.montantNet) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. TABLEAU : ÉTAT COTISATION CNSS          -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_CNSS' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>N° CNSS</th>
+            <th>Date Embauche</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Assiette CNSS (plaf. 800k)</th>
+            <th class="text-right">Part Sal. (5.5%)</th>
+            <th class="text-right">Prest. Fam. (7.0%)</th>
+            <th class="text-right">Risques Pro (3.5%)</th>
+            <th class="text-right">Retraite Pat. (5.5%)</th>
+            <th class="text-right">Total Patronal</th>
+            <th class="text-right col-net">Total reversé CNSS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td class="font-mono">{{ row.noCnss }}</td>
+            <td>{{ row.dateEmbauche }}</td>
+            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.assietteCotisable) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.partSalariale) }}</td>
+            <td class="text-right">{{ formatFcfa(row.partPatronalePrestations) }}</td>
+            <td class="text-right">{{ formatFcfa(row.partPatronaleRisques) }}</td>
+            <td class="text-right">{{ formatFcfa(row.partPatronaleRetraite) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalPartPatronale) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.totalCotisationCnss) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 4. TABLEAU : ÉTAT FISCAL IUTS              -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_IUTS' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Exonérations</th>
+            <th class="text-right">Abattement Forfaitaire</th>
+            <th class="text-right">Base Imposable IUTS</th>
+            <th class="text-center">Charges</th>
+            <th class="text-right">IUTS Brut</th>
+            <th class="text-right">Réduction Charges</th>
+            <th class="text-right col-net">IUTS Net Retenu</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalExonerations) }}</td>
+            <td class="text-right">{{ formatFcfa(row.abattementForfaitaire) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.baseImposable) }}</td>
+            <td class="text-center">{{ row.nombreCharges }}</td>
+            <td class="text-right">{{ formatFcfa(row.impotIutsBrut) }}</td>
+            <td class="text-right text-success">{{ formatFcfa(row.reductionPourCharges) }}</td>
+            <td class="text-right col-net font-bold text-danger">{{ formatFcfa(row.impotIutsNet) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 5. TABLEAU : ÉTAT SALAIRE PAR DIRECTION    -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_SALAIRE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Direction</th>
+            <th class="text-center">Effectif</th>
+            <th class="text-right">Salaire de Base</th>
+            <th class="text-right">Indemnités</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Charges Patronales</th>
+            <th class="text-right">Masse Salariale Totale</th>
+            <th class="text-right">Retenues</th>
+            <th class="text-right col-net">Net Payé</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-bold">{{ row.directionNom }}</td>
+            <td class="text-center font-bold">{{ row.effectif }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalSalaireBase) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalIndemnites) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalBrut) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalCotisationsPatronales) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalMasseSalariale) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.totalNet) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 6. TABLEAU : ÉTAT NOMINATIF DE PAIE        -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_NOMINATIF' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Poste / Classification</th>
+            <th>Direction</th>
+            <th class="text-right">Salaire Base</th>
+            <th>Détail des Gains</th>
+            <th>Détail des Retenues</th>
+            <th class="text-right">Sal. Brut</th>
+            <th class="text-right">Total Ret.</th>
+            <th class="text-right col-net">Net Payé</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.poste }} ({{ row.classification }})</td>
+            <td>{{ row.direction }}</td>
+            <td class="text-right">{{ formatFcfa(row.salaireBase) }}</td>
+            <td>
+              <div class="line-tags">
+                <span class="tag-gain" *ngFor="let g of row.gains">
+                  {{ g.libelle }}: {{ formatFcfa(g.montant) }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="line-tags">
+                <span class="tag-ret" *ngFor="let r of row.retenues">
+                  {{ r.libelle }}: {{ formatFcfa(r.montant) }}
+                </span>
+              </div>
+            </td>
+            <td class="text-right font-bold">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireNet) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 7. TABLEAU : ÉTAT PRÉCOMPTE                -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_PRECOMPTE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Type de Précompte / Prêt</th>
+            <th>Organisme Bénéficiaire</th>
+            <th class="text-right">Montant Initial</th>
+            <th class="text-right col-net">Retenue Période</th>
+            <th class="text-right">Solde Restant Dû</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.typePrecompte }}</td>
+            <td>{{ row.organismeBeneficiaire }}</td>
+            <td class="text-right">{{ formatFcfa(row.montantTotalInitial) }}</td>
+            <td class="text-right font-bold text-danger col-net">{{ formatFcfa(row.retenuePeriode) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.soldeRestantDu) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 8. TABLEAU : ÉTAT FSP                      -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_FSP' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Direction</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Assiette FSP</th>
+            <th class="text-center">Taux FSP</th>
+            <th class="text-right col-net">Retenue FSP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.direction }}</td>
+            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right">{{ formatFcfa(row.assietteCalcul) }}</td>
+            <td class="text-center">{{ row.tauxFsp }}%</td>
+            <td class="text-right font-bold text-danger col-net">{{ formatFcfa(row.montantRetenu) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 9. TABLEAU : ÉTAT MUTUELLE                 -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_MUTUELLE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Direction</th>
+            <th>Formule / Régime</th>
+            <th class="text-right">Part Salariale</th>
+            <th class="text-right">Part Patronale</th>
+            <th class="text-right col-net">Total Cotisation Mutuelle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.direction }}</td>
+            <td>{{ row.formuleMutuelle }}</td>
+            <td class="text-right text-danger font-bold">{{ formatFcfa(row.partSalariale) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.partPatronale) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.totalCotisation) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 10. TABLEAU : ÉTAT TYPE EMPLOYÉ            -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_TYPE_EMPLOYE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Statut / Type d'Employé</th>
+            <th class="text-center">Effectif</th>
+            <th class="text-right">Salaire Base</th>
+            <th class="text-right">Indemnités</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Charges Patronales</th>
+            <th class="text-right">Retenues</th>
+            <th class="text-right">Net Global</th>
+            <th class="text-right col-net">Net Moyen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-bold">{{ row.typeEmploye }}</td>
+            <td class="text-center font-bold">{{ row.effectif }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalSalaireBase) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalIndemnites) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalBrut) }}</td>
+            <td class="text-right">{{ formatFcfa(row.totalCotisationsPatronales) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalNet) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireMoyenNet) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 11. TABLEAU : ÉTAT ÉLÉMENTS DE SALAIRE     -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_ELEMENTS_SALAIRE' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Code Rubrique</th>
+            <th>Libellé de l'Élément</th>
+            <th class="text-center">Nature / Type</th>
+            <th class="text-center">Nombre Bénéficiaires</th>
+            <th class="text-right">Part Salariale</th>
+            <th class="text-right">Part Patronale</th>
+            <th class="text-right col-net">Total Général</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.codeRubrique }}</td>
+            <td class="font-bold">{{ row.libelleRubrique }}</td>
+            <td class="text-center">
+              <span class="badge-type" [class.badge-gain]="row.typeRubrique === 'GAIN'" [class.badge-ret]="row.typeRubrique !== 'GAIN'">
+                {{ row.typeRubrique }}
+              </span>
+            </td>
+            <td class="text-center font-bold">{{ row.nombreBeneficiaires }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalMontantSalarial) }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.totalMontantPatronal) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.totalGlobal) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 12. TABLEAU : ÉTAT BULLETIN                -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_BULLETIN' && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>Code Bulletin</th>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Direction</th>
+            <th class="text-center">Type Session</th>
+            <th class="text-center">Statut</th>
+            <th class="text-right">Salaire Brut</th>
+            <th class="text-right">Total Retenues</th>
+            <th class="text-right col-net">Net à Payer</th>
+            <th>Justification Écart</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.codeBulletin }}</td>
+            <td class="font-mono">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.direction }}</td>
+            <td class="text-center font-mono">{{ row.typeSession }}</td>
+            <td class="text-center">
+              <span class="badge-statut" [class.valide]="row.statut === 'VALIDE'" [class.genere]="row.statut === 'GENERE'">
+                {{ row.statut }}
+              </span>
+            </td>
+            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireNet) }}</td>
+            <td>{{ row.justificationEcart || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 13. TABLEAU DYNAMIQUE : ÉTATS PERSONNALISÉS  -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && isCustomEtat && filteredRows.length > 0">
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th>Emploi / Poste</th>
+            <th>Direction</th>
+            <th class="text-right">Montant Brut</th>
+            <th class="text-right">Total Retenues</th>
+            <th class="text-right col-net">Net à Payer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows; let idx = index">
+            <td class="font-mono">{{ idx + 1 }}</td>
+            <td class="font-mono font-bold">{{ row.matricule || '—' }}</td>
+            <td class="font-bold">{{ row.nomPrenom || row.nom || '—' }}</td>
+            <td>{{ row.emploi || row.poste || '—' }}</td>
+            <td>{{ row.direction || '—' }}</td>
+            <td class="text-right font-bold">{{ formatFcfa(row.salaireBrut || row.brut || row.montant) }}</td>
+            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues || row.retenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireNet || row.net) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL : FORMULAIRE CRÉATION / ÉDITION ÉTAT -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" *ngIf="isFormModalOpen" (click)="closeFormModal()">
+    <div class="form-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="dialog-title-group">
+          <div class="dialog-icon-badge">
+            <mat-icon>{{ configForm.icon || 'assessment' }}</mat-icon>
+          </div>
+          <div>
+            <h3 class="dialog-title">{{ isEditing ? 'Modifier l\'État de Synthèse' : 'Créer un Nouvel État de Synthèse' }}</h3>
+            <p class="dialog-subtitle">Configuration persistée directement dans la base de données PostgreSQL</p>
+          </div>
+        </div>
+        <button type="button" class="close-btn" (click)="closeFormModal()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="dialog-body">
+        <div class="alert-error" *ngIf="formError">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ formError }}</span>
+        </div>
+
+        <div class="alert-success" *ngIf="formSuccess">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ formSuccess }}</span>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Libellé officiel de l'état <span class="required">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="configForm.libelle"
+              placeholder="ex: État des Indemnités de Logement"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Code technique unique</label>
+            <input
+              type="text"
+              class="form-control font-mono"
+              [(ngModel)]="configForm.code"
+              [disabled]="!!(isEditing && configForm.isSystem)"
+              placeholder="ex: ETAT_LOGEMENT (auto si vide)"
+            />
+            <small class="hint" *ngIf="isEditing && configForm.isSystem">Le code d'un état système ne peut pas être modifié.</small>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Catégorie fonctionnelle</label>
+            <select class="form-control" [(ngModel)]="configForm.categorie">
+              <option *ngFor="let cat of availableCategories" [value]="cat">{{ cat }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ordre d'affichage</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="configForm.ordre"
+              min="1"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description & Usage RH</label>
+          <textarea
+            class="form-control text-area"
+            rows="2"
+            [(ngModel)]="configForm.description"
+            placeholder="Décrivez l'objet de cet état, les rubriques concernées ou l'organisme destinataire..."
+          ></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Filtre / Source des données</label>
+            <select class="form-control" [(ngModel)]="configForm.filtreType">
+              <option value="ALL">Toutes les rubriques (Vue globale)</option>
+              <option value="INDEMNITE">Indemnités & Primes uniquement</option>
+              <option value="RETENUE">Retenues & Précomptes uniquement</option>
+              <option value="BANQUE">Ventilation bancaire (Virements)</option>
+              <option value="DIRECTION">Ventilation par Direction / Service</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Icône visuelle</label>
+            <div class="icon-selector-row">
+              <div class="icon-preview">
+                <mat-icon>{{ configForm.icon || 'assessment' }}</mat-icon>
+              </div>
+              <select class="form-control" [(ngModel)]="configForm.icon">
+                <option *ngFor="let ic of availableIcons" [value]="ic">{{ ic }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-toggle">
+          <label class="switch-label">
+            <input type="checkbox" [(ngModel)]="configForm.actif" />
+            <span class="slider"></span>
+            <span class="label-text">État actif et visible dans les onglets de sélection</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn-cancel" (click)="closeFormModal()" [disabled]="isSaving">
+          Annuler
+        </button>
+        <button type="button" class="btn-submit" (click)="saveConfig()" [disabled]="isSaving">
+          <mat-icon *ngIf="!isSaving">save</mat-icon>
+          <span *ngIf="isSaving" class="mini-spinner"></span>
+          <span>{{ isSaving ? 'Enregistrement...' : 'Enregistrer dans PostgreSQL' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

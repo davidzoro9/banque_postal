@@ -28,8 +28,11 @@
       @if (information) {
         <div class="totals-grid">
           <div class="total-card"><span>Salaire de base</span><strong>{{ information.salaireBase | number:'1.2-2' }}</strong></div>
-          <!-- <div class="total-card"><span>Total indemnités</span><strong class="positive">{{ information.totalIndemnites | number:'1.2-2' }}</strong></div> -->
           <div class="total-card"><span>Rémunération brute</span><strong>{{ information.remunerationBrute | number:'1.2-2' }}</strong></div>
+          <div class="total-card">
+            <span>Total des exonérations</span>
+            <strong class="positive">{{ information.totalExonerations | number:'1.2-2' }}</strong>
+          </div>
           <div class="total-card">
             <span>Abattement forfaitaire</span>
             <strong>{{ information.abattementForfaitaire | number:'1.2-2' }}</strong>

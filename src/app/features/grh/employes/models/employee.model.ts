@@ -83,7 +83,7 @@ export interface EmployeeSalaryDeduction {
   code: string;
   libelle: string;
   typeRetenueCode: string;
-  baseCalcul: 'SALAIRE_BASE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
+  baseCalcul: 'SALAIRE_BASE' | 'SALAIRE_BASE_SUR_SALAIRE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
   montantBase: number;
   taux: number;
   montantCalcule: number;
@@ -124,6 +124,7 @@ export interface EmployeeExemption {
   employeeId: number | string;
   indemniteEmployeId: number | string;
   montant: number;
+  montantAutorise?: number; // Limite théorique = min(taux%×brutFiscal, plafond)
   tauxExonere: number;
   plafondExonere: number;
 }
@@ -215,11 +216,16 @@ export interface Employee {
   departement?: string;
   agence?: string;
   dateEmbauche: string;
+  ancienneteReprise?: number;
   statut: StatutEmploye;
   typeContrat: TypeContrat;
   emailPro?: string;
   numeroPoste?: string;
   directeurHierarchique?: string;
+  superviseurId?: number | string;
+  superviseurNom?: string;
+  superviseurPrenom?: string;
+  superviseurMatricule?: string;
   organismeRetraite?: string;
   fonctionId?: string;
   emploiId?: string;

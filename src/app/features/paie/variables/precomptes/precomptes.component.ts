@@ -393,6 +393,15 @@ export class PrecomptesComponent implements OnInit {
     this.showAgentDropdown = false;
   }
 
+  selectEmployeeById(empId: any): void {
+    const emp = this.employeesList.find(e => String(e.id) === String(empId));
+    if (emp) {
+      this.formModel.employeeId = emp.id;
+      this.formModel.employeeName = `${emp.nom} ${emp.prenom}`;
+      this.formModel.matricule = emp.matricule;
+    }
+  }
+
   selectEmployee(emp: Employee): void {
     this.formModel.employeeId = emp.id;
     this.formModel.employeeName = `${emp.nom} ${emp.prenom}`;
@@ -420,14 +429,14 @@ export class PrecomptesComponent implements OnInit {
   }
 
   savePrecompte(): void {
-    if (!this.formModel.employeeId || !this.formModel.elementSalaryId || !this.formModel.amount || !this.formModel.retenueMensuelle) {
-      alert('Veuillez renseigner tous les champs obligatoires (Agent, Élément de salaire, Montant Total et Mensualité autorisée).');
+    if (!this.formModel.employeeId || !this.formModel.amount || !this.formModel.retenueMensuelle) {
+      alert('Veuillez renseigner tous les champs obligatoires (Agent, Montant Total et Mensualité autorisée).');
       return;
     }
 
     this.isSaving = true;
     const selectedEmp = this.employeesList.find(e => String(e.id) === String(this.formModel.employeeId));
-    const selectedElem = this.elementsList.find(el => String(el.id) === String(this.formModel.elementSalaryId));
+    const selectedElem = this.formModel.elementSalaryId ? this.elementsList.find(el => String(el.id) === String(this.formModel.elementSalaryId)) : null;
 
     let dateDebutStr = '';
     if (this.formModel.dateDebut) {
@@ -446,9 +455,9 @@ export class PrecomptesComponent implements OnInit {
 
     const payload: any = {
       employeeId: Number(this.formModel.employeeId),
-      salaryElementId: Number(this.formModel.elementSalaryId),
-      reference: this.formModel.reference || '',
-      motif: this.formModel.motif || '-',
+      salaryElementId: this.formModel.elementSalaryId ? Number(this.formModel.elementSalaryId) : null,
+      reference: this.formModel.reference || `PRC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      motif: this.formModel.motif || 'Précompte / Avance sur salaire',
       motifAnnulation: this.formModel.motifAnnulation || '-',
       dateDebut: dateDebutStr,
       amount: Number(this.formModel.amount),

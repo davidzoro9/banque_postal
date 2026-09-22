@@ -28,6 +28,15 @@ export class InfosPersonnellesComponent implements OnInit {
 
   readonly sexes = [{ value: 'M', label: 'Masculin' }, { value: 'F', label: 'Féminin' }];
 
+  readonly situationsFamiliales = [
+    { value: 'Célibataire', label: 'Célibataire' },
+    { value: 'Marié(e)', label: 'Marié(e)' },
+    { value: 'Divorcé(e)', label: 'Divorcé(e)' },
+    { value: 'Veuf(ve)', label: 'Veuf(ve)' }
+  ];
+
+  paramRetraite: RefItem[] = [];
+
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
@@ -42,6 +51,12 @@ export class InfosPersonnellesComponent implements OnInit {
     this.services$ = this.dbRefService.getItems('service');
     this.directions$ = this.dbRefService.getItems('direction');
     this.departements$ = this.dbRefService.getItems('departement');
+    this.dbRefService.getItems('param-retraite').subscribe(list => {
+      this.paramRetraite = list || [];
+      if (this.form) {
+        this.calculateRetraite();
+      }
+    });
 
     this.employeeService.getById(this.empId).subscribe(e => {
       if (!e) { this.router.navigate(['/grh/employes']); return; }
@@ -72,6 +87,7 @@ export class InfosPersonnellesComponent implements OnInit {
       prenom:                 [''],
       nomJeuneFille:          [''],
       sexe:                   ['M'],
+      situationFamiliale:     ['Célibataire'],
       dateNaissance:          [''],
       lieuNaissance:          [''],
       nationalite:            [''],
@@ -118,18 +134,14 @@ export class InfosPersonnellesComponent implements OnInit {
     }
 
     let age = 60;
-    try {
-      const storedParams = localStorage.getItem('ref_param-retraite');
-      if (storedParams) {
-        const list = JSON.parse(storedParams);
-        const param = list.find((p: any) => (p.libelle && p.libelle.includes(groupe)) || (p.grade && p.grade.includes(groupe)) || (p.code && p.code.includes(groupe)));
-        if (param && (param.taux || param.montant)) {
-          age = Number(param.taux || param.montant);
-        }
-      } else {
-        age = groupe === 'GROUPE III' ? 65 : 60;
-      }
-    } catch (e) {
+    const param = (this.paramRetraite || []).find((p: any) =>
+      (p.libelle && p.libelle.includes(groupe)) ||
+      (p.grade && p.grade.includes(groupe)) ||
+      (p.code && p.code.includes(groupe))
+    );
+    if (param && (param.taux || param.montant)) {
+      age = Number(param.taux || param.montant);
+    } else {
       age = groupe === 'GROUPE III' ? 65 : 60;
     }
 
@@ -150,7 +162,9 @@ export class InfosPersonnellesComponent implements OnInit {
   private patch(e: Employee): void {
     this.form.patchValue({
       nom: e.nom, prenom: e.prenom, nomJeuneFille: e.nomJeuneFille || '',
-      sexe: e.sexe, dateNaissance: e.dateNaissance, lieuNaissance: e.lieuNaissance,
+      sexe: e.sexe,
+      situationFamiliale: e.situationFamiliale || e.situationMatrimoniale || 'Célibataire',
+      dateNaissance: e.dateNaissance, lieuNaissance: e.lieuNaissance,
       nationalite: e.nationalite, numeroCNI: e.numeroCNI,
       dernierDiplome: e.dernierDiplome || '', diplomeRecrutement: e.diplomeRecrutement || '',
       brancheEtude: e.brancheEtude || '', ecoleUniversite: e.ecoleUniversite || '',
@@ -186,7 +200,10 @@ export class InfosPersonnellesComponent implements OnInit {
 
     this.employeeService.update(this.empId, {
       nom: v.nom, prenom: v.prenom, nomJeuneFille: v.nomJeuneFille,
-      sexe: v.sexe, dateNaissance: dob, lieuNaissance: v.lieuNaissance,
+      sexe: v.sexe,
+      situationFamiliale: v.situationFamiliale || 'Célibataire',
+      situationMatrimoniale: v.situationFamiliale || 'Célibataire',
+      dateNaissance: dob, lieuNaissance: v.lieuNaissance,
       nationalite: v.nationalite, numeroCNI: v.numeroCNI,
       dernierDiplome: v.dernierDiplome, diplomeRecrutement: v.diplomeRecrutement,
       brancheEtude: v.brancheEtude, ecoleUniversite: v.ecoleUniversite,

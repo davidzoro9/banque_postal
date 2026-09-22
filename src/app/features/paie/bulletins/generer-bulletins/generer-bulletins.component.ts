@@ -48,6 +48,7 @@ export class GenererBulletinsComponent implements OnInit {
     name: '',
     periode: `${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][new Date().getMonth()]} ${new Date().getFullYear()}`,
     typeSession: 'ORDINAIRE',
+    natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | 'STC',
     codeSession: `SESS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
     modeCible: 'TOUS' as 'TOUS' | 'SELECTION'
   };
@@ -78,6 +79,15 @@ export class GenererBulletinsComponent implements OnInit {
   // Modification des variables du bulletin par lot
   showEditVariablesModal = false;
   selectedBulletinForEdit: any = null;
+  editableLines: any[] = [];
+  modalSalaireBrut = 0;
+  modalTotalRetenues = 0;
+  modalSalaireNet = 0;
+  modalBaseImposable = 0;
+  modalCotisationCnss = 0;
+  modalImpotIuts = 0;
+  modalCotisationCrrae = 0;
+  modalCotisationSolidarite = 0;
   editVariablesForm: {
     workedDays: number;
     scheduledWorkingDays: number;
@@ -187,6 +197,7 @@ export class GenererBulletinsComponent implements OnInit {
       annee: this.selectedYear,
       name: '',
       typeSession: 'ORDINAIRE',
+      natureExtraordinaire: '13EME_MOIS',
       periode: '',
       codeSession: '',
       modeCible: 'TOUS'
@@ -239,6 +250,26 @@ export class GenererBulletinsComponent implements OnInit {
     }
   }
 
+  onNatureExtraordinaireChange(): void {
+    const y = Number(this.newSessionForm.annee) || this.selectedYear;
+    const m = String(this.newSessionForm.mois || '01').padStart(2, '0');
+    const mIdx = Math.max(0, Math.min(11, parseInt(m, 10) - 1));
+    const nomMois = this.moisNoms[mIdx] || `Mois ${m}`;
+
+    if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
+      this.newSessionForm.name = `13ème Mois ${y}`;
+      this.newSessionForm.codeSession = `SESS-13EME-${y}-${m}`;
+      this.newSessionForm.modeCible = 'TOUS';
+      this.changerModeCibleNouvelleSession('TOUS');
+    } else {
+      this.newSessionForm.name = `Solde de Tout Compte — ${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-STC-${y}-${m}`;
+      this.newSessionForm.modeCible = 'SELECTION';
+      this.changerModeCibleNouvelleSession('SELECTION');
+    }
+    this.actualiserCodeSession();
+  }
+
   actualiserCodeSession(): void {
     const y = Number(this.newSessionForm.annee) || this.selectedYear;
     const m = String(this.newSessionForm.mois || '01').padStart(2, '0');
@@ -249,9 +280,16 @@ export class GenererBulletinsComponent implements OnInit {
     const isExtra = this.newSessionForm.typeSession === 'EXTRAORDINAIRE';
 
     if (isExtra) {
-      const libelle = this.newSessionForm.name?.trim() ? this.newSessionForm.name.trim() : 'Extraordinaire';
-      this.newSessionForm.periode = `${libelle} — ${nomMois} ${y}`;
-      this.newSessionForm.codeSession = `SESS-EXT-${y}-${m}`;
+      if (!this.newSessionForm.name || this.newSessionForm.name.trim() === '') {
+        if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
+          this.newSessionForm.name = `13ème Mois ${y}`;
+        } else {
+          this.newSessionForm.name = `Solde de Tout Compte — ${nomMois} ${y}`;
+        }
+      }
+      const prefix = this.newSessionForm.natureExtraordinaire === '13EME_MOIS' ? '13EME' : 'STC';
+      this.newSessionForm.periode = `${this.newSessionForm.name}`;
+      this.newSessionForm.codeSession = `SESS-${prefix}-${y}-${m}`;
     } else {
       this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.codeSession = `SESS-${y}-${m}`;
@@ -676,6 +714,65 @@ export class GenererBulletinsComponent implements OnInit {
     }
   }
 
+  recalculerTousLesBulletins(): void {
+    if (confirm("Voulez-vous recalculer TOUS les bulletins existants selon les règles officielles du CGI ?\nCette opération mettra à jour les exonérations d'indemnités, l'IUTS et le net à payer pour toutes les sessions.")) {
+      this.isCalculating = true;
+      this.bulletinService.recalculerTous().subscribe({
+        next: (res) => {
+          this.isCalculating = false;
+          alert(`${res.length} bulletin(s) recalculé(s) avec succès selon les règles du CGI !`);
+          if (this.currentSession && this.currentSession.id) {
+            this.selectionnerSession(this.currentSession);
+          } else {
+            this.chargerToutesLesSessions();
+          }
+        },
+        error: (err) => {
+          this.isCalculating = false;
+          alert('Erreur lors du recalcul : ' + (err?.error?.message || err.message));
+        }
+      });
+    }
+  }
+
+  recalculerBulletinsSession(): void {
+    if (!this.currentSession || !this.currentSession.id) return;
+    if (confirm(`Voulez-vous recalculer tous les bulletins de la session "${this.periode}" ?\nCette opération mettra à jour chaque bulletin selon les formules officielles du CGI.`)) {
+      this.isCalculating = true;
+      this.bulletinService.recalculerSession(this.currentSession.id).subscribe({
+        next: (res) => {
+          this.isCalculating = false;
+          this.bulletins = (res || []).map(b => this.adapterBulletinFromBackend(b));
+          alert(`${res.length} bulletin(s) de la session recalculé(s) avec succès !`);
+        },
+        error: (err) => {
+          this.isCalculating = false;
+          alert('Erreur lors du recalcul de la session : ' + (err?.error?.message || err.message));
+        }
+      });
+    }
+  }
+
+  recalculerBulletin(bulletinId: number): void {
+    if (!bulletinId) return;
+    this.isCalculating = true;
+    this.bulletinService.recalculerBulletin(bulletinId).subscribe({
+      next: (updated) => {
+        this.isCalculating = false;
+        const adapted = this.adapterBulletinFromBackend(updated);
+        const idx = this.bulletins.findIndex(b => b.id === bulletinId);
+        if (idx !== -1) {
+          this.bulletins[idx] = adapted;
+        }
+        alert('Bulletin recalculé avec succès selon les règles du CGI !');
+      },
+      error: (err) => {
+        this.isCalculating = false;
+        alert('Erreur lors du recalcul du bulletin : ' + (err?.error?.message || err.message));
+      }
+    });
+  }
+
   private adapterBulletinFromBackend(b: any): any {
     let copy = JSON.parse(JSON.stringify(b));
     copy.mois = this.periode;
@@ -722,9 +819,7 @@ export class GenererBulletinsComponent implements OnInit {
     copy.totalRetenuesPatronales = b.totalCotisationsPatronales != null ? b.totalCotisationsPatronales : (b.totalRetenuesPatronales != null ? b.totalRetenuesPatronales : (b.totalChargesPatronales != null ? b.totalChargesPatronales : 0));
     copy.salaireNet = b.salaireNet != null ? b.salaireNet : (copy.salaireBrut - copy.totalRetenues);
 
-    const sitB = (copy.situationFamiliale || copy.situationMatrimoniale || b.situationFamiliale || b.situationMatrimoniale || '').toUpperCase();
-    const basePartsB = sitB.includes('MARI') ? 2 : 1;
-    copy.partsFiscales = b.partsFiscales != null ? b.partsFiscales : (basePartsB + (b.nombreCharges || 0));
+    copy.partsFiscales = b.partsFiscales != null ? b.partsFiscales : (b.nombreCharges != null ? b.nombreCharges : 0);
 
     let indList = b.lines ? b.lines.filter((l: any) => {
       const cd = (l.code || '').toUpperCase();
@@ -783,63 +878,381 @@ export class GenererBulletinsComponent implements OnInit {
 
   ouvrirModalModifierVariables(b: any): void {
     this.selectedBulletinForEdit = b;
-    const empId = b.employeeId || b.employee?.id;
-
-    const initialPrecompte = b.totalPrecomptes !== undefined ? b.totalPrecomptes : (b.precompteAvance || b.avanceSurSolde || 0);
-    const initialAvoir = b.totalAvoirs !== undefined ? b.totalAvoirs : (b.primeExceptionnelle || 0);
-
-    this.editVariablesForm = {
-      workedDays: b.joursPresents !== undefined ? b.joursPresents : (b.workedDays !== undefined ? b.workedDays : 30),
-      scheduledWorkingDays: b.scheduledWorkingDays || 30,
-      primeExceptionnelle: initialAvoir,
-      precompteAvance: initialPrecompte,
-      nombreHeuresSup: b.nombreHeuresSup || (b.heuresSup ? Math.round(b.heuresSup / this.getTauxHoraire()) : 0),
-      heuresSup: b.heuresSup || 0,
-      motifAjustement: b.motifAjustement || ''
-    };
-
-    // Chargement dynamique des précomptes actifs (calcul de la mensualité par échéancier)
-    if (empId && initialPrecompte === 0) {
-      this.http.get<any[]>(`${environment.apiUrl}/precomptes`).pipe(
-        catchError(() => of([]))
-      ).subscribe((precomptes: any[]) => {
-        let list = precomptes || [];
-        if (list.length === 0) {
-          const stored = localStorage.getItem('bpbf_precomptes_storage');
-          if (stored) {
-            try { list = JSON.parse(stored); } catch (e) {}
-          }
-        }
-
-        const agentPrecomptes = list.filter((p: any) =>
-          String(p.employeeId) === String(empId) ||
-          (p.matricule && b.matricule && p.matricule.trim() === b.matricule.trim()) ||
-          (p.employeeName && b.employeeName && p.employeeName.toLowerCase().includes(b.employeeName.toLowerCase()))
-        );
-
-        if (agentPrecomptes.length > 0) {
-          const totMensuel = agentPrecomptes.reduce((sum: number, p: any) => {
-            if (p.statut && p.statut === 'SOLDE') return sum;
-            let m = 0;
-            if (p.montantMensuel && p.montantMensuel > 0) {
-              m = p.montantMensuel;
-            } else if (p.amount && p.amount > 0) {
-              const ech = p.echeance || p.echeancesTotal || 1;
-              m = Math.round(p.amount / ech);
-            } else if (p.montant && p.montant > 0) {
-              m = p.montant;
-            }
-            return sum + m;
-          }, 0);
-
-          if (totMensuel > 0) {
-            this.editVariablesForm.precompteAvance = totMensuel;
-          }
-        }
+    if (b.lines && b.lines.length > 0) {
+      this.initEditableLines(b);
+      this.showEditVariablesModal = true;
+    } else if (b.id) {
+      this.isCalculating = true;
+      this.http.get<any>(`${environment.apiUrl}/bulletins/${b.id}`).pipe(
+        catchError(err => {
+          console.warn('Erreur chargement détails bulletin pour variables:', err);
+          return of(b);
+        })
+      ).subscribe(fullB => {
+        this.isCalculating = false;
+        this.selectedBulletinForEdit = fullB || b;
+        this.initEditableLines(this.selectedBulletinForEdit);
+        this.showEditVariablesModal = true;
       });
+    } else {
+      this.initEditableLines(b);
+      this.showEditVariablesModal = true;
+    }
+  }
+
+  isDayLine(line: any): boolean {
+    if (!line) return false;
+    const cd = (line.code || '').toUpperCase();
+    const nm = (line.name || line.libelle || '').toUpperCase();
+    return cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE');
+  }
+
+  getLineDisplayTaux(line: any): string {
+    if (!line) return '—';
+    if (this.isDayLine(line)) {
+      return (line.tauxOrNb ?? 30) + ' j';
+    }
+    const cd = (line.code || '').toUpperCase();
+    const nm = (line.name || line.libelle || '').toUpperCase();
+    if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+      return (line.tauxOrNb ?? 30) + ' j';
+    }
+    if (cd.includes('IUTS') || nm.includes('IUTS')) {
+      const parts = this.selectedBulletinForEdit?.partsFiscales || this.selectedBulletinForEdit?.nombreCharges || line.tauxOrNb;
+      return parts ? `${parts} part${Number(parts) > 1 ? 's' : ''}` : 'Barème';
+    }
+    if (cd.includes('CNSS') || nm.includes('CNSS')) {
+      return '5.5 %';
+    }
+    if (cd.includes('CRRAE') || nm.includes('CRRAE')) {
+      return '6 %';
+    }
+    if (cd.includes('SOLIDAR') || nm.includes('SOLIDAR') || cd.includes('FSP')) {
+      return '1 %';
+    }
+    if (cd.includes('LOG') || nm.includes('LOGEMENT')) {
+      return '20 %';
+    }
+    if (cd.includes('TRP') || nm.includes('TRANSPORT') || cd.includes('CS') || nm.includes('CAISSE') || cd.includes('SUJ') || nm.includes('SUJETION')) {
+      return '5 %';
+    }
+    if (cd.includes('CP') || nm.includes('CASH')) {
+      return (line.tauxOrNb ?? 30) + ' j';
+    }
+    if (line.tauxFormatted) {
+      return line.tauxFormatted;
+    }
+    if (line.tauxOrNb !== undefined && line.tauxOrNb !== null) {
+      const u = line.unit || '%';
+      return `${line.tauxOrNb} ${u}`.trim();
+    }
+    return '—';
+  }
+
+  initEditableLines(b: any): void {
+    // Sauvegarder les montants originaux certifiés du bulletin pour éviter toute dérive d'arrondi
+    b.salaireBaseOriginal = b.salaireBaseOriginal || b.salaireBase;
+    b.surSalaireOriginal = b.surSalaireOriginal || b.surSalaire;
+    b.salaireBrutOriginal = b.salaireBrutOriginal || b.salaireBrut;
+    b.baseImposableOriginal = b.baseImposableOriginal || b.baseImposable;
+    b.cotisationCnssOriginal = b.cotisationCnssOriginal || b.cotisationCnss;
+    b.cotisationCrraeOriginal = b.cotisationCrraeOriginal || b.cotisationCrrae;
+    b.impotIutsOriginal = b.impotIutsOriginal || b.impotIuts;
+    b.cotisationSolidariteOriginal = b.cotisationSolidariteOriginal || b.cotisationSolidarite;
+    b.totalRetenuesOriginal = b.totalRetenuesOriginal || b.totalRetenues;
+    b.salaireNetOriginal = b.salaireNetOriginal || b.salaireNet;
+
+    const enriched = this.enrichSelectedBulletinLines(b);
+    const rawLines = enriched?.lines || [];
+
+    const lines = rawLines.map((l: any, idx: number) => {
+      const cd = (l.code || '').toUpperCase();
+      const nm = (l.name || l.libelle || '').toUpperCase();
+      const isGain = l.typeLigne === 'GAIN';
+
+      let unit = '%';
+      let fullBase = l.baseCalcul !== undefined && l.baseCalcul !== null && Number(l.baseCalcul) > 0
+        ? Number(l.baseCalcul)
+        : (isGain ? Number(l.gain || 0) : Number(l.retenue || 0));
+      let tauxOrNb: any = 100;
+
+      if (cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE')) {
+        unit = 'j';
+        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : 30;
+        tauxOrNb = wDays;
+        fullBase = Number(b.salaireBaseOriginal || b.salaireBase || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
+      } else if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+        unit = 'j';
+        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : 30;
+        tauxOrNb = wDays;
+        fullBase = Number(b.surSalaireOriginal || b.surSalaire || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
+      } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
+        unit = '%';
+        let tVal = 0;
+        if (l.tauxFormatted) {
+          const m = String(l.tauxFormatted).match(/(\d+(\.\d+)?)/);
+          if (m) tVal = parseFloat(m[1]);
+        } else if (l.taux !== undefined && l.taux !== null) {
+          tVal = Number(l.taux);
+        } else if (b.ancienneteAnnees) {
+          tVal = Math.min(25, Number(b.ancienneteAnnees));
+        }
+        tauxOrNb = tVal;
+        fullBase = Number(b.salaireBaseOriginal || b.salaireBase || 0);
+      } else if (cd.includes('CNSS') || nm.includes('CNSS')) {
+        unit = '%';
+        tauxOrNb = 5.5;
+        fullBase = Math.min(Number(b.salaireBrutOriginal || b.salaireBrut || 0), 800000);
+      } else if (cd.includes('CRRAE') || nm.includes('CRRAE')) {
+        unit = '%';
+        tauxOrNb = 6;
+        fullBase = Number(b.salaireBaseOriginal || b.salaireBase || 0) + Number(b.surSalaireOriginal || b.surSalaire || 0);
+      } else if (cd.includes('IUTS') || nm.includes('IUTS')) {
+        unit = 'parts';
+        tauxOrNb = b.partsFiscales || b.nombreCharges || 2;
+        fullBase = Number(b.baseImposableOriginal || b.baseImposable || 0);
+      } else if (cd.includes('SOLIDAR') || nm.includes('SOLIDAR') || cd.includes('FSP')) {
+        unit = '%';
+        tauxOrNb = 1;
+        fullBase = Math.max(0, Number(b.salaireBrutOriginal || b.salaireBrut || 0) - Number(b.cotisationCnssOriginal || b.cotisationCnss || 0) - Number(b.impotIutsOriginal || b.impotIuts || 0));
+      } else {
+        unit = '%';
+        let tVal = 100;
+        if (l.tauxFormatted) {
+          const m = String(l.tauxFormatted).match(/(\d+(\.\d+)?)/);
+          if (m) tVal = parseFloat(m[1]);
+        } else if (l.taux !== undefined && l.taux !== null) {
+          tVal = Number(l.taux);
+        }
+        tauxOrNb = tVal;
+        // Pour les indemnités (Caisse, Sujétion, Transport, Logement, Cash point...),
+        // fullBase doit être le montant nominal de l'indemnité !
+        const nominal = Number(
+          l.baseCalcul !== undefined && l.baseCalcul !== null && Number(l.baseCalcul) > 0
+            ? l.baseCalcul
+            : (l.gain !== undefined && l.gain !== null && Number(l.gain) > 0
+              ? l.gain
+              : (l.montant || 0))
+        );
+        fullBase = nominal;
+      }
+
+      return {
+        code: l.code || `LINE_${idx}`,
+        name: (l.name || l.libelle || '').replace(/[()]/g, '').trim(),
+        typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
+        baseCalcul: l.baseCalcul !== undefined && l.baseCalcul !== null ? Number(l.baseCalcul) : fullBase,
+        fullBase: fullBase,
+        tauxOrNb: tauxOrNb,
+        unit: unit,
+        gain: isGain ? Number(l.gain !== undefined && l.gain !== null ? l.gain : (l.montant || 0)) : null,
+        retenue: !isGain ? Number(l.retenue !== undefined && l.retenue !== null ? l.retenue : (l.montant || 0)) : null,
+        ordre: l.ordre !== undefined ? l.ordre : (idx + 1),
+        tauxFormatted: l.tauxFormatted
+      };
+    });
+
+    this.editableLines = lines;
+    this.recalculerLignesVariables();
+  }
+
+  recalculerLignesVariables(): void {
+    if (!this.selectedBulletinForEdit || !this.editableLines) return;
+    const b = this.selectedBulletinForEdit;
+
+    // 1. Salaire de Base et Sursalaire (Jours travaillés sur 30)
+    const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
+    const surSalLine = this.editableLines.find(l => (l.code || '').includes('SUR_SALAIRE') || (l.name || '').includes('SUR-SALAIRE') || (l.name || '').includes('SURSALAIRE'));
+    const ancLine = this.editableLines.find(l => (l.code || '').includes('ANC') || (l.name || '').includes('ANCIENNET'));
+
+    let workedDays = 30;
+    if (salBaseLine) {
+      workedDays = Number(salBaseLine.tauxOrNb);
+      if (isNaN(workedDays) || workedDays < 0) workedDays = 0;
+      if (workedDays > 31) workedDays = 31;
+      salBaseLine.tauxOrNb = workedDays;
+    }
+    // Synchroniser automatiquement le sur-salaire
+    if (surSalLine) {
+      surSalLine.tauxOrNb = workedDays;
     }
 
-    this.showEditVariablesModal = true;
+    const ratio = Math.max(0, Math.min(31, workedDays)) / 30;
+
+    if (salBaseLine) {
+      const fullSb = Number(salBaseLine.fullBase || b.salaireBaseOriginal || b.salaireBase || 0);
+      salBaseLine.gain = Math.round(fullSb * ratio);
+      salBaseLine.baseCalcul = fullSb;
+    }
+
+    if (surSalLine) {
+      const fullSs = Number(surSalLine.fullBase || b.surSalaireOriginal || b.surSalaire || 0);
+      surSalLine.gain = Math.round(fullSs * ratio);
+      surSalLine.baseCalcul = fullSs;
+    }
+
+    const sbGain = salBaseLine ? (salBaseLine.gain || 0) : Number(b.salaireBase || 0);
+    const ssGain = surSalLine ? (surSalLine.gain || 0) : Number(b.surSalaire || 0);
+
+    // 2. Prime d'ancienneté (taux % appliqué sur Salaire de Base)
+    let ancGain = 0;
+    if (ancLine) {
+      ancLine.baseCalcul = sbGain;
+      const tauxAnc = Number(ancLine.tauxOrNb) || 0;
+      ancLine.gain = Math.round(sbGain * (tauxAnc / 100));
+      ancGain = ancLine.gain;
+    }
+
+    // 3. Indemnités conventionnelles (proratisées avec le ratio jours travaillés / 30)
+    // IMPORTANT : Le montant nominal (fullBase) est proratisé par la présence (ratio),
+    // et JAMAIS multiplié par le taux d'exonération fiscale !
+    for (const l of this.editableLines) {
+      if (l === salBaseLine || l === surSalLine || l === ancLine) continue;
+      if (l.typeLigne === 'GAIN') {
+        const fullAmount = Number(l.fullBase !== undefined && l.fullBase !== null ? l.fullBase : (l.baseCalcul || l.gain || 0));
+        l.baseCalcul = fullAmount;
+        l.gain = Math.round(fullAmount * ratio);
+      }
+    }
+
+    // 4. Calcul du Salaire Brut (Total Avoirs)
+    let brut = 0;
+    for (const l of this.editableLines) {
+      if (l.typeLigne === 'GAIN') {
+        brut += (l.gain || 0);
+      }
+    }
+    this.modalSalaireBrut = brut;
+
+    // 5. Cotisation CNSS (Strictement 5.5% plafonné à 800 000 FCFA, arrondi par excès CEILING)
+    const cnssLine = this.editableLines.find(l => (l.code || '').includes('CNSS') || (l.name || '').includes('CNSS'));
+    let cnssVal = 0;
+    if (cnssLine) {
+      const baseCnss = Math.min(brut, 800000);
+      cnssLine.baseCalcul = baseCnss;
+      cnssLine.rate = 5.5;
+      cnssLine.taux = 5.5;
+      cnssLine.tauxOrNb = 5.5;
+      cnssLine.tauxFormatted = '5,5 %';
+      if (workedDays === 30 && b.cotisationCnssOriginal) {
+        cnssVal = Number(b.cotisationCnssOriginal);
+      } else {
+        cnssVal = Math.ceil(baseCnss * 0.055);
+      }
+      cnssLine.retenue = cnssVal;
+      cnssLine.amount = cnssVal;
+      cnssLine.montant = cnssVal;
+    }
+    this.modalCotisationCnss = cnssVal;
+
+    // 6. Cotisation CRRAE / RCPNC (6% sur SB + SS + ANC, arrondi par excès CEILING)
+    const crraeLine = this.editableLines.find(l => (l.code || '').includes('CRRAE') || (l.name || '').includes('CRRAE'));
+    let crraeVal = 0;
+    if (crraeLine) {
+      const baseCrrae = sbGain + ssGain + ancGain;
+      crraeLine.baseCalcul = baseCrrae;
+      if (workedDays === 30 && b.cotisationCrraeOriginal) {
+        crraeVal = Number(b.cotisationCrraeOriginal);
+      } else {
+        crraeVal = Math.ceil(baseCrrae * 0.06);
+      }
+      crraeLine.retenue = crraeVal;
+    }
+    this.modalCotisationCrrae = crraeVal;
+
+    // 7. Base Imposable et IUTS
+    let baseImposable = 0;
+    if (workedDays === 30 && b.baseImposableOriginal) {
+      baseImposable = Number(b.baseImposableOriginal);
+    } else {
+      const fullBaseImp = Number(b.baseImposableOriginal || b.baseImposable || 0);
+      if (fullBaseImp > 0) {
+        baseImposable = Math.round(fullBaseImp * ratio);
+      } else {
+        const brutApresCnss = Math.max(0, brut - cnssVal);
+        const abattement = Math.min(75000, Math.round(brutApresCnss * 0.20));
+        baseImposable = Math.max(0, brutApresCnss - abattement);
+      }
+    }
+    this.modalBaseImposable = baseImposable;
+
+    const iutsLine = this.editableLines.find(l => (l.code || '').includes('IUTS') || (l.name || '').includes('IUTS'));
+    let iutsVal = 0;
+    if (iutsLine) {
+      iutsLine.baseCalcul = baseImposable;
+      if (workedDays === 30 && b.impotIutsOriginal) {
+        iutsVal = Number(b.impotIutsOriginal);
+      } else {
+        const charges = b.nombreCharges !== undefined ? b.nombreCharges : (b.partsFiscales ? Math.max(0, b.partsFiscales - 1) : 0);
+        iutsVal = this.calculerIutsBareme(baseImposable, charges);
+      }
+      iutsLine.retenue = iutsVal;
+    }
+    this.modalImpotIuts = iutsVal;
+
+    // 8. Retenue Fonds de Solidarité (FSP) (1% du net cédulaire = Brut - CNSS - IUTS)
+    const fspLine = this.editableLines.find(l => (l.code || '').includes('SOLIDAR') || (l.name || '').includes('SOLIDAR') || (l.code || '').includes('FSP'));
+    let fspVal = 0;
+    if (fspLine) {
+      const baseSol = Math.max(0, brut - cnssVal - iutsVal);
+      fspLine.baseCalcul = baseSol;
+      if (workedDays === 30 && b.cotisationSolidariteOriginal) {
+        fspVal = Number(b.cotisationSolidariteOriginal);
+      } else {
+        fspVal = Math.ceil(baseSol * 0.01);
+      }
+      fspLine.retenue = fspVal;
+    }
+    this.modalCotisationSolidarite = fspVal;
+
+    // 9. Autres retenues salariales (Prêts, Trop-perçus, Avances, etc.)
+    for (const l of this.editableLines) {
+      if (l === cnssLine || l === crraeLine || l === iutsLine || l === fspLine) continue;
+      if (l.typeLigne !== 'GAIN') {
+        const base = Number(l.fullBase !== undefined ? l.fullBase : (l.baseCalcul || l.retenue || 0));
+        l.retenue = base;
+      }
+    }
+
+    // 10. Total Retenues et Net à Payer
+    let totRet = 0;
+    for (const l of this.editableLines) {
+      if (l.typeLigne !== 'GAIN') {
+        totRet += (l.retenue || 0);
+      }
+    }
+    this.modalTotalRetenues = totRet;
+    this.modalSalaireNet = Math.max(0, brut - totRet);
+  }
+
+  calculerIutsBareme(rawBase: number, charges: number = 0): number {
+    if (!rawBase || rawBase <= 30000) return 0;
+    // Troncature légale à la centaine inférieure (CGI Burkina Faso)
+    const base = Math.floor(rawBase / 100) * 100;
+    let brutTax = 0;
+    if (base > 250000) {
+      brutTax = 39430 + (base - 250000) * 0.25;
+    } else if (base > 170000) {
+      brutTax = 22070 + (base - 170000) * 0.217;
+    } else if (base > 120000) {
+      brutTax = 12870 + (base - 120000) * 0.184;
+    } else if (base > 80000) {
+      brutTax = 6590 + (base - 80000) * 0.157;
+    } else if (base > 50000) {
+      brutTax = 2420 + (base - 50000) * 0.139;
+    } else {
+      brutTax = (base - 30000) * 0.121;
+    }
+
+    let redRate = 0;
+    if (charges === 1) redRate = 0.08;
+    else if (charges === 2) redRate = 0.10;
+    else if (charges === 3) redRate = 0.12;
+    else if (charges >= 4) redRate = 0.14;
+
+    const reduction = Math.ceil(brutTax * redRate);
+    const finalTax = Math.max(0, Math.ceil(brutTax - reduction));
+    return finalTax;
   }
 
   getTauxHoraire(): number {
@@ -855,62 +1268,87 @@ export class GenererBulletinsComponent implements OnInit {
   fermerModalModifierVariables(): void {
     this.showEditVariablesModal = false;
     this.selectedBulletinForEdit = null;
+    this.editableLines = [];
   }
 
   sauvegarderVariablesEtRecalculer(): void {
     if (!this.selectedBulletinForEdit) return;
 
     const b = this.selectedBulletinForEdit;
-    const workedDays = Number(this.editVariablesForm.workedDays) || 30;
-    const scheduledDays = Number(this.editVariablesForm.scheduledWorkingDays) || 30;
+    this.recalculerLignesVariables();
 
-    b.workedDays = workedDays;
-    b.scheduledWorkingDays = scheduledDays;
-    b.motifAjustement = this.editVariablesForm.motifAjustement;
+    const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
+    const surSalLine = this.editableLines.find(l => (l.code || '').includes('SUR_SALAIRE') || (l.name || '').includes('SUR-SALAIRE'));
+    const workedDays = salBaseLine ? Number(salBaseLine.tauxOrNb) || 30 : 30;
 
-    const empId = Number(b.employeeId || b.employee?.id);
-    const sessId = this.currentSession?.id;
-
-    if (!sessId || !empId) {
-      this.fermerModalModifierVariables();
-      return;
+    let totIndem = 0;
+    for (const l of this.editableLines) {
+      const cd = (l.code || '').toUpperCase();
+      if ((cd.startsWith('IND_') || (l.name || '').includes('INDEMNITE')) && l.typeLigne === 'GAIN') {
+        totIndem += (l.gain || 0);
+      }
     }
+
+    const payloadLines = this.editableLines.map((l, idx) => ({
+      bulletinId: b.id,
+      code: l.code || `LINE_${idx + 1}`,
+      libelle: (l.name || l.libelle || '').replace(/[()]/g, '').trim(),
+      name: (l.name || l.libelle || '').replace(/[()]/g, '').trim(),
+      typeLigne: l.typeLigne || (l.gain !== null ? 'GAIN' : 'RETENUE'),
+      baseCalcul: l.baseCalcul || 0,
+      taux: l.tauxOrNb !== undefined ? Number(l.tauxOrNb) : null,
+      rate: l.tauxOrNb !== undefined ? Number(l.tauxOrNb) : null,
+      montant: l.typeLigne === 'GAIN' ? (l.gain || 0) : (l.retenue || 0),
+      gain: l.typeLigne === 'GAIN' ? (l.gain || 0) : null,
+      retenue: l.typeLigne !== 'GAIN' ? (l.retenue || 0) : null,
+      ordre: l.ordre || (idx + 1)
+    }));
+
+    const updatePayload: any = {
+      id: b.id,
+      workedDays: workedDays,
+      scheduledWorkingDays: b.scheduledWorkingDays || 30,
+      salaireBase: salBaseLine ? salBaseLine.gain : b.salaireBase,
+      surSalaire: surSalLine ? surSalLine.gain : b.surSalaire,
+      totalIndemnites: totIndem,
+      totalAvoirs: this.modalSalaireBrut,
+      salaireBrut: this.modalSalaireBrut,
+      baseImposable: this.modalBaseImposable,
+      cotisationCnss: this.modalCotisationCnss,
+      impotIuts: this.modalImpotIuts,
+      cotisationCrrae: this.modalCotisationCrrae,
+      cotisationSolidarite: this.modalCotisationSolidarite,
+      totalRetenues: this.modalTotalRetenues,
+      salaireNet: this.modalSalaireNet,
+      lines: payloadLines
+    };
 
     this.isCalculating = true;
 
-    // Mise à jour des variables persistées en backend
-    const updatePayload = {
-      workedDays: workedDays,
-      scheduledWorkingDays: scheduledDays,
-      justificationEcart: b.motifAjustement || b.justificationEcart
-    };
-
-    const updateRequest$ = b.id 
+    const req$ = b.id
       ? this.http.put<any>(`${environment.apiUrl}/bulletins/${b.id}`, updatePayload)
       : of(null);
 
-    updateRequest$.pipe(
-      catchError(() => of(null))
-    ).subscribe(() => {
-      // Déclenche le recalcul complet officiel côté Spring Boot / PostgreSQL
-      this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${sessId}/generer`, [empId]).pipe(
-        catchError(err => {
-          alert('Erreur lors du recalcul serveur: ' + (err?.error?.message || err.message));
-          return of([]);
-        })
-      ).subscribe(recalculatedList => {
-        this.isCalculating = false;
-        if (recalculatedList && recalculatedList.length > 0) {
-          const updatedDto = this.adapterBulletinFromBackend(recalculatedList[0]);
-          const idx = this.bulletins.findIndex(item => String(item.employeeId) === String(empId) || String(item.id) === String(updatedDto.id));
-          if (idx >= 0) {
-            this.bulletins[idx] = updatedDto;
-          } else {
-            this.bulletins.push(updatedDto);
-          }
+    req$.pipe(
+      catchError(err => {
+        alert('Erreur lors de la mise à jour du bulletin: ' + (err?.error?.message || err.message));
+        return of(null);
+      })
+    ).subscribe(savedDto => {
+      this.isCalculating = false;
+      if (savedDto) {
+        const updatedDto = this.adapterBulletinFromBackend(savedDto);
+        const idx = this.bulletins.findIndex(item => String(item.employeeId) === String(b.employeeId) || String(item.id) === String(b.id));
+        if (idx >= 0) {
+          this.bulletins[idx] = updatedDto;
+        } else {
+          this.bulletins.push(updatedDto);
         }
-        this.fermerModalModifierVariables();
-      });
+        if (this.selectedBulletin && (String(this.selectedBulletin.id) === String(b.id) || String(this.selectedBulletin.employeeId) === String(b.employeeId))) {
+          this.selectedBulletin = this.enrichSelectedBulletinLines(updatedDto);
+        }
+      }
+      this.fermerModalModifierVariables();
     });
   }
 
@@ -964,12 +1402,13 @@ export class GenererBulletinsComponent implements OnInit {
   enrichSelectedBulletinLines(b: any): any {
     if (!b) return b;
 
-    let lines: Array<{ name: string; gain?: number; retenue?: number; baseCalcul?: number; tauxFormatted?: string; code?: string; ordre?: number }> = [];
+    let lines: Array<{ name: string; gain?: number; retenue?: number; baseCalcul?: number; tauxFormatted?: string; code?: string; ordre?: number; typeLigne?: string }> = [];
 
     if (b.lines && b.lines.length > 0) {
       lines = b.lines.map((l: any) => {
         const cd = (l.code || '').toUpperCase();
-        const nm = (l.libelle || l.name || '').toUpperCase();
+        const rawName = (l.libelle || l.name || '').trim();
+        const nm = rawName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
         const isRetenue = l.typeLigne === 'RETENUE' || l.typeLigne === 'RETENUE_SOCIALE' || l.typeLigne === 'IMPOT' ||
           l.typeLigne === 'PRECOMPTE' || l.category === 'RETENUE' || l.category === 'PRECOMPTE' ||
@@ -988,16 +1427,23 @@ export class GenererBulletinsComponent implements OnInit {
         const retenueVal = l.retenue !== undefined ? l.retenue : (!isGain ? montant : undefined);
 
         let tauxStr = '';
-        if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm === 'SALAIRE DE BASE' || nm === 'SUR-SALAIRE' || nm === 'SURSALAIRE') {
-          tauxStr = String(b.workedDays || 30);
+        if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+          const days = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31)
+            ? l.taux
+            : (b.workedDays !== undefined && b.workedDays !== null ? b.workedDays : 30);
+          tauxStr = String(days);
+        } else if (cd.includes('ICCP') || nm.includes('CONGÉS') || nm.includes('CONGES')) {
+          tauxStr = l.taux !== undefined && l.taux !== null ? String(l.taux) : '';
+        } else if (cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31) ? String(l.taux) : (l.taux !== undefined ? `${l.taux} %` : '');
         } else if (cd.includes('TROP') || cd.includes('PREC') || nm.includes('TROP') || nm.includes('PRECOMPTE')) {
           tauxStr = '';
         } else if (l.tauxFormatted) {
-          tauxStr = l.tauxFormatted;
+          tauxStr = l.tauxFormatted.replace(/[()]/g, '').trim();
         } else if (l.taux !== undefined && l.taux !== null && l.taux !== '') {
-          if (cd.includes('IUTS')) {
+          if (cd.includes('IUTS') || nm.includes('IUTS')) {
             const tVal = Number(l.taux);
-            tauxStr = tVal > 0 ? `${tVal} %` : 'Barème';
+            tauxStr = String(Math.round(tVal));
           } else {
             tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
           }
@@ -1018,6 +1464,25 @@ export class GenererBulletinsComponent implements OnInit {
       }).filter((l: any) => l !== null);
     }
 
+    const ancVal = b.primeAnciennete != null ? Number(b.primeAnciennete) : 0;
+    if (ancVal > 0 && !lines.some((l: any) => (l.code || '').includes('ANC') || (l.name || '').includes('ANCIENNET'))) {
+      lines.push({
+        code: 'PRIME_ANC',
+        name: "PRIME D'ANCIENNETE",
+        typeLigne: 'GAIN',
+        gain: ancVal,
+        baseCalcul: b.salaireBase || 0,
+        tauxFormatted: ''
+      });
+    }
+
+    lines = lines.filter((l: any) => {
+      const g = l.gain != null ? Number(l.gain) : 0;
+      const r = l.retenue != null ? Number(l.retenue) : 0;
+      const m = l.montant != null ? Number(l.montant) : 0;
+      return g > 0 || r > 0 || m > 0;
+    });
+
     const getOrderWeight = (l: any): number => {
       const cd = (l.code || '').toUpperCase();
       const nm = (l.name || l.libelle || '').toUpperCase();
@@ -1036,14 +1501,15 @@ export class GenererBulletinsComponent implements OnInit {
       if (cd.includes('CRRAE') || nm.includes('CRRAE')) return 22;
       if (cd.includes('SOLIDAR') || cd.includes('FSP') || nm.includes('SOLIDARITE') || nm.includes('SOLIDARITÉ')) return 23;
 
-      // 3. Salaire de base et sur-salaire
+      // 3. Salaire de base, sur-salaire et prime d'ancienneté
       if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP'))) return 1;
       if (cd === 'SUR_SALAIRE' || nm.includes('SURSALAIRE') || nm.includes('SUR-SALAIRE')) return 2;
-      if (cd.includes('CAISSE') || nm.includes('CAISSE')) return 3;
-      if (cd.includes('SUJETION') || cd.includes('SUJ') || nm.includes('SUJETION') || nm.includes('SUJÉTION')) return 4;
-      if (cd.includes('TRANS') || cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT') || nm.includes('DÉPLACEMENT')) return 5;
-      if (cd.includes('LOG') || nm.includes('LOGEMENT') || nm.includes('MAISON')) return 6;
-      if (cd.includes('CASH') || cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT') || nm.includes('GUICHET')) return 7;
+      if (cd.includes('ANC') || nm.includes('ANCIENNET')) return 3;
+      if (cd.includes('CAISSE') || nm.includes('CAISSE')) return 4;
+      if (cd.includes('SUJETION') || cd.includes('SUJ') || nm.includes('SUJETION') || nm.includes('SUJÉTION')) return 5;
+      if (cd.includes('TRANS') || cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT') || nm.includes('DÉPLACEMENT')) return 6;
+      if (cd.includes('LOG') || nm.includes('LOGEMENT') || nm.includes('MAISON')) return 7;
+      if (cd.includes('CASH') || cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT') || nm.includes('GUICHET')) return 8;
       if (l.gain !== undefined && l.gain !== null && l.gain > 0) return 10;
 
       if (l.ordre !== undefined && l.ordre !== null && l.ordre > 0) {
@@ -1075,10 +1541,9 @@ export class GenererBulletinsComponent implements OnInit {
     copy.dateEmbauche = copy.dateEmbauche && copy.dateEmbauche !== '—' ? copy.dateEmbauche : (emp?.dateEmbauche || '—');
     copy.service = copy.service && copy.service !== '—' ? copy.service : (emp?.service || emp?.departement || emp?.direction || '—');
     copy.numeroCnss = copy.numeroCnss && copy.numeroCnss !== '—' ? copy.numeroCnss : (emp?.numeroCnss || emp?.numeroCNI || '—');
-    copy.situationFamiliale = copy.situationFamiliale || copy.situationMatrimoniale || emp?.situationFamiliale || emp?.situationMatrimoniale || 'Célibataire';
+    copy.situationFamiliale = (copy.situationFamiliale || copy.situationMatrimoniale || emp?.situationFamiliale || emp?.situationMatrimoniale || 'Célibataire').replace(/[()]/g, '').trim();
     copy.situationMatrimoniale = copy.situationFamiliale;
-    const isMarriedGen = copy.situationFamiliale.toUpperCase().includes('MARI');
-    copy.partsFiscales = copy.partsFiscales != null ? copy.partsFiscales : ((isMarriedGen ? 2 : 1) + (copy.nombreCharges || 0));
+    copy.partsFiscales = copy.partsFiscales != null ? copy.partsFiscales : (copy.nombreCharges != null ? copy.nombreCharges : 0);
     copy.classification = copy.classification && copy.classification !== '—' ? copy.classification : (copy.grade || (emp ? this.getGradeConcat(emp) : '—'));
     let genAnc = copy.anciennete != null ? copy.anciennete : (emp?.anciennete != null ? emp.anciennete : (copy.ancienneteAnnees != null ? copy.ancienneteAnnees : 0));
     if (genAnc === 0 && (copy.dateEmbauche || emp?.dateEmbauche)) {
@@ -1108,7 +1573,8 @@ export class GenererBulletinsComponent implements OnInit {
     copy.cumulCnss = (copy.cumulCnssExercice != null && copy.cumulCnssExercice > 0) ? copy.cumulCnssExercice : (copy.cumulCnss != null && copy.cumulCnss > 0 ? copy.cumulCnss : (copy.cotisationCnss || copy.cotisationCNSS || 0));
     copy.cumulIuts = (copy.cumulIutsExercice != null && copy.cumulIutsExercice > 0) ? copy.cumulIutsExercice : (copy.cumulIuts != null && copy.cumulIuts > 0 ? copy.cumulIuts : (copy.impotIuts || copy.impotIUTS || 0));
     copy.cumulCrrae = (copy.cumulCrraeExercice != null && copy.cumulCrraeExercice > 0) ? copy.cumulCrraeExercice : (copy.cumulCrrae != null && copy.cumulCrrae > 0 ? copy.cumulCrrae : (copy.cotisationCrrae || copy.cotisationCrraeAgent || 0));
-    copy.banque = copy.banque || (emp && emp.banque) || 'BANQUE POSTALE';
+    copy.banque = (copy.banque || (emp && emp.banque) || 'BANQUE POSTALE').replace(/[()]/g, '').trim();
+    if (copy.modeReglement) copy.modeReglement = copy.modeReglement.replace(/[()]/g, '').trim();
     const rawIban = copy.numeroCompteBancaire || emp?.iban;
     copy.numeroCompteBancaire = (rawIban && !rawIban.includes('0000000000') && rawIban !== '08000002501' && rawIban !== '—')
       ? rawIban

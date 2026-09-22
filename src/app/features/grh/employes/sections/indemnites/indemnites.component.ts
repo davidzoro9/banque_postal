@@ -108,6 +108,7 @@ export class IndemnitesComponent implements OnInit {
           : `Indemnité « ${item.libelle} » retirée avec succès.`;
         this.showToast(msg);
         this.loadIndemnities();
+        this.employeeService.getById(this.empId).subscribe(e => { if (e) this.employee = e; });
       },
       error: (err) => {
         console.error('Erreur bascule indemnité:', err);

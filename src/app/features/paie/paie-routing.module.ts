@@ -15,9 +15,14 @@ import { DsnComponent } from './declarations/dsn/dsn.component';
 import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
 import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
+import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.component';
 
 const routes: Routes = [
   { path: '', component: PaieOverviewComponent },
+  
+  // États de synthèse
+  { path: 'etats-synthese', component: EtatsSyntheseComponent },
+  { path: 'etats', redirectTo: 'etats-synthese', pathMatch: 'full' },
   
   // 1. Traitements & Bulletins
   { path: 'lots', component: GenererBulletinsComponent },

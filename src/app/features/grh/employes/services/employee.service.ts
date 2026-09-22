@@ -25,6 +25,8 @@ const createDefaultEmployee = (partial: Partial<Employee>): Employee => {
     lieuNaissance: partial.lieuNaissance || 'Ouagadougou',
     nationalite: partial.nationalite || 'Burkinabè',
     numeroCNI: partial.numeroCNI || 'B0000000',
+    situationFamiliale: partial.situationFamiliale || partial.situationMatrimoniale || 'Célibataire',
+    situationMatrimoniale: partial.situationFamiliale || partial.situationMatrimoniale || 'Célibataire',
     adresse: partial.adresse || 'Ouagadougou',
     ville: partial.ville || 'Ouagadougou',
     codePostal: partial.codePostal || '',
@@ -93,6 +95,10 @@ export class EmployeeService {
   private toBackend(emp: Partial<Employee>): any {
     const result: any = { ...emp };
 
+    if (emp.ancienneteReprise !== undefined) {
+      result.ancienneteReprise = Number(emp.ancienneteReprise) || 0;
+    }
+
     // Map JSON fields & extraData for PostgreSQL safely without forced defaults
     const extraDataObj: any = {};
     if (emp.categoriePro) {
@@ -127,6 +133,9 @@ export class EmployeeService {
     result.grilleSalarialeId =  emp.grilleSalarialeId ? Number(emp.grilleSalarialeId) : null;
 
     result.regimeSecuriteSocialId = emp.regimeSecuriteSocialId ? Number(emp.regimeSecuriteSocialId) : null;
+    if (emp.superviseurId !== undefined) {
+      result.superviseur_id = emp.superviseurId ? Number(emp.superviseurId) : null;
+    }
 
     if (emp.contactsUrgence) result.contactsUrgenceJson = JSON.stringify(emp.contactsUrgence);
     if (emp.autresIndemnites) result.autresIndemnitesJson = JSON.stringify(emp.autresIndemnites);
@@ -163,6 +172,9 @@ export class EmployeeService {
 
   private toFrontend(db: any): Employee {
     const result: any = { ...db };
+    result.situationFamiliale = db.situationFamiliale || db.situationMatrimoniale || 'Célibataire';
+    result.situationMatrimoniale = result.situationFamiliale;
+    result.ancienneteReprise = db.ancienneteReprise != null ? Number(db.ancienneteReprise) : 0;
     
     // Parse JSON fields safely
     try { result.contactsUrgence = db.contactsUrgenceJson ? JSON.parse(db.contactsUrgenceJson) : []; } catch (e) { result.contactsUrgence = []; }
@@ -219,6 +231,11 @@ export class EmployeeService {
     result.regimeSecuriteSocialCode = db.regimeSecuriteSocialCode || '';
 
     result.regimeSecuriteSocialLibelle =  db.regimeSecuriteSocialLibelle || '';
+
+    result.superviseurId = db.superviseurId != null ? String(db.superviseurId) : (db.superviseur_id != null ? String(db.superviseur_id) : undefined);
+    result.superviseurNom = db.superviseurNom || '';
+    result.superviseurPrenom = db.superviseurPrenom || '';
+    result.superviseurMatricule = db.superviseurMatricule || '';
 
     result.fonction = db.fonctionLibelle || result.fonction || '';
     result.poste = db.emploiLibelle || result.poste || '';
@@ -319,10 +336,11 @@ export class EmployeeService {
     );
   }
 
-  simulateSalary(id: string, salaireBase?: number, surSalaire?: number): Observable<EmployeeSalaryInformation> {
+  simulateSalary(id: string, salaireBase?: number, surSalaire?: number, ancienneteReprise?: number): Observable<EmployeeSalaryInformation> {
     const params: Record<string, string> = {};
     if (salaireBase != null) params['salaireBase'] = String(salaireBase);
     if (surSalaire != null) params['surSalaire'] = String(surSalaire);
+    if (ancienneteReprise != null) params['ancienneteReprise'] = String(ancienneteReprise);
     return this.http.get<EmployeeSalaryInformation>(
       `${environment.apiUrl}/employes/${id}/informations-salariales/simulation`,
       { params }
@@ -376,6 +394,21 @@ export class EmployeeService {
     const current = this.employees.find(employee => String(employee.id) === String(id));
     const backendData = this.toBackend(current ? { ...current, ...data } : data);
     return this.http.put<any>(`${environment.apiUrl}/employes/${id}`, backendData).pipe(
+      map(item => {
+        const updated = this.toFrontend(item);
+        this.employees = this.employees.map(e => String(e.id) === String(id) ? updated : e);
+        this.employeesSubject.next(this.employees);
+        return updated;
+      })
+    );
+  }
+
+  updateSuperviseur(id: string | number, superviseurId?: string | number | null): Observable<Employee> {
+    const params: any = {};
+    if (superviseurId != null && String(superviseurId).trim() !== '') {
+      params.superviseurId = String(superviseurId);
+    }
+    return this.http.put<any>(`${environment.apiUrl}/employes/${id}/superviseur`, null, { params }).pipe(
       map(item => {
         const updated = this.toFrontend(item);
         this.employees = this.employees.map(e => String(e.id) === String(id) ? updated : e);

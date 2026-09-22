@@ -11,6 +11,7 @@ export interface ParametragePaieRule {
   taux: number;
   actif: boolean;
   description?: string;
+  baseCalcul?: string;
 }
 
 @Component({
@@ -285,7 +286,8 @@ export class ParametragePaieComponent implements OnInit {
           typeRetenueId: d.typeRetenueId,
           taux: d.taux || 0,
           actif: d.actif !== undefined ? d.actif : true,
-          description: d.description || ''
+          description: d.description || '',
+          baseCalcul: d.baseCalcul || 'REMUNERATION_BRUTE'
         }));
         this.loading = false;
       },
@@ -354,7 +356,7 @@ export class ParametragePaieComponent implements OnInit {
       actif: this.formRule.actif,
       description: this.formRule.description,
       typeRetenueId: foundTypeId,
-      baseCalcul: 'REMUNERATION_BRUTE'
+      baseCalcul: this.formRule.baseCalcul || 'REMUNERATION_BRUTE'
     };
 
     if (this.modeEdition && this.formRule.id) {

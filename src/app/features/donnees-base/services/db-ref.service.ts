@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
-export type BaseCalculRetenue = 'SALAIRE_BASE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
+export type BaseCalculRetenue = 'SALAIRE_BASE' | 'SALAIRE_BASE_SUR_SALAIRE' | 'REMUNERATION_BRUTE' | 'BASE_IMPOSABLE';
 
 export interface RefItem {
   id?: string;
@@ -12,6 +12,7 @@ export interface RefItem {
   libelle: string;
   name?: string;
   description: string;
+  ordre?: number;
   actif: boolean;
   montant?: number;
   agenceId?: string;
@@ -167,9 +168,16 @@ const BACKEND_MAP: Record<string, {
   'emploi': {
     segment: 'emplois',
     getAllPath: '/all',
-    toFront: dto => ({ id: String(dto.id), code: dto.code || `EMP-${dto.id}`, libelle: dto.name || dto.libelle || dto.code || 'Emploi', description: dto.description || '', actif: true }),
-    toBack:  item => ({ code: item.code, name: item.libelle }),
-    toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code || `EMP-${dto.id}`,
+      libelle: dto.name || dto.libelle || dto.code || 'Emploi',
+      description: dto.description || '',
+      ordre: dto.ordre != null ? Number(dto.ordre) : undefined,
+      actif: true
+    }),
+    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description, ordre: item.ordre }),
+    toBackUpdate: item => ({ id: item.id ? Number(item.id) : null, code: item.code, name: item.libelle, description: item.description, ordre: item.ordre }),
   },
   'direction': {
     segment: 'directions',
@@ -270,6 +278,7 @@ const BACKEND_MAP: Record<string, {
       description: dto.description || '',
       actif: dto.actif ?? true,
       typeNomination: dto.typeNomination ? dto.typeNomination : 'NON_NOMMEE',
+      ordre: dto.ordre != null ? Number(dto.ordre) : undefined,
       indemnites: dto.indemnites || []
     }),
     toBack:  item => ({
@@ -277,15 +286,17 @@ const BACKEND_MAP: Record<string, {
       name: item.libelle,
       description: item.description || '',
       typeNomination: item.typeNomination || 'NON_NOMMEE',
+      ordre: item.ordre,
       actif: item.actif ?? true,
       indemnites: item.indemnites || []
     }),
     toBackUpdate: item => ({
-      id: item.id,
+      id: item.id ? Number(item.id) : null,
       code: item.code,
       name: item.libelle,
       description: item.description || '',
       typeNomination: item.typeNomination || 'NON_NOMMEE',
+      ordre: item.ordre,
       actif: item.actif ?? true,
       indemnites: item.indemnites || []
     }),
@@ -566,48 +577,7 @@ const BACKEND_MAP: Record<string, {
   },
 };
 
-const SALARY_MATRIX: Record<string, { catCode: string; groupe: string; values: number[] }> = {
-  '1':     { catCode: 'C1',  groupe: 'GROUPE I',   values: [95945, 105540, 116093, 127703, 140473, 154520, 169972, 186970, 205667, 226233, 248857, 273742, 301117, 331228, 364351] },
-  '2':     { catCode: 'C2',  groupe: 'GROUPE I',   values: [104474, 114921, 126414, 139055, 152960, 168256, 185082, 203590, 223949, 246344, 270979, 298077, 327884, 360673, 396740] },
-  '3':     { catCode: 'C3',  groupe: 'GROUPE I',   values: [107135, 117849, 129633, 142597, 156856, 172542, 189796, 208776, 229653, 252619, 277881, 305669, 336236, 369859, 406845] },
-  '4':     { catCode: 'C4',  groupe: 'GROUPE I',   values: [115558, 127114, 139825, 153808, 169188, 186107, 204718, 225190, 247709, 272480, 299728, 329700, 362671, 398938, 438831] },
-  '5':     { catCode: 'C5',  groupe: 'GROUPE I',   values: [128831, 141714, 155886, 171474, 188621, 207484, 228232, 251055, 276161, 303777, 334154, 367570, 404327, 444760, 489236] },
-  '6':     { catCode: 'C6',  groupe: 'GROUPE I',   values: [157940, 173734, 191107, 210218, 231240, 254364, 279800, 307780, 338558, 372414, 409656, 450621, 495683, 545252, 599777] },
-  '7':     { catCode: 'C7',  groupe: 'GROUPE I',   values: [176441, 194085, 213494, 234843, 258327, 284160, 312576, 343834, 378217, 416039, 457643, 503407, 553747, 609122, 670034] },
-  'I':    { catCode: 'CL1', groupe: 'GROUPE II',  values: [173090, 190399, 209439, 230383, 253421, 278763, 306639, 337303, 371034, 408137, 448951, 493846, 543231, 597554, 657309] },
-  'II':   { catCode: 'CL2', groupe: 'GROUPE II',  values: [203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059] },
-  'III':  { catCode: 'CL3', groupe: 'GROUPE II',  values: [278697, 306567, 337223, 370946, 408040, 448844, 493729, 543102, 597412, 657153, 722868, 795155, 874671, 962138, 1058351] },
-  'IV':   { catCode: 'CL4', groupe: 'GROUPE II',  values: [405758, 446334, 490967, 540064, 594070, 653477, 718825, 790708, 869778, 956756, 1052432, 1157675, 1273442, 1400787, 1540865] },
-  'V':    { catCode: 'CL5', groupe: 'GROUPE III', values: [581390, 639529, 703482, 773830, 851213, 936334, 1029968, 1132965, 1246261, 1370887, 1507976, 1658774, 1824651, 2007116, 2207828] },
-  'VI':   { catCode: 'CL6', groupe: 'GROUPE III', values: [599438, 659382, 725320, 797852, 877637, 965401, 1061941, 1168135, 1284949, 1413443, 1554788, 1710267, 1881293, 2069423, 2276365] },
-  'VII':  { catCode: 'CL7', groupe: 'GROUPE III', values: [631454, 694599, 764059, 840465, 924512, 1016963, 1118659, 1230525, 1353578, 1488936, 1637829, 1801612, 1981773, 2179950, 2397946] },
-  'VIII': { catCode: 'CL8', groupe: 'GROUPE III', values: [710386, 781425, 859567, 945524, 1040076, 1144084, 1258492, 1384341, 1522775, 1675053, 1842558, 2026814, 2229496, 2452445, 2697690] }
-};
 
-function buildOfficialGridItems(): RefItem[] {
-  const items: RefItem[] = [];
-  let idCounter = 1;
-  for (const [code, info] of Object.entries(SALARY_MATRIX)) {
-    info.values.forEach((amount, index) => {
-      const echNum = index + 1;
-      const echCode = echNum < 10 ? `E0${echNum}` : `E${echNum}`;
-      const gradeConcat = `${info.catCode}${echCode}`;
-      items.push({
-        id: String(idCounter++),
-        code: info.catCode,
-        libelle: info.groupe,
-        grade: gradeConcat,
-        categorie: info.catCode,
-        echelle: info.groupe,
-        echellon: echCode,
-        description: `${info.groupe} (${info.catCode}) - ${echCode}`,
-        montant: amount,
-        actif: true
-      });
-    });
-  }
-  return items;
-}
 
 @Injectable({
   providedIn: 'root'
@@ -616,19 +586,7 @@ export class DbRefService {
   private cache: Record<string, BehaviorSubject<RefItem[]>> = {};
   public refChanges$ = new Subject<{ type: string; action: string; item?: RefItem }>();
 
-  constructor(private http: HttpClient) {
-    try {
-      const stored = localStorage.getItem('ref_grille-salariale');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (!Array.isArray(parsed) || parsed.length !== 225) {
-          localStorage.removeItem('ref_grille-salariale');
-        }
-      }
-    } catch (e) {
-      localStorage.removeItem('ref_grille-salariale');
-    }
-  }
+  constructor(private http: HttpClient) {}
 
   private getSubject(type: string): BehaviorSubject<RefItem[]> {
     if (!this.cache[type]) {
@@ -653,12 +611,7 @@ export class DbRefService {
     return !!BACKEND_MAP[type];
   }
 
-  // ─── Charge depuis mock localStorage ──────────────────────────────────────
-  private getMockItems(type: string): RefItem[] {
-    return [];
-  }
-
-  private saveMockItems(type: string, items: RefItem[]): void {
+  private notifyItemsUpdated(type: string, items: RefItem[]): void {
     this.getSubject(type).next(items);
     this.refChanges$.next({ type, action: 'update', item: items && items.length > 0 ? items[0] : undefined });
   }
@@ -746,8 +699,7 @@ export class DbRefService {
 
     const addLocalState = (newItem: RefItem): RefItem[] => {
       const newList = [...currentList.filter(i => !this.isSameItem(i, newItem, type)), newItem];
-      this.getSubject(type).next(newList);
-      this.saveMockItems(type, newList);
+      this.notifyItemsUpdated(type, newList);
       return newList;
     };
 
@@ -767,7 +719,6 @@ export class DbRefService {
             map(newItem => addLocalState(newItem)),
             catchError(err2 => {
               console.error(`[DbRefService] Backend post error for ${type}:`, err2);
-
               return throwError(() => this.mutationError(err2, `Impossible d'enregistrer ${type} dans la base de données.`));
             })
           );
@@ -775,9 +726,35 @@ export class DbRefService {
       );
     }
 
-    // Mock
-    const newItem: RefItem = { ...item, id: item.id || `loc_${Date.now()}` };
-    return of(addLocalState(newItem));
+    // Generic type saved to PostgreSQL via /api/ref-data/{type}
+    const genericBody = {
+      code: item.code,
+      libelle: item.libelle,
+      description: item.description || '',
+      grade: item.grade || null,
+      categorie: item.categorie || null,
+      taux: item.taux != null ? Number(item.taux) : null,
+      typeRetenue: item.typeRetenue || null,
+      actif: item.actif ?? true
+    };
+    return this.http.post<any>(`${environment.apiUrl}/ref-data/${type}`, genericBody).pipe(
+      map(dto => ({
+        id: String(dto.id),
+        code: dto.code,
+        libelle: dto.libelle,
+        description: dto.description || '',
+        grade: dto.grade,
+        categorie: dto.categorie,
+        taux: dto.taux,
+        typeRetenue: dto.typeRetenue,
+        actif: dto.actif ?? true
+      })),
+      map(newItem => addLocalState(newItem)),
+      catchError(err => {
+        console.error(`[DbRefService] Backend generic save error for ${type}:`, err);
+        return throwError(() => this.mutationError(err, `Impossible d'enregistrer ${type} dans la base de données.`));
+      })
+    );
   }
 
   // ─── UPDATE ────────────────────────────────────────────────────────────────
@@ -796,26 +773,54 @@ export class DbRefService {
         return i;
       });
       const finalItems = found ? newList : [...currentList, itemToSave];
-      this.getSubject(type).next(finalItems);
-      this.saveMockItems(type, finalItems);
+      this.notifyItemsUpdated(type, finalItems);
       return finalItems;
     };
 
-    if (mapping && id && !String(id).startsWith('mock_') && !String(id).startsWith('loc_')) {
+    if (mapping && id) {
       const body = mapping.toBackUpdate(updatedItem);
       return this.http.put<any>(`${environment.apiUrl}/${mapping.segment}/${id}`, body).pipe(
         map(dto => mapping.toFront(dto)),
         map(updated => updateLocalState(updated)),
         catchError(err => {
           console.error(`[DbRefService] Backend update error for ${type}:`, err);
-
           return throwError(() => this.mutationError(err, `Impossible de modifier ${type} dans la base de données.`));
         })
       );
     }
 
-    // Local / Mock update
-    return of(updateLocalState(updatedItem));
+    if (id) {
+      const genericBody = {
+        code: updatedItem.code,
+        libelle: updatedItem.libelle,
+        description: updatedItem.description || '',
+        grade: updatedItem.grade || null,
+        categorie: updatedItem.categorie || null,
+        taux: updatedItem.taux != null ? Number(updatedItem.taux) : null,
+        typeRetenue: updatedItem.typeRetenue || null,
+        actif: updatedItem.actif ?? true
+      };
+      return this.http.put<any>(`${environment.apiUrl}/ref-data/${type}/${id}`, genericBody).pipe(
+        map(dto => ({
+          id: String(dto.id),
+          code: dto.code,
+          libelle: dto.libelle,
+          description: dto.description || '',
+          grade: dto.grade,
+          categorie: dto.categorie,
+          taux: dto.taux,
+          typeRetenue: dto.typeRetenue,
+          actif: dto.actif ?? true
+        })),
+        map(updated => updateLocalState(updated)),
+        catchError(err => {
+          console.error(`[DbRefService] Backend generic update error for ${type}:`, err);
+          return throwError(() => this.mutationError(err, `Impossible de modifier ${type} dans la base de données.`));
+        })
+      );
+    }
+
+    return throwError(() => new Error(`Impossible de modifier ${type} : identifiant manquant.`));
   }
 
   // ─── DELETE ────────────────────────────────────────────────────────────────
@@ -826,12 +831,11 @@ export class DbRefService {
 
     const deleteLocalState = (): RefItem[] => {
       const newList = currentList.filter(i => !this.isSameItem(i, item as RefItem, type, item.code));
-      subject.next(newList);
-      this.saveMockItems(type, newList);
+      this.notifyItemsUpdated(type, newList);
       return newList;
     };
 
-    if (mapping && item.id && !String(item.id).startsWith('mock_') && !String(item.id).startsWith('loc_')) {
+    if (mapping && item.id) {
       return this.http.delete(
         `${environment.apiUrl}/${mapping.segment}/${item.id}`,
         { responseType: 'text' }
@@ -839,13 +843,25 @@ export class DbRefService {
         map(() => deleteLocalState()),
         catchError(err => {
           console.error(`[DbRefService] Backend delete error for ${type}:`, err);
-
-          return throwError(() => this.mutationError(err, `Impossible de supprimer ${type}.`));
+          return throwError(() => this.mutationError(err, `Impossible de supprimer ${type} de la base de données.`));
         })
       );
     }
 
-    return of(deleteLocalState());
+    if (item.id) {
+      return this.http.delete(
+        `${environment.apiUrl}/ref-data/${type}/${item.id}`,
+        { responseType: 'text' }
+      ).pipe(
+        map(() => deleteLocalState()),
+        catchError(err => {
+          console.error(`[DbRefService] Backend generic delete error for ${type}:`, err);
+          return throwError(() => this.mutationError(err, `Impossible de supprimer ${type} de la base de données.`));
+        })
+      );
+    }
+
+    return throwError(() => new Error(`Impossible de supprimer ${type} : identifiant manquant.`));
   }
 
   // ─── TOGGLE STATUS ─────────────────────────────────────────────────────────

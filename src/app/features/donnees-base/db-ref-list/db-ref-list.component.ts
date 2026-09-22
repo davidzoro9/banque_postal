@@ -84,8 +84,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     return [];
   }
 
-  categories: any[] = ['1', '2', '3', '4', '5', '6', '7', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-  echelons: any[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  categories: any[] = [];
+  echelons: any[] = [];
 
   // Grille salariale - listes par groupe (utilisant les codes officiels C1..C7, CL1..CL8)
   groupe1Classifications: string[] = [];

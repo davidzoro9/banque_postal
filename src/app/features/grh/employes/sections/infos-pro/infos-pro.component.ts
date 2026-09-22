@@ -101,13 +101,13 @@ export class InfosProComponent implements OnInit {
       employee: this.employeeService.getById(this.empId)
     }).subscribe({
       next: (res) => {
-        this.emplois = res.emplois || [];
+        this.emplois = (res.emplois || []).slice().sort((a, b) => (a.ordre ?? 999) - (b.ordre ?? 999));
         this.services = res.services || [];
         this.directions = res.directions || [];
         this.departements = res.departements || [];
         this.agences = res.agences || [];
-        this.fonctions = res.fonctions || [];
-        this.fonctionsList = res.fonctions || [];
+        this.fonctions = (res.fonctions || []).slice().sort((a, b) => (a.ordre ?? 999) - (b.ordre ?? 999));
+        this.fonctionsList = this.fonctions;
         this.grades = res.grades || [];
         this.categories = res.categories || [];
         this.echelons = res.echelons || [];
@@ -219,6 +219,27 @@ export class InfosProComponent implements OnInit {
     return `${day}/${month}/${year}`;
   }
 
+  get calculatedTotalAncienneteDisplay(): string {
+    const rep = Number(this.form?.get('ancienneteReprise')?.value ?? this.employee?.ancienneteReprise ?? 0);
+    let years = isNaN(rep) ? 0 : Math.max(0, rep);
+    const rawDate = this.form?.get('dateEmbauche')?.value || this.employee?.dateEmbauche;
+    if (rawDate) {
+      try {
+        const dateEmb = new Date(rawDate);
+        const now = new Date();
+        let internalYears = now.getFullYear() - dateEmb.getFullYear();
+        const m = now.getMonth() - dateEmb.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < dateEmb.getDate())) internalYears--;
+        if (internalYears > 0) years += internalYears;
+      } catch {}
+    }
+    return `${years} an${years > 1 ? 's' : ''}`;
+  }
+
+  onDateEmbaucheChange(): void {
+    this.triggerRecalculateNet();
+  }
+
   private buildForm(): void {
     this.form = this.fb.group({
       fonctionId:           [null],
@@ -252,7 +273,15 @@ export class InfosProComponent implements OnInit {
       groupeRetraiteId:     [null],
       matricule:            [''],
       numeroCnss:           [''],
+      ancienneteReprise:     [0, [Validators.min(0)]],
       surSalaire:           [0, [Validators.min(0)]]
+    });
+
+    this.form.get('ancienneteReprise')?.valueChanges.pipe(
+      debounceTime(250),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.triggerRecalculateNet();
     });
 
     this.form.get('surSalaire')?.valueChanges.pipe(
@@ -344,25 +373,92 @@ export class InfosProComponent implements OnInit {
       }
     }
 
-    let resolvedAgenceId = e.agenceId || null;
+    let resolvedEmploiId = e.emploiId != null ? String(e.emploiId) : null;
+    if (!resolvedEmploiId && e.poste) {
+      const targetPoste = (e.poste || '').trim().toLowerCase();
+      const foundEmp = this.emplois.find(emp => {
+        const name = (emp.libelle || emp.name || emp.code || '').trim().toLowerCase();
+        return name === targetPoste || targetPoste.includes(name) || name.includes(targetPoste);
+      });
+      if (foundEmp) resolvedEmploiId = String(foundEmp.id);
+    }
+
+    let resolvedFonctionId = e.fonctionId != null ? String(e.fonctionId) : null;
+    if (!resolvedFonctionId && fctValue && !fctValue.toLowerCase().includes('agent simple')) {
+      const targetFct = fctValue.trim().toLowerCase();
+      const foundFct = this.fonctions.find(f => {
+        const name = (f.libelle || f.name || f.code || '').trim().toLowerCase();
+        return name === targetFct || targetFct.includes(name) || name.includes(targetFct);
+      });
+      if (foundFct) resolvedFonctionId = String(foundFct.id);
+    }
+
+    let resolvedAgenceId = e.agenceId != null ? String(e.agenceId) : null;
     if (!resolvedAgenceId && e.agence) {
       const targetAg = (e.agence || '').trim().toLowerCase();
       const foundAg = this.agences.find(a => (a.libelle || a.code || '').trim().toLowerCase() === targetAg);
-      if (foundAg) resolvedAgenceId = foundAg.id || null;
+      if (foundAg) resolvedAgenceId = String(foundAg.id);
     }
 
-    let resolvedDirId = e.directionId || null;
+    let resolvedDepId = e.departmentId != null ? String(e.departmentId) : null;
+    if (!resolvedDepId && e.departement) {
+      const depName = (e.departement || '').trim().toLowerCase();
+      const foundDep = this.departements.find(d => (d.libelle || d.name || d.code || '').trim().toLowerCase() === depName);
+      if (foundDep) resolvedDepId = String(foundDep.id);
+    }
+
+    let resolvedDirId = e.directionId != null ? String(e.directionId) : null;
     if (!resolvedDirId && (e.direction || e.departement)) {
       const dirName = (e.direction || e.departement || '').trim().toLowerCase();
-      const foundDir = this.directions.find(d => (d.libelle || d.code || '').trim().toLowerCase() === dirName);
-      if (foundDir) resolvedDirId = foundDir.id || null;
+      const foundDir = this.directions.find(d => (d.libelle || d.name || d.code || '').trim().toLowerCase() === dirName);
+      if (foundDir) resolvedDirId = String(foundDir.id);
+    }
+    if (!resolvedDirId && resolvedDepId) {
+      const pDep = this.departements.find(d => String(d.id) === String(resolvedDepId));
+      if (pDep && pDep.directionId) resolvedDirId = String(pDep.directionId);
     }
 
-    let resolvedSrvId = e.serviceId || null;
+    let resolvedSrvId = e.serviceId != null ? String(e.serviceId) : null;
     if (!resolvedSrvId && e.service) {
       const targetSrv = (e.service || '').trim().toLowerCase();
-      const foundSrv = this.services.find(s => (s.libelle || s.code || '').trim().toLowerCase() === targetSrv);
-      if (foundSrv) resolvedSrvId = foundSrv.id || null;
+      const foundSrv = this.services.find(s => (s.libelle || s.name || s.code || '').trim().toLowerCase() === targetSrv);
+      if (foundSrv) resolvedSrvId = String(foundSrv.id);
+    }
+    if (resolvedSrvId) {
+      const pSrv = this.services.find(s => String(s.id) === String(resolvedSrvId));
+      if (pSrv) {
+        if (!resolvedDepId && pSrv.departementId) resolvedDepId = String(pSrv.departementId);
+        if (!resolvedDirId && pSrv.directionId) resolvedDirId = String(pSrv.directionId);
+      }
+    }
+
+    let resolvedRegimeId = e.regimeSecuriteSocialId != null ? String(e.regimeSecuriteSocialId) : null;
+    if (!resolvedRegimeId) {
+      const rawRegime = (e.regimeSecuriteSocialCode || e.regimeSecuriteSocialLibelle || (e as any).regimeSecuriteSocial || '').trim().toLowerCase();
+      if (rawRegime) {
+        const foundReg = this.regimesSecuriteSocial.find(r =>
+          (r.code || '').toLowerCase().includes(rawRegime) ||
+          (r.libelle || '').toLowerCase().includes(rawRegime)
+        );
+        if (foundReg) resolvedRegimeId = String(foundReg.id);
+      } else {
+        const cnss = this.regimesSecuriteSocial.find(r => (r.code || '').toUpperCase().includes('CNSS'));
+        if (cnss) resolvedRegimeId = String(cnss.id);
+      }
+    }
+
+    let resolvedBanque = e.banque || '';
+    if (this.banques.length > 0) {
+      const targetB = (resolvedBanque || 'banque postale').trim().toLowerCase();
+      const matchBank = this.banques.find(b =>
+        (b.libelle || '').trim().toLowerCase() === targetB ||
+        (b.code || '').trim().toLowerCase() === targetB ||
+        targetB.includes((b.libelle || '').trim().toLowerCase()) ||
+        (b.libelle || '').trim().toLowerCase().includes(targetB)
+      );
+      if (matchBank) {
+        resolvedBanque = matchBank.libelle || matchBank.code || resolvedBanque;
+      }
     }
 
     this.form.patchValue({
@@ -379,20 +475,21 @@ export class InfosProComponent implements OnInit {
       dateEmbauche:     e.dateEmbauche || '',
       modePaiement:     e.modePaiement || 'Virement bancaire',
       intituleCompte:   e.intituleCompte || (e.nom && e.prenom ? `${e.prenom} ${e.nom}` : ''),
-      banque:           e.banque || '',
+      banque:           resolvedBanque,
       iban:             e.iban || '',
       groupeRetraiteId: e.groupeRetraiteId || null,
       matricule:        e.matricule || '',
       numeroCnss:       e.numeroCnss || '',
+      ancienneteReprise: e.ancienneteReprise || 0,
       surSalaire:       e.surSalaire || 0,
 
-      fonctionId: e.fonctionId || null,
-      emploiId: e.emploiId || null,
-      serviceId: resolvedSrvId,
-      agenceId: resolvedAgenceId,
-      directionId: resolvedDirId,
-      departmentId: e.departmentId || null,
-      regimeSecuriteSocialId: e.regimeSecuriteSocialId || null,
+      fonctionId:       resolvedFonctionId,
+      emploiId:         resolvedEmploiId,
+      serviceId:        resolvedSrvId,
+      agenceId:         resolvedAgenceId,
+      directionId:      resolvedDirId,
+      departmentId:     resolvedDepId,
+      regimeSecuriteSocialId: resolvedRegimeId,
 
       gradeId: resolvedGradeId,
       categorieId: resolvedCatId,
@@ -409,7 +506,20 @@ export class InfosProComponent implements OnInit {
     const values: Record<string, any> = {};
     if (information.modePaiement) values['modePaiement'] = information.modePaiement;
     if (information.intituleCompte) values['intituleCompte'] = information.intituleCompte;
-    if (information.banque) values['banque'] = information.banque;
+    if (information.banque) {
+      let bVal = information.banque;
+      if (this.banques.length > 0) {
+        const targetB = bVal.trim().toLowerCase();
+        const matchBank = this.banques.find(b =>
+          (b.libelle || '').trim().toLowerCase() === targetB ||
+          (b.code || '').trim().toLowerCase() === targetB ||
+          targetB.includes((b.libelle || '').trim().toLowerCase()) ||
+          (b.libelle || '').trim().toLowerCase().includes(targetB)
+        );
+        if (matchBank) bVal = matchBank.libelle || matchBank.code || bVal;
+      }
+      values['banque'] = bVal;
+    }
     if (information.iban) values['iban'] = information.iban;
     if (information.surSalaire != null) values['surSalaire'] = information.surSalaire;
     this.form.patchValue(values);
@@ -448,23 +558,7 @@ export class InfosProComponent implements OnInit {
   }
 
   get filteredDirections(): RefItem[] {
-    const agenceId = this.form?.get('agenceId')?.value;
-    if (!agenceId) {
-      return this.directions;
-    }
-
-    const selectedAgence = this.agences.find(a => String(a.id) === String(agenceId));
-
-    return this.directions.filter(dir => {
-      if (dir.agenceId && String(dir.agenceId) === String(agenceId)) {
-        return true;
-      }
-      if (selectedAgence && dir.agenceLibelle && dir.agenceLibelle.trim().toLowerCase() === selectedAgence.libelle?.trim().toLowerCase()) {
-        return true;
-      }
-      // Si la direction n'a pas d'agence assignée, on ne l'affiche que si aucune agence spécifique n'est filtrée
-      return false;
-    });
+    return this.directions;
   }
 
   onAgenceChange(): void {
@@ -473,6 +567,62 @@ export class InfosProComponent implements OnInit {
       const valid = this.filteredDirections.some(d => String(d.id) === String(currentDirId));
       if (!valid) {
         this.form.get('directionId')?.setValue(null);
+        this.form.get('departmentId')?.setValue(null);
+        this.form.get('serviceId')?.setValue(null);
+      }
+    }
+  }
+
+  get filteredDepartements(): RefItem[] {
+    const dirId = this.form?.get('directionId')?.value;
+    if (!dirId) {
+      return this.departements;
+    }
+
+    const selectedDir = this.directions.find(d => String(d.id) === String(dirId));
+
+    return this.departements.filter(dep => {
+      if (dep.directionId && String(dep.directionId) === String(dirId)) {
+        return true;
+      }
+      if (selectedDir && dep.directionLibelle && dep.directionLibelle.trim().toLowerCase() === selectedDir.libelle?.trim().toLowerCase()) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  onDirectionChange(): void {
+    const currentDepId = this.form.get('departmentId')?.value;
+    if (currentDepId) {
+      const valid = this.filteredDepartements.some(d => String(d.id) === String(currentDepId));
+      if (!valid) {
+        this.form.get('departmentId')?.setValue(null);
+      }
+    }
+
+    const currentServiceId = this.form.get('serviceId')?.value;
+    if (currentServiceId) {
+      const valid = this.filteredServices.some(s => String(s.id) === String(currentServiceId));
+      if (!valid) {
+        this.form.get('serviceId')?.setValue(null);
+      }
+    }
+  }
+
+  onDepartmentChange(): void {
+    const depId = this.form.get('departmentId')?.value;
+    if (depId) {
+      const selectedDep = this.departements.find(d => String(d.id) === String(depId));
+      if (selectedDep && selectedDep.directionId && !this.form.get('directionId')?.value) {
+        this.form.get('directionId')?.setValue(String(selectedDep.directionId));
+      }
+    }
+
+    const currentServiceId = this.form.get('serviceId')?.value;
+    if (currentServiceId) {
+      const valid = this.filteredServices.some(s => String(s.id) === String(currentServiceId));
+      if (!valid) {
         this.form.get('serviceId')?.setValue(null);
       }
     }
@@ -490,39 +640,56 @@ export class InfosProComponent implements OnInit {
     const selectedDep = this.departements.find(d => String(d.id) === String(depId));
 
     return this.services.filter(srv => {
-      let matchDir = false;
-      if (dirId) {
-        matchDir = (srv.directionId != null && String(srv.directionId) === String(dirId)) ||
-                   (!!selectedDir && !!srv.directionLibelle && srv.directionLibelle.trim().toLowerCase() === selectedDir.libelle?.trim().toLowerCase());
-      }
-
-      let matchDep = false;
       if (depId) {
-        matchDep = (srv.departementId != null && String(srv.departementId) === String(depId)) ||
-                   (!!selectedDep && !!srv.departementLibelle && srv.departementLibelle.trim().toLowerCase() === selectedDep.libelle?.trim().toLowerCase());
+        const matchDep = (srv.departementId != null && String(srv.departementId) === String(depId)) ||
+                         (!!selectedDep && !!srv.departementLibelle && srv.departementLibelle.trim().toLowerCase() === selectedDep.libelle?.trim().toLowerCase());
+        if (matchDep) return true;
+        if (srv.departementId != null) return false;
       }
 
-      if (dirId && depId) return matchDir || matchDep;
-      if (dirId) return matchDir;
-      if (depId) return matchDep;
-      return true;
+      if (dirId) {
+        const matchDir = (srv.directionId != null && String(srv.directionId) === String(dirId)) ||
+                         (!!selectedDir && !!srv.directionLibelle && srv.directionLibelle.trim().toLowerCase() === selectedDir.libelle?.trim().toLowerCase());
+        if (matchDir) return true;
+
+        if (srv.departementId) {
+          const parentDep = this.departements.find(d => String(d.id) === String(srv.departementId));
+          if (parentDep && parentDep.directionId && String(parentDep.directionId) === String(dirId)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     });
   }
 
-  onDirectionChange(): void {
-    const currentServiceId = this.form.get('serviceId')?.value;
-    if (currentServiceId) {
-      const valid = this.filteredServices.some(s => String(s.id) === String(currentServiceId));
-      if (!valid) {
-        this.form.get('serviceId')?.setValue(null);
+  onServiceChange(): void {
+    const srvId = this.form.get('serviceId')?.value;
+    if (srvId) {
+      const selectedSrv = this.services.find(s => String(s.id) === String(srvId));
+      if (selectedSrv) {
+        if (selectedSrv.departementId && !this.form.get('departmentId')?.value) {
+          this.form.get('departmentId')?.setValue(String(selectedSrv.departementId));
+        }
+        if (selectedSrv.directionId && !this.form.get('directionId')?.value) {
+          this.form.get('directionId')?.setValue(String(selectedSrv.directionId));
+        }
       }
     }
   }
 
-  compareIds(a: any, b: any): boolean {
-    if (a == null || b == null) return a === b;
-    return String(a) === String(b);
-  }
+  compareIds = (a: any, b: any): boolean => {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return String(a).trim() === String(b).trim();
+  };
+
+  compareBanques = (a: any, b: any): boolean => {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  };
 
   getGradeGroupe(grade: RefItem | undefined): 'GROUPE I' | 'GROUPE II' | 'GROUPE III' | '' {
     if (!grade) return '';
@@ -850,6 +1017,7 @@ export class InfosProComponent implements OnInit {
       surSalaire:       v.surSalaire ? Number(v.surSalaire) : 0,
       matricule:        v.matricule?.trim() || this.employee?.matricule || '',
       numeroCnss:       v.numeroCnss?.trim() || '',
+      ancienneteReprise: Number(v.ancienneteReprise) || 0,
       statut:           v.statut,
       dateEmbauche:     v.dateEmbauche,
       modePaiement:     v.modePaiement,
@@ -923,13 +1091,15 @@ export class InfosProComponent implements OnInit {
       : (Number(this.form?.get('salaireBase')?.value) || (this.employee?.salaireBase || 0));
     const rawSur = Number(this.form?.get('surSalaire')?.value) || 0;
     const sur = Math.max(0, rawSur);
+    const rawAnc = Number(this.form?.get('ancienneteReprise')?.value) || 0;
+    const anc = Math.max(0, rawAnc);
 
     // Calcul réactif instantané (0 délai perceptible lors de la saisie)
     this.computeInstantNet(base, sur);
 
     // Confirmation officielle auprès du moteur de calcul du backend
     if (this.empId && !this.isCreationMode) {
-      this.employeeService.simulateSalary(this.empId, base, sur).subscribe({
+      this.employeeService.simulateSalary(this.empId, base, sur, anc).subscribe({
         next: (simulated) => {
           if (simulated && simulated.salaireNet != null) {
             this.currentNetSalary = simulated.salaireNet;
@@ -947,17 +1117,21 @@ export class InfosProComponent implements OnInit {
     const totalExonerations = this.salaryInformation?.totalExonerations || 0;
 
     let primeAnciennete = 0;
-    if (this.employee?.dateEmbauche) {
+    const rep = Number(this.form?.get('ancienneteReprise')?.value ?? this.employee?.ancienneteReprise ?? 0);
+    let years = isNaN(rep) ? 0 : Math.max(0, rep);
+    const rawDate = this.form?.get('dateEmbauche')?.value || this.employee?.dateEmbauche;
+    if (rawDate) {
       try {
-        const dateEmb = new Date(this.employee.dateEmbauche);
+        const dateEmb = new Date(rawDate);
         const now = new Date();
-        let years = now.getFullYear() - dateEmb.getFullYear();
+        let internalYears = now.getFullYear() - dateEmb.getFullYear();
         const m = now.getMonth() - dateEmb.getMonth();
-        if (m < 0 || (m === 0 && now.getDate() < dateEmb.getDate())) years--;
-        if (years === 3) primeAnciennete = Math.round(base * 0.05);
-        else if (years > 3) primeAnciennete = Math.round(base * (0.05 + (years - 3) * 0.01));
+        if (m < 0 || (m === 0 && now.getDate() < dateEmb.getDate())) internalYears--;
+        if (internalYears > 0) years += internalYears;
       } catch {}
     }
+    if (years === 3) primeAnciennete = Math.round(base * 0.05);
+    else if (years > 3) primeAnciennete = Math.round(base * (0.05 + (years - 3) * 0.01));
 
     const remunerationBrute = base + sur + totalIndemnites + primeAnciennete;
     const tauxAbattement = (this.salaryInformation?.abattementForfaitaire && this.salaryInformation?.salaireBase)

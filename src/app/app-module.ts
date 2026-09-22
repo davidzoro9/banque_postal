@@ -1,4 +1,4 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { NgModule, provideBrowserGlobalErrorListeners, LOCALE_ID } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
@@ -19,7 +19,8 @@ import { LayoutModule } from './layout/layout.module';
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient()
+    provideHttpClient(),
+    { provide: LOCALE_ID, useValue: 'fr' }
   ],
   bootstrap: [App]
 })

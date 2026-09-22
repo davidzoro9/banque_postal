@@ -62,6 +62,15 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Situation familiale</mat-label>
+              <mat-select formControlName="situationFamiliale">
+                @for (sit of situationsFamiliales; track sit.value) {
+                  <mat-option [value]="sit.value">{{ sit.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Date de naissance</mat-label>
               <input matInput [matDatepicker]="picker" formControlName="dateNaissance">
               <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>

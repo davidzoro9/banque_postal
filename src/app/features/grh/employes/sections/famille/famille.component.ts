@@ -153,5 +153,7 @@ export class FamilleComponent implements OnInit {
     return `${this.employee.prenom?.[0] || ''}${this.employee.nom?.[0] || ''}`.toUpperCase() || '??';
   }
 
+  goToInfosPerso(): void { this.router.navigate(['/grh/employes', this.empId, 'infos-personnelles']); }
+
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }

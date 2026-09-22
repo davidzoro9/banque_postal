@@ -99,8 +99,9 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
         { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
+        { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' },
         { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' },
-        { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' }
+        { id: 'etats-synthese', label: 'États de synthèse', icon: 'assessment', route: '/paie/etats-synthese' }
       ]
     }
   ],

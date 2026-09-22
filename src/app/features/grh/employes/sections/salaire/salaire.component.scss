@@ -4,7 +4,8 @@
 .error-box { padding: 12px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #b91c1c; }
 .success-box { margin-bottom: 14px; padding: 12px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; color: #166534; }
 .recalculate-button { margin-left: auto; align-self: center; }
-.totals-grid, .iuts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.totals-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+.iuts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
 .total-card, .iuts-grid > div { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-variant); }
 .total-card span, .iuts-grid span { color: var(--on-surface-3); font-size: 12px; font-weight: 600; }
 .total-card strong, .iuts-grid strong { color: var(--on-surface); font-size: 15px; }

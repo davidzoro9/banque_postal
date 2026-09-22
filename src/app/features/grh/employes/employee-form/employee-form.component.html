@@ -14,25 +14,32 @@
     </mat-card-header>
 
     <mat-card-content style="padding-top: 16px;">
+      @if (formError || errorMessage) {
+        <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+          <mat-icon style="color: #dc2626;">warning</mat-icon>
+          <span>{{ formError || errorMessage }}</span>
+        </div>
+      }
+
       <form [formGroup]="form">
 
         <!-- SECTION ÉTAT CIVIL -->
-        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">ÉTAT CIVIL</p>
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">ÉTAT CIVIL DE L'EMPLOYÉ</p>
         
         <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
           <mat-form-field appearance="outline">
-            <mat-label>Nom</mat-label>
-            <input matInput formControlName="nom" placeholder="SAWADOGO">
+            <mat-label>Nom de l'employé *</mat-label>
+            <input matInput formControlName="nom" placeholder="Ex: SAWADOGO">
             @if (form.get('nom')?.hasError('required')) {
-              <mat-error>Le nom est obligatoire</mat-error>
+              <mat-error>Le nom de l'employé est obligatoire</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Prénom</mat-label>
-            <input matInput formControlName="prenom" placeholder="Abdoulaye">
+            <mat-label>Prénom de l'employé *</mat-label>
+            <input matInput formControlName="prenom" placeholder="Ex: Abdoulaye">
             @if (form.get('prenom')?.hasError('required')) {
-              <mat-error>Le prénom est obligatoire</mat-error>
+              <mat-error>Le prénom de l'employé est obligatoire</mat-error>
             }
           </mat-form-field>
 
@@ -46,6 +53,15 @@
             <mat-select formControlName="sexe">
               <mat-option value="M">Masculin</mat-option>
               <mat-option value="F">Féminin</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Situation familiale</mat-label>
+            <mat-select formControlName="situationFamiliale">
+              @for (sit of situationsFamiliales; track sit.value) {
+                <mat-option [value]="sit.value">{{ sit.label }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
@@ -128,26 +144,33 @@
         </div>
 
         <!-- SECTION CONTACT D'URGENCE -->
-        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">CONTACT D'URGENCE</p>
+        <p class="form-section-label" style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">PERSONNE À CONTACTER EN CAS D'URGENCE (OPTIONNEL)</p>
         
         <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <mat-form-field appearance="outline">
-            <mat-label>Nom & Prénom du contact</mat-label>
-            <input matInput formControlName="contactUrgenceNom" placeholder="Ex: Sawadogo Jean">
+            <mat-label>Nom & Prénom du contact d'urgence</mat-label>
+            <input matInput formControlName="contactUrgenceNom" placeholder="Ex: Sawadogo Jean (Père / Conjoint)">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Téléphone du contact</mat-label>
+            <mat-label>Téléphone du contact d'urgence</mat-label>
             <input matInput formControlName="contactUrgenceTelephone" placeholder="+226 70 00 00 00">
           </mat-form-field>
         </div>
 
       </form>
+
+      @if (formError || errorMessage) {
+        <div style="margin-top: 20px; padding: 12px 16px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+          <mat-icon style="color: #dc2626;">warning</mat-icon>
+          <span>{{ formError || errorMessage }}</span>
+        </div>
+      }
     </mat-card-content>
 
     <mat-card-actions style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; background-color: #fafafa; border-top: 1px solid #e2e8f0;">
       <button mat-button (click)="cancel()">Annuler</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving || form.invalid" style="border-radius: 8px; font-weight: 600;">
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving" style="border-radius: 8px; font-weight: 600;">
         @if (saving) { <mat-icon class="spin-icon">sync</mat-icon> }
         @else { <mat-icon style="margin-right: 4px;">arrow_forward</mat-icon> }
         {{ isEdit ? 'Enregistrer les modifications' : 'Enregistrer et continuer' }}
