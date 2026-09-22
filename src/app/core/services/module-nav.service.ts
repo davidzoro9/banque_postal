@@ -152,12 +152,13 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
     },
     {
       id: 'carrieres-gpec',
-      label: 'GPEC & Formations',
+      label: 'GPEC & Compétences',
       icon: 'trending_up',
       children: [
-        { id: 'evaluations', label: 'Évaluations', icon: 'star', route: '/carrieres/evaluations' },
+        { id: 'competences', label: 'Référentiel Compétences', icon: 'psychology', route: '/carrieres/competences' },
+        { id: 'evaluations', label: 'Évaluations & Entretiens', icon: 'star', route: '/carrieres/evaluations' },
         { id: 'mobilite', label: 'Mobilité & Promotions', icon: 'alt_route', route: '/carrieres/mobilite' },
-        { id: 'formations', label: 'Plan de formation', icon: 'school', route: '/carrieres/formations' }
+        { id: 'formations', label: 'Plan de Formation', icon: 'school', route: '/carrieres/formations' }
       ]
     }
   ],

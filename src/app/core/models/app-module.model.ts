@@ -25,6 +25,18 @@ export const APP_MODULES: AppModule[] = [
     permissions: ['grh.view']
   },
   {
+    id: 'carrieres',
+    name: 'Carrières & Compétences',
+    shortName: 'CARRIÈRES',
+    icon: 'trending_up',
+    color: '#0060B3',
+    gradientFrom: '#0060B3',
+    gradientTo: '#004885',
+    route: '/carrieres',
+    description: 'Compétences, formations, évaluations et mobilité',
+    permissions: ['carrieres.view']
+  },
+  {
     id: 'paie',
     name: 'Gestion de la Paie',
     shortName: 'PAIE',

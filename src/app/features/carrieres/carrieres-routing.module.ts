@@ -8,11 +8,14 @@ import { MobiliteComponent } from './mobilite/mobilite.component';
 
 const routes: Routes = [
   { path: '', component: CarrieresOverviewComponent },
+  { path: 'competences', component: CompetencesComponent },
   { path: 'competences/referentiel', component: CompetencesComponent },
   { path: 'competences/evaluation', component: CompetencesComponent },
+  { path: 'formations', component: FormationsComponent },
   { path: 'formations/plan', component: FormationsComponent },
   { path: 'formations/catalogue', component: FormationsComponent },
   { path: 'formations/suivi', component: FormationsComponent },
+  { path: 'evaluations', component: EvaluationsComponent },
   { path: 'evaluations/entretiens', component: EvaluationsComponent },
   { path: 'evaluations/objectifs', component: EvaluationsComponent },
   { path: 'mobilite', component: MobiliteComponent },
