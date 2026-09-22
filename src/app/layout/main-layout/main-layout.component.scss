@@ -22,7 +22,7 @@
   height: 52px;
   flex-shrink: 0;
   box-shadow: var(--shadow-nav);
-  z-index: 100;
+  z-index: 50;
   position: relative;
 }
 
@@ -138,10 +138,37 @@
 .sidenav-container {
   flex: 1;
   min-height: 0;
+  position: relative;
+  z-index: 10;
 
   ::ng-deep .mat-drawer-content,
   ::ng-deep .mat-sidenav-content {
     z-index: auto !important;
+  }
+}
+
+// ─── ÉLÉVATION ABSOLUE DES MODALES AU-DESSUS DE TOUTES LES TOOLBARS ET MENUS ───
+// Dès qu'une modale, un backdrop ou une boîte de dialogue s'affiche dans la page,
+// élever immédiatement le conteneur principal à z-index 999999 pour que la modale
+// et son voile d'assombrissement recouvrent proprement l'intégralité de l'écran,
+// sans être tronqués ou chevauchés par la toolbar ou la navbar supérieure.
+.app-shell:has(.custom-modal-overlay),
+.app-shell:has(.modal-backdrop),
+.app-shell:has(.bulletin-modal-overlay),
+.app-shell:has(.modal-backdrop-custom),
+.app-shell:has(.session-modal-dialog),
+.app-shell:has(.modal-container),
+.app-shell:has(.modal-card),
+.app-shell:has([class*="modal-backdrop"]),
+.app-shell:has([class*="modal-overlay"]) {
+  .sidenav-container {
+    z-index: 999999 !important;
+  }
+  .module-navbar {
+    z-index: 1 !important;
+  }
+  app-toolbar {
+    z-index: 1 !important;
   }
 }
 

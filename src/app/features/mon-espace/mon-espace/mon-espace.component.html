@@ -354,7 +354,7 @@
 
   <!-- MODAL : DEMANDE DE BULLETIN RH -->
   @if (showDemandeBulletinModal) {
-    <div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;">
+    <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 40px 20px; overflow-y: auto;">
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 540px; box-shadow: var(--shadow-card); overflow: hidden; color: var(--on-surface);">
         <!-- Header modal -->
         <div style="background: var(--surface-variant); border-bottom: 1px solid var(--border); padding: 18px 24px; color: var(--on-surface); display: flex; justify-content: space-between; align-items: center;">

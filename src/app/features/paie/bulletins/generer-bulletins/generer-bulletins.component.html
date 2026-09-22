@@ -411,7 +411,7 @@
 
 <!-- Modal Aperçu du Bulletin Harmonisé avec le Bulletin Individuel -->
 @if (selectedBulletin) {
-  <div class="modal-backdrop" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+  <div class="modal-backdrop custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 40px 20px; overflow-y: auto;">
     <div class="payslip-modal-card">
       <!-- Barre supérieure d'actions -->
       <div class="payslip-top-actions">
@@ -654,7 +654,7 @@
 
 <!-- Modal Ajuster les Variables de Paie (Taux & Nombre) de l'Agent -->
 @if (showEditVariablesModal && selectedBulletinForEdit) {
-  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 40px 20px; overflow-y: auto;">
     <div style="background: #ffffff; border-radius: 14px; max-width: 860px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.25); overflow: hidden;">
       
       <!-- Modal Header -->
@@ -792,7 +792,7 @@
 
 <!-- Modal Créer une Nouvelle Session de Paie -->
 @if (showCreateSessionModal) {
-  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 40px 20px; overflow-y: auto;">
     <div class="session-modal-dialog">
       
       <!-- En-tête du modal -->
@@ -811,7 +811,7 @@
 
       <div style="display: flex; flex-direction: column; gap: 18px;">
         <!-- Année & Mois -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
           <div>
             <label class="form-group-label">
               <mat-icon style="font-size: 15px; width: 15px; height: 15px;">calendar_today</mat-icon>
@@ -1021,7 +1021,7 @@
 
 <!-- Modal Sélection des Employés pour Calcul / Recalcul de Paie -->
 @if (showSelectionEmployesModal) {
-  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 40px 20px; overflow-y: auto;">
     <div class="session-modal-dialog">
       
       <!-- En-tête du modal -->
@@ -1226,7 +1226,7 @@
 
 <!-- Modal Justification de l'Écart -->
 @if (showJustificationModal && selectedBulletinForJustification) {
-  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+  <div class="custom-modal-overlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 40px 20px; overflow-y: auto;">
     <div style="background: #ffffff; border-radius: 14px; max-width: 520px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
       
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">

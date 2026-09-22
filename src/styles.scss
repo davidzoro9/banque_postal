@@ -561,10 +561,19 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 
 .bulletin-modal-overlay,
 .custom-modal-overlay,
+.modal-backdrop,
 .modal-backdrop-custom {
   position: fixed !important;
   inset: 0 !important;
   z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 40px 20px !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(5px) !important;
 }
 
 .table-responsive,
@@ -611,15 +620,23 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 
 // ─── MODALES & POPUPS UNIVERSELLES ────────
 .modal-container,
+.session-modal-dialog,
+.modal-card,
+.modal-dialog-custom,
 .mat-mdc-dialog-container .mdc-dialog__surface {
   background: var(--surface) !important;
   color: var(--on-surface) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
+  border-radius: 16px !important;
   max-width: 95vw !important;
+  max-height: calc(100vh - 90px) !important;
+  margin: auto !important;
+  overflow-y: auto !important;
   box-sizing: border-box !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45) !important;
 
-  .modal-header {
+  .modal-header,
+  .modal-head {
     border-bottom-color: var(--border) !important;
     h2, h3, .mh-title h2 {
       color: var(--on-surface) !important;
@@ -637,6 +654,18 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
       color: var(--on-surface) !important;
     }
   }
+}
+
+// Support CDK Overlay (Angular Material Dialogs, Menus & Popups)
+.cdk-overlay-container {
+  z-index: 1000000 !important;
+}
+
+.cdk-global-overlay-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 40px 20px !important;
 }
 
 @media (max-width: 1024px) {
@@ -718,13 +747,25 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
     grid-template-columns: 1fr !important;
   }
 
+  .custom-modal-overlay,
+  .modal-backdrop,
+  .modal-backdrop-custom,
+  .bulletin-modal-overlay {
+    padding: 12px 8px !important;
+    align-items: flex-start !important;
+  }
+
   .modal-container,
+  .session-modal-dialog,
+  .modal-card,
+  .modal-dialog-custom,
   .mat-mdc-dialog-container .mdc-dialog__surface {
-    max-width: 96vw !important;
-    width: 96vw !important;
-    padding: 16px !important;
-    margin: auto !important;
-    max-height: 90vh !important;
+    max-width: 98vw !important;
+    width: 98vw !important;
+    padding: 16px 12px !important;
+    margin: 8px auto !important;
+    max-height: calc(100dvh - 20px) !important;
+    border-radius: 12px !important;
     overflow-y: auto !important;
   }
 }
