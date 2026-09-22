@@ -5,9 +5,6 @@
   <!-- ========================================== -->
   <div class="header-card">
     <div class="header-left">
-      <div class="icon-avatar">
-        <mat-icon>{{ getSelectedEtatObj().icon || 'assessment' }}</mat-icon>
-      </div>
       <div>
         <div class="breadcrumbs">
           <span>Gestion de la Paie</span>
@@ -36,7 +33,6 @@
         (click)="openCreateModal()"
         matTooltip="Créer et configurer un nouvel état de synthèse via un formulaire"
       >
-        <mat-icon>add_circle</mat-icon>
         <span>+ Nouvel État</span>
       </button>
 
@@ -46,7 +42,6 @@
         (click)="openEditModal(getSelectedEtatObj())"
         matTooltip="Paramétrer / Configurer cet état"
       >
-        <mat-icon>tune</mat-icon>
         <span>Paramétrer</span>
       </button>
 
@@ -57,7 +52,6 @@
         [disabled]="isExporting || isLoading"
         matTooltip="Télécharger au format Excel / CSV avec BOM UTF-8"
       >
-        <mat-icon>table_view</mat-icon>
         <span>Exporter Excel</span>
       </button>
 
@@ -68,7 +62,6 @@
         [disabled]="isExporting || isLoading"
         matTooltip="Télécharger le bordereau officiel au format PDF signé"
       >
-        <mat-icon>picture_as_pdf</mat-icon>
         <span>Télécharger PDF</span>
       </button>
     </div>
@@ -82,7 +75,6 @@
       <!-- Session de Paie -->
       <div class="filter-item">
         <label class="filter-label">
-          <mat-icon>date_range</mat-icon>
           <span>Session / Période de paie</span>
         </label>
         <select
@@ -99,7 +91,6 @@
       <!-- Direction -->
       <div class="filter-item">
         <label class="filter-label">
-          <mat-icon>domain</mat-icon>
           <span>Direction</span>
         </label>
         <select
@@ -117,7 +108,6 @@
       <!-- Banque -->
       <div class="filter-item">
         <label class="filter-label">
-          <mat-icon>account_balance</mat-icon>
           <span>Banque de virement</span>
         </label>
         <select
@@ -134,7 +124,6 @@
       <!-- Recherche textuelle -->
       <div class="filter-item search-item">
         <label class="filter-label">
-          <mat-icon>search</mat-icon>
           <span>Recherche rapide</span>
         </label>
         <div class="search-input-wrapper">
@@ -833,7 +822,6 @@
           (click)="deleteFromModal()"
           [disabled]="isSaving"
         >
-          <mat-icon>delete</mat-icon>
           <span>Supprimer</span>
         </button>
 
@@ -843,7 +831,6 @@
           Annuler
         </button>
         <button type="button" class="btn-submit" (click)="saveConfig()" [disabled]="isSaving">
-          <mat-icon *ngIf="!isSaving">save</mat-icon>
           <span *ngIf="isSaving" class="mini-spinner"></span>
           <span>{{ isSaving ? 'Enregistrement...' : 'Enregistrer dans PostgreSQL' }}</span>
         </button>

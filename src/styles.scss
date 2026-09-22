@@ -729,3 +729,61 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
   }
 }
 
+// =========================================================================
+// RÈGLE GLOBALE : DESIGN SOBRE & ÉPURÉ SANS ICÔNES DANS LES PAGES
+// Les icônes sont conservées EXCLUSIVEMENT dans les menus de navigation :
+// - Menu supérieur des modules (.module-navbar)
+// - Barre supérieure globale (app-toolbar)
+// - Menu latéral gauche (app-nav-drawer / app-sidebar)
+// - Sélecteurs interactifs indispensables (flèche de select, dates, pagination)
+// Partout ailleurs dans l'application (pages, en-têtes, boutons avec texte,
+// filtres, cartes statistiques, badges), les icônes superflues sont retirées.
+// =========================================================================
+.page-wrapper,
+.cdk-overlay-pane {
+  // 1. Boutons d'action avec libellé textuel : texte épuré sans icône
+  button:not(.mat-mdc-icon-button):not(.mat-icon-button):not(.page-nav-btn):not([aria-label="Previous page"]):not([aria-label="Next page"]) mat-icon:not(.mat-datepicker-toggle-default-icon):not(.mat-select-arrow),
+  a.btn mat-icon,
+  .btn mat-icon,
+  .btn-export mat-icon,
+  .btn-submit mat-icon,
+  .btn-cancel mat-icon,
+  .btn-delete-modal mat-icon,
+  .btn-action mat-icon,
+  .btn-primary mat-icon,
+  .btn-secondary mat-icon,
+  .btn-success mat-icon,
+  .btn-danger mat-icon,
+  .action-link mat-icon,
+  mat-card-actions button mat-icon {
+    display: none !important;
+  }
+
+  // 2. En-têtes de pages, avatars décoratifs et bannières
+  .header-icon,
+  .icon-avatar,
+  .header-icon-box,
+  .card-header-icon,
+  .banner-icon,
+  .icon-circle,
+  .page-header-icon {
+    display: none !important;
+  }
+
+  // 3. Cartes statistiques, KPI & compteurs
+  .stat-icon,
+  .kpi-icon,
+  .metric-icon,
+  .chip-icon {
+    display: none !important;
+  }
+
+  // 4. Libellés de filtres & champs de formulaire
+  .filter-label mat-icon,
+  .form-label mat-icon,
+  .filter-item > label mat-icon,
+  label > mat-icon {
+    display: none !important;
+  }
+}
+
