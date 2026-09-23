@@ -9,6 +9,10 @@ const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.module').then(m => m.AuthModule)
   },
   {
+    path: 'maintenance',
+    loadComponent: () => import('./features/maintenance/maintenance.component').then(m => m.MaintenanceComponent)
+  },
+  {
     // Portail Employé - route autonome sans sidebar
     path: 'mon-espace',
     canActivate: [AuthGuard],
