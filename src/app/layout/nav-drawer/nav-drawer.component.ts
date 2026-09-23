@@ -100,9 +100,6 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
       if (!isSameModule) {
         this.expandedItems.clear();
         this.expandedItems.add('employes');
-        if (mod?.id === 'paie') {
-          this.expandedItems.add('etats-synthese');
-        }
       }
     });
 
