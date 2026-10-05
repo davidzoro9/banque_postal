@@ -110,13 +110,13 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       icon: 'assessment',
       children: [
         { id: 'etat-recapitulatif-global', label: 'Récapitulatif Global de la Paie', icon: 'account_balance', route: '/paie/etats-synthese/recapitulatif-global' },
-        { id: 'etat-banque', label: 'État de Virement des Salaires', icon: 'payments', route: '/paie/etats-synthese/banque' },
-        { id: 'etat-livre-paie', label: 'Livre de Paie (17 colonnes)', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
-        { id: 'etat-crrae-rrpc', label: 'Déclaration Cotisations RRPC (19%)', icon: 'security', route: '/paie/etats-synthese/crrae-rrpc' },
-        { id: 'etat-crrae-rcpnc', label: 'Déclaration Cotisations RCPNC (12%)', icon: 'security', route: '/paie/etats-synthese/crrae-rcpnc' },
-        { id: 'etat-crrae-faam', label: 'Déclaration Cotisations FAAM (1,5%)', icon: 'security', route: '/paie/etats-synthese/crrae-faam' },
-        { id: 'etat-iuts', label: 'État Retenues IUTS (IFU)', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
-        { id: 'etat-fsp', label: 'Retenue Fonds de Solidarité (1%)', icon: 'shield', route: '/paie/etats-synthese/fsp' },
+        { id: 'etat-banque', label: 'État par banque', icon: 'payments', route: '/paie/etats-synthese/banque' },
+        { id: 'etat-livre-paie', label: 'Livre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
+        { id: 'etat-crrae-rrpc', label: 'Cotisations RRPC', icon: 'security', route: '/paie/etats-synthese/crrae-rrpc' },
+        { id: 'etat-crrae-rcpnc', label: 'Cotisations RCPNC', icon: 'security', route: '/paie/etats-synthese/crrae-rcpnc' },
+        { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'security', route: '/paie/etats-synthese/crrae-faam' },
+        { id: 'etat-iuts', label: 'État IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
+        { id: 'etat-fsp', label: 'État FSP', icon: 'shield', route: '/paie/etats-synthese/fsp' },
         { id: 'etat-cnss', label: 'État Cotisation CNSS', icon: 'security', route: '/paie/etats-synthese/cnss' },
         { id: 'etat-nominatif', label: 'État nominatif de paie', icon: 'badge', route: '/paie/etats-synthese/nominatif' },
         { id: 'etat-direction', label: 'État salaire par direction', icon: 'payments', route: '/paie/etats-synthese/direction' },
@@ -124,7 +124,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'etat-mutuelle', label: 'État Mutuelle', icon: 'health_and_safety', route: '/paie/etats-synthese/mutuelle' },
         { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
         { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
-        { id: 'etat-bulletin', label: 'État Bulletin (Contrôle)', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
+        { id: 'etat-bulletin', label: 'État Bulletin', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
       ]
     }
   ],
