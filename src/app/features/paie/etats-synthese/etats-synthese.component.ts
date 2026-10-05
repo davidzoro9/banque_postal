@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { EtatSyntheseService, EtatSyntheseWrapper, EtatSyntheseFilter, EtatSyntheseConfig } from '../services/etat-synthese.service';
+import { EtatSyntheseService, EtatSyntheseWrapper, EtatSyntheseFilter, EtatSyntheseConfig, SignatairesEtat } from '../services/etat-synthese.service';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { environment } from '../../../../environments/environment';
 
@@ -38,6 +38,18 @@ export class EtatsSyntheseComponent implements OnInit {
   isEditing = false;
   formError = '';
   formSuccess = '';
+
+  // Modal de Paramétrage des Signataires Officiels (PostgreSQL)
+  isSignatairesModalOpen = false;
+  isSavingSignataires = false;
+  signatairesError = '';
+  signatairesSuccess = '';
+  signatairesForm: SignatairesEtat = {
+    titreSignataire1: 'Le Comptable',
+    nomSignataire1: 'Ahadi Ismaël YONLI',
+    titreSignataire2: 'Le Directeur Financier et Comptable',
+    nomSignataire2: 'Inoussa SANOUIDI'
+  };
 
   configForm: Partial<EtatSyntheseConfig> = {
     code: '',
@@ -103,6 +115,7 @@ export class EtatsSyntheseComponent implements OnInit {
 
     this.loadConfigs();
     this.loadFiltersData();
+    this.loadSignataires();
   }
 
   // ─── CHARGEMENT DES CONFIGURATIONS D'ÉTATS DEPUIS POSTGRESQL ─────────────
@@ -215,6 +228,12 @@ export class EtatsSyntheseComponent implements OnInit {
     this.etatService.getEtatSynthese(filter).subscribe({
       next: (res) => {
         this.etatData = res;
+        if (res) {
+          if (res.titreSignataire1) this.signatairesForm.titreSignataire1 = res.titreSignataire1;
+          if (res.nomSignataire1) this.signatairesForm.nomSignataire1 = res.nomSignataire1;
+          if (res.titreSignataire2) this.signatairesForm.titreSignataire2 = res.titreSignataire2;
+          if (res.nomSignataire2) this.signatairesForm.nomSignataire2 = res.nomSignataire2;
+        }
         this.isLoading = false;
       },
       error: (err) => {
@@ -546,5 +565,67 @@ export class EtatsSyntheseComponent implements OnInit {
       actif: true,
       icon: 'assessment'
     };
+  }
+
+  // ─── GESTION DES SIGNATAIRES OFFICIELS (POSTGRESQL) ─────────────────────
+  loadSignataires(): void {
+    this.etatService.getSignataires().subscribe({
+      next: (res) => {
+        if (res) {
+          this.signatairesForm = { ...res };
+        }
+      },
+      error: (err) => console.error('Erreur chargement des signataires officiels', err)
+    });
+  }
+
+  openSignatairesModal(): void {
+    this.signatairesError = '';
+    this.signatairesSuccess = '';
+    this.isSignatairesModalOpen = true;
+    this.loadSignataires();
+  }
+
+  closeSignatairesModal(): void {
+    this.isSignatairesModalOpen = false;
+    this.signatairesError = '';
+    this.signatairesSuccess = '';
+  }
+
+  saveSignataires(): void {
+    if (!this.signatairesForm.titreSignataire1?.trim() || !this.signatairesForm.nomSignataire1?.trim()) {
+      this.signatairesError = 'Le titre et le nom du Signataire 1 (Gauche) sont obligatoires.';
+      return;
+    }
+    if (!this.signatairesForm.titreSignataire2?.trim() || !this.signatairesForm.nomSignataire2?.trim()) {
+      this.signatairesError = 'Le titre et le nom du Signataire 2 (Droite) sont obligatoires.';
+      return;
+    }
+
+    this.isSavingSignataires = true;
+    this.signatairesError = '';
+    this.signatairesSuccess = '';
+
+    this.etatService.updateSignataires(this.signatairesForm).subscribe({
+      next: (res) => {
+        this.signatairesForm = { ...res };
+        if (this.etatData) {
+          this.etatData.titreSignataire1 = res.titreSignataire1;
+          this.etatData.nomSignataire1 = res.nomSignataire1;
+          this.etatData.titreSignataire2 = res.titreSignataire2;
+          this.etatData.nomSignataire2 = res.nomSignataire2;
+        }
+        this.isSavingSignataires = false;
+        this.signatairesSuccess = 'Signataires officiels enregistrés avec succès dans PostgreSQL !';
+        setTimeout(() => {
+          this.closeSignatairesModal();
+        }, 1200);
+      },
+      error: (err) => {
+        console.error('Erreur enregistrement signataires', err);
+        this.signatairesError = 'Une erreur est survenue lors de l\'enregistrement des signataires.';
+        this.isSavingSignataires = false;
+      }
+    });
   }
 }

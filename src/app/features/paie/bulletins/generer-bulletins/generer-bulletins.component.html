@@ -902,36 +902,12 @@
               Nature de la session extraordinaire *
             </label>
             <select class="form-control-select" [(ngModel)]="newSessionForm.natureExtraordinaire" (ngModelChange)="onNatureExtraordinaireChange()">
-              <option value="13EME_MOIS">13ème Mois (Calcul inverse : Brut devient Net)</option>
-              <option value="14EME_MOIS">14ème Mois (Calcul inverse : Brut devient Net)</option>
-              <option value="CONGE_PAYE">Congé Payé (Revenus 12 mois ÷ 360 × Jours acquis)</option>
-              <option value="STC">Solde de Tout Compte (Licenciement, Préavis, Congés, Prorata, Trop perçu)</option>
-              <option value="INDEMNITE_RETRAITE">Indemnités de Départ à la Retraite (30% / 35% / 45%)</option>
+              <option value="13EME_MOIS">13ème Mois</option>
+              <option value="14EME_MOIS">14ème Mois</option>
+              <option value="CONGE_PAYE">Congé Payé</option>
+              <option value="STC">Solde de Tout Compte</option>
+              <option value="INDEMNITE_RETRAITE">Indemnités de Départ à la Retraite</option>
             </select>
-          </div>
-
-          <!-- Boîte d'information sur la formule officielle appliquée -->
-          <div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 12px 14px; border-radius: 6px; font-size: 12px; color: #334155; line-height: 1.5;">
-            @if (newSessionForm.natureExtraordinaire === '13EME_MOIS' || newSessionForm.natureExtraordinaire === '14EME_MOIS') {
-              <div style="font-weight: 700; color: #0060B3; margin-bottom: 4px;">⚡ Règle du {{ newSessionForm.natureExtraordinaire === '13EME_MOIS' ? '13ème' : '14ème' }} Mois : Mode Calcul Inverse</div>
-              <div>Le salaire de base et le sursalaire constituent directement le salaire net versé à l'agent. Zéro retenue salariale (CNSS/CARFO, IUTS, FSP sont neutralisées). Les cotisations patronales sont calculées sur la base normale.</div>
-            } @else if (newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
-              <div style="font-weight: 700; color: #0284c7; margin-bottom: 4px;">🏖️ Règle des Congés Payés : Salaire Moyen Journalier</div>
-              <div>Somme des revenus des 12 derniers mois divisée par <strong>360</strong> pour déterminer le salaire moyen journalier (SMJ), ensuite multipliée par le nombre de jours de congé acquis par l'agent.</div>
-            } @else if (newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
-              <div style="font-weight: 700; color: #b45309; margin-bottom: 4px;">🎖️ Règle des Indemnités de Départ à la Retraite : Pourcentages par Ancienneté</div>
-              <div>Calculée pour chaque année d'ancienneté accomplie sur le <strong>salaire global mensuel moyen</strong> des 12 derniers mois (hors frais) :
-                <ul style="margin: 4px 0 0 16px; padding: 0;">
-                  <li><strong>30%</strong> pour les cinq (05) premières années ;</li>
-                  <li><strong>35%</strong> pour la période de la 6ème à la 10ème année incluse ;</li>
-                  <li><strong>45%</strong> pour la période au-delà de la 10ème année.</li>
-                </ul>
-                Indemnité exonérée de cotisations sociales et d'impôt (Net = Brut).
-              </div>
-            } @else {
-              <div style="font-weight: 700; color: #dc2626; margin-bottom: 4px;">💼 Règle du Solde de Tout Compte (STC)</div>
-              <div>Liquidation complète : Indemnité de licenciement, indemnité compensatrice de préavis (3 mois cadres, 1 mois non-cadres), congés acquis non pris, 13ème et 14ème mois au prorata temporis, avec déduction intégrale des prêts et trop-perçus.</div>
-            }
           </div>
 
           <div>

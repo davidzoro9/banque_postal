@@ -47,6 +47,16 @@
 
       <button
         type="button"
+        class="btn-export btn-signataires"
+        (click)="openSignatairesModal()"
+        matTooltip="Configurer les 2 signataires officiels des bordereaux et PDF"
+      >
+        <mat-icon>draw</mat-icon>
+        <span>Signataires</span>
+      </button>
+
+      <button
+        type="button"
         class="btn-export btn-excel"
         (click)="exportExcel()"
         [disabled]="isExporting || isLoading"
@@ -819,18 +829,27 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- SIGNATAIRES OFFICIELS BPBF                 -->
+    <!-- SIGNATAIRES OFFICIELS BPBF (POSTGRESQL)    -->
     <!-- ========================================== -->
-    <div class="official-signers-footer" *ngIf="!isLoading && filteredRows.length > 0">
-      <div class="signer-box">
-        <span class="signer-title">Le Comptable</span>
-        <div class="signer-signature-space"></div>
-        <span class="signer-name">Ahadi Ismaël YONLI</span>
+    <div
+      class="official-signers-footer"
+      *ngIf="!isLoading && filteredRows.length > 0"
+      (click)="openSignatairesModal()"
+      matTooltip="Cliquer pour configurer les signataires officiels"
+    >
+      <div class="signers-edit-hint">
+        <mat-icon>edit</mat-icon>
+        <span>Modifier signataires</span>
       </div>
       <div class="signer-box">
-        <span class="signer-title">Le Directeur Financier et Comptable</span>
+        <span class="signer-title">{{ etatData?.titreSignataire1 || signatairesForm.titreSignataire1 || 'Le Comptable' }}</span>
         <div class="signer-signature-space"></div>
-        <span class="signer-name">Inoussa SANOUIDI</span>
+        <span class="signer-name">{{ etatData?.nomSignataire1 || signatairesForm.nomSignataire1 || 'Ahadi Ismaël YONLI' }}</span>
+      </div>
+      <div class="signer-box">
+        <span class="signer-title">{{ etatData?.titreSignataire2 || signatairesForm.titreSignataire2 || 'Le Directeur Financier et Comptable' }}</span>
+        <div class="signer-signature-space"></div>
+        <span class="signer-name">{{ etatData?.nomSignataire2 || signatairesForm.nomSignataire2 || 'Inoussa SANOUIDI' }}</span>
       </div>
     </div>
 
@@ -973,6 +992,125 @@
         <button type="button" class="btn-submit" (click)="saveConfig()" [disabled]="isSaving">
           <span *ngIf="isSaving" class="mini-spinner"></span>
           <span>{{ isSaving ? 'Enregistrement...' : 'Enregistrer dans PostgreSQL' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL : PARAMÉTRAGE DES SIGNATAIRES (PGSQL) -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" *ngIf="isSignatairesModalOpen" (click)="closeSignatairesModal()">
+    <div class="form-dialog signataires-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="dialog-title-group">
+          <div class="dialog-icon-badge" style="background: rgba(13, 148, 136, 0.12); color: #0d9488;">
+            <mat-icon>draw</mat-icon>
+          </div>
+          <div>
+            <h3 class="dialog-title">Paramétrage des Signataires Officiels</h3>
+            <p class="dialog-subtitle">Configuration des 2 signataires des bordereaux et exports PDF (Persistance PostgreSQL)</p>
+          </div>
+        </div>
+        <button type="button" class="close-btn" (click)="closeSignatairesModal()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="dialog-body">
+        <div class="alert-error" *ngIf="signatairesError">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ signatairesError }}</span>
+        </div>
+
+        <div class="alert-success" *ngIf="signatairesSuccess">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ signatairesSuccess }}</span>
+        </div>
+
+        <p class="signataires-intro-text">
+          Définissez les titres et noms des deux signataires officiels apparaissant au bas des états de synthèse de paie et sur les bordereaux PDF générés.
+        </p>
+
+        <!-- Grille des 2 signataires : Gauche et Droite -->
+        <div class="signataires-grid">
+          <!-- Signataire 1 : Gauche -->
+          <div class="signataire-card">
+            <div class="signataire-card-header">
+              <span class="signataire-badge">Signataire 1 (Bas Gauche)</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Titre / Fonction <span class="required">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="signatairesForm.titreSignataire1"
+                placeholder="Ex: Le Comptable"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom & Prénom(s) <span class="required">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="signatairesForm.nomSignataire1"
+                placeholder="Ex: Ahadi Ismaël YONLI"
+              />
+            </div>
+          </div>
+
+          <!-- Signataire 2 : Droite -->
+          <div class="signataire-card">
+            <div class="signataire-card-header">
+              <span class="signataire-badge badge-primary">Signataire 2 (Bas Droite)</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Titre / Fonction <span class="required">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="signatairesForm.titreSignataire2"
+                placeholder="Ex: Le Directeur Financier et Comptable"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom & Prénom(s) <span class="required">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="signatairesForm.nomSignataire2"
+                placeholder="Ex: Inoussa SANOUIDI"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Aperçu en direct -->
+        <div class="signataires-preview-box">
+          <span class="preview-label">Aperçu en direct sur le bordereau :</span>
+          <div class="preview-signers-row">
+            <div class="preview-signer">
+              <span class="ps-title">{{ signatairesForm.titreSignataire1 || '(Titre non renseigné)' }}</span>
+              <div class="ps-line"></div>
+              <span class="ps-name">{{ signatairesForm.nomSignataire1 || '(Nom non renseigné)' }}</span>
+            </div>
+            <div class="preview-signer">
+              <span class="ps-title">{{ signatairesForm.titreSignataire2 || '(Titre non renseigné)' }}</span>
+              <div class="ps-line"></div>
+              <span class="ps-name">{{ signatairesForm.nomSignataire2 || '(Nom non renseigné)' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <div style="flex: 1;"></div>
+        <button type="button" class="btn-cancel" (click)="closeSignatairesModal()" [disabled]="isSavingSignataires">
+          Annuler
+        </button>
+        <button type="button" class="btn-submit" (click)="saveSignataires()" [disabled]="isSavingSignataires">
+          <span *ngIf="isSavingSignataires" class="mini-spinner"></span>
+          <span>{{ isSavingSignataires ? 'Enregistrement...' : 'Enregistrer les Signataires' }}</span>
         </button>
       </div>
     </div>

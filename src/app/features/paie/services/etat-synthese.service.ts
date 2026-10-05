@@ -18,6 +18,13 @@ export interface EtatSyntheseConfig {
   colonnesJson?: string;
 }
 
+export interface SignatairesEtat {
+  titreSignataire1: string;
+  nomSignataire1: string;
+  titreSignataire2: string;
+  nomSignataire2: string;
+}
+
 export interface EtatSyntheseFilter {
   typeEtat?: string;
   sessionPaieId?: number | null;
@@ -42,6 +49,10 @@ export interface EtatSyntheseWrapper {
   totalMasseSalariale: number;
   donnees: any[];
   totaux?: any;
+  titreSignataire1?: string;
+  nomSignataire1?: string;
+  titreSignataire2?: string;
+  nomSignataire2?: string;
 }
 
 @Injectable({
@@ -51,6 +62,15 @@ export class EtatSyntheseService {
   private readonly baseUrl = `${environment.apiUrl}/paie/etats-synthese`;
 
   constructor(private http: HttpClient) {}
+
+  // ─── GESTION DES SIGNATAIRES OFFICIELS (POSTGRESQL) ────────────────────
+  getSignataires(): Observable<SignatairesEtat> {
+    return this.http.get<SignatairesEtat>(`${this.baseUrl}/signataires`);
+  }
+
+  updateSignataires(dto: SignatairesEtat): Observable<SignatairesEtat> {
+    return this.http.put<SignatairesEtat>(`${this.baseUrl}/signataires`, dto);
+  }
 
   // ─── GESTION DES CONFIGURATIONS D'ÉTATS (POSTGRESQL) ────────────────────
   getConfigs(onlyActive = false): Observable<EtatSyntheseConfig[]> {
