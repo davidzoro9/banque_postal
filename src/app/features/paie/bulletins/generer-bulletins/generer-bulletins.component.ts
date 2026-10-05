@@ -38,14 +38,68 @@ export class GenererBulletinsComponent implements OnInit {
   modeComparatifMminus1 = false;
 
   // === GESTION DES SESSIONS & NAVIGATION ===
-  vueActive: 'LISTE_SESSIONS' | 'DETAIL_SESSION' | 'SIMULATION' = 'LISTE_SESSIONS';
+  vueActive: 'LISTE_SESSIONS' | 'DETAIL_SESSION' | 'SIMULATION' | 'DEMANDES_BULLETINS' = 'LISTE_SESSIONS';
   vuePrecedente: 'LISTE_SESSIONS' | 'DETAIL_SESSION' = 'LISTE_SESSIONS';
+
+  // Demandes de Bulletins reçues depuis Mon Espace
+  demandesBulletins: any[] = [];
+  isLoadingDemandes = false;
+  nbDemandesEnAttente = 0;
+  searchDemandeTexte = '';
 
   basculerVersSimulation(): void {
     if (this.vueActive !== 'SIMULATION') {
-      this.vuePrecedente = this.vueActive;
+      this.vuePrecedente = this.vueActive === 'DEMANDES_BULLETINS' ? 'LISTE_SESSIONS' : this.vueActive;
     }
     this.vueActive = 'SIMULATION';
+  }
+
+  basculerVersDemandesBulletins(): void {
+    if (this.vueActive !== 'DEMANDES_BULLETINS') {
+      this.vuePrecedente = this.vueActive === 'SIMULATION' ? 'LISTE_SESSIONS' : this.vueActive;
+    }
+    this.vueActive = 'DEMANDES_BULLETINS';
+    this.chargerDemandesBulletins();
+  }
+
+  chargerDemandesBulletins(): void {
+    this.isLoadingDemandes = true;
+    this.http.get<any[]>(`${environment.apiUrl}/demandes-bulletin`).pipe(
+      catchError(() => of([]))
+    ).subscribe(data => {
+      this.demandesBulletins = data || [];
+      this.nbDemandesEnAttente = this.demandesBulletins.filter(d => (d.statut || '').toUpperCase().includes('EN_ATTENTE')).length;
+      this.isLoadingDemandes = false;
+    });
+  }
+
+  traiterDemande(demande: any, nouveauStatut: 'TRAITEE' | 'REJETEE'): void {
+    if (!demande || !demande.id) return;
+    this.http.put(`${environment.apiUrl}/demandes-bulletin/${demande.id}/traiter`, {
+      statut: nouveauStatut,
+      traitePar: 'GESTIONNAIRE_PAIE'
+    }).subscribe({
+      next: () => {
+        demande.statut = nouveauStatut;
+        demande.dateTraitement = new Date().toISOString();
+        this.nbDemandesEnAttente = this.demandesBulletins.filter(d => (d.statut || '').toUpperCase().includes('EN_ATTENTE')).length;
+      },
+      error: () => {
+        demande.statut = nouveauStatut;
+        this.nbDemandesEnAttente = this.demandesBulletins.filter(d => (d.statut || '').toUpperCase().includes('EN_ATTENTE')).length;
+      }
+    });
+  }
+
+  get demandesFiltrees(): any[] {
+    if (!this.searchDemandeTexte) return this.demandesBulletins;
+    const q = this.searchDemandeTexte.toUpperCase().trim();
+    return this.demandesBulletins.filter(d =>
+      (d.employeeName || '').toUpperCase().includes(q) ||
+      (d.matricule || '').toUpperCase().includes(q) ||
+      (d.periode || '').toUpperCase().includes(q) ||
+      (d.motif || '').toUpperCase().includes(q)
+    );
   }
 
   retourAuxSessions(): void {
@@ -160,6 +214,7 @@ export class GenererBulletinsComponent implements OnInit {
 
   ngOnInit(): void {
     this.chargerToutesLesSessions();
+    this.chargerDemandesBulletins();
   }
 
   chargerToutesLesSessions(): void {

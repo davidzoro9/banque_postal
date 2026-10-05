@@ -1,11 +1,11 @@
 <div class="paie-container">
 
   <!-- BARRE D'ONGLETS SUPÉRIEURE DE NAVIGATION DANS GÉNÉRATION DE BULLETIN -->
-  <div class="top-nav-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; align-items: center; justify-content: space-between;">
-    <div style="display: flex; gap: 10px;">
+  <div class="top-nav-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
       <button mat-button 
-              [style.background]="vueActive !== 'SIMULATION' ? '#0060B3' : '#f1f5f9'"
-              [style.color]="vueActive !== 'SIMULATION' ? '#ffffff' : '#334155'"
+              [style.background]="(vueActive === 'LISTE_SESSIONS' || vueActive === 'DETAIL_SESSION') ? '#0060B3' : '#f1f5f9'"
+              [style.color]="(vueActive === 'LISTE_SESSIONS' || vueActive === 'DETAIL_SESSION') ? '#ffffff' : '#334155'"
               style="font-weight: 700; border-radius: 8px; padding: 0 20px; height: 42px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;"
               (click)="retourAuxSessions()">
         <mat-icon style="font-size: 20px; width: 20px; height: 20px;">account_balance_wallet</mat-icon>
@@ -19,9 +19,22 @@
         <mat-icon style="font-size: 20px; width: 20px; height: 20px; color: #ffc000;">calculate</mat-icon>
         Simulateur &amp; Calculatrice RH
       </button>
+      <button mat-button 
+              [style.background]="vueActive === 'DEMANDES_BULLETINS' ? '#0060B3' : '#f1f5f9'"
+              [style.color]="vueActive === 'DEMANDES_BULLETINS' ? '#ffffff' : '#334155'"
+              style="font-weight: 700; border-radius: 8px; padding: 0 20px; height: 42px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;"
+              (click)="basculerVersDemandesBulletins()">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px; color: #38bdf8;">mark_email_unread</mat-icon>
+        Demandes de Bulletins
+        @if (nbDemandesEnAttente > 0) {
+          <span style="background: #dc2626; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 900; margin-left: 4px;">
+            {{ nbDemandesEnAttente }}
+          </span>
+        }
+      </button>
     </div>
 
-    @if (vueActive === 'SIMULATION') {
+    @if (vueActive === 'SIMULATION' || vueActive === 'DEMANDES_BULLETINS') {
       <button mat-stroked-button (click)="retourAuxSessions()" style="border-radius: 8px; font-weight: 700;">
         <mat-icon style="margin-right: 4px;">arrow_back</mat-icon> Retour aux Sessions
       </button>
@@ -31,6 +44,123 @@
   @if (vueActive === 'SIMULATION') {
     <!-- VUE SIMULATEUR / CALCULATRICE INTÉGRÉE DANS GÉNÉRATION DE BULLETIN -->
     <app-calculatrice-simulation></app-calculatrice-simulation>
+  } @else if (vueActive === 'DEMANDES_BULLETINS') {
+    <!-- VUE : DEMANDES DE BULLETINS DES EMPLOYÉS -->
+    <div class="hero-header" style="margin-bottom: 20px;">
+      <div class="hero-title-group">
+        <div class="hero-icon" style="background: linear-gradient(135deg, #0060B3, #0284c7);">
+          <mat-icon>mark_email_unread</mat-icon>
+        </div>
+        <div>
+          <h1>Demandes de Bulletins Reçues des Collaborateurs</h1>
+          <p>Gestion et traitement des demandes de bulletins de paie formulées depuis Mon Espace (ordinaires &amp; extraordinaires)</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button mat-stroked-button color="primary" (click)="chargerDemandesBulletins()" style="height: 42px; border-radius: 8px;">
+          <mat-icon style="margin-right: 4px;">refresh</mat-icon> Actualiser
+        </button>
+      </div>
+    </div>
+
+    <!-- Barre de recherche -->
+    <div style="background: var(--surface); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; box-shadow: var(--shadow-card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex: 1; max-width: 450px;">
+        <mat-icon style="color: var(--on-surface-3);">search</mat-icon>
+        <input matInput type="text" [(ngModel)]="searchDemandeTexte" placeholder="Rechercher par nom, matricule, période..."
+               style="width: 100%; border: none; outline: none; background: transparent; font-size: 14px; color: var(--on-surface);">
+      </div>
+      <div style="font-size: 13px; font-weight: 700; color: var(--on-surface-2);">
+        Total demandes : <strong>{{ demandesBulletins.length }}</strong> | En attente RH : <strong style="color: #d97706;">{{ nbDemandesEnAttente }}</strong>
+      </div>
+    </div>
+
+    @if (isLoadingDemandes) {
+      <div style="text-align: center; padding: 48px; background: var(--surface); border-radius: 14px; border: 1px solid var(--border);">
+        <mat-spinner diameter="40" style="margin: 0 auto 16px;"></mat-spinner>
+        <p style="color: #0060B3; font-weight: 700;">Chargement des demandes...</p>
+      </div>
+    } @else if (demandesFiltrees.length === 0) {
+      <div style="background: var(--surface); border-radius: 14px; padding: 48px 32px; text-align: center; border: 1px dashed var(--border);">
+        <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: var(--on-surface-3); margin-bottom: 12px;">inbox</mat-icon>
+        <h3 style="margin: 0 0 6px 0; color: var(--on-surface); font-weight: 800;">Aucune demande de bulletin trouvée</h3>
+        <p style="color: var(--on-surface-3); font-size: 13.5px; margin: 0;">Toutes les demandes ont été traitées ou aucun collaborateur n'a encore transmis de demande.</p>
+      </div>
+    } @else {
+      <div style="background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-card); border: 1px solid var(--border); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: var(--surface-variant); border-bottom: 2px solid var(--border); text-align: left; color: var(--on-surface-2); font-weight: 700;">
+              <th style="padding: 14px 18px;">COLLABORATEUR</th>
+              <th style="padding: 14px 18px;">PÉRIODE / SESSION</th>
+              <th style="padding: 14px 18px;">MOTIF &amp; COMMENTAIRE</th>
+              <th style="padding: 14px 18px;">URGENCE</th>
+              <th style="padding: 14px 18px;">DATE DEMANDE</th>
+              <th style="padding: 14px 18px;">STATUT</th>
+              <th style="padding: 14px 18px; text-align: right;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of demandesFiltrees; track d.id || d.dateDemande) {
+              <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;" onmouseover="this.style.background='rgba(0,96,179,0.03)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 14px 18px;">
+                  <strong style="color: #0060B3; font-size: 13.5px;">{{ d.employeeName || 'Collaborateur' }}</strong>
+                  <div style="font-size: 11.5px; color: var(--on-surface-3);">Matricule : {{ d.matricule || '—' }}</div>
+                </td>
+                <td style="padding: 14px 18px;">
+                  <span style="font-weight: 800; color: var(--on-surface);">{{ d.periode }}</span>
+                </td>
+                <td style="padding: 14px 18px; max-width: 320px;">
+                  <div>{{ d.motif }}</div>
+                  @if (d.commentaire) {
+                    <div style="font-size: 11.5px; color: var(--on-surface-3); font-style: italic; margin-top: 3px;">« {{ d.commentaire }} »</div>
+                  }
+                </td>
+                <td style="padding: 14px 18px;">
+                  @if (d.urgence === 'URGENTE') {
+                    <span style="background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.25); padding: 3px 8px; border-radius: 10px; font-weight: 800; font-size: 11px;">
+                      URGENT
+                    </span>
+                  } @else {
+                    <span style="color: var(--on-surface-3); font-size: 12px;">Normale</span>
+                  }
+                </td>
+                <td style="padding: 14px 18px; color: var(--on-surface-3); font-size: 12px;">
+                  {{ d.dateDemande | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td style="padding: 14px 18px;">
+                  @if (d.statut === 'TRAITEE' || d.statut === 'DISPONIBLE' || d.statut === 'VALIDE') {
+                    <span style="background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.25); padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">check_circle</mat-icon> Traitée
+                    </span>
+                  } @else if (d.statut === 'REJETEE' || d.statut === 'REFUSEE') {
+                    <span style="background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.25); padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">cancel</mat-icon> Rejetée
+                    </span>
+                  } @else {
+                    <span style="background: rgba(217, 119, 6, 0.12); color: #b45309; border: 1px solid rgba(217, 119, 6, 0.25); padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">hourglass_top</mat-icon> En attente RH
+                    </span>
+                  }
+                </td>
+                <td style="padding: 14px 18px; text-align: right;">
+                  @if (d.statut !== 'TRAITEE' && d.statut !== 'DISPONIBLE' && d.statut !== 'VALIDE') {
+                    <button mat-raised-button color="primary" style="background: #15803d; font-weight: 700; border-radius: 6px; font-size: 12px; margin-right: 6px;" (click)="traiterDemande(d, 'TRAITEE')" title="Marquer le bulletin comme mis à disposition">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">done_all</mat-icon> Traiter
+                    </button>
+                    <button mat-stroked-button color="warn" style="border-radius: 6px; font-size: 12px;" (click)="traiterDemande(d, 'REJETEE')" title="Rejeter la demande">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">close</mat-icon> Rejeter
+                    </button>
+                  } @else {
+                    <span style="font-size: 11.5px; color: #15803d; font-weight: 700;">Traité par RH</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   } @else if (vueActive === 'LISTE_SESSIONS') {
     <!-- VUE 1 : GESTION DES SESSIONS DE PAIE -->
     <div class="hero-header" style="margin-bottom: 20px;">
