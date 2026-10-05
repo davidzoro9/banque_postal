@@ -30,4 +30,11 @@ public class EtatSyntheseWrapperDto {
     
     // Résumé ou totaux personnalisés selon l'état
     private Object totaux;
+
+    // Signataires officiels configurables
+    private String titreSignataire1;
+    private String nomSignataire1;
+    private String titreSignataire2;
+    private String nomSignataire2;
 }
+

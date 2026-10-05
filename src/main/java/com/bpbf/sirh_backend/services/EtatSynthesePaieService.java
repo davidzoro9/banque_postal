@@ -35,6 +35,7 @@ public class EtatSynthesePaieService {
     private final SessionPaieRepository sessionPaieRepository;
     private final BulletinLotRepository bulletinLotRepository;
     private final DirectionRepository directionRepository;
+    private final SignataireConfigService signataireConfigService;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -190,6 +191,15 @@ public class EtatSynthesePaieService {
                 break;
         }
 
+        SignatairesEtatDto signataires = signataireConfigService != null 
+                ? signataireConfigService.getSignataires() 
+                : SignatairesEtatDto.builder()
+                        .titreSignataire1("Le Comptable")
+                        .nomSignataire1("Ahadi Ismaël YONLI")
+                        .titreSignataire2("Le Directeur Financier et Comptable")
+                        .nomSignataire2("Inoussa SANOUIDI")
+                        .build();
+
         return EtatSyntheseWrapperDto.builder()
                 .typeEtat(type)
                 .titreEtat(titreEtat)
@@ -205,6 +215,10 @@ public class EtatSynthesePaieService {
                 .totalCotisationsPatronales(totalPatronales)
                 .totalMasseSalariale(totalMasseSalariale)
                 .donnees(rows)
+                .titreSignataire1(signataires.getTitreSignataire1())
+                .nomSignataire1(signataires.getNomSignataire1())
+                .titreSignataire2(signataires.getTitreSignataire2())
+                .nomSignataire2(signataires.getNomSignataire2())
                 .build();
     }
 
@@ -1725,11 +1739,20 @@ public class EtatSynthesePaieService {
         table.setWidths(new float[]{50, 50});
         table.setSpacingBefore(18f);
 
-        PdfPCell c1 = new PdfPCell(new Paragraph("Le Comptable\n\n\n\n\nAhadi Ismaël YONLI", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
+        String t1 = (etat != null && etat.getTitreSignataire1() != null && !etat.getTitreSignataire1().isBlank()) 
+                ? etat.getTitreSignataire1() : "Le Comptable";
+        String n1 = (etat != null && etat.getNomSignataire1() != null && !etat.getNomSignataire1().isBlank()) 
+                ? etat.getNomSignataire1() : "Ahadi Ismaël YONLI";
+        String t2 = (etat != null && etat.getTitreSignataire2() != null && !etat.getTitreSignataire2().isBlank()) 
+                ? etat.getTitreSignataire2() : "Le Directeur Financier et Comptable";
+        String n2 = (etat != null && etat.getNomSignataire2() != null && !etat.getNomSignataire2().isBlank()) 
+                ? etat.getNomSignataire2() : "Inoussa SANOUIDI";
+
+        PdfPCell c1 = new PdfPCell(new Paragraph(t1 + "\n\n\n\n\n" + n1, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
         c1.setBorder(Rectangle.NO_BORDER);
         c1.setHorizontalAlignment(Element.ALIGN_CENTER);
 
-        PdfPCell c2 = new PdfPCell(new Paragraph("Le Directeur Financier et Comptable\n\n\n\n\nInoussa SANOUIDI", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
+        PdfPCell c2 = new PdfPCell(new Paragraph(t2 + "\n\n\n\n\n" + n2, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
         c2.setBorder(Rectangle.NO_BORDER);
         c2.setHorizontalAlignment(Element.ALIGN_CENTER);
 

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/grh/employes/sections/retenues/retenues.component.scss"],
+  "sourcesContent": [".spin-icon { animation: spin 1s linear infinite; }\r\n@keyframes spin { to { transform: rotate(360deg); } }\r\n\r\n.salary-summary {\r\n  display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap;\r\n}\r\n.sal-item {\r\n  flex: 1; min-width: 180px;\r\n  background: var(--surface-variant); border-radius: 10px; padding: 14px 18px;\r\n  display: flex; flex-direction: column; gap: 4px;\r\n}\r\n.sal-lbl { font-size: 12px; color: var(--on-surface-3); font-weight: 600; }\r\n.sal-val { font-size: 16px; font-weight: 800; color: var(--on-surface); }\r\n.sal-val.highlight { color: #c62828; font-size: 18px; }\r\n"],
+  "mappings": ";AAAA,CAAA;AAAa,aAAA,KAAA,GAAA,OAAA;;AACb,WADa;AACK;AAAK,eAAA,OAAA;;;AAEvB,CAAA;AACE,WAAA;AAAe,OAAA;AAAW,cAAA;AAAkB,aAAA;;AAE9C,CAAA;AACE,QAAA;AAAS,aAAA;AACT,cAAA,IAAA;AAAoC,iBAAA;AAAqB,WAAA,KAAA;AACzD,WAAA;AAAe,kBAAA;AAAwB,OAAA;;AAEzC,CAAA;AAAW,aAAA;AAAiB,SAAA,IAAA;AAA4B,eAAA;;AACxD,CAAA;AAAW,aAAA;AAAiB,eAAA;AAAkB,SAAA,IAAA;;AAC9C,CADA,OACA,CAAA;AAAqB,SAAA;AAAgB,aAAA;;",
+  "names": []
+}

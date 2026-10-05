@@ -16,6 +16,18 @@ public class EtatSynthesePaieController {
 
     private final EtatSynthesePaieService etatSynthesePaieService;
     private final com.bpbf.sirh_backend.services.EtatSyntheseConfigService etatSyntheseConfigService;
+    private final com.bpbf.sirh_backend.services.SignataireConfigService signataireConfigService;
+
+    @GetMapping("/signataires")
+    public ResponseEntity<com.bpbf.sirh_backend.dtos.etatsynthese.SignatairesEtatDto> getSignataires() {
+        return ResponseEntity.ok(signataireConfigService.getSignataires());
+    }
+
+    @PutMapping("/signataires")
+    public ResponseEntity<com.bpbf.sirh_backend.dtos.etatsynthese.SignatairesEtatDto> updateSignataires(
+            @RequestBody com.bpbf.sirh_backend.dtos.etatsynthese.SignatairesEtatDto dto) {
+        return ResponseEntity.ok(signataireConfigService.updateSignataires(dto));
+    }
 
     @GetMapping("/configs")
     public ResponseEntity<java.util.List<com.bpbf.sirh_backend.dtos.etatsynthese.EtatSyntheseConfigDto>> getAllConfigs(

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/grh/employes/sections/notes-rh/notes-rh.component.scss"],
+  "sourcesContent": [".spin-icon { animation: spin 1s linear infinite; }\r\n@keyframes spin { to { transform: rotate(360deg); } }\r\n\r\n.eval-row { padding: 12px 0; }\r\n\r\n.historique-list { display: flex; flex-direction: column; gap: 8px; }\r\n.historique-item {\r\n  display: flex; gap: 12px; align-items: flex-start;\r\n  background: var(--surface-variant); border-radius: 10px; padding: 12px 14px;\r\n}\r\n.hist-icon { font-size: 18px; width: 18px; height: 18px; color: var(--on-surface-3); margin-top: 2px; flex-shrink: 0; }\r\n.hist-body { display: flex; flex-direction: column; gap: 2px; }\r\n.hist-type { font-size: 13px; font-weight: 700; color: var(--on-surface); }\r\n.hist-desc { font-size: 13px; color: var(--on-surface-2); }\r\n.hist-meta { font-size: 11px; color: var(--on-surface-3); }\r\n"],
+  "mappings": ";AAAA,CAAA;AAAa,aAAA,KAAA,GAAA,OAAA;;AACb,WADa;AACK;AAAK,eAAA,OAAA;;;AAEvB,CAAA;AAAY,WAAA,KAAA;;AAEZ,CAAA;AAAmB,WAAA;AAAe,kBAAA;AAAwB,OAAA;;AAC1D,CAAA;AACE,WAAA;AAAe,OAAA;AAAW,eAAA;AAC1B,cAAA,IAAA;AAAoC,iBAAA;AAAqB,WAAA,KAAA;;AAE3D,CAAA;AAAa,aAAA;AAAiB,SAAA;AAAa,UAAA;AAAc,SAAA,IAAA;AAA4B,cAAA;AAAiB,eAAA;;AACtG,CAAA;AAAa,WAAA;AAAe,kBAAA;AAAwB,OAAA;;AACpD,CAAA;AAAa,aAAA;AAAiB,eAAA;AAAkB,SAAA,IAAA;;AAChD,CAAA;AAAa,aAAA;AAAiB,SAAA,IAAA;;AAC9B,CAAA;AAAa,aAAA;AAAiB,SAAA,IAAA;;",
+  "names": []
+}
