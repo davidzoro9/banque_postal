@@ -39,7 +39,7 @@ public class CongeController {
     }
 
     // ── ÉTAPE 1 : CRÉATION / SOUMISSION ──
-    @PostMapping("/create")
+    @PostMapping(value = {"", "/create"})
     public ResponseEntity<Conge> create(@RequestBody Conge conge) {
         Conge saved = congeService.createConge(conge);
         return ResponseEntity.ok(saved);

@@ -99,6 +99,24 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) Long directionId,
             @RequestParam(required = false) String banque) {
 
+        byte[] excelBytes = etatSynthesePaieService.generateExcelExport(
+                typeEtat, sessionPaieId, bulletinLotId, directionId, banque);
+
+        String filename = "etat-" + typeEtat.toLowerCase() + ".xlsx";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(excelBytes);
+    }
+
+    @GetMapping("/csv")
+    public ResponseEntity<byte[]> downloadCsv(
+            @RequestParam(defaultValue = "LIVRE_PAIE") String typeEtat,
+            @RequestParam(required = false) Long sessionPaieId,
+            @RequestParam(required = false) Long bulletinLotId,
+            @RequestParam(required = false) Long directionId,
+            @RequestParam(required = false) String banque) {
+
         byte[] csvBytes = etatSynthesePaieService.generateCsvExport(
                 typeEtat, sessionPaieId, bulletinLotId, directionId, banque);
 

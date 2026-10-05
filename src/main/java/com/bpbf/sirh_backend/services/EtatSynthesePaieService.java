@@ -6,6 +6,20 @@ import com.bpbf.sirh_backend.repositories.*;
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
 import com.lowagie.text.pdf.*;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -1873,6 +1887,9 @@ public class EtatSynthesePaieService {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
 
+        // Directive officielle Microsoft pour forcer Excel à découper par point-virgule sur toutes les versions Windows
+        pw.println("sep=;");
+
         // Titre et métadonnées d'en-tête
         pw.println("BANQUE POSTALE DU BURKINA FASO");
         pw.println("ÉTAT DE SYNTHÈSE : " + etat.getTitreEtat());
@@ -2312,6 +2329,771 @@ public class EtatSynthesePaieService {
     private String escape(String s) {
         if (s == null) return "";
         return "\"" + s.replace("\"", "\"\"") + "\"";
+    }
+
+    // ─── GÉNÉRATION DU FICHIER EXCEL NATIF (.XLSX MULTI-COLONNES STYLISÉ) ───
+
+    public byte[] generateExcelExport(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, sessionPaieId, bulletinLotId, directionId, banqueNom);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            String sheetName = etat.getTypeEtat() != null ? etat.getTypeEtat() : "ETAT";
+            if (sheetName.length() > 30) {
+                sheetName = sheetName.substring(0, 30);
+            }
+            XSSFSheet sheet = workbook.createSheet(sheetName);
+            sheet.setDisplayGridlines(true);
+
+            // Palette de couleurs BPBF
+            byte[] navyRgb = new byte[]{(byte) 0, (byte) 96, (byte) 179}; // #0060B3
+            XSSFColor navyColor = new XSSFColor(navyRgb, null);
+
+            byte[] grayRgb = new byte[]{(byte) 241, (byte) 245, (byte) 249}; // #F1F5F9
+            XSSFColor grayColor = new XSSFColor(grayRgb, null);
+
+            // Polices
+            XSSFFont titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 13);
+            titleFont.setColor(navyColor);
+
+            XSSFFont subTitleFont = workbook.createFont();
+            subTitleFont.setBold(true);
+            subTitleFont.setFontHeightInPoints((short) 10.5);
+
+            XSSFFont metaFont = workbook.createFont();
+            metaFont.setFontHeightInPoints((short) 9);
+            metaFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+
+            XSSFFont thFont = workbook.createFont();
+            thFont.setBold(true);
+            thFont.setFontHeightInPoints((short) 9.5);
+            thFont.setColor(IndexedColors.WHITE.getIndex());
+
+            XSSFFont tdFont = workbook.createFont();
+            tdFont.setFontHeightInPoints((short) 9);
+
+            XSSFFont tdBoldFont = workbook.createFont();
+            tdBoldFont.setBold(true);
+            tdBoldFont.setFontHeightInPoints((short) 9.5);
+
+            DataFormat dataFormat = workbook.createDataFormat();
+            short numFmt = dataFormat.getFormat("#,##0");
+
+            // Styles
+            XSSFCellStyle titleStyle = workbook.createCellStyle();
+            titleStyle.setFont(titleFont);
+
+            XSSFCellStyle subTitleStyle = workbook.createCellStyle();
+            subTitleStyle.setFont(subTitleFont);
+
+            XSSFCellStyle metaStyle = workbook.createCellStyle();
+            metaStyle.setFont(metaFont);
+
+            XSSFCellStyle thStyle = workbook.createCellStyle();
+            thStyle.setFont(thFont);
+            thStyle.setFillForegroundColor(navyColor);
+            thStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            thStyle.setAlignment(HorizontalAlignment.CENTER);
+            thStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            thStyle.setBorderTop(BorderStyle.THIN);
+            thStyle.setBorderBottom(BorderStyle.THIN);
+            thStyle.setBorderLeft(BorderStyle.THIN);
+            thStyle.setBorderRight(BorderStyle.THIN);
+
+            XSSFCellStyle thNumStyle = workbook.createCellStyle();
+            thNumStyle.cloneStyleFrom(thStyle);
+            thNumStyle.setAlignment(HorizontalAlignment.RIGHT);
+
+            XSSFCellStyle tdTextStyle = workbook.createCellStyle();
+            tdTextStyle.setFont(tdFont);
+            tdTextStyle.setAlignment(HorizontalAlignment.LEFT);
+            tdTextStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            tdTextStyle.setBorderTop(BorderStyle.THIN);
+            tdTextStyle.setBorderBottom(BorderStyle.THIN);
+            tdTextStyle.setBorderLeft(BorderStyle.THIN);
+            tdTextStyle.setBorderRight(BorderStyle.THIN);
+
+            XSSFCellStyle tdCenterStyle = workbook.createCellStyle();
+            tdCenterStyle.setFont(tdFont);
+            tdCenterStyle.setAlignment(HorizontalAlignment.CENTER);
+            tdCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            tdCenterStyle.setBorderTop(BorderStyle.THIN);
+            tdCenterStyle.setBorderBottom(BorderStyle.THIN);
+            tdCenterStyle.setBorderLeft(BorderStyle.THIN);
+            tdCenterStyle.setBorderRight(BorderStyle.THIN);
+
+            XSSFCellStyle tdNumStyle = workbook.createCellStyle();
+            tdNumStyle.setFont(tdFont);
+            tdNumStyle.setDataFormat(numFmt);
+            tdNumStyle.setAlignment(HorizontalAlignment.RIGHT);
+            tdNumStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            tdNumStyle.setBorderTop(BorderStyle.THIN);
+            tdNumStyle.setBorderBottom(BorderStyle.THIN);
+            tdNumStyle.setBorderLeft(BorderStyle.THIN);
+            tdNumStyle.setBorderRight(BorderStyle.THIN);
+
+            XSSFCellStyle totalLabelStyle = workbook.createCellStyle();
+            totalLabelStyle.setFont(tdBoldFont);
+            totalLabelStyle.setFillForegroundColor(grayColor);
+            totalLabelStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            totalLabelStyle.setAlignment(HorizontalAlignment.LEFT);
+            totalLabelStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            totalLabelStyle.setBorderTop(BorderStyle.THIN);
+            totalLabelStyle.setBorderBottom(BorderStyle.DOUBLE);
+            totalLabelStyle.setBorderLeft(BorderStyle.THIN);
+            totalLabelStyle.setBorderRight(BorderStyle.THIN);
+
+            XSSFCellStyle totalNumStyle = workbook.createCellStyle();
+            totalNumStyle.setFont(tdBoldFont);
+            totalNumStyle.setFillForegroundColor(grayColor);
+            totalNumStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            totalNumStyle.setDataFormat(numFmt);
+            totalNumStyle.setAlignment(HorizontalAlignment.RIGHT);
+            totalNumStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            totalNumStyle.setBorderTop(BorderStyle.THIN);
+            totalNumStyle.setBorderBottom(BorderStyle.DOUBLE);
+            totalNumStyle.setBorderLeft(BorderStyle.THIN);
+            totalNumStyle.setBorderRight(BorderStyle.THIN);
+
+            // En-tête officiel BPBF
+            Row r0 = sheet.createRow(0);
+            createCell(r0, 0, "BANQUE POSTALE DU BURKINA FASO", titleStyle);
+
+            Row r1 = sheet.createRow(1);
+            createCell(r1, 0, "ÉTAT DE SYNTHÈSE : " + (etat.getTitreEtat() != null ? etat.getTitreEtat() : ""), subTitleStyle);
+
+            Row r2 = sheet.createRow(2);
+            String infoSession = "Session : " + (etat.getCodeSession() != null ? etat.getCodeSession() : "—") +
+                    "  |  Période : " + (etat.getPeriode() != null ? etat.getPeriode() : "—") +
+                    "  |  Date d'export : " + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            createCell(r2, 0, infoSession, metaStyle);
+
+            List<Object> data = etat.getDonnees() != null ? etat.getDonnees() : Collections.emptyList();
+            String type = etat.getTypeEtat();
+            int rowIndex = 4;
+            int colCount = 0;
+
+            Row headerRow = sheet.createRow(rowIndex++);
+            headerRow.setHeightInPoints(24);
+
+            if ("RECAPITULATIF_GLOBAL".equalsIgnoreCase(type)) {
+                String[] headers = {"Numéro Compte", "Intitulé Compte", "Sens", "Débit (FCFA)", "Crédit (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 3) ? thNumStyle : thStyle);
+                }
+                for (Object o : data) {
+                    if (o instanceof RecapitulatifGlobalRowDto r) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, r.getNumeroCompte(), tdCenterStyle);
+                        createCell(row, 1, r.getIntituleCompte(), tdTextStyle);
+                        createCell(row, 2, r.getSens(), tdCenterStyle);
+                        createCell(row, 3, r.getMontantDebit(), tdNumStyle);
+                        createCell(row, 4, r.getMontantCredit(), tdNumStyle);
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE)", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, "", totalLabelStyle);
+                createCell(totRow, 3, etat.getTotalMasseSalariale(), totalNumStyle);
+                createCell(totRow, 4, etat.getTotalMasseSalariale(), totalNumStyle);
+
+            } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type)) {
+                String[] headers = {"N° d'Ordre", "Matricule", "Nom et Prénoms", "Salaire Soumis (FCFA)", "Part Employeur (FCFA)", "Part Salariale (FCFA)", "Total Cotisations (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 3) ? thNumStyle : thStyle);
+                }
+                BigDecimal totSoumis = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totSal = BigDecimal.ZERO;
+                BigDecimal totGlob = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatCrraeRowDto c) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, c.getNumeroOrdre() != null ? c.getNumeroOrdre().toString() : "", tdCenterStyle);
+                        createCell(row, 1, c.getMatricule(), tdCenterStyle);
+                        createCell(row, 2, c.getNomPrenom(), tdTextStyle);
+                        createCell(row, 3, c.getSalaireSoumisCotisation(), tdNumStyle);
+                        createCell(row, 4, c.getCotisationPatronale(), tdNumStyle);
+                        createCell(row, 5, c.getCotisationSalariale(), tdNumStyle);
+                        createCell(row, 6, c.getMontantTotalCotisations(), tdNumStyle);
+
+                        if (c.getSalaireSoumisCotisation() != null) totSoumis = totSoumis.add(c.getSalaireSoumisCotisation());
+                        if (c.getCotisationPatronale() != null) totPat = totPat.add(c.getCotisationPatronale());
+                        if (c.getCotisationSalariale() != null) totSal = totSal.add(c.getCotisationSalariale());
+                        if (c.getMontantTotalCotisations() != null) totGlob = totGlob.add(c.getMontantTotalCotisations());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DE LA DÉCLARATION DES COTISATIONS", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, "", totalLabelStyle);
+                createCell(totRow, 3, totSoumis, totalNumStyle);
+                createCell(totRow, 4, totPat, totalNumStyle);
+                createCell(totRow, 5, totSal, totalNumStyle);
+                createCell(totRow, 6, totGlob, totalNumStyle);
+
+            } else if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
+                String[] headers = {"Banque", "Matricule", "Nom & Prénom(s)", "Code Banque", "Code Guichet", "Compte à créditer", "Clé", "Montant Net (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i == 7) ? thNumStyle : thStyle);
+                }
+                BigDecimal totalNetBq = BigDecimal.ZERO;
+                for (Object o : data) {
+                    if (o instanceof EtatBanqueGroupeDto bq) {
+                        if (bq.getVirements() != null) {
+                            for (EtatBanqueGroupeDto.VirementItemDto v : bq.getVirements()) {
+                                Row row = sheet.createRow(rowIndex++);
+                                createCell(row, 0, bq.getBanqueNom(), tdTextStyle);
+                                createCell(row, 1, v.getMatricule(), tdCenterStyle);
+                                createCell(row, 2, v.getNomPrenom(), tdTextStyle);
+                                createCell(row, 3, v.getCodeBanque(), tdCenterStyle);
+                                createCell(row, 4, v.getCodeGuichet(), tdCenterStyle);
+                                createCell(row, 5, v.getCompteACrediter(), tdCenterStyle);
+                                createCell(row, 6, v.getCle(), tdCenterStyle);
+                                BigDecimal m = v.getMontant() != null ? v.getMontant() : v.getMontantNet();
+                                createCell(row, 7, m, tdNumStyle);
+                                if (m != null) totalNetBq = totalNetBq.add(m);
+                            }
+                        }
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DES ORDRES DE VIREMENT", totalLabelStyle);
+                for (int i = 1; i <= 6; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 7, totalNetBq, totalNumStyle);
+
+            } else if ("ETAT_CNSS".equalsIgnoreCase(type)) {
+                String[] headers = {"Matricule", "Nom et Prénoms", "N° CNSS", "Date Embauche", "Salaire Brut (FCFA)", "Assiette CNSS (plaf. 800k)", "Part Sal. (5.5%)", "Prest. Fam. (7.0%)", "Risques Pro (3.5%)", "Retraite Pat. (5.5%)", "Total Patronal", "Total reversé CNSS"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
+                }
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totAss = BigDecimal.ZERO;
+                BigDecimal totSal = BigDecimal.ZERO;
+                BigDecimal totPf = BigDecimal.ZERO;
+                BigDecimal totRp = BigDecimal.ZERO;
+                BigDecimal totRetPat = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totRev = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatCnssRowDto c) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, c.getMatricule(), tdCenterStyle);
+                        createCell(row, 1, c.getNomPrenom(), tdTextStyle);
+                        createCell(row, 2, c.getNoCnss(), tdCenterStyle);
+                        createCell(row, 3, c.getDateEmbauche(), tdCenterStyle);
+                        createCell(row, 4, c.getSalaireBrut(), tdNumStyle);
+                        createCell(row, 5, c.getAssietteCotisable(), tdNumStyle);
+                        createCell(row, 6, c.getPartSalariale(), tdNumStyle);
+                        createCell(row, 7, c.getPartPatronalePrestations(), tdNumStyle);
+                        createCell(row, 8, c.getPartPatronaleRisques(), tdNumStyle);
+                        createCell(row, 9, c.getPartPatronaleRetraite(), tdNumStyle);
+                        createCell(row, 10, c.getTotalPartPatronale(), tdNumStyle);
+                        createCell(row, 11, c.getTotalCotisationCnss(), tdNumStyle);
+
+                        if (c.getSalaireBrut() != null) totBrut = totBrut.add(c.getSalaireBrut());
+                        if (c.getAssietteCotisable() != null) totAss = totAss.add(c.getAssietteCotisable());
+                        if (c.getPartSalariale() != null) totSal = totSal.add(c.getPartSalariale());
+                        if (c.getPartPatronalePrestations() != null) totPf = totPf.add(c.getPartPatronalePrestations());
+                        if (c.getPartPatronaleRisques() != null) totRp = totRp.add(c.getPartPatronaleRisques());
+                        if (c.getPartPatronaleRetraite() != null) totRetPat = totRetPat.add(c.getPartPatronaleRetraite());
+                        if (c.getTotalPartPatronale() != null) totPat = totPat.add(c.getTotalPartPatronale());
+                        if (c.getTotalCotisationCnss() != null) totRev = totRev.add(c.getTotalCotisationCnss());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DÉCLARATIF COTISATIONS CNSS", totalLabelStyle);
+                for (int i = 1; i <= 3; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 4, totBrut, totalNumStyle);
+                createCell(totRow, 5, totAss, totalNumStyle);
+                createCell(totRow, 6, totSal, totalNumStyle);
+                createCell(totRow, 7, totPf, totalNumStyle);
+                createCell(totRow, 8, totRp, totalNumStyle);
+                createCell(totRow, 9, totRetPat, totalNumStyle);
+                createCell(totRow, 10, totPat, totalNumStyle);
+                createCell(totRow, 11, totRev, totalNumStyle);
+
+            } else if ("ETAT_IUTS".equalsIgnoreCase(type)) {
+                String[] headers = {"N° d'Ordre", "Nom et Prénoms", "Total Salaires Bruts (FCFA)", "Base Imposable IUTS (FCFA)", "Nb de charges", "IUTS Net à Reverser (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i == 2 || i == 3 || i == 5) ? thNumStyle : thStyle);
+                }
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totBase = BigDecimal.ZERO;
+                BigDecimal totIuts = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatIutsRowDto i) {
+                        BigDecimal brut = i.getSalaireBruts() != null ? i.getSalaireBruts() : i.getSalaireBrut();
+                        BigDecimal netIuts = i.getIutsAReverser() != null ? i.getIutsAReverser() : i.getImpotIutsNet();
+                        Integer ch = i.getNbDeCharges() != null ? i.getNbDeCharges() : i.getNombreCharges();
+
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, i.getNumeroOrdre() != null ? i.getNumeroOrdre().toString() : "—", tdCenterStyle);
+                        createCell(row, 1, i.getNomPrenom(), tdTextStyle);
+                        createCell(row, 2, brut, tdNumStyle);
+                        createCell(row, 3, i.getBaseImposable(), tdNumStyle);
+                        createCell(row, 4, ch != null ? ch : 0, tdCenterStyle);
+                        createCell(row, 5, netIuts, tdNumStyle);
+
+                        if (brut != null) totBrut = totBrut.add(brut);
+                        if (i.getBaseImposable() != null) totBase = totBase.add(i.getBaseImposable());
+                        if (netIuts != null) totIuts = totIuts.add(netIuts);
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DE L'ÉTAT IUTS À REVERSER", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, totBrut, totalNumStyle);
+                createCell(totRow, 3, totBase, totalNumStyle);
+                createCell(totRow, 4, "", totalLabelStyle);
+                createCell(totRow, 5, totIuts, totalNumStyle);
+
+            } else if ("ETAT_FSP".equalsIgnoreCase(type)) {
+                String[] headers = {"N° d'Ordre", "Matricule", "Nom et Prénoms", "Salaire Net (FCFA)", "Taux", "Montant (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i == 3 || i == 5) ? thNumStyle : thStyle);
+                }
+                BigDecimal totNet = BigDecimal.ZERO;
+                BigDecimal totFsp = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatFspRowDto f) {
+                        BigDecimal net = f.getSalaireNet() != null ? f.getSalaireNet() : f.getAssietteCalcul();
+                        BigDecimal m = f.getMontant() != null ? f.getMontant() : f.getMontantRetenu();
+
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, f.getNumeroOrdre() != null ? f.getNumeroOrdre().toString() : "—", tdCenterStyle);
+                        createCell(row, 1, f.getMatricule(), tdCenterStyle);
+                        createCell(row, 2, f.getNomPrenom(), tdTextStyle);
+                        createCell(row, 3, net, tdNumStyle);
+                        createCell(row, 4, f.getTaux() != null ? (f.getTaux() + "%") : "1%", tdCenterStyle);
+                        createCell(row, 5, m, tdNumStyle);
+
+                        if (net != null) totNet = totNet.add(net);
+                        if (m != null) totFsp = totFsp.add(m);
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DU FONDS DE SOLIDARITÉ PATRIOTIQUE", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, "", totalLabelStyle);
+                createCell(totRow, 3, totNet, totalNumStyle);
+                createCell(totRow, 4, "1%", totalLabelStyle);
+                createCell(totRow, 5, totFsp, totalNumStyle);
+
+            } else if ("ETAT_SALAIRE".equalsIgnoreCase(type)) {
+                String[] headers = {"Direction", "Département", "Effectif", "Salaire Base (FCFA)", "Indemnités (FCFA)", "Salaire Brut (FCFA)", "Charges Patronales (FCFA)", "Masse Salariale Totale (FCFA)", "Retenues (FCFA)", "Net Payé (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 2) ? thNumStyle : thStyle);
+                }
+                int totEff = 0;
+                BigDecimal totBase = BigDecimal.ZERO;
+                BigDecimal totIndem = BigDecimal.ZERO;
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totMasse = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNet = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatSalaireDirectionRowDto s) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, s.getDirectionNom(), tdTextStyle);
+                        createCell(row, 1, s.getDepartementNom(), tdTextStyle);
+                        createCell(row, 2, s.getEffectif() != null ? s.getEffectif() : 0, tdCenterStyle);
+                        createCell(row, 3, s.getTotalSalaireBase(), tdNumStyle);
+                        createCell(row, 4, s.getTotalIndemnites(), tdNumStyle);
+                        createCell(row, 5, s.getTotalBrut(), tdNumStyle);
+                        createCell(row, 6, s.getTotalCotisationsPatronales(), tdNumStyle);
+                        createCell(row, 7, s.getTotalMasseSalariale(), tdNumStyle);
+                        createCell(row, 8, s.getTotalRetenues(), tdNumStyle);
+                        createCell(row, 9, s.getTotalNet(), tdNumStyle);
+
+                        totEff += s.getEffectif() != null ? s.getEffectif() : 0;
+                        if (s.getTotalSalaireBase() != null) totBase = totBase.add(s.getTotalSalaireBase());
+                        if (s.getTotalIndemnites() != null) totIndem = totIndem.add(s.getTotalIndemnites());
+                        if (s.getTotalBrut() != null) totBrut = totBrut.add(s.getTotalBrut());
+                        if (s.getTotalCotisationsPatronales() != null) totPat = totPat.add(s.getTotalCotisationsPatronales());
+                        if (s.getTotalMasseSalariale() != null) totMasse = totMasse.add(s.getTotalMasseSalariale());
+                        if (s.getTotalRetenues() != null) totRet = totRet.add(s.getTotalRetenues());
+                        if (s.getTotalNet() != null) totNet = totNet.add(s.getTotalNet());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL CONSOLIDÉ TOUTES DIRECTIONS", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, totEff, totalNumStyle);
+                createCell(totRow, 3, totBase, totalNumStyle);
+                createCell(totRow, 4, totIndem, totalNumStyle);
+                createCell(totRow, 5, totBrut, totalNumStyle);
+                createCell(totRow, 6, totPat, totalNumStyle);
+                createCell(totRow, 7, totMasse, totalNumStyle);
+                createCell(totRow, 8, totRet, totalNumStyle);
+                createCell(totRow, 9, totNet, totalNumStyle);
+
+            } else if ("ETAT_NOMINATIF".equalsIgnoreCase(type)) {
+                String[] headers = {"Matricule", "Nom et Prénoms", "Poste / Classification", "Direction", "Salaire Base (FCFA)", "Sal. Brut (FCFA)", "Total Ret. (FCFA)", "Net Payé (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
+                }
+                BigDecimal totBase = BigDecimal.ZERO;
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNet = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatNominatifRowDto n) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, n.getMatricule(), tdCenterStyle);
+                        createCell(row, 1, n.getNomPrenom(), tdTextStyle);
+                        String posteClass = (n.getPoste() != null ? n.getPoste() : "") + (n.getClassification() != null ? " (" + n.getClassification() + ")" : "");
+                        createCell(row, 2, posteClass, tdTextStyle);
+                        createCell(row, 3, n.getDirection(), tdTextStyle);
+                        createCell(row, 4, n.getSalaireBase(), tdNumStyle);
+                        createCell(row, 5, n.getSalaireBrut(), tdNumStyle);
+                        createCell(row, 6, n.getTotalRetenues(), tdNumStyle);
+                        createCell(row, 7, n.getSalaireNet(), tdNumStyle);
+
+                        if (n.getSalaireBase() != null) totBase = totBase.add(n.getSalaireBase());
+                        if (n.getSalaireBrut() != null) totBrut = totBrut.add(n.getSalaireBrut());
+                        if (n.getTotalRetenues() != null) totRet = totRet.add(n.getTotalRetenues());
+                        if (n.getSalaireNet() != null) totNet = totNet.add(n.getSalaireNet());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL GÉNÉRAL DE L'ÉTAT NOMINATIF", totalLabelStyle);
+                for (int i = 1; i <= 3; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 4, totBase, totalNumStyle);
+                createCell(totRow, 5, totBrut, totalNumStyle);
+                createCell(totRow, 6, totRet, totalNumStyle);
+                createCell(totRow, 7, totNet, totalNumStyle);
+
+            } else if ("ETAT_PRECOMPTE".equalsIgnoreCase(type)) {
+                String[] headers = {"Matricule", "Nom et Prénoms", "Type de Précompte / Prêt", "Organisme Bénéficiaire", "Montant Initial (FCFA)", "Retenue Période (FCFA)", "Solde Restant Dû (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
+                }
+                BigDecimal totInit = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totSolde = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatPrecompteRowDto p) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, p.getMatricule(), tdCenterStyle);
+                        createCell(row, 1, p.getNomPrenom(), tdTextStyle);
+                        createCell(row, 2, p.getTypePrecompte(), tdTextStyle);
+                        createCell(row, 3, p.getOrganismeBeneficiaire(), tdTextStyle);
+                        createCell(row, 4, p.getMontantTotalInitial(), tdNumStyle);
+                        createCell(row, 5, p.getRetenuePeriode(), tdNumStyle);
+                        createCell(row, 6, p.getSoldeRestantDu(), tdNumStyle);
+
+                        if (p.getMontantTotalInitial() != null) totInit = totInit.add(p.getMontantTotalInitial());
+                        if (p.getRetenuePeriode() != null) totRet = totRet.add(p.getRetenuePeriode());
+                        if (p.getSoldeRestantDu() != null) totSolde = totSolde.add(p.getSoldeRestantDu());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DES PRÉCOMPTES ET RETENUES", totalLabelStyle);
+                for (int i = 1; i <= 3; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 4, totInit, totalNumStyle);
+                createCell(totRow, 5, totRet, totalNumStyle);
+                createCell(totRow, 6, totSolde, totalNumStyle);
+
+            } else if ("ETAT_MUTUELLE".equalsIgnoreCase(type)) {
+                String[] headers = {"Matricule", "Nom et Prénoms", "Direction", "Formule / Régime", "Part Salariale (FCFA)", "Part Patronale (FCFA)", "Total Cotisation Mutuelle (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
+                }
+                BigDecimal totSal = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totCot = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatMutuelleRowDto m) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, m.getMatricule(), tdCenterStyle);
+                        createCell(row, 1, m.getNomPrenom(), tdTextStyle);
+                        createCell(row, 2, m.getDirection(), tdTextStyle);
+                        createCell(row, 3, m.getFormuleMutuelle(), tdTextStyle);
+                        createCell(row, 4, m.getPartSalariale(), tdNumStyle);
+                        createCell(row, 5, m.getPartPatronale(), tdNumStyle);
+                        createCell(row, 6, m.getTotalCotisation(), tdNumStyle);
+
+                        if (m.getPartSalariale() != null) totSal = totSal.add(m.getPartSalariale());
+                        if (m.getPartPatronale() != null) totPat = totPat.add(m.getPartPatronale());
+                        if (m.getTotalCotisation() != null) totCot = totCot.add(m.getTotalCotisation());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DES COTISATIONS MUTUELLE DE SANTÉ", totalLabelStyle);
+                for (int i = 1; i <= 3; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 4, totSal, totalNumStyle);
+                createCell(totRow, 5, totPat, totalNumStyle);
+                createCell(totRow, 6, totCot, totalNumStyle);
+
+            } else if ("ETAT_TYPE_EMPLOYE".equalsIgnoreCase(type)) {
+                String[] headers = {"Statut / Type d'Employé", "Effectif", "Salaire Base (FCFA)", "Indemnités (FCFA)", "Salaire Brut (FCFA)", "Charges Patronales (FCFA)", "Retenues (FCFA)", "Net Global (FCFA)", "Net Moyen (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 1) ? thNumStyle : thStyle);
+                }
+                int totEff = 0;
+                BigDecimal totBase = BigDecimal.ZERO;
+                BigDecimal totIndem = BigDecimal.ZERO;
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNet = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatTypeEmployeRowDto te) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, te.getTypeEmploye(), tdTextStyle);
+                        createCell(row, 1, te.getEffectif() != null ? te.getEffectif() : 0, tdCenterStyle);
+                        createCell(row, 2, te.getTotalSalaireBase(), tdNumStyle);
+                        createCell(row, 3, te.getTotalIndemnites(), tdNumStyle);
+                        createCell(row, 4, te.getTotalBrut(), tdNumStyle);
+                        createCell(row, 5, te.getTotalCotisationsPatronales(), tdNumStyle);
+                        createCell(row, 6, te.getTotalRetenues(), tdNumStyle);
+                        createCell(row, 7, te.getTotalNet(), tdNumStyle);
+                        createCell(row, 8, te.getSalaireMoyenNet(), tdNumStyle);
+
+                        totEff += te.getEffectif() != null ? te.getEffectif() : 0;
+                        if (te.getTotalSalaireBase() != null) totBase = totBase.add(te.getTotalSalaireBase());
+                        if (te.getTotalIndemnites() != null) totIndem = totIndem.add(te.getTotalIndemnites());
+                        if (te.getTotalBrut() != null) totBrut = totBrut.add(te.getTotalBrut());
+                        if (te.getTotalCotisationsPatronales() != null) totPat = totPat.add(te.getTotalCotisationsPatronales());
+                        if (te.getTotalRetenues() != null) totRet = totRet.add(te.getTotalRetenues());
+                        if (te.getTotalNet() != null) totNet = totNet.add(te.getTotalNet());
+                    }
+                }
+                BigDecimal moyNet = totEff > 0 ? totNet.divide(new BigDecimal(totEff), 0, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL GÉNÉRAL PAR STATUT", totalLabelStyle);
+                createCell(totRow, 1, totEff, totalNumStyle);
+                createCell(totRow, 2, totBase, totalNumStyle);
+                createCell(totRow, 3, totIndem, totalNumStyle);
+                createCell(totRow, 4, totBrut, totalNumStyle);
+                createCell(totRow, 5, totPat, totalNumStyle);
+                createCell(totRow, 6, totRet, totalNumStyle);
+                createCell(totRow, 7, totNet, totalNumStyle);
+                createCell(totRow, 8, moyNet, totalNumStyle);
+
+            } else if ("ETAT_ELEMENTS_SALAIRE".equalsIgnoreCase(type) || "ETAT_ELEMENT_SALAIRE".equalsIgnoreCase(type)) {
+                String[] headers = {"Code Rubrique", "Libellé de l'Élément", "Nature / Type", "Nombre Bénéficiaires", "Part Salariale (FCFA)", "Part Patronale (FCFA)", "Total Général (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 3) ? thNumStyle : thStyle);
+                }
+                int totBenef = 0;
+                BigDecimal totSal = BigDecimal.ZERO;
+                BigDecimal totPat = BigDecimal.ZERO;
+                BigDecimal totGlob = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatElementSalaireRowDto el) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, el.getCodeRubrique(), tdCenterStyle);
+                        createCell(row, 1, el.getLibelleRubrique(), tdTextStyle);
+                        createCell(row, 2, el.getTypeRubrique(), tdCenterStyle);
+                        createCell(row, 3, el.getNombreBeneficiaires() != null ? el.getNombreBeneficiaires() : 0, tdCenterStyle);
+                        createCell(row, 4, el.getTotalMontantSalarial(), tdNumStyle);
+                        createCell(row, 5, el.getTotalMontantPatronal(), tdNumStyle);
+                        createCell(row, 6, el.getTotalGlobal(), tdNumStyle);
+
+                        totBenef += el.getNombreBeneficiaires() != null ? el.getNombreBeneficiaires() : 0;
+                        if (el.getTotalMontantSalarial() != null) totSal = totSal.add(el.getTotalMontantSalarial());
+                        if (el.getTotalMontantPatronal() != null) totPat = totPat.add(el.getTotalMontantPatronal());
+                        if (el.getTotalGlobal() != null) totGlob = totGlob.add(el.getTotalGlobal());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DES RUBRIQUES DE SALAIRE", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, "", totalLabelStyle);
+                createCell(totRow, 3, totBenef, totalNumStyle);
+                createCell(totRow, 4, totSal, totalNumStyle);
+                createCell(totRow, 5, totPat, totalNumStyle);
+                createCell(totRow, 6, totGlob, totalNumStyle);
+
+            } else if ("ETAT_BULLETIN".equalsIgnoreCase(type)) {
+                String[] headers = {"Code Bulletin", "Matricule", "Nom et Prénoms", "Direction", "Type Session", "Statut", "Salaire Brut (FCFA)", "Total Retenues (FCFA)", "Net à Payer (FCFA)", "Justification Écart"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 6 && i <= 8) ? thNumStyle : thStyle);
+                }
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNet = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatBulletinControleRowDto b) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, b.getCodeBulletin(), tdCenterStyle);
+                        createCell(row, 1, b.getMatricule(), tdCenterStyle);
+                        createCell(row, 2, b.getNomPrenom(), tdTextStyle);
+                        createCell(row, 3, b.getDirection(), tdTextStyle);
+                        createCell(row, 4, b.getTypeSession(), tdCenterStyle);
+                        createCell(row, 5, b.getStatut(), tdCenterStyle);
+                        createCell(row, 6, b.getSalaireBrut(), tdNumStyle);
+                        createCell(row, 7, b.getTotalRetenues(), tdNumStyle);
+                        createCell(row, 8, b.getSalaireNet(), tdNumStyle);
+                        createCell(row, 9, b.getJustificationEcart() != null ? b.getJustificationEcart() : "—", tdTextStyle);
+
+                        if (b.getSalaireBrut() != null) totBrut = totBrut.add(b.getSalaireBrut());
+                        if (b.getTotalRetenues() != null) totRet = totRet.add(b.getTotalRetenues());
+                        if (b.getSalaireNet() != null) totNet = totNet.add(b.getSalaireNet());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL CONTRÔLE DE TOUS LES BULLETINS", totalLabelStyle);
+                for (int i = 1; i <= 5; i++) createCell(totRow, i, "", totalLabelStyle);
+                createCell(totRow, 6, totBrut, totalNumStyle);
+                createCell(totRow, 7, totRet, totalNumStyle);
+                createCell(totRow, 8, totNet, totalNumStyle);
+                createCell(totRow, 9, "", totalLabelStyle);
+
+            } else {
+                // Livre de paie officiel - 17 colonnes réglementaires
+                String[] headers = {"Mle", "Nom et Prénoms", "Grade", "Sal. base", "Sursalaire", "Indem. & Pr.", "Total brut", "Ass. vi.", "Part patr.", "Base imp.", "Chrg", "IUTS", "Sal. net", "Tot. ret.", "Net payer", "TPA", "Masse sal."};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 3) ? thNumStyle : thStyle);
+                }
+                BigDecimal totBase = BigDecimal.ZERO;
+                BigDecimal totSurSal = BigDecimal.ZERO;
+                BigDecimal totIndem = BigDecimal.ZERO;
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totAssVi = BigDecimal.ZERO;
+                BigDecimal totPartPat = BigDecimal.ZERO;
+                BigDecimal totBaseImp = BigDecimal.ZERO;
+                BigDecimal totIuts = BigDecimal.ZERO;
+                BigDecimal totSalNet = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNetPayer = BigDecimal.ZERO;
+                BigDecimal totTpa = BigDecimal.ZERO;
+                BigDecimal totMasseSal = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof LivrePaieRowDto l) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, l.getMatricule(), tdCenterStyle);
+                        createCell(row, 1, l.getNomPrenom(), tdTextStyle);
+                        createCell(row, 2, l.getGrade(), tdCenterStyle);
+                        createCell(row, 3, l.getSalaireBase(), tdNumStyle);
+                        createCell(row, 4, l.getSurSalaire(), tdNumStyle);
+                        BigDecimal ind = l.getIndemnitesEtPrimes() != null ? l.getIndemnitesEtPrimes() : l.getIndemnites();
+                        createCell(row, 5, ind, tdNumStyle);
+                        createCell(row, 6, l.getSalaireBrut(), tdNumStyle);
+                        BigDecimal ass = l.getAssVieillesse() != null ? l.getAssVieillesse() : l.getCotisationCnss();
+                        createCell(row, 7, ass, tdNumStyle);
+                        createCell(row, 8, l.getPartPatronale(), tdNumStyle);
+                        createCell(row, 9, l.getBaseImposable(), tdNumStyle);
+                        createCell(row, 10, l.getCharges() != null ? l.getCharges() : 0, tdCenterStyle);
+                        createCell(row, 11, l.getImpotIuts(), tdNumStyle);
+                        createCell(row, 12, l.getSalaireNet(), tdNumStyle);
+                        createCell(row, 13, l.getTotalRetenues(), tdNumStyle);
+                        BigDecimal netP = l.getNetAPayer() != null ? l.getNetAPayer() : l.getSalaireNet();
+                        createCell(row, 14, netP, tdNumStyle);
+                        createCell(row, 15, l.getTpa(), tdNumStyle);
+                        createCell(row, 16, l.getMasseSalariale(), tdNumStyle);
+
+                        if (l.getSalaireBase() != null) totBase = totBase.add(l.getSalaireBase());
+                        if (l.getSurSalaire() != null) totSurSal = totSurSal.add(l.getSurSalaire());
+                        if (ind != null) totIndem = totIndem.add(ind);
+                        if (l.getSalaireBrut() != null) totBrut = totBrut.add(l.getSalaireBrut());
+                        if (ass != null) totAssVi = totAssVi.add(ass);
+                        if (l.getPartPatronale() != null) totPartPat = totPartPat.add(l.getPartPatronale());
+                        if (l.getBaseImposable() != null) totBaseImp = totBaseImp.add(l.getBaseImposable());
+                        if (l.getImpotIuts() != null) totIuts = totIuts.add(l.getImpotIuts());
+                        if (l.getSalaireNet() != null) totSalNet = totSalNet.add(l.getSalaireNet());
+                        if (l.getTotalRetenues() != null) totRet = totRet.add(l.getTotalRetenues());
+                        if (netP != null) totNetPayer = totNetPayer.add(netP);
+                        if (l.getTpa() != null) totTpa = totTpa.add(l.getTpa());
+                        if (l.getMasseSalariale() != null) totMasseSal = totMasseSal.add(l.getMasseSalariale());
+                    }
+                }
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL GÉNÉRAL DU REGISTRE DE PAIE", totalLabelStyle);
+                createCell(totRow, 1, "", totalLabelStyle);
+                createCell(totRow, 2, "", totalLabelStyle);
+                createCell(totRow, 3, totBase, totalNumStyle);
+                createCell(totRow, 4, totSurSal, totalNumStyle);
+                createCell(totRow, 5, totIndem, totalNumStyle);
+                createCell(totRow, 6, totBrut, totalNumStyle);
+                createCell(totRow, 7, totAssVi, totalNumStyle);
+                createCell(totRow, 8, totPartPat, totalNumStyle);
+                createCell(totRow, 9, totBaseImp, totalNumStyle);
+                createCell(totRow, 10, "", totalLabelStyle);
+                createCell(totRow, 11, totIuts, totalNumStyle);
+                createCell(totRow, 12, totSalNet, totalNumStyle);
+                createCell(totRow, 13, totRet, totalNumStyle);
+                createCell(totRow, 14, totNetPayer, totalNumStyle);
+                createCell(totRow, 15, totTpa, totalNumStyle);
+                createCell(totRow, 16, totMasseSal, totalNumStyle);
+            }
+
+            // Auto-ajustement des largeurs de colonnes avec marge
+            for (int col = 0; col < colCount; col++) {
+                sheet.autoSizeColumn(col);
+                int currentWidth = sheet.getColumnWidth(col);
+                sheet.setColumnWidth(col, Math.max(currentWidth + 1200, 3600));
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            workbook.write(bos);
+            return bos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la génération de l'export Excel natif XLSX : {}", e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la génération du fichier Excel XLSX", e);
+        }
+    }
+
+    private void createCell(Row row, int col, String val, CellStyle style) {
+        Cell cell = row.createCell(col);
+        cell.setCellValue(val != null ? val : "");
+        cell.setCellStyle(style);
+    }
+
+    private void createCell(Row row, int col, Number val, CellStyle style) {
+        Cell cell = row.createCell(col);
+        if (val != null) {
+            cell.setCellValue(val.doubleValue());
+        } else {
+            cell.setCellValue(0.0);
+        }
+        cell.setCellStyle(style);
     }
 
     // ─── UTILITAIRES DE RENDU PDF ───────────────────────────────────────────

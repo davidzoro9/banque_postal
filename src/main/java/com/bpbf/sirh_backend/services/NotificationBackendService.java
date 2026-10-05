@@ -68,6 +68,28 @@ public class NotificationBackendService {
             log.debug("Comptage alertes SI BCEAO ignoré: {}", e.getMessage());
         }
 
+        // 1.c Demandes de bulletins RH formulées depuis Mon Espace
+        try {
+            Long demBullCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM demande_bulletin WHERE UPPER(statut) LIKE '%EN_ATTENTE%'",
+                Long.class
+            );
+            if (demBullCount != null && demBullCount > 0) {
+                list.add(NotificationItemDto.builder()
+                    .id("notif-dem-bulletin-" + demBullCount)
+                    .title(demBullCount + " demande" + (demBullCount > 1 ? "s" : "") + " de bulletin RH")
+                    .message(demBullCount + " collaborateur(s) ont formulé une demande de bulletin dans leur espace")
+                    .type("info")
+                    .read(false)
+                    .date(today)
+                    .icon("mark_email_unread")
+                    .route("/paie/bulletins")
+                    .build());
+            }
+        } catch (Exception e) {
+            log.debug("Comptage demandes bulletins ignoré : {}", e.getMessage());
+        }
+
         // 2. Contrats arrivant à échéance sous 30 jours
         try {
             Long contratsCount = jdbcTemplate.queryForObject(
