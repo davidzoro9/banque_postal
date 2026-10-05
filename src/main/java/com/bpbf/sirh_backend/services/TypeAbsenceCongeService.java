@@ -55,6 +55,12 @@ public class TypeAbsenceCongeService {
         if (typeAbsenceCongeDto.getName() != null && !typeAbsenceCongeDto.getName().isBlank()) {
             typeAbsenceConge.setName(typeAbsenceCongeDto.getName());
         }
+        if (typeAbsenceCongeDto.getDeductibleDuSolde() != null) {
+            typeAbsenceConge.setDeductibleDuSolde(typeAbsenceCongeDto.getDeductibleDuSolde());
+        }
+        if (typeAbsenceCongeDto.getDureeMaxLegaleJours() != null) {
+            typeAbsenceConge.setDureeMaxLegaleJours(typeAbsenceCongeDto.getDureeMaxLegaleJours());
+        }
 
         TypeAbsenceConge saved = typeAbsenceCongeRepository.save(typeAbsenceConge);
 

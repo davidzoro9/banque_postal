@@ -117,10 +117,15 @@ public class BulletinPdfService {
 
             // 4. Bloc Règlements & Net à payer
             BigDecimal net = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
-            String banqueNom = emp != null && emp.getBanque() != null && !emp.getBanque().isEmpty() ? emp.getBanque() : "BANQUE POSTALE DU BURKINA FASO";
+            String banqueNom = emp != null && emp.getBanque() != null && !emp.getBanque().isEmpty() 
+                    ? emp.getBanque().toUpperCase(Locale.ROOT) 
+                    : "BANQUE POSTALE";
+            if (banqueNom.contains("BURKINA") || banqueNom.contains("BPBF")) {
+                banqueNom = "BANQUE POSTALE";
+            }
             boolean isDummyCompte = iban == null || iban.isBlank() || iban.equals("—") 
                     || iban.contains("0000000000") || iban.contains("000000000000") 
-                    || iban.equals("08000002501") || iban.contains("BF01 01001 000000000000 00");
+                    || iban.contains("BF01 01001 000000000000 00");
             String compteBancaire = !isDummyCompte
                     ? iban
                     : (emp != null && emp.getMatricule() != null ? ("Compte BPBF — " + emp.getMatricule()) : "—");
@@ -188,12 +193,15 @@ public class BulletinPdfService {
 
             BigDecimal net = dto.getSalaireNet() != null ? dto.getSalaireNet() : BigDecimal.ZERO;
             String banqueNom = empObj != null && empObj.getBanque() != null && !empObj.getBanque().isEmpty() 
-                    ? empObj.getBanque() 
-                    : (dto.getBanque() != null && !dto.getBanque().isBlank() ? dto.getBanque() : "BANQUE POSTALE DU BURKINA FASO");
+                    ? empObj.getBanque().toUpperCase(Locale.ROOT) 
+                    : (dto.getBanque() != null && !dto.getBanque().isBlank() ? dto.getBanque().toUpperCase(Locale.ROOT) : "BANQUE POSTALE");
+            if (banqueNom.contains("BURKINA") || banqueNom.contains("BPBF")) {
+                banqueNom = "BANQUE POSTALE";
+            }
             String rawIban = empObj != null && empObj.getIban() != null ? empObj.getIban() : dto.getNumeroCompteBancaire();
             boolean isDummyIban = rawIban == null || rawIban.isBlank() || rawIban.equals("—")
                     || rawIban.contains("0000000000") || rawIban.contains("000000000000")
-                    || rawIban.equals("08000002501") || rawIban.contains("BF01 01001 000000000000 00");
+                    || rawIban.contains("BF01 01001 000000000000 00");
             String compteIban = !isDummyIban
                     ? rawIban
                     : (matricule != null && !matricule.equals("—") ? ("Compte BPBF — " + matricule) : "—");
@@ -452,6 +460,14 @@ public class BulletinPdfService {
         return s;
     }
 
+    private static String normalizeText(String s) {
+        if (s == null) return "";
+        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9]", "")
+                .toUpperCase(Locale.ROOT);
+    }
+
     private static class DisplayLine {
         final String code;
         final String libelle;
@@ -512,7 +528,7 @@ public class BulletinPdfService {
                 ? surSalL.getTaux().stripTrailingZeros().toPlainString()
                 : daysStr;
         if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SUR_SALAIRE", "SUR-SALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
+            displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }
 
         // 3. Examiner les lignes du bulletin
@@ -531,18 +547,22 @@ public class BulletinPdfService {
                 hasAggregatedIndemnites = true;
                 continue;
             }
-            if (code.startsWith("IND_") || (code.contains("INDEMNITE") && !lib.contains("TOTAL"))) {
-                hasIndividualIndemnites = true;
-            }
-            if (code.contains("CRRAE") || lib.contains("CRRAE")) {
-                hasCrraeLine = true;
-            }
 
             boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne());
             boolean isRetenue = "RETENUE".equalsIgnoreCase(l.getTypeLigne()) ||
                     "RETENUE_SOCIALE".equalsIgnoreCase(l.getTypeLigne()) ||
                     "IMPOT".equalsIgnoreCase(l.getTypeLigne()) ||
                     "PRECOMPTE".equalsIgnoreCase(l.getTypeLigne());
+
+            String normLib = normalizeText(lib);
+            if (isGain || code.startsWith("IND_") || normLib.contains("INDEMNIT") || code.contains("IND") || code.contains("PRIME")) {
+                if (!normLib.contains("TOTAL")) {
+                    hasIndividualIndemnites = true;
+                }
+            }
+            if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                hasCrraeLine = true;
+            }
 
             String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
             String tauxStr = "";
@@ -562,6 +582,10 @@ public class BulletinPdfService {
             } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
                 lib = "RETENUE FONDS DE SOLIDARITE";
                 tauxStr = "1 %";
+            } else if (code.contains("CASH") || lib.contains("CASH POINT") || code.contains("CP")) {
+                tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0)
+                        ? l.getTaux().stripTrailingZeros().toPlainString()
+                        : daysStr;
             } else if (code.contains("ANC")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
             } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
@@ -589,6 +613,15 @@ public class BulletinPdfService {
                 if (Boolean.TRUE.equals(b.getEmployee().getVehiculeFourni()) && (iCode.contains("TRP") || iLib.contains("TRANSPORT"))) continue;
                 if (Boolean.TRUE.equals(b.getEmployee().getLogementFourni()) && (iCode.contains("LOG") || iLib.contains("LOGEMENT"))) continue;
 
+                // Protection anti-doublon absolue avec les lignes déjà présentes
+                String normILib = normalizeText(iLib);
+                boolean alreadyInList = displayLines.stream().anyMatch(dl -> {
+                    String normDl = normalizeText(dl.libelle);
+                    return dl.code.equalsIgnoreCase(iCode) || normDl.equalsIgnoreCase(normILib)
+                            || normDl.contains(normILib) || normILib.contains(normDl);
+                });
+                if (alreadyInList) continue;
+
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
                 if (mnt.compareTo(BigDecimal.ZERO) > 0) {
                     displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
@@ -602,7 +635,7 @@ public class BulletinPdfService {
             BigDecimal baseCrrae = BigDecimal.ZERO;
             if (b.getSalaireBase() != null) baseCrrae = baseCrrae.add(b.getSalaireBase());
             if (b.getSurSalaire() != null) baseCrrae = baseCrrae.add(b.getSurSalaire());
-            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "3 %", null, mntCrrae, 35));
+            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 35));
         }
 
         // 6. Vérifier la somme des retenues par rapport à totalRetenues pour équilibre parfait
@@ -612,6 +645,20 @@ public class BulletinPdfService {
         if (diffRet.compareTo(new BigDecimal("1.00")) >= 0) {
             displayLines.add(new DisplayLine("RET_SOLIDARITE", "RETENUE FONDS DE SOLIDARITE", "", "1 %", null, diffRet, 40));
         }
+
+        // Déduplication de sécurité finale
+        List<DisplayLine> uniqueLines = new ArrayList<>();
+        for (DisplayLine dl : displayLines) {
+            String norm = normalizeText(dl.libelle);
+            boolean exists = uniqueLines.stream().anyMatch(u -> {
+                String uNorm = normalizeText(u.libelle);
+                return (u.code != null && !u.code.isEmpty() && u.code.equalsIgnoreCase(dl.code)) || uNorm.equalsIgnoreCase(norm);
+            });
+            if (!exists) {
+                uniqueLines.add(dl);
+            }
+        }
+        displayLines = uniqueLines;
 
         // 7. Trier les lignes
         displayLines.sort(Comparator.comparingInt(l -> l.sortWeight));
@@ -675,7 +722,7 @@ public class BulletinPdfService {
                 ? surSalL.getTaux().stripTrailingZeros().toPlainString()
                 : daysStr;
         if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
-            displayLines.add(new DisplayLine("SUR_SALAIRE", "SUR-SALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
+            displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }
 
         boolean hasAggregatedIndemnites = false;
@@ -694,12 +741,6 @@ public class BulletinPdfService {
                     hasAggregatedIndemnites = true;
                     continue;
                 }
-                if (code.startsWith("IND_") || (code.contains("INDEMNITE") && !lib.contains("TOTAL"))) {
-                    hasIndividualIndemnites = true;
-                }
-                if (code.contains("CRRAE") || lib.contains("CRRAE")) {
-                    hasCrraeLine = true;
-                }
 
                 boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne());
                 boolean isRetenue = "RETENUE".equalsIgnoreCase(l.getTypeLigne()) || 
@@ -707,14 +748,40 @@ public class BulletinPdfService {
                         "IMPOT".equalsIgnoreCase(l.getTypeLigne()) || 
                         "PRECOMPTE".equalsIgnoreCase(l.getTypeLigne());
 
+                String normLib = normalizeText(lib);
+                if (isGain || code.startsWith("IND_") || normLib.contains("INDEMNIT") || code.contains("IND") || code.contains("PRIME")) {
+                    if (!normLib.contains("TOTAL")) {
+                        hasIndividualIndemnites = true;
+                    }
+                }
+                if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                    hasCrraeLine = true;
+                }
+
                 String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
                 String tauxStr = "";
-                if (code.contains("IUTS")) {
+                if (code.contains("IUTS") || lib.contains("IUTS")) {
+                    lib = "RETENUE IUTS";
                     if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
-                        tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
+                        tauxStr = String.valueOf(l.getTaux().intValue());
+                    } else if (dto.getNombreCharges() != null) {
+                        tauxStr = String.valueOf(dto.getNombreCharges());
                     } else {
-                        tauxStr = "Barème";
+                        tauxStr = "2";
                     }
+                } else if (code.contains("CNSS") || lib.contains("CNSS")) {
+                    lib = "COTISATION CNSS";
+                    tauxStr = "5,5 %";
+                } else if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                    lib = "COTISATION CRRAE/RCPNC";
+                    tauxStr = "6 %";
+                } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
+                    lib = "RETENUE FONDS DE SOLIDARITE";
+                    tauxStr = "1 %";
+                } else if (code.contains("CASH") || lib.contains("CASH POINT") || code.contains("CP")) {
+                    tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0)
+                            ? l.getTaux().stripTrailingZeros().toPlainString()
+                            : daysStr;
                 } else if (code.contains("ANC")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
                 } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
@@ -743,6 +810,15 @@ public class BulletinPdfService {
                 if (Boolean.TRUE.equals(emp.getVehiculeFourni()) && (iCode.contains("TRP") || iLib.contains("TRANSPORT"))) continue;
                 if (Boolean.TRUE.equals(emp.getLogementFourni()) && (iCode.contains("LOG") || iLib.contains("LOGEMENT"))) continue;
 
+                // Protection anti-doublon absolue avec les lignes déjà présentes
+                String normILib = normalizeText(iLib);
+                boolean alreadyInList = displayLines.stream().anyMatch(dl -> {
+                    String normDl = normalizeText(dl.libelle);
+                    return dl.code.equalsIgnoreCase(iCode) || normDl.equalsIgnoreCase(normILib)
+                            || normDl.contains(normILib) || normILib.contains(normDl);
+                });
+                if (alreadyInList) continue;
+
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
                 if (mnt.compareTo(BigDecimal.ZERO) > 0) {
                     displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
@@ -755,7 +831,7 @@ public class BulletinPdfService {
             BigDecimal baseCrrae = BigDecimal.ZERO;
             if (dto.getSalaireBase() != null) baseCrrae = baseCrrae.add(dto.getSalaireBase());
             if (dto.getSurSalaire() != null) baseCrrae = baseCrrae.add(dto.getSurSalaire());
-            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "3 %", null, mntCrrae, 35));
+            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 35));
         }
 
         BigDecimal totRetenuesTarget = dto.getTotalRetenues() != null ? dto.getTotalRetenues() : BigDecimal.ZERO;
@@ -764,6 +840,20 @@ public class BulletinPdfService {
         if (diffRet.compareTo(new BigDecimal("1.00")) >= 0) {
             displayLines.add(new DisplayLine("RET_SOLIDARITE", "RETENUE FONDS DE SOLIDARITE", "", "1 %", null, diffRet, 40));
         }
+
+        // Déduplication de sécurité finale
+        List<DisplayLine> uniqueLines = new ArrayList<>();
+        for (DisplayLine dl : displayLines) {
+            String norm = normalizeText(dl.libelle);
+            boolean exists = uniqueLines.stream().anyMatch(u -> {
+                String uNorm = normalizeText(u.libelle);
+                return (u.code != null && !u.code.isEmpty() && u.code.equalsIgnoreCase(dl.code)) || uNorm.equalsIgnoreCase(norm);
+            });
+            if (!exists) {
+                uniqueLines.add(dl);
+            }
+        }
+        displayLines = uniqueLines;
 
         displayLines.sort(Comparator.comparingInt(l -> l.sortWeight));
 
@@ -795,10 +885,16 @@ public class BulletinPdfService {
         PdfPCell payCell = new PdfPCell();
         payCell.setBorder(Rectangle.NO_BORDER);
         payCell.setPadding(4f);
-        payCell.addElement(new Paragraph("REGLEMENTS  : " + (banqueNom != null && !banqueNom.isBlank() ? banqueNom.replaceAll("[()]", "") : "Banque Postale du Burkina Faso - BPBF"), FONT_CELL_BOLD));
+        String formattedBanque = (banqueNom != null && !banqueNom.isBlank())
+                ? banqueNom.replaceAll("[()]", "").trim().toUpperCase(Locale.ROOT)
+                : "BANQUE POSTALE";
+        if (formattedBanque.contains("BURKINA") || formattedBanque.contains("BPBF")) {
+            formattedBanque = "BANQUE POSTALE";
+        }
+        payCell.addElement(new Paragraph("REGLEMENTS  : " + formattedBanque, FONT_CELL_BOLD));
         
         String cleanIban = "—";
-        if (iban != null && !iban.isBlank() && !iban.equals("—") && !iban.contains("0000000000") && !iban.equals("08000002501")) {
+        if (iban != null && !iban.isBlank() && !iban.equals("—") && !iban.contains("0000000000")) {
             cleanIban = iban.trim();
         }
         payCell.addElement(new Paragraph("COMPTE N°    : " + cleanIban, FONT_CELL_BOLD));
@@ -886,6 +982,12 @@ public class BulletinPdfService {
                 }
             }
         }
+        if (b != null && b.getSessionPaie() != null && BulletinService.is13Ou14emeMois(b.getSessionPaie())) {
+            return BigDecimal.ZERO;
+        }
+        if (b != null && BulletinService.is13Ou14emeMois(b.getTypeSession())) {
+            return BigDecimal.ZERO;
+        }
         // Failsafe légal : 5.5% du brut
         BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
         if (brut.compareTo(BigDecimal.ZERO) > 0) {
@@ -913,6 +1015,15 @@ public class BulletinPdfService {
                     }
                 }
             }
+        }
+        if (dto.getTypeSession() != null && BulletinService.is13Ou14emeMois(dto.getTypeSession())) {
+            return BigDecimal.ZERO;
+        }
+        if (dto.getSessionType() != null && BulletinService.is13Ou14emeMois(dto.getSessionType())) {
+            return BigDecimal.ZERO;
+        }
+        if (dto.getSessionPeriode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPeriode())) {
+            return BigDecimal.ZERO;
         }
         // Failsafe légal : 5.5% du brut
         BigDecimal brut = dto.getSalaireBrut() != null ? dto.getSalaireBrut() : BigDecimal.ZERO;

@@ -192,10 +192,14 @@ public class BulletinService {
             surSalaire = money(new BigDecimal(emp.getSurSalaire()));
         }
 
-        boolean is13eme = is13emeMois(session);
+        boolean is13 = is13emeMois(session);
+        boolean is14 = is14emeMois(session);
+        boolean isConge = isCongePaye(session);
+        boolean isRetraite = isIndemniteRetraite(session);
         boolean isStc = isStc(session);
-        boolean isGratif = !is13eme && !isStc && isGratification(session != null ? session.getTypeSession() : null);
-        boolean isExtra = isExtraordinaire(session != null ? session.getTypeSession() : null) || is13eme || isStc;
+        boolean isGratif = !is13 && !is14 && !isConge && !isRetraite && !isStc && isGratification(session != null ? session.getTypeSession() : null);
+        boolean isExtra = isExtraordinaire(session != null ? session.getTypeSession() : null) || is13 || is14 || isConge || isRetraite || isStc;
+        boolean is13Ou14eme = is13 || is14;
 
         // Calcul automatique du nombre de jours travaillés selon dateEmbauche (prorata temporis)
         BigDecimal scheduledDays = customScheduledDays != null ? customScheduledDays : new BigDecimal("30.00");
@@ -237,35 +241,25 @@ public class BulletinService {
         BigDecimal surSalairePlein = surSalaire;
         surSalaire = money(surSalairePlein.multiply(ratio));
 
-        if (isGratif) {
-            BulletinLine gratLine = new BulletinLine();
-            gratLine.setCode("GRAT_ANN");
-            gratLine.setLibelle("Gratification Annuelle 13ème Mois");
-            gratLine.setTypeLigne("GAIN");
-            gratLine.setBaseCalcul(salaireBase.add(surSalaire));
-            gratLine.setTaux(new BigDecimal("100.00"));
-            gratLine.setMontant(salaireBase.add(surSalaire));
-            gratLine.setOrdre(1);
+        // ====================================================================
+        // 1. SESSION EXTRAORDINAIRE : 13ème MOIS (Mode calcul inverse : Brut = Net)
+        // ====================================================================
+        if (is13 || isGratif) {
+            BigDecimal brut13 = money(salaireBase.add(surSalaire));
+            BigDecimal net13 = brut13; // Le brut devient le net de l'agent
 
-            List<BulletinLine> lines = new ArrayList<>();
-            lines.add(gratLine);
+            BulletinLine gratLine = new BulletinLine();
+            gratLine.setCode("GRAT_13EME");
+            gratLine.setLibelle("13ème Mois (Gratification)");
+            gratLine.setTypeLigne("GAIN");
+            gratLine.setBaseCalcul(brut13);
+            gratLine.setTaux(new BigDecimal("100.00"));
+            gratLine.setMontant(brut13);
+            gratLine.setOrdre(1);
 
             Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
             Grade grade = emp.getGradeObj();
-
-            String codeBulletin = String.format("BLT-%s-%s-%04d",
-                    session.getMois() != null ? session.getMois() : "M",
-                    session.getAnnee() != null ? session.getAnnee() : LocalDate.now().getYear(),
-                    emp.getId());
-            if (codeBulletin.length() > 60) codeBulletin = codeBulletin.substring(0, 60);
-            String finalCode = codeBulletin;
-            if (bulletinRepository.findByCode(finalCode).isPresent()) {
-                long count = bulletinRepository.countByEmployeeId(emp.getId()) + 1;
-                finalCode = String.format("%s-%d", codeBulletin, count);
-                while (bulletinRepository.findByCode(finalCode).isPresent()) {
-                    finalCode = String.format("%s-%d", codeBulletin, ++count);
-                }
-            }
+            String finalCode = generateBulletinCode(session, emp);
 
             Bulletin bulletin = new Bulletin();
             bulletin.setCode(finalCode);
@@ -273,7 +267,8 @@ public class BulletinService {
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
             bulletin.setContrat(contrat);
-            bulletin.setTypeSession("GRATIFICATION");
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("13EME_MOIS");
             bulletin.setDateFrom(debutPeriode);
             bulletin.setDateTo(finPeriode);
             bulletin.setScheduledWorkingDays(scheduledDays);
@@ -282,7 +277,7 @@ public class BulletinService {
             bulletin.setSurSalaire(surSalaire);
             bulletin.setTotalIndemnites(BigDecimal.ZERO);
             bulletin.setTotalAvoirs(BigDecimal.ZERO);
-            bulletin.setSalaireBrut(salaireBase.add(surSalaire));
+            bulletin.setSalaireBrut(brut13);
             bulletin.setTotalExonerations(BigDecimal.ZERO);
             bulletin.setAbattementForfaitaire(BigDecimal.ZERO);
             bulletin.setBaseImposable(BigDecimal.ZERO);
@@ -294,11 +289,501 @@ public class BulletinService {
             bulletin.setTotalPrecomptes(BigDecimal.ZERO);
             bulletin.setTotalRetenues(BigDecimal.ZERO);
             bulletin.setTotalCotisationsPatronales(BigDecimal.ZERO);
-            bulletin.setSalaireNet(salaireBase.add(surSalaire));
+            bulletin.setSalaireNet(net13);
             bulletin.setStatut("GENERE");
             bulletin.setDateCalcul(LocalDateTime.now());
 
             bulletin.addLine(gratLine);
+            bulletin = bulletinRepository.save(bulletin);
+            return bulletin;
+        }
+
+        // ====================================================================
+        // 2. SESSION EXTRAORDINAIRE : 14ème MOIS (Mode calcul inverse : Brut = Net)
+        // ====================================================================
+        if (is14) {
+            BigDecimal brut14 = money(salaireBase.add(surSalaire));
+            BigDecimal net14 = brut14; // Le brut devient le net de l'agent
+
+            BulletinLine gratLine = new BulletinLine();
+            gratLine.setCode("GRAT_14EME");
+            gratLine.setLibelle("14ème Mois");
+            gratLine.setTypeLigne("GAIN");
+            gratLine.setBaseCalcul(brut14);
+            gratLine.setTaux(new BigDecimal("100.00"));
+            gratLine.setMontant(brut14);
+            gratLine.setOrdre(1);
+
+            Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+            Grade grade = emp.getGradeObj();
+            String finalCode = generateBulletinCode(session, emp);
+
+            Bulletin bulletin = new Bulletin();
+            bulletin.setCode(finalCode);
+            bulletin.setEmployee(emp);
+            bulletin.setSessionPaie(session);
+            bulletin.setGrade(grade);
+            bulletin.setContrat(contrat);
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("14EME_MOIS");
+            bulletin.setDateFrom(debutPeriode);
+            bulletin.setDateTo(finPeriode);
+            bulletin.setScheduledWorkingDays(scheduledDays);
+            bulletin.setWorkedDays(workedDays);
+            bulletin.setSalaireBase(salaireBase);
+            bulletin.setSurSalaire(surSalaire);
+            bulletin.setTotalIndemnites(BigDecimal.ZERO);
+            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setSalaireBrut(brut14);
+            bulletin.setTotalExonerations(BigDecimal.ZERO);
+            bulletin.setAbattementForfaitaire(BigDecimal.ZERO);
+            bulletin.setBaseImposable(BigDecimal.ZERO);
+            bulletin.setCotisationCnss(BigDecimal.ZERO);
+            bulletin.setImpotIutsSansCharge(BigDecimal.ZERO);
+            bulletin.setReductionIutsCharge(BigDecimal.ZERO);
+            bulletin.setImpotIuts(BigDecimal.ZERO);
+            bulletin.setTotalRetenuesSociales(BigDecimal.ZERO);
+            bulletin.setTotalPrecomptes(BigDecimal.ZERO);
+            bulletin.setTotalRetenues(BigDecimal.ZERO);
+            bulletin.setTotalCotisationsPatronales(BigDecimal.ZERO);
+            bulletin.setSalaireNet(net14);
+            bulletin.setStatut("GENERE");
+            bulletin.setDateCalcul(LocalDateTime.now());
+
+            bulletin.addLine(gratLine);
+            bulletin = bulletinRepository.save(bulletin);
+            return bulletin;
+        }
+
+        // ====================================================================
+        // 3. SESSION EXTRAORDINAIRE : LE CONGÉ PAYÉ
+        // Formule : Somme revenus 12 derniers mois / 360 * Jours acquis
+        // ====================================================================
+        if (isConge) {
+            BigDecimal defMonthlyBrut = salaireBase.add(surSalaire);
+            BigDecimal somme12 = getSommeRevenus12DerniersMois(emp.getId(), defMonthlyBrut);
+            BigDecimal smj = somme12.divide(new BigDecimal("360"), 2, RoundingMode.HALF_UP);
+            BigDecimal joursAcquis = getJoursCongeAcquis(emp.getId());
+            BigDecimal montantConge = money(smj.multiply(joursAcquis));
+
+            BulletinLine cpLine = new BulletinLine();
+            cpLine.setCode("IND_CONGE_PAYE");
+            cpLine.setLibelle("Indemnité de Congé Payé (" + formatMoneyNoDec(joursAcquis) + " j)");
+            cpLine.setTypeLigne("GAIN");
+            cpLine.setBaseCalcul(smj);
+            cpLine.setTaux(joursAcquis);
+            cpLine.setMontant(montantConge);
+            cpLine.setOrdre(1);
+
+            // Cotisation CNSS (5.5% plafonné à 600 000 FCFA => max 33 000 FCFA)
+            BigDecimal baseCnss = montantConge.min(new BigDecimal("600000"));
+            BigDecimal cnssEmploye = money(baseCnss.multiply(new BigDecimal("0.055")));
+            BigDecimal cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
+
+            // IUTS sur congé payé avec abattement de 20%
+            BigDecimal abattement = money(montantConge.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00")));
+            BigDecimal baseImposable = money(montantConge.subtract(cnssEmploye).subtract(abattement).max(BigDecimal.ZERO));
+
+            int nbCharges = 0;
+            try {
+                nbCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(emp.getId()));
+            } catch (Exception ignored) {}
+            BigDecimal iutsSansCharge = calculateIuts(baseImposable);
+            BigDecimal tauxReduction = reductionRate(nbCharges);
+            BigDecimal reductionIuts = money(iutsSansCharge.multiply(tauxReduction).divide(CENT, 8, RoundingMode.HALF_UP));
+            BigDecimal impotIuts = money(iutsSansCharge.subtract(reductionIuts).max(BigDecimal.ZERO));
+
+            BigDecimal totalRetenues = money(cnssEmploye.add(impotIuts));
+            BigDecimal salaireNet = money(montantConge.subtract(totalRetenues));
+
+            Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+            Grade grade = emp.getGradeObj();
+            String finalCode = generateBulletinCode(session, emp);
+
+            Bulletin bulletin = new Bulletin();
+            bulletin.setCode(finalCode);
+            bulletin.setEmployee(emp);
+            bulletin.setSessionPaie(session);
+            bulletin.setGrade(grade);
+            bulletin.setContrat(contrat);
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("CONGE_PAYE");
+            bulletin.setDateFrom(debutPeriode);
+            bulletin.setDateTo(finPeriode);
+            bulletin.setScheduledWorkingDays(scheduledDays);
+            bulletin.setWorkedDays(workedDays);
+            bulletin.setSalaireBase(salaireBase);
+            bulletin.setSurSalaire(surSalaire);
+            bulletin.setTotalIndemnites(montantConge);
+            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setSalaireBrut(montantConge);
+            bulletin.setTotalExonerations(BigDecimal.ZERO);
+            bulletin.setAbattementForfaitaire(abattement);
+            bulletin.setBaseImposable(baseImposable);
+            bulletin.setCotisationCnss(cnssEmploye);
+            bulletin.setImpotIutsSansCharge(iutsSansCharge);
+            bulletin.setReductionIutsCharge(reductionIuts);
+            bulletin.setImpotIuts(impotIuts);
+            bulletin.setTotalRetenuesSociales(cnssEmploye);
+            bulletin.setTotalPrecomptes(BigDecimal.ZERO);
+            bulletin.setTotalRetenues(totalRetenues);
+            bulletin.setTotalCotisationsPatronales(cnssPatronale);
+            bulletin.setSalaireNet(salaireNet);
+            bulletin.setStatut("GENERE");
+            bulletin.setDateCalcul(LocalDateTime.now());
+
+            bulletin.addLine(cpLine);
+
+            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine cnssLine = new BulletinLine();
+                cnssLine.setCode("COT_CNSS");
+                cnssLine.setLibelle("Cotisation CNSS (5.5%)");
+                cnssLine.setTypeLigne("RETENUE_SOCIALE");
+                cnssLine.setBaseCalcul(baseCnss);
+                cnssLine.setTaux(new BigDecimal("5.50"));
+                cnssLine.setMontant(cnssEmploye);
+                cnssLine.setOrdre(20);
+                bulletin.addLine(cnssLine);
+            }
+
+            if (impotIuts.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine iutsLine = new BulletinLine();
+                iutsLine.setCode("IUTS");
+                iutsLine.setLibelle("RETENUE IUTS");
+                iutsLine.setTypeLigne("IMPOT");
+                iutsLine.setBaseCalcul(baseImposable);
+                iutsLine.setTaux(BigDecimal.valueOf(nbCharges));
+                iutsLine.setMontant(impotIuts);
+                iutsLine.setOrdre(21);
+                bulletin.addLine(iutsLine);
+            }
+
+            bulletin = bulletinRepository.save(bulletin);
+            return bulletin;
+        }
+
+        // ====================================================================
+        // 4. SESSION EXTRAORDINAIRE : INDEMNITÉS DE DÉPART À LA RETRAITE
+        // Tranches : 30% (ans 1 à 5), 35% (ans 6 à 10), 45% (au-delà) sur SGM 12 mois
+        // ====================================================================
+        if (isRetraite) {
+            try {
+                employeeProcessService.sync(emp, null);
+            } catch (Exception ignored) {}
+            List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
+
+            BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
+            double ancienneteAns = getAncienneteExacte(emp, session);
+
+            double t1Ans = Math.min(ancienneteAns, 5.0);
+            double t2Ans = Math.max(0.0, Math.min(ancienneteAns - 5.0, 5.0));
+            double t3Ans = Math.max(0.0, ancienneteAns - 10.0);
+
+            BigDecimal part1 = money(sgm.multiply(BigDecimal.valueOf(t1Ans)).multiply(new BigDecimal("0.30")));
+            BigDecimal part2 = money(sgm.multiply(BigDecimal.valueOf(t2Ans)).multiply(new BigDecimal("0.35")));
+            BigDecimal part3 = money(sgm.multiply(BigDecimal.valueOf(t3Ans)).multiply(new BigDecimal("0.45")));
+            BigDecimal totalRetraite = money(part1.add(part2).add(part3));
+
+            BulletinLine retLine = new BulletinLine();
+            retLine.setCode("IND_RETRAITE");
+            retLine.setLibelle("Indemnité de Départ à la Retraite (" + String.format(Locale.US, "%.1f", ancienneteAns) + " ans)");
+            retLine.setTypeLigne("GAIN");
+            retLine.setBaseCalcul(sgm);
+            retLine.setTaux(BigDecimal.valueOf(ancienneteAns));
+            retLine.setMontant(totalRetraite);
+            retLine.setOrdre(1);
+
+            Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+            Grade grade = emp.getGradeObj();
+            String finalCode = generateBulletinCode(session, emp);
+
+            Bulletin bulletin = new Bulletin();
+            bulletin.setCode(finalCode);
+            bulletin.setEmployee(emp);
+            bulletin.setSessionPaie(session);
+            bulletin.setGrade(grade);
+            bulletin.setContrat(contrat);
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("INDEMNITE_RETRAITE");
+            bulletin.setDateFrom(debutPeriode);
+            bulletin.setDateTo(finPeriode);
+            bulletin.setScheduledWorkingDays(scheduledDays);
+            bulletin.setWorkedDays(workedDays);
+            bulletin.setSalaireBase(salaireBase);
+            bulletin.setSurSalaire(surSalaire);
+            bulletin.setTotalIndemnites(totalRetraite);
+            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setSalaireBrut(totalRetraite);
+            bulletin.setTotalExonerations(totalRetraite); // Exonéré de retenues fiscales/sociales
+            bulletin.setAbattementForfaitaire(BigDecimal.ZERO);
+            bulletin.setBaseImposable(BigDecimal.ZERO);
+            bulletin.setCotisationCnss(BigDecimal.ZERO);
+            bulletin.setImpotIutsSansCharge(BigDecimal.ZERO);
+            bulletin.setReductionIutsCharge(BigDecimal.ZERO);
+            bulletin.setImpotIuts(BigDecimal.ZERO);
+            bulletin.setTotalRetenuesSociales(BigDecimal.ZERO);
+            bulletin.setTotalPrecomptes(BigDecimal.ZERO);
+            bulletin.setTotalRetenues(BigDecimal.ZERO);
+            bulletin.setTotalCotisationsPatronales(BigDecimal.ZERO);
+            bulletin.setSalaireNet(totalRetraite);
+            bulletin.setStatut("GENERE");
+            bulletin.setDateCalcul(LocalDateTime.now());
+
+            bulletin.addLine(retLine);
+            bulletin = bulletinRepository.save(bulletin);
+            return bulletin;
+        }
+
+        // ====================================================================
+        // 5. SESSION EXTRAORDINAIRE : SOLDE DE TOUT COMPTE (STC)
+        // Licenciement + Préavis + Congés acquis + 13e & 14e prorata - Prêts/Trop-perçus
+        // ====================================================================
+        if (isStc) {
+            try {
+                employeeProcessService.sync(emp, null);
+            } catch (Exception ignored) {}
+            List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
+
+            BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
+            double ancienneteAns = getAncienneteExacte(emp, session);
+
+            // Indemnité de licenciement par tranches
+            double t1Ans = Math.min(ancienneteAns, 5.0);
+            double t2Ans = Math.max(0.0, Math.min(ancienneteAns - 5.0, 5.0));
+            double t3Ans = Math.max(0.0, ancienneteAns - 10.0);
+
+            BigDecimal part1 = money(sgm.multiply(BigDecimal.valueOf(t1Ans)).multiply(new BigDecimal("0.30")));
+            BigDecimal part2 = money(sgm.multiply(BigDecimal.valueOf(t2Ans)).multiply(new BigDecimal("0.35")));
+            BigDecimal part3 = money(sgm.multiply(BigDecimal.valueOf(t3Ans)).multiply(new BigDecimal("0.45")));
+            BigDecimal indemniteLicenciement = money(part1.add(part2).add(part3));
+
+            // Indemnité compensatrice de préavis (3 mois cadre, 1 mois non cadre)
+            boolean isCadre = false;
+            if (emp.getCategorieObj() != null && emp.getCategorieObj().getLibelle() != null) {
+                String cLib = emp.getCategorieObj().getLibelle().toUpperCase(Locale.ROOT);
+                isCadre = cLib.contains("CADRE") || cLib.contains("DIRECTION");
+            }
+            if (!isCadre && emp.getGradeObj() != null && emp.getGradeObj().getLibelle() != null) {
+                String gLib = emp.getGradeObj().getLibelle().toUpperCase(Locale.ROOT);
+                isCadre = gLib.contains("CADRE") || gLib.contains("DIRECTEUR") || gLib.contains("CHEF");
+            }
+            int moisPreavis = isCadre ? 3 : 1;
+            BigDecimal indemnitePreavis = money(sgm.multiply(BigDecimal.valueOf(moisPreavis)));
+
+            // Indemnité compensatrice de congés payés acquis (ICCP)
+            BigDecimal somme12 = getSommeRevenus12DerniersMois(emp.getId(), salaireBase.add(surSalaire));
+            BigDecimal smj = somme12.divide(new BigDecimal("360"), 2, RoundingMode.HALF_UP);
+            BigDecimal joursCongeAcquis = getJoursCongeAcquis(emp.getId());
+            BigDecimal indemniteCongesAcquis = money(smj.multiply(joursCongeAcquis));
+
+            // 13ème et 14ème mois au prorata
+            int moisDepart = 12;
+            if (session != null && session.getMois() != null) {
+                try { moisDepart = Integer.parseInt(session.getMois()); } catch (Exception ignored) {}
+            }
+            BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
+            BigDecimal prorata13eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
+            BigDecimal prorata14eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
+
+            BigDecimal totalBrutStc = indemniteLicenciement
+                    .add(indemnitePreavis)
+                    .add(indemniteCongesAcquis)
+                    .add(prorata13eme)
+                    .add(prorata14eme);
+
+            // Éléments imposables / assujettis (hors indemnité de licenciement exonérée)
+            BigDecimal brutSoumis = indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme).add(prorata14eme);
+            BigDecimal baseCnss = brutSoumis.min(new BigDecimal("600000"));
+            BigDecimal cnssEmploye = money(baseCnss.multiply(new BigDecimal("0.055")));
+            BigDecimal cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
+
+            BigDecimal abattement = money(brutSoumis.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00")));
+            BigDecimal baseImposable = money(brutSoumis.subtract(cnssEmploye).subtract(abattement).max(BigDecimal.ZERO));
+
+            int nbCharges = 0;
+            try {
+                nbCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(emp.getId()));
+            } catch (Exception ignored) {}
+            BigDecimal iutsSansCharge = calculateIuts(baseImposable);
+            BigDecimal tauxReduction = reductionRate(nbCharges);
+            BigDecimal reductionIuts = money(iutsSansCharge.multiply(tauxReduction).divide(CENT, 8, RoundingMode.HALF_UP));
+            BigDecimal impotIuts = money(iutsSansCharge.subtract(reductionIuts).max(BigDecimal.ZERO));
+
+            List<BulletinLine> lines = new ArrayList<>();
+            int ordre = 1;
+
+            // Gains
+            BulletinLine lLic = new BulletinLine();
+            lLic.setCode("IND_LICENC");
+            lLic.setLibelle("Indemnité de Licenciement (" + String.format(Locale.US, "%.1f", ancienneteAns) + " ans)");
+            lLic.setTypeLigne("GAIN");
+            lLic.setBaseCalcul(sgm);
+            lLic.setTaux(BigDecimal.valueOf(ancienneteAns));
+            lLic.setMontant(indemniteLicenciement);
+            lLic.setOrdre(ordre++);
+            lines.add(lLic);
+
+            BulletinLine lPreav = new BulletinLine();
+            lPreav.setCode("IND_PREAVIS");
+            lPreav.setLibelle("Indemnité Compensatrice de Préavis (" + moisPreavis + " mois)");
+            lPreav.setTypeLigne("GAIN");
+            lPreav.setBaseCalcul(sgm);
+            lPreav.setTaux(BigDecimal.valueOf(moisPreavis));
+            lPreav.setMontant(indemnitePreavis);
+            lPreav.setOrdre(ordre++);
+            lines.add(lPreav);
+
+            BulletinLine lCp = new BulletinLine();
+            lCp.setCode("IND_CP_ACQUIS");
+            lCp.setLibelle("Indemnité Compensatrice de Congés Acquis (" + formatMoneyNoDec(joursCongeAcquis) + " j)");
+            lCp.setTypeLigne("GAIN");
+            lCp.setBaseCalcul(smj);
+            lCp.setTaux(joursCongeAcquis);
+            lCp.setMontant(indemniteCongesAcquis);
+            lCp.setOrdre(ordre++);
+            lines.add(lCp);
+
+            BulletinLine l13P = new BulletinLine();
+            l13P.setCode("PRORATA_13EME");
+            l13P.setLibelle("13ème Mois au Prorata (" + moisDepart + "/12)");
+            l13P.setTypeLigne("GAIN");
+            l13P.setBaseCalcul(salaireBase.add(surSalaire));
+            l13P.setTaux(prorataMois.multiply(CENT));
+            l13P.setMontant(prorata13eme);
+            l13P.setOrdre(ordre++);
+            lines.add(l13P);
+
+            BulletinLine l14P = new BulletinLine();
+            l14P.setCode("PRORATA_14EME");
+            l14P.setLibelle("14ème Mois au Prorata (" + moisDepart + "/12)");
+            l14P.setTypeLigne("GAIN");
+            l14P.setBaseCalcul(salaireBase.add(surSalaire));
+            l14P.setTaux(prorataMois.multiply(CENT));
+            l14P.setMontant(prorata14eme);
+            l14P.setOrdre(ordre++);
+            lines.add(l14P);
+
+            // Cotisations & Impôts
+            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine cnssLine = new BulletinLine();
+                cnssLine.setCode("COT_CNSS");
+                cnssLine.setLibelle("Cotisation CNSS (5.5%)");
+                cnssLine.setTypeLigne("RETENUE_SOCIALE");
+                cnssLine.setBaseCalcul(baseCnss);
+                cnssLine.setTaux(new BigDecimal("5.50"));
+                cnssLine.setMontant(cnssEmploye);
+                cnssLine.setOrdre(ordre++);
+                lines.add(cnssLine);
+            }
+
+            if (impotIuts.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine iutsLine = new BulletinLine();
+                iutsLine.setCode("IUTS");
+                iutsLine.setLibelle("RETENUE IUTS");
+                iutsLine.setTypeLigne("IMPOT");
+                iutsLine.setBaseCalcul(baseImposable);
+                iutsLine.setTaux(BigDecimal.valueOf(nbCharges));
+                iutsLine.setMontant(impotIuts);
+                iutsLine.setOrdre(ordre++);
+                lines.add(iutsLine);
+            }
+
+            // Déduction intégrale des prêts et précomptes
+            BigDecimal totalPrecomptesStc = BigDecimal.ZERO;
+            List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
+            for (PrecompteEmploye prec : precomptes) {
+                BigDecimal soldePret = prec.getMontantRestant() != null ? prec.getMontantRestant() : BigDecimal.ZERO;
+                if (soldePret.compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(soldePret);
+                    BulletinLine pLine = new BulletinLine();
+                    pLine.setRubriquePaie(prec.getRubriquePaie());
+                    pLine.setCode("PREC_" + prec.getId());
+                    pLine.setLibelle(prec.getLibelle() + " - Solde Intégral STC");
+                    pLine.setTypeLigne("PRECOMPTE");
+                    pLine.setBaseCalcul(prec.getMontantInitial());
+                    pLine.setMontant(soldePret);
+                    pLine.setOrdre(ordre++);
+                    lines.add(pLine);
+                }
+            }
+
+            List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "EN_COURS");
+            if (precomptesVariables.isEmpty()) {
+                precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
+            }
+            for (Precompte prec : precomptesVariables) {
+                BigDecimal solde = prec.getMontantRestant() != null ? prec.getMontantRestant() : prec.getAmount();
+                if (solde != null && solde.compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(solde);
+                    BulletinLine pLine = new BulletinLine();
+                    pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
+                    pLine.setLibelle((prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : "Précompte") + " - Solde Intégral STC");
+                    pLine.setTypeLigne("PRECOMPTE");
+                    pLine.setBaseCalcul(prec.getAmount());
+                    pLine.setMontant(solde);
+                    pLine.setOrdre(ordre++);
+                    lines.add(pLine);
+                }
+            }
+
+            // Déduction des Trop-perçus
+            List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatut(emp.getId(), "EN_ATTENTE");
+            for (TropPercu tp : tropPercus) {
+                if (tp.getAmount() != null && tp.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(tp.getAmount());
+                    BulletinLine tpLine = new BulletinLine();
+                    tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
+                    tpLine.setLibelle("Régularisation Trop-Perçu STC");
+                    tpLine.setTypeLigne("RETENUE");
+                    tpLine.setBaseCalcul(tp.getAmount());
+                    tpLine.setMontant(tp.getAmount());
+                    tpLine.setOrdre(ordre++);
+                    lines.add(tpLine);
+                }
+            }
+
+            BigDecimal totalRetenues = money(cnssEmploye.add(impotIuts).add(totalPrecomptesStc));
+            BigDecimal salaireNet = money(totalBrutStc.subtract(totalRetenues));
+
+            Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+            Grade grade = emp.getGradeObj();
+            String finalCode = generateBulletinCode(session, emp);
+
+            Bulletin bulletin = new Bulletin();
+            bulletin.setCode(finalCode);
+            bulletin.setEmployee(emp);
+            bulletin.setSessionPaie(session);
+            bulletin.setGrade(grade);
+            bulletin.setContrat(contrat);
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("STC");
+            bulletin.setDateFrom(debutPeriode);
+            bulletin.setDateTo(finPeriode);
+            bulletin.setScheduledWorkingDays(scheduledDays);
+            bulletin.setWorkedDays(workedDays);
+            bulletin.setSalaireBase(salaireBase);
+            bulletin.setSurSalaire(surSalaire);
+            bulletin.setTotalIndemnites(money(totalBrutStc.subtract(prorata13eme).subtract(prorata14eme)));
+            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setSalaireBrut(totalBrutStc);
+            bulletin.setTotalExonerations(indemniteLicenciement);
+            bulletin.setAbattementForfaitaire(abattement);
+            bulletin.setBaseImposable(baseImposable);
+            bulletin.setCotisationCnss(cnssEmploye);
+            bulletin.setImpotIutsSansCharge(iutsSansCharge);
+            bulletin.setReductionIutsCharge(reductionIuts);
+            bulletin.setImpotIuts(impotIuts);
+            bulletin.setTotalRetenuesSociales(cnssEmploye);
+            bulletin.setTotalPrecomptes(totalPrecomptesStc);
+            bulletin.setTotalRetenues(totalRetenues);
+            bulletin.setTotalCotisationsPatronales(cnssPatronale);
+            bulletin.setSalaireNet(salaireNet);
+            bulletin.setStatut("GENERE");
+            bulletin.setDateCalcul(LocalDateTime.now());
+
+            for (BulletinLine l : lines) {
+                bulletin.addLine(l);
+            }
             bulletin = bulletinRepository.save(bulletin);
             return bulletin;
         }
@@ -374,7 +859,7 @@ public class BulletinService {
             }
         }
 
-        if (is13eme) {
+        if (is13Ou14eme) {
             indemnites = new ArrayList<>();
             totalIndemnites = BigDecimal.ZERO;
             avoirs = new ArrayList<>();
@@ -457,9 +942,14 @@ public class BulletinService {
         }
 
         // Retenues sociales obligatoires : CNSS (5.5% plafonné à 800 000 FCFA)
+        // Règle formelle : les 13ème et 14ème mois ne cotisent JAMAIS à la CNSS (0 FCFA d'office)
         BigDecimal baseCnss;
         BigDecimal cotisationCnss;
-        if (isExtra && cnssPlafondAtteint) {
+        if (is13Ou14eme) {
+            baseCnss = BigDecimal.ZERO;
+            cotisationCnss = BigDecimal.ZERO;
+            cnssPlafondAtteint = true;
+        } else if (isExtra && cnssPlafondAtteint) {
             baseCnss = BigDecimal.ZERO;
             cotisationCnss = BigDecimal.ZERO;
         } else if (isExtra && baseCnssDejaCotisee.compareTo(BigDecimal.ZERO) > 0) {
@@ -623,18 +1113,14 @@ public class BulletinService {
                 BigDecimal tauxAffichage;
                 String c = indCode != null ? indCode.toUpperCase(Locale.ROOT) : "";
                 String l = indLib != null ? indLib.toUpperCase(Locale.ROOT) : "";
-                if (c.contains("LOG") || l.contains("LOGEMENT")) {
-                    tauxAffichage = new BigDecimal("20.00");
-                } else if (c.contains("TRP") || l.contains("TRANSPORT")) {
-                    tauxAffichage = new BigDecimal("5.00");
-                } else if (c.contains("CS") || l.contains("CAISSE")) {
-                    tauxAffichage = new BigDecimal("5.00");
-                } else if (c.contains("SUJ") || l.contains("SUJETION")) {
-                    tauxAffichage = new BigDecimal("5.00");
-                } else if (c.contains("CP") || l.contains("CASH")) {
+                if (c.contains("CP") || l.contains("CASH") || c.contains("SAL_BASE") || c.contains("SUR_SALAIRE")) {
                     tauxAffichage = workedDays != null ? workedDays : new BigDecimal("30.00");
                 } else if (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getTauxExoneration() != null && ind.getTypeIndemnite().getTauxExoneration() > 0) {
                     tauxAffichage = money(BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()));
+                } else if (c.contains("LOG") || l.contains("LOGEMENT")) {
+                    tauxAffichage = new BigDecimal("20.00");
+                } else if (c.contains("TRP") || l.contains("TRANSPORT") || c.contains("CS") || l.contains("CAISSE") || c.contains("SUJ") || l.contains("SUJETION")) {
+                    tauxAffichage = new BigDecimal("5.00");
                 } else {
                     tauxAffichage = new BigDecimal("100.00");
                 }
@@ -710,8 +1196,8 @@ public class BulletinService {
                 continue;
             }
 
-            // CNSS désactivée si plafond atteint en session extraordinaire
-            if (isExtra && cnssPlafondAtteint && (rCode.contains("CNSS") || rLib.contains("CNSS"))) {
+            // CNSS désactivée si 13ème/14ème mois OU si plafond atteint en session extraordinaire
+            if ((is13Ou14eme || (isExtra && cnssPlafondAtteint)) && (rCode.contains("CNSS") || rLib.contains("CNSS") || rCode.contains("SECU") || rLib.contains("SECURITE"))) {
                 continue;
             }
 
@@ -763,7 +1249,7 @@ public class BulletinService {
 
         // Vérifier et garantir la présence de la CNSS (5.5% plafonné à 800 000 FCFA sur Salaire Brut)
         boolean hasCnss = lines.stream().anyMatch(l -> l.getCode() != null && (l.getCode().contains("CNSS") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CNSS"))));
-        if (!hasCnss && !(isExtra && cnssPlafondAtteint) && cotisationCnss.compareTo(BigDecimal.ZERO) > 0) {
+        if (!hasCnss && !is13Ou14eme && !(isExtra && cnssPlafondAtteint) && cotisationCnss.compareTo(BigDecimal.ZERO) > 0) {
             totalRetenuesSociales = totalRetenuesSociales.add(cotisationCnss);
 
             BulletinLine cnssLine = new BulletinLine();
@@ -953,6 +1439,7 @@ public class BulletinService {
         bulletin.setSalaireNet(salaireNet);
         bulletin.setStatut("GENERE");
         bulletin.setDateCalcul(LocalDateTime.now());
+        bulletin.setNatureSession(session != null ? session.getNatureSession() : null);
 
         lines.removeIf(l -> l.getMontant() == null || l.getMontant().compareTo(BigDecimal.ZERO) <= 0);
         lines.sort(Comparator.comparingInt(l -> getOverallLineSortWeight(l.getCode(), l.getLibelle(), l.getTypeLigne())));
@@ -1511,6 +1998,7 @@ public class BulletinService {
         dto.setGradeLibelle(gradeStr);
         dto.setContratId(b.getContrat() != null ? b.getContrat().getId() : null);
         dto.setTypeSession(b.getTypeSession());
+        dto.setNatureSession(b.getNatureSession() != null ? b.getNatureSession() : (b.getSessionPaie() != null ? b.getSessionPaie().getNatureSession() : null));
         dto.setDateFrom(b.getDateFrom());
         dto.setDateTo(b.getDateTo());
         dto.setScheduledWorkingDays(b.getScheduledWorkingDays());
@@ -1691,7 +2179,7 @@ public class BulletinService {
                 }
             }
         }
-        boolean bIsExtra = isExtraordinaire(b.getTypeSession()) || (b.getSessionPaie() != null && (isExtraordinaire(b.getSessionPaie().getTypeSession()) || is13emeMois(b.getSessionPaie())));
+        boolean bIsExtra = isExtraordinaire(b.getTypeSession()) || (b.getSessionPaie() != null && (isExtraordinaire(b.getSessionPaie().getTypeSession()) || is13Ou14emeMois(b.getSessionPaie())));
         if (!bIsExtra && crraeVal.compareTo(BigDecimal.ZERO) == 0 && b.getSalaireBase() != null) {
             BigDecimal baseCrrae = b.getSalaireBase().add(b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO);
             crraeVal = baseCrrae.multiply(new BigDecimal("0.06")).setScale(0, java.math.RoundingMode.HALF_UP);
@@ -1707,9 +2195,14 @@ public class BulletinService {
         BigDecimal cnssMois = (b.getCotisationCnss() != null && b.getCotisationCnss().compareTo(BigDecimal.ZERO) > 0)
                 ? b.getCotisationCnss()
                 : (cnssFromLines.compareTo(BigDecimal.ZERO) > 0 ? cnssFromLines : BigDecimal.ZERO);
-        if (cnssMois.compareTo(BigDecimal.ZERO) == 0 && brutMois.compareTo(BigDecimal.ZERO) > 0) {
+        if (!bIsExtra && !is13Ou14emeMois(b.getSessionPaie()) && cnssMois.compareTo(BigDecimal.ZERO) == 0 && brutMois.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal baseCnss = brutMois.min(new BigDecimal("800000.00"));
             cnssMois = baseCnss.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
+        }
+        if (bIsExtra || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie()))) {
+            if (cnssFromLines.compareTo(BigDecimal.ZERO) == 0 && (b.getCotisationCnss() == null || b.getCotisationCnss().compareTo(BigDecimal.ZERO) == 0)) {
+                cnssMois = BigDecimal.ZERO;
+            }
         }
         dto.setCotisationCnss(cnssMois);
 
@@ -1965,22 +2458,64 @@ public class BulletinService {
 
     public static boolean is13emeMois(SessionPaie session) {
         if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("13EME_MOIS") || nat.equals("TREIZIEME_MOIS")) return true;
         String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
         String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
         String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
         String p = (session.getPeriode() != null ? session.getPeriode() : "").toUpperCase(Locale.ROOT);
-        return t.contains("13") || t.contains("GRATIF") || n.contains("13") || n.contains("GRATIF")
-                || c.contains("13") || c.contains("GRATIF") || p.contains("13") || p.contains("GRATIF");
+        return (t.contains("13") || t.contains("TREIZIEME") || n.contains("13") || n.contains("TREIZIEME") || c.contains("13") || c.contains("TREIZIEME") || p.contains("13") || p.contains("TREIZIEME") || t.contains("GRATIF") || n.contains("GRATIF"))
+                && !nat.equals("14EME_MOIS") && !n.contains("14") && !c.contains("14");
+    }
+
+    public static boolean is14emeMois(SessionPaie session) {
+        if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("14EME_MOIS") || nat.equals("QUATORZIEME_MOIS")) return true;
+        String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
+        String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
+        String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
+        String p = (session.getPeriode() != null ? session.getPeriode() : "").toUpperCase(Locale.ROOT);
+        return t.contains("14") || t.contains("QUATORZIEME") || n.contains("14") || n.contains("QUATORZIEME") || c.contains("14") || c.contains("QUATORZIEME") || p.contains("14") || p.contains("QUATORZIEME");
+    }
+
+    public static boolean is13Ou14emeMois(SessionPaie session) {
+        return is13emeMois(session) || is14emeMois(session);
+    }
+
+    public static boolean is13Ou14emeMois(String text) {
+        if (text == null) return false;
+        String t = text.trim().toUpperCase(Locale.ROOT);
+        return t.contains("13") || t.contains("14") || t.contains("GRATIF") || t.contains("TREIZIEME") || t.contains("QUATORZIEME");
     }
 
     public static boolean is13emeMois(String text) {
-        if (text == null) return false;
-        String t = text.trim().toUpperCase(Locale.ROOT);
-        return t.contains("13") || t.contains("GRATIF") || t.contains("TREIZIEME");
+        return is13Ou14emeMois(text);
+    }
+
+    public static boolean isCongePaye(SessionPaie session) {
+        if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("CONGE_PAYE") || nat.contains("CONGE") || nat.contains("CONGÉ")) return true;
+        String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
+        String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
+        String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
+        return n.contains("CONGE") || n.contains("CONGÉ") || c.contains("CONGE") || c.contains("CONGÉ") || t.contains("CONGE");
+    }
+
+    public static boolean isIndemniteRetraite(SessionPaie session) {
+        if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("INDEMNITE_RETRAITE") || nat.contains("RETRAITE")) return true;
+        String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
+        String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
+        return n.contains("RETRAITE") || c.contains("RETRAITE");
     }
 
     public static boolean isStc(SessionPaie session) {
         if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("STC") || nat.contains("SOLDE")) return true;
         String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
         String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
         String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
@@ -2053,5 +2588,126 @@ public class BulletinService {
         }
 
         return 40;
+    }
+
+    private BigDecimal getSommeRevenus12DerniersMois(Long employeeId, BigDecimal defaultMonthlyBrut) {
+        List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId);
+        if (past == null || past.isEmpty()) {
+            return defaultMonthlyBrut != null ? defaultMonthlyBrut.multiply(new BigDecimal("12")) : BigDecimal.ZERO;
+        }
+        List<Bulletin> last12 = past.stream()
+                .filter(b -> b.getSalaireBrut() != null && b.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0)
+                .limit(12)
+                .toList();
+        if (last12.isEmpty()) {
+            return defaultMonthlyBrut != null ? defaultMonthlyBrut.multiply(new BigDecimal("12")) : BigDecimal.ZERO;
+        }
+        BigDecimal sum = last12.stream()
+                .map(Bulletin::getSalaireBrut)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (last12.size() < 12) {
+            BigDecimal avg = sum.divide(BigDecimal.valueOf(last12.size()), 4, RoundingMode.HALF_UP);
+            sum = sum.add(avg.multiply(BigDecimal.valueOf(12 - last12.size())));
+        }
+        return money(sum);
+    }
+
+    private BigDecimal getJoursCongeAcquis(Long employeeId) {
+        try {
+            com.bpbf.sirh_backend.dtos.SoldeCongeDto solde = congeWorkflowService.getSoldeForEmployee(employeeId);
+            if (solde != null && solde.getSoldeRestant() != null && solde.getSoldeRestant() > 0) {
+                return new BigDecimal(solde.getSoldeRestant()).setScale(1, RoundingMode.HALF_UP);
+            }
+        } catch (Exception ignored) {}
+        return new BigDecimal("30.00");
+    }
+
+    private double getAncienneteExacte(Employee emp, SessionPaie session) {
+        double ans = (emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise().doubleValue() : 0.0;
+        if (emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank()) {
+            try {
+                LocalDate dateEmb = LocalDate.parse(emp.getDateEmbauche().trim());
+                LocalDate dateRef = session != null && session.getDateTo() != null ? session.getDateTo() : LocalDate.now();
+                java.time.Period period = java.time.Period.between(dateEmb, dateRef);
+                ans += period.getYears() + (period.getMonths() / 12.0) + (period.getDays() / 365.0);
+            } catch (Exception ignored) {}
+        }
+        return Math.max(0.0, ans);
+    }
+
+    private BigDecimal getSalaireGlobalMensuelMoyen(Long employeeId, BigDecimal base, BigDecimal sursalaire, BigDecimal primeAnc, List<IndemniteEmploye> rawIndemnites) {
+        BigDecimal sgmActuel = (base != null ? base : BigDecimal.ZERO).add(sursalaire != null ? sursalaire : BigDecimal.ZERO).add(primeAnc != null ? primeAnc : BigDecimal.ZERO);
+        if (rawIndemnites != null) {
+            for (IndemniteEmploye ind : rawIndemnites) {
+                if (ind == null || ind.getMontant() == null || ind.getMontant() <= 0) continue;
+                String code = ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getCode() != null ? ind.getTypeIndemnite().getCode().toUpperCase(Locale.ROOT) : "";
+                String lib = ind.getLibelle() != null ? ind.getLibelle().toUpperCase(Locale.ROOT) : "";
+                // Exclusion explicite des remboursements de frais
+                if (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT") ||
+                    code.contains("DEP") || lib.contains("DEPLACEMENT") || lib.contains("DÉPLACEMENT") ||
+                    code.contains("MISS") || lib.contains("MISSION") || code.contains("CARB") || lib.contains("CARBURANT") ||
+                    lib.contains("FRAIS")) {
+                    continue;
+                }
+                sgmActuel = sgmActuel.add(money(BigDecimal.valueOf(ind.getMontant())));
+            }
+        }
+
+        List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId);
+        if (past == null || past.isEmpty()) {
+            return money(sgmActuel);
+        }
+        List<Bulletin> last12 = past.stream()
+                .filter(b -> b.getSalaireBrut() != null && b.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0)
+                .limit(12)
+                .toList();
+        if (last12.isEmpty()) {
+            return money(sgmActuel);
+        }
+        BigDecimal sum = BigDecimal.ZERO;
+        for (Bulletin b : last12) {
+            BigDecimal brutMois = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String lc = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String ll = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (lc.contains("TRP") || lc.contains("TRANS") || ll.contains("TRANSPORT") ||
+                        lc.contains("DEP") || ll.contains("DEPLACEMENT") || ll.contains("DÉPLACEMENT") ||
+                        lc.contains("CARB") || ll.contains("CARBURANT") || ll.contains("FRAIS")) {
+                        if (l.getMontant() != null) {
+                            brutMois = brutMois.subtract(l.getMontant());
+                        }
+                    }
+                }
+            }
+            sum = sum.add(brutMois.max(BigDecimal.ZERO));
+        }
+        BigDecimal avg = sum.divide(BigDecimal.valueOf(last12.size()), 2, RoundingMode.HALF_UP);
+        return money(avg);
+    }
+
+    private String generateBulletinCode(SessionPaie session, Employee emp) {
+        String codeBulletin = String.format("BLT-%s-%s-%04d",
+                session != null && session.getMois() != null ? session.getMois() : "M",
+                session != null && session.getAnnee() != null ? session.getAnnee() : LocalDate.now().getYear(),
+                emp.getId());
+        if (codeBulletin.length() > 60) codeBulletin = codeBulletin.substring(0, 60);
+        String finalCode = codeBulletin;
+        if (bulletinRepository.findByCode(finalCode).isPresent()) {
+            long count = bulletinRepository.countByEmployeeId(emp.getId()) + 1;
+            finalCode = String.format("%s-%d", codeBulletin, count);
+            while (bulletinRepository.findByCode(finalCode).isPresent()) {
+                finalCode = String.format("%s-%d", codeBulletin, ++count);
+            }
+        }
+        return finalCode;
+    }
+
+    private String formatMoneyNoDec(BigDecimal amount) {
+        if (amount == null) return "0";
+        java.text.NumberFormat nf = java.text.NumberFormat.getInstance(Locale.FRENCH);
+        nf.setMinimumFractionDigits(0);
+        nf.setMaximumFractionDigits(0);
+        return nf.format(amount);
     }
 }

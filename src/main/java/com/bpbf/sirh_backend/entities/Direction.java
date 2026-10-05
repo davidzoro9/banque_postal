@@ -33,4 +33,8 @@ public class Direction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "agence_id", nullable = true)
     private Agence agence;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "directeur_id", nullable = true)
+    private Employee directeur;
 }

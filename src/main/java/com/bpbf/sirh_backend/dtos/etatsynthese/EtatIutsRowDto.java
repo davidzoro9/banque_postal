@@ -8,12 +8,19 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EtatIutsRowDto {
-    private String matricule;
+    // Colonnes officielles - Modèle 7 (Page 7) : ÉTAT DES RETENUES IUTS
+    private Integer numeroOrdre;
     private String nomPrenom;
+    private BigDecimal salaireBruts;        // Total des salaires bruts
+    private BigDecimal baseImposable;       // Base imposable IUTS
+    private Integer nbDeCharges;            // Nb de charges de famille
+    private BigDecimal iutsAReverser;       // IUTS net à reverser
+
+    // Rétrocompatibilité
+    private String matricule;
     private BigDecimal salaireBrut;
     private BigDecimal totalExonerations;
     private BigDecimal abattementForfaitaire;
-    private BigDecimal baseImposable;
     private Integer nombreCharges;
     private BigDecimal impotIutsBrut;
     private BigDecimal reductionPourCharges;

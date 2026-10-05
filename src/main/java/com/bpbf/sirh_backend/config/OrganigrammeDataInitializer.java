@@ -8,6 +8,7 @@ import com.bpbf.sirh_backend.repositories.DirectionRepository;
 import com.bpbf.sirh_backend.repositories.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 @Component
 @Order(20)
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class OrganigrammeDataInitializer implements CommandLineRunner {
@@ -189,10 +191,7 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
         }
 
         if (existing.isPresent()) {
-            Direction dir = existing.get();
-            dir.setName(name);
-            dir.setDescription(description);
-            return directionRepository.save(dir);
+            return existing.get(); // Conserver les modifications faites par l'utilisateur
         } else {
             Direction dir = new Direction();
             dir.setCode(code);
@@ -208,17 +207,16 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
             existing = directionRepository.findByNameIgnoreCase(name);
         }
 
-        Direction dir;
         if (existing.isPresent()) {
-            dir = existing.get();
+            return existing.get(); // Conserver les modifications faites par l'utilisateur
         } else {
-            dir = new Direction();
+            Direction dir = new Direction();
             dir.setCode(code);
+            dir.setName(name);
+            dir.setDescription(description);
+            dir.setParentDirection(parent);
+            return directionRepository.save(dir);
         }
-        dir.setName(name);
-        dir.setDescription(description);
-        dir.setParentDirection(parent);
-        return directionRepository.save(dir);
     }
 
     private Department getOrCreateDepartment(String code, String name) {
@@ -228,9 +226,7 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
         }
 
         if (existing.isPresent()) {
-            Department dep = existing.get();
-            dep.setName(name);
-            return departmentRepository.save(dep);
+            return existing.get(); // Conserver les modifications faites par l'utilisateur
         } else {
             Department dep = new Department();
             dep.setCode(code);
@@ -245,23 +241,21 @@ public class OrganigrammeDataInitializer implements CommandLineRunner {
             existing = serviceRepository.findByNameIgnoreCase(name);
         }
 
-        Service srv;
         if (existing.isPresent()) {
-            srv = existing.get();
+            return existing.get(); // Conserver les modifications faites par l'utilisateur
         } else {
-            srv = new Service();
+            Service srv = new Service();
             srv.setCode(code);
+            srv.setName(name);
+            srv.setDescription(description);
+            if (direction != null) {
+                srv.setDirection(direction);
+                srv.setDepartment(null);
+            } else if (department != null) {
+                srv.setDepartment(department);
+                srv.setDirection(null);
+            }
+            return serviceRepository.save(srv);
         }
-
-        srv.setName(name);
-        srv.setDescription(description);
-        if (direction != null) {
-            srv.setDirection(direction);
-            srv.setDepartment(null);
-        } else if (department != null) {
-            srv.setDepartment(department);
-            srv.setDirection(null);
-        }
-        return serviceRepository.save(srv);
     }
 }

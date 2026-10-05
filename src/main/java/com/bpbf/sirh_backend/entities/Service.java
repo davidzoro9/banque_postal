@@ -30,6 +30,10 @@ public class Service {
     @JoinColumn(name = "direction_id", nullable = true)
     private Direction direction;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "directeur_id", nullable = true)
+    private Employee directeur;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -47,5 +51,7 @@ public class Service {
 
     public Direction getDirection() { return direction; }
     public void setDirection(Direction direction) { this.direction = direction; }
-}
 
+    public Employee getDirecteur() { return directeur; }
+    public void setDirecteur(Employee directeur) { this.directeur = directeur; }
+}

@@ -54,6 +54,9 @@ public class Bulletin {
     @Column(length = 50)
     private String typeSession;
 
+    @Column(length = 50)
+    private String natureSession;
+
     private LocalDate dateFrom;
 
     private LocalDate dateTo;
@@ -177,6 +180,9 @@ public class Bulletin {
 
     public String getTypeSession() { return typeSession; }
     public void setTypeSession(String typeSession) { this.typeSession = typeSession; }
+
+    public String getNatureSession() { return natureSession; }
+    public void setNatureSession(String natureSession) { this.natureSession = natureSession; }
 
     public LocalDate getDateFrom() { return dateFrom; }
     public void setDateFrom(LocalDate dateFrom) { this.dateFrom = dateFrom; }
@@ -304,6 +310,7 @@ public class Bulletin {
         public BulletinBuilder grade(Grade grade) { this.grade = grade; return this; }
         public BulletinBuilder contrat(Contrat contrat) { this.contrat = contrat; return this; }
         public BulletinBuilder typeSession(String typeSession) { this.typeSession = typeSession; return this; }
+        public BulletinBuilder natureSession(String natureSession) { this.natureSession = natureSession; return this; }
         public BulletinBuilder dateFrom(LocalDate dateFrom) { this.dateFrom = dateFrom; return this; }
         public BulletinBuilder dateTo(LocalDate dateTo) { this.dateTo = dateTo; return this; }
         public BulletinBuilder scheduledWorkingDays(BigDecimal scheduledWorkingDays) { this.scheduledWorkingDays = scheduledWorkingDays; return this; }
@@ -341,6 +348,7 @@ public class Bulletin {
             b.setGrade(grade);
             b.setContrat(contrat);
             b.setTypeSession(typeSession);
+            b.setNatureSession(natureSession);
             b.setDateFrom(dateFrom);
             b.setDateTo(dateTo);
             b.setScheduledWorkingDays(scheduledWorkingDays);

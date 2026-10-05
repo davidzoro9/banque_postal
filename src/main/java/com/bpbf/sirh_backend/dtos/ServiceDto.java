@@ -19,6 +19,10 @@ public class ServiceDto {
     private Long departmentId;
     private String departmentLibelle;
 
+    private Long directeurId;
+    private String directeurLibelle;
+    private String directeurMatricule;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -42,5 +46,13 @@ public class ServiceDto {
 
     public String getDepartmentLibelle() { return departmentLibelle; }
     public void setDepartmentLibelle(String departmentLibelle) { this.departmentLibelle = departmentLibelle; }
-}
 
+    public Long getDirecteurId() { return directeurId; }
+    public void setDirecteurId(Long directeurId) { this.directeurId = directeurId; }
+
+    public String getDirecteurLibelle() { return directeurLibelle; }
+    public void setDirecteurLibelle(String directeurLibelle) { this.directeurLibelle = directeurLibelle; }
+
+    public String getDirecteurMatricule() { return directeurMatricule; }
+    public void setDirecteurMatricule(String directeurMatricule) { this.directeurMatricule = directeurMatricule; }
+}

@@ -278,8 +278,17 @@ public class EmployeeService {
             dto.setService_id(entity.getService().getId());
         if (entity.getAgence() != null)
             dto.setAgence_id(entity.getAgence().getId());
-        if (entity.getSuperviseur() != null)
+        if (entity.getSuperviseur() != null) {
             dto.setSuperviseur_id(entity.getSuperviseur().getId());
+            dto.setSuperviseurNom(entity.getSuperviseur().getNom());
+            dto.setSuperviseurPrenom(entity.getSuperviseur().getPrenom());
+            dto.setSuperviseurMatricule(entity.getSuperviseur().getMatricule());
+        } else {
+            dto.setSuperviseur_id(null);
+            dto.setSuperviseurNom(null);
+            dto.setSuperviseurPrenom(null);
+            dto.setSuperviseurMatricule(null);
+        }
         if (entity.getGrilleSalariale() != null)
             dto.setGrilleSalarialeId(entity.getGrilleSalariale().getId());
 
@@ -489,8 +498,10 @@ public class EmployeeService {
             entity.setAgence(agence);
         }
 
-        if (dto.getSuperviseur_id() != null) {
+        if (dto.getSuperviseur_id() != null && dto.getSuperviseur_id() > 0) {
             employeeRepository.findById(dto.getSuperviseur_id()).ifPresent(entity::setSuperviseur);
+        } else {
+            entity.setSuperviseur(null);
         }
 
         if (dto.getRegimeSecuriteSocialId() == null) {

@@ -7,6 +7,7 @@ import com.bpbf.sirh_backend.repositories.SalaryElementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 
 @Component
 @Order(10)
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class PayrollDataInitializer implements CommandLineRunner {
@@ -135,8 +137,6 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS numero_cnss VARCHAR(50)");
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS vehicule_fourni BOOLEAN DEFAULT FALSE");
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS logement_fourni BOOLEAN DEFAULT FALSE");
-                jdbcTemplate.execute("UPDATE employee SET situation_familiale = CASE WHEN id % 2 = 1 THEN 'Marié(e)' ELSE 'Célibataire' END WHERE situation_familiale IS NULL OR situation_familiale = '' OR situation_familiale = '—'");
-                jdbcTemplate.execute("UPDATE employee SET numero_cnss = CONCAT('CNSS-', LPAD(id::text, 6, '0')) WHERE numero_cnss IS NULL OR numero_cnss = '' OR numero_cnss = '—'");
             } catch (Exception ex) {
                 log.debug("Auto-migration colonnes employee (non bloquant): {}", ex.getMessage());
             }
@@ -232,20 +232,20 @@ public class PayrollDataInitializer implements CommandLineRunner {
         // Cotisations non reversées
         getOrCreateElement("COTIS_EMP_NON_REV", "Cotisation employé non reversée", catCotisNonRev, null, false, false, "MONTANT_FIXE", "0", 33);
         // 3. Types officiels de Congés et Absences au Burkina Faso
-        getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé");
-        getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité");
-        getOrCreateTypeAbsence("CONGE_PATERNITE", "Congé de paternité");
-        getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie");
-        getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage");
-        getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès");
-        getOrCreateTypeAbsence("EVT_NAISSANCE", "Événement familial - Naissance");
-        getOrCreateTypeAbsence("ABS_AUTORISEE", "Absence autorisée");
+        getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé", true, 30);
+        getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité (14 semaines)", false, 98);
+        getOrCreateTypeAbsence("CONGE_PATERNITE", "Congé de paternité", false, 3);
+        getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie (Arrêt médical)", false, 180);
+        getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage de l'agent", false, 3);
+        getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès (Conjoint/Parent/Enfant)", false, 5);
+        getOrCreateTypeAbsence("EVT_NAISSANCE", "Événement familial - Naissance au foyer", false, 3);
+        getOrCreateTypeAbsence("ABS_AUTORISEE", "Absence autorisée exceptionnelle", false, 2);
         // 4. Jours Fériés Légaux au Burkina Faso (Article 11.3 des spécifications)
         seedJoursFeries("2026");
         seedJoursFeries("2025");
         seedJoursFeries("2027");
 
-        // 5. Synchronisation automatique des comptes utilisateurs et de la situation indemnitaire des employés
+        // 5. Synchronisation des comptes utilisateurs si absents (ne modifie pas les indemnités ni les données RH)
         try {
             if (employeeRepository != null && employeeService != null) {
                 employeeRepository.findAll().forEach(emp -> {
@@ -253,32 +253,17 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 });
                 log.info("Comptes utilisateurs des employés synchronisés avec succès.");
             }
-            if (employeeProcessService != null) {
-                employeeProcessService.syncAllEmployees();
-                log.info("Indemnités conformes (Tableaux 1, 2, 3 BPBF) resynchronisées avec succès.");
-            }
         } catch (Exception e) {
-            log.warn("Erreur mineure synchronisation employés: {}", e.getMessage());
+            log.warn("Erreur mineure synchronisation comptes: {}", e.getMessage());
         }
 
-        // 6. Barème progressif officiel IUTS Burkina Faso
+        // 6. Barème progressif officiel IUTS Burkina Faso (uniquement si absent)
         seedBaremesIuts();
 
-        // 7. Retenues salariales et patronales officielles
+        // 7. Retenues salariales et patronales officielles (uniquement si absentes)
         seedRetenues();
 
-        // 8. Recalcul automatique de tous les bulletins existants avec le moteur conforme CGI BF
-        try {
-            log.info("Recalcul automatique de toutes les fiches salariales selon la circulaire CGI...");
-            informationSalarialeCalculService.recalculateAll();
-            log.info("Recalcul automatique de tous les bulletins existants selon la circulaire CGI...");
-            bulletinService.recalculerTousLesBulletins();
-            log.info("Tous les bulletins et fiches salariales ont été recalculés avec succès.");
-        } catch (Exception e) {
-            log.warn("Recalcul automatique des bulletins au démarrage (non bloquant): {}", e.getMessage());
-        }
-
-        log.info("Les données de base (catégories, éléments, congés, fériés, IUTS, retenues) ont été initialisées avec succès.");
+        log.info("Les données de base (catégories, éléments, congés, fériés, IUTS, retenues) sont prêtes.");
     }
 
     private void seedBaremesIuts() {
@@ -410,17 +395,33 @@ public class PayrollDataInitializer implements CommandLineRunner {
         });
     }
 
-    private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name) {
-        return typeAbsenceCongeRepository.findByCode(code).orElseGet(() -> {
+    private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours) {
+        return typeAbsenceCongeRepository.findByCode(code).map(existing -> {
+            boolean changed = false;
+            if (existing.getDeductibleDuSolde() == null || !existing.getDeductibleDuSolde().equals(deductible)) {
+                existing.setDeductibleDuSolde(deductible);
+                changed = true;
+            }
+            if (existing.getDureeMaxLegaleJours() == null || !existing.getDureeMaxLegaleJours().equals(maxJours)) {
+                existing.setDureeMaxLegaleJours(maxJours);
+                changed = true;
+            }
+            if (changed) {
+                return typeAbsenceCongeRepository.save(existing);
+            }
+            return existing;
+        }).orElseGet(() -> {
             try {
                 com.bpbf.sirh_backend.entities.TypeAbsenceConge t = new com.bpbf.sirh_backend.entities.TypeAbsenceConge();
                 t.setCode(code);
                 t.setName(name);
+                t.setDeductibleDuSolde(deductible);
+                t.setDureeMaxLegaleJours(maxJours);
                 return typeAbsenceCongeRepository.save(t);
             } catch (Exception e) {
                 try {
                     Long nextId = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) + 1 FROM type_absence_conge", Long.class);
-                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name);
+                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name, deductible_du_solde, duree_max_legale_jours) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name, deductible, maxJours);
                     return typeAbsenceCongeRepository.findByCode(code).orElse(null);
                 } catch (Exception ex) {
                     log.debug("Notice insert type absence: {}", ex.getMessage());

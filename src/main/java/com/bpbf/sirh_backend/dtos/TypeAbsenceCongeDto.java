@@ -13,4 +13,6 @@ public class TypeAbsenceCongeDto {
     private Long id;
     private String code;
     private String name;
+    private Boolean deductibleDuSolde;
+    private Integer dureeMaxLegaleJours;
 }

@@ -47,6 +47,9 @@ public class EtatSynthesePaieService {
     private static final Font FONT_TH = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.WHITE);
     private static final Font FONT_TD = FontFactory.getFont(FontFactory.HELVETICA, 7.5f, TEXT_DARK);
     private static final Font FONT_TD_BOLD = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f, TEXT_DARK);
+    private static final Font FONT_TH_MINI = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 6f, Color.WHITE);
+    private static final Font FONT_TD_MINI = FontFactory.getFont(FontFactory.HELVETICA, 5.5f, TEXT_DARK);
+    private static final Font FONT_TD_BOLD_MINI = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 5.5f, TEXT_DARK);
 
     @Transactional(readOnly = true)
     public EtatSyntheseWrapperDto getEtatSynthese(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
@@ -105,6 +108,26 @@ public class EtatSynthesePaieService {
         String titreEtat = "Livre de Paie";
 
         switch (type) {
+            case "RECAPITULATIF_GLOBAL":
+                titreEtat = "Récapitulatif Global de la Paie (Journal Débit / Crédit)";
+                rows.addAll(buildRecapitulatifGlobalRows(bulletins));
+                break;
+
+            case "ETAT_CRRAE_RRPC":
+                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations RRPC (19%)";
+                rows.addAll(buildEtatCrraeRows(bulletins, "RRPC"));
+                break;
+
+            case "ETAT_CRRAE_RCPNC":
+                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations RCPNC (12%)";
+                rows.addAll(buildEtatCrraeRows(bulletins, "RCPNC"));
+                break;
+
+            case "ETAT_CRRAE_FAAM":
+                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations FAAM (1.5%)";
+                rows.addAll(buildEtatCrraeRows(bulletins, "FAAM"));
+                break;
+
             case "LIVRE_PAIE":
                 titreEtat = "Livre de Paie (Registre Général)";
                 rows.addAll(buildLivrePaieRows(bulletins));
@@ -240,24 +263,55 @@ public class EtatSynthesePaieService {
             String emp = e != null && e.getFonction() != null ? (e.getFonction().getName() != null ? e.getFonction().getName() : e.getFonction().getCode()) : (e != null && e.getEmploi() != null ? e.getEmploi().getName() : "Agent");
             String dir = e != null && e.getDirection() != null ? e.getDirection().getName() : "—";
             String srv = e != null && e.getService() != null ? e.getService().getName() : "—";
+            String grade = b.getGrade() != null ? b.getGrade().getCode() : (e != null && e.getGradeObj() != null ? e.getGradeObj().getCode() : "—");
+
+            BigDecimal sBase = b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO;
+            BigDecimal surSal = b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO;
+            BigDecimal indem = b.getTotalIndemnites() != null ? b.getTotalIndemnites() : BigDecimal.ZERO;
+            BigDecimal sBrut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+            BigDecimal cnss = b.getCotisationCnss() != null ? b.getCotisationCnss() : BigDecimal.ZERO;
+            BigDecimal partPat = b.getTotalCotisationsPatronales() != null ? b.getTotalCotisationsPatronales() : BigDecimal.ZERO;
+            BigDecimal baseImp = b.getBaseImposable() != null ? b.getBaseImposable() : BigDecimal.ZERO;
+            int charges = 0;
+            if (b.getLines() != null) {
+                BulletinLine iutsL = b.getLines().stream().filter(l -> "IUTS".equalsIgnoreCase(l.getCode()) || "IMP_IUTS".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
+                if (iutsL != null && iutsL.getTaux() != null) {
+                    charges = iutsL.getTaux().intValue();
+                }
+            }
+            BigDecimal iuts = b.getImpotIuts() != null ? b.getImpotIuts() : BigDecimal.ZERO;
+            BigDecimal sNet = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
+            BigDecimal totRet = b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO;
+            BigDecimal netAPayer = sNet;
+            BigDecimal tpa = sBrut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal masseSal = sBrut.add(partPat);
 
             rows.add(LivrePaieRowDto.builder()
                     .bulletinId(b.getId())
                     .matricule(mat)
                     .nomPrenom(nom)
+                    .grade(grade)
+                    .salaireBase(sBase)
+                    .surSalaire(surSal)
+                    .indemnitesEtPrimes(indem)
+                    .salaireBrut(sBrut)
+                    .assVieillesse(cnss)
+                    .partPatronale(partPat)
+                    .baseImposable(baseImp)
+                    .charges(charges)
+                    .impotIuts(iuts)
+                    .salaireNet(sNet)
+                    .totalRetenues(totRet)
+                    .netAPayer(netAPayer)
+                    .tpa(tpa)
+                    .masseSalariale(masseSal)
                     .emploi(emp)
                     .direction(dir)
                     .service(srv)
-                    .salaireBase(b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO)
-                    .surSalaire(b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO)
-                    .indemnites(b.getTotalIndemnites() != null ? b.getTotalIndemnites() : BigDecimal.ZERO)
-                    .totalAvoirs(b.getTotalAvoirs() != null ? b.getTotalAvoirs() : (b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO))
-                    .salaireBrut(b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO)
-                    .cotisationCnss(b.getCotisationCnss() != null ? b.getCotisationCnss() : BigDecimal.ZERO)
-                    .impotIuts(b.getImpotIuts() != null ? b.getImpotIuts() : BigDecimal.ZERO)
+                    .indemnites(indem)
+                    .totalAvoirs(sBrut)
+                    .cotisationCnss(cnss)
                     .totalPrecomptes(b.getTotalPrecomptes() != null ? b.getTotalPrecomptes() : BigDecimal.ZERO)
-                    .totalRetenues(b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO)
-                    .salaireNet(b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO)
                     .build());
         }
         return rows;
@@ -376,25 +430,48 @@ public class EtatSynthesePaieService {
                 String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
                 String nom = e != null ? ((e.getPrenom() != null ? e.getPrenom() : "") + " " + (e.getNom() != null ? e.getNom() : "")).trim().toUpperCase(Locale.ROOT) : "—";
                 String poste = e != null && e.getFonction() != null ? (e.getFonction().getName() != null ? e.getFonction().getName() : e.getFonction().getCode()) : "Collaborateur";
-                String iban = e != null && e.getIban() != null && !e.getIban().isBlank() ? e.getIban() : (mat.equals("—") ? "—" : ("Compte BPBF — " + mat));
-                BigDecimal net = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
+                String iban = e != null && e.getIban() != null && !e.getIban().isBlank() ? e.getIban().replaceAll("\\s+", "") : "";
 
+                String codeBq = "BF080";
+                String codeGuichet = "01001";
+                String compteCred = !iban.isEmpty() ? iban : (mat.equals("—") ? "00000000000" : String.format("%011d", Math.abs(mat.hashCode() % 10000000000L)));
+                String cleRib = "45";
+
+                if (iban.length() >= 23) {
+                    try {
+                        codeBq = iban.substring(0, 5);
+                        codeGuichet = iban.substring(5, 10);
+                        compteCred = iban.substring(10, 21);
+                        cleRib = iban.substring(21, Math.min(23, iban.length()));
+                    } catch (Exception ignored) {}
+                }
+
+                BigDecimal net = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
                 totalBq = totalBq.add(net);
+
                 virs.add(EtatBanqueGroupeDto.VirementItemDto.builder()
                         .matricule(mat)
                         .nomPrenom(nom)
+                        .codeBanque(codeBq)
+                        .codeGuichet(codeGuichet)
+                        .compteACrediter(compteCred)
+                        .cle(cleRib)
+                        .montant(net)
                         .emploi(poste)
-                        .numeroCompte(iban)
+                        .numeroCompte(compteCred)
                         .iban(iban)
                         .montantNet(net)
                         .build());
             }
+
+            String montantLettres = BulletinPdfService.numberToFrenchWords(totalBq.longValue());
 
             rows.add(EtatBanqueGroupeDto.builder()
                     .banqueNom(banqueNom)
                     .codeBanque(banqueNom.contains("BPBF") ? "BF080" : "BANQUE")
                     .nombreBeneficiaires(blts.size())
                     .totalNet(totalBq)
+                    .montantEnLettres(montantLettres)
                     .virements(virs)
                     .build());
         }
@@ -447,6 +524,7 @@ public class EtatSynthesePaieService {
 
     private List<EtatIutsRowDto> buildEtatIutsRows(List<Bulletin> bulletins) {
         List<EtatIutsRowDto> rows = new ArrayList<>();
+        int ord = 1;
         for (Bulletin b : bulletins) {
             Employee e = b.getEmployee();
             String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
@@ -458,7 +536,6 @@ public class EtatSynthesePaieService {
             BigDecimal baseImp = b.getBaseImposable() != null ? b.getBaseImposable() : BigDecimal.ZERO;
             int charges = 0;
             if (b.getLines() != null) {
-                // Taux sur la ligne IUTS stocke souvent le nb de charges
                 BulletinLine iutsL = b.getLines().stream().filter(l -> "IUTS".equalsIgnoreCase(l.getCode()) || "IMP_IUTS".equalsIgnoreCase(l.getCode())).findFirst().orElse(null);
                 if (iutsL != null && iutsL.getTaux() != null) {
                     charges = iutsL.getTaux().intValue();
@@ -469,12 +546,16 @@ public class EtatSynthesePaieService {
             BigDecimal netIuts = b.getImpotIuts() != null ? b.getImpotIuts() : BigDecimal.ZERO;
 
             rows.add(EtatIutsRowDto.builder()
-                    .matricule(mat)
+                    .numeroOrdre(ord++)
                     .nomPrenom(nom)
+                    .salaireBruts(brut)
+                    .baseImposable(baseImp)
+                    .nbDeCharges(charges)
+                    .iutsAReverser(netIuts)
+                    .matricule(mat)
                     .salaireBrut(brut)
                     .totalExonerations(exon)
                     .abattementForfaitaire(abatt)
-                    .baseImposable(baseImp)
                     .nombreCharges(charges)
                     .impotIutsBrut(brutIuts)
                     .reductionPourCharges(reduc)
@@ -517,6 +598,7 @@ public class EtatSynthesePaieService {
 
     private List<EtatFspRowDto> buildEtatFspRows(List<Bulletin> bulletins) {
         List<EtatFspRowDto> rows = new ArrayList<>();
+        int ord = 1;
         for (Bulletin b : bulletins) {
             Employee e = b.getEmployee();
             String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
@@ -524,7 +606,7 @@ public class EtatSynthesePaieService {
             String dir = e != null && e.getDirection() != null ? e.getDirection().getName() : "—";
 
             BigDecimal fspMontant = BigDecimal.ZERO;
-            BigDecimal fspBase = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+            BigDecimal fspBase = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
             BigDecimal fspTaux = new BigDecimal("1.00");
 
             if (b.getLines() != null) {
@@ -532,15 +614,19 @@ public class EtatSynthesePaieService {
                     if (l.getCode() != null && (l.getCode().contains("FSP") || l.getCode().contains("SOLIDAR"))) {
                         fspMontant = fspMontant.add(l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO);
                         if (l.getBaseCalcul() != null) fspBase = l.getBaseCalcul();
-                        if (l.getTaux() != null) fspTaux = l.getTaux();
+                        if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) fspTaux = l.getTaux();
                     }
                 }
             }
 
             if (fspMontant.compareTo(BigDecimal.ZERO) > 0) {
                 rows.add(EtatFspRowDto.builder()
+                        .numeroOrdre(ord++)
                         .matricule(mat)
                         .nomPrenom(nom)
+                        .salaireNet(fspBase)
+                        .taux(fspTaux)
+                        .montant(fspMontant)
                         .direction(dir)
                         .salaireBrut(b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO)
                         .assietteCalcul(fspBase)
@@ -548,6 +634,249 @@ public class EtatSynthesePaieService {
                         .montantRetenu(fspMontant)
                         .build());
             }
+        }
+        return rows;
+    }
+
+    private List<RecapitulatifGlobalRowDto> buildRecapitulatifGlobalRows(List<Bulletin> bulletins) {
+        BigDecimal totalSalBase = BigDecimal.ZERO;
+        BigDecimal totalSurSal = BigDecimal.ZERO;
+        BigDecimal totalIndemnites = BigDecimal.ZERO;
+        BigDecimal totalCnssPatronale = BigDecimal.ZERO;
+        BigDecimal totalCrraePatronale = BigDecimal.ZERO;
+        BigDecimal totalTpa = BigDecimal.ZERO;
+
+        BigDecimal totalNet = BigDecimal.ZERO;
+        BigDecimal totalCnssSal = BigDecimal.ZERO;
+        BigDecimal totalCrraeSal = BigDecimal.ZERO;
+        BigDecimal totalIuts = BigDecimal.ZERO;
+        BigDecimal totalFsp = BigDecimal.ZERO;
+        BigDecimal totalPrecomptes = BigDecimal.ZERO;
+
+        for (Bulletin b : bulletins) {
+            if (b.getSalaireBase() != null) totalSalBase = totalSalBase.add(b.getSalaireBase());
+            if (b.getSurSalaire() != null) totalSurSal = totalSurSal.add(b.getSurSalaire());
+            if (b.getTotalIndemnites() != null) totalIndemnites = totalIndemnites.add(b.getTotalIndemnites());
+            if (b.getSalaireNet() != null) totalNet = totalNet.add(b.getSalaireNet());
+            if (b.getCotisationCnss() != null) totalCnssSal = totalCnssSal.add(b.getCotisationCnss());
+            if (b.getImpotIuts() != null) totalIuts = totalIuts.add(b.getImpotIuts());
+            if (b.getTotalPrecomptes() != null) totalPrecomptes = totalPrecomptes.add(b.getTotalPrecomptes());
+
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (c.contains("CRRAE") || lib.contains("CRRAE")) {
+                        if (l.getMontant() != null) totalCrraeSal = totalCrraeSal.add(l.getMontant());
+                        if (l.getPartPatronale() != null) totalCrraePatronale = totalCrraePatronale.add(l.getPartPatronale());
+                    }
+                    if (c.contains("FSP") || c.contains("SOLIDAR") || lib.contains("SOLIDAR")) {
+                        if (l.getMontant() != null) totalFsp = totalFsp.add(l.getMontant());
+                    }
+                }
+            }
+
+            BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+            BigDecimal baseCnss = brut.min(new BigDecimal("600000"));
+            totalCnssPatronale = totalCnssPatronale.add(baseCnss.multiply(new BigDecimal("0.16")).setScale(0, RoundingMode.HALF_UP));
+            totalTpa = totalTpa.add(brut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP));
+        }
+
+        BigDecimal totalCnssGlobal = totalCnssSal.add(totalCnssPatronale);
+        BigDecimal totalCrraeGlobal = totalCrraeSal.add(totalCrraePatronale);
+
+        List<RecapitulatifGlobalRowDto> rows = new ArrayList<>();
+        // Débit : Charges de personnel (Comptes 64)
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte("642100")
+                .intituleCompte("Salaires de base du personnel")
+                .sens("DEBIT")
+                .montantDebit(totalSalBase)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
+
+        if (totalSurSal.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("642200")
+                    .intituleCompte("Sur-salaires du personnel")
+                    .sens("DEBIT")
+                    .montantDebit(totalSurSal)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("CHARGES_PERSONNEL")
+                    .build());
+        }
+
+        if (totalIndemnites.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("642300")
+                    .intituleCompte("Indemnités, primes et gratifications diverses")
+                    .sens("DEBIT")
+                    .montantDebit(totalIndemnites)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("CHARGES_PERSONNEL")
+                    .build());
+        }
+
+        if (totalCnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("641100")
+                    .intituleCompte("Cotisations patronales de sécurité sociale (CNSS)")
+                    .sens("DEBIT")
+                    .montantDebit(totalCnssPatronale)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("CHARGES_SOCIALES")
+                    .build());
+        }
+
+        if (totalCrraePatronale.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("641200")
+                    .intituleCompte("Cotisations patronales régimes complémentaires (CRRAE)")
+                    .sens("DEBIT")
+                    .montantDebit(totalCrraePatronale)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("CHARGES_SOCIALES")
+                    .build());
+        }
+
+        if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("641300")
+                    .intituleCompte("Taxe Patronale d'Apprentissage (TPA)")
+                    .sens("DEBIT")
+                    .montantDebit(totalTpa)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("IMPOTS_TAXES")
+                    .build());
+        }
+
+        // Crédit : Rémunérations nettes, Organismes et État
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte("352200")
+                .intituleCompte("Personnel - Rémunérations nettes à payer (Virements)")
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalNet)
+                .categorieComptable("DETTES_PERSONNEL")
+                .build());
+
+        if (totalCnssGlobal.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("431100")
+                    .intituleCompte("Sécurité Sociale (CNSS Part Salariale + Patronale)")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalCnssGlobal)
+                    .categorieComptable("ORGANISMES_SOCIAUX")
+                    .build());
+        }
+
+        if (totalCrraeGlobal.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("431200")
+                    .intituleCompte("Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalCrraeGlobal)
+                    .categorieComptable("ORGANISMES_SOCIAUX")
+                    .build());
+        }
+
+        if (totalIuts.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("447100")
+                    .intituleCompte("État - Impôt Unique sur Traitements & Salaires (IUTS)")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalIuts)
+                    .categorieComptable("DETTES_FISCALES")
+                    .build());
+        }
+
+        if (totalFsp.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("447200")
+                    .intituleCompte("État - Fonds de Soutien Patriotique (FSP)")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalFsp)
+                    .categorieComptable("DETTES_FISCALES")
+                    .build());
+        }
+
+        if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("447300")
+                    .intituleCompte("État - Taxe Patronale d'Apprentissage à reverser (TPA)")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalTpa)
+                    .categorieComptable("DETTES_FISCALES")
+                    .build());
+        }
+
+        if (totalPrecomptes.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("422000")
+                    .intituleCompte("Personnel - Prêts, avances et précomptes récupérés")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalPrecomptes)
+                    .categorieComptable("CREANCES_PERSONNEL")
+                    .build());
+        }
+
+        return rows;
+    }
+
+    private List<EtatCrraeRowDto> buildEtatCrraeRows(List<Bulletin> bulletins, String typeRegime) {
+        List<EtatCrraeRowDto> rows = new ArrayList<>();
+        BigDecimal tauxPat;
+        BigDecimal tauxSal;
+
+        if ("RRPC".equalsIgnoreCase(typeRegime) || "ETAT_CRRAE_RRPC".equalsIgnoreCase(typeRegime)) {
+            tauxPat = new BigDecimal("12.67");
+            tauxSal = new BigDecimal("6.33");
+            typeRegime = "RRPC (19%)";
+        } else if ("FAAM".equalsIgnoreCase(typeRegime) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(typeRegime)) {
+            tauxPat = new BigDecimal("1.00");
+            tauxSal = new BigDecimal("0.50");
+            typeRegime = "FAAM (1.5%)";
+        } else {
+            tauxPat = new BigDecimal("6.00");
+            tauxSal = new BigDecimal("6.00");
+            typeRegime = "RCPNC (12%)";
+        }
+
+        int ord = 1;
+        for (Bulletin b : bulletins) {
+            Employee e = b.getEmployee();
+            String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
+            String nom = e != null ? ((e.getPrenom() != null ? e.getPrenom() : "") + " " + (e.getNom() != null ? e.getNom() : "")).trim().toUpperCase(Locale.ROOT) : "—";
+
+            BigDecimal base = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+            BigDecimal salBase = b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO;
+            BigDecimal surSal = b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO;
+            BigDecimal assiette = salBase.add(surSal);
+            if (assiette.compareTo(BigDecimal.ZERO) <= 0) assiette = base;
+
+            BigDecimal partPat = assiette.multiply(tauxPat).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            BigDecimal partSal = assiette.multiply(tauxSal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            BigDecimal totalCotis = partPat.add(partSal);
+
+            rows.add(EtatCrraeRowDto.builder()
+                    .numeroOrdre(ord++)
+                    .matricule(mat)
+                    .nomPrenom(nom)
+                    .salaireSoumisCotisation(assiette)
+                    .tauxPatronal(tauxPat)
+                    .cotisationPatronale(partPat)
+                    .tauxSalarial(tauxSal)
+                    .cotisationSalariale(partSal)
+                    .montantTotalCotisations(totalCotis)
+                    .typeRegime(typeRegime)
+                    .build());
         }
         return rows;
     }
@@ -792,7 +1121,11 @@ public class EtatSynthesePaieService {
         String type = etat.getTypeEtat();
         List<Object> data = etat.getDonnees();
 
-        if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
+        if ("RECAPITULATIF_GLOBAL".equalsIgnoreCase(type)) {
+            addTableRecapitulatifGlobal(doc, data);
+        } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type)) {
+            addTableCrrae(doc, data, etat.getTitreEtat());
+        } else if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
             addTableBanque(doc, data);
         } else if ("ETAT_CNSS".equalsIgnoreCase(type)) {
             addTableCnss(doc, data);
@@ -816,93 +1149,224 @@ public class EtatSynthesePaieService {
         }
     }
 
-    private void addTableLivrePaie(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(9);
+    private void addTableRecapitulatifGlobal(Document doc, List<Object> data) throws DocumentException {
+        PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{9, 23, 14, 11, 11, 11, 10, 10, 11});
+        table.setWidths(new float[]{15, 45, 20, 20});
         table.setSpacingAfter(8f);
 
+        addTh(table, "COMPTE", Element.ALIGN_LEFT);
+        addTh(table, "LIBELLÉ DU COMPTE", Element.ALIGN_LEFT);
+        addTh(table, "DÉBIT (FCFA)", Element.ALIGN_RIGHT);
+        addTh(table, "CRÉDIT (FCFA)", Element.ALIGN_RIGHT);
+
+        BigDecimal totDebit = BigDecimal.ZERO;
+        BigDecimal totCredit = BigDecimal.ZERO;
+
+        for (Object obj : data) {
+            if (obj instanceof RecapitulatifGlobalRowDto row) {
+                addTd(table, row.getNumeroCompte(), Element.ALIGN_LEFT, false);
+                addTd(table, row.getIntituleCompte(), Element.ALIGN_LEFT, false);
+                addTd(table, row.getMontantDebit() != null && row.getMontantDebit().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(row.getMontantDebit()) : "—", Element.ALIGN_RIGHT, false);
+                addTd(table, row.getMontantCredit() != null && row.getMontantCredit().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(row.getMontantCredit()) : "—", Element.ALIGN_RIGHT, false);
+
+                if (row.getMontantDebit() != null) totDebit = totDebit.add(row.getMontantDebit());
+                if (row.getMontantCredit() != null) totCredit = totCredit.add(row.getMontantCredit());
+            }
+        }
+
+        addTot(table, "TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE)", 2, Element.ALIGN_LEFT);
+        addTot(table, formatMoney(totDebit), 1, Element.ALIGN_RIGHT);
+        addTot(table, formatMoney(totCredit), 1, Element.ALIGN_RIGHT);
+
+        doc.add(table);
+    }
+
+    private void addTableCrrae(Document doc, List<Object> data, String titre) throws DocumentException {
+        PdfPTable table = new PdfPTable(7);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{8, 12, 34, 14, 11, 10, 11});
+        table.setSpacingAfter(8f);
+
+        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
         addTh(table, "MATRICULE", Element.ALIGN_LEFT);
         addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "EMPLOI", Element.ALIGN_LEFT);
-        addTh(table, "SAL. BASE", Element.ALIGN_RIGHT);
-        addTh(table, "INDEMNITÉS", Element.ALIGN_RIGHT);
-        addTh(table, "SAL. BRUT", Element.ALIGN_RIGHT);
-        addTh(table, "CNSS", Element.ALIGN_RIGHT);
-        addTh(table, "IUTS", Element.ALIGN_RIGHT);
-        addTh(table, "NET À PAYER", Element.ALIGN_RIGHT);
+        addTh(table, "SALAIRE SOUMIS", Element.ALIGN_RIGHT);
+        addTh(table, "PART EMPLOY.", Element.ALIGN_RIGHT);
+        addTh(table, "PART SALAR.", Element.ALIGN_RIGHT);
+        addTh(table, "TOTAL COTIS.", Element.ALIGN_RIGHT);
 
         BigDecimal totBase = BigDecimal.ZERO;
+        BigDecimal totPat = BigDecimal.ZERO;
+        BigDecimal totSal = BigDecimal.ZERO;
+        BigDecimal totCotis = BigDecimal.ZERO;
+
+        for (Object obj : data) {
+            if (obj instanceof EtatCrraeRowDto row) {
+                addTd(table, String.valueOf(row.getNumeroOrdre() != null ? row.getNumeroOrdre() : "—"), Element.ALIGN_CENTER, false);
+                addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
+                addTd(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
+                addTd(table, formatMoney(row.getSalaireSoumisCotisation()), Element.ALIGN_RIGHT, false);
+                addTd(table, formatMoney(row.getCotisationPatronale()), Element.ALIGN_RIGHT, false);
+                addTd(table, formatMoney(row.getCotisationSalariale()), Element.ALIGN_RIGHT, false);
+                addTd(table, formatMoney(row.getMontantTotalCotisations()), Element.ALIGN_RIGHT, true);
+
+                if (row.getSalaireSoumisCotisation() != null) totBase = totBase.add(row.getSalaireSoumisCotisation());
+                if (row.getCotisationPatronale() != null) totPat = totPat.add(row.getCotisationPatronale());
+                if (row.getCotisationSalariale() != null) totSal = totSal.add(row.getCotisationSalariale());
+                if (row.getMontantTotalCotisations() != null) totCotis = totCotis.add(row.getMontantTotalCotisations());
+            }
+        }
+
+        addTot(table, "TOTAL DÉCLARATION COTISATIONS", 3, Element.ALIGN_LEFT);
+        addTot(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
+        addTot(table, formatMoney(totPat), 1, Element.ALIGN_RIGHT);
+        addTot(table, formatMoney(totSal), 1, Element.ALIGN_RIGHT);
+        addTot(table, formatMoney(totCotis), 1, Element.ALIGN_RIGHT);
+
+        doc.add(table);
+    }
+
+    private void addTableLivrePaie(Document doc, List<Object> data) throws DocumentException {
+        // Page 3 - REGISTRE DE PAIE : 17 colonnes officielles
+        PdfPTable table = new PdfPTable(17);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{4, 13, 4, 6, 6, 6, 6, 5, 6, 6, 3, 5, 6, 6, 6, 5, 7});
+        table.setSpacingAfter(8f);
+
+        addThMini(table, "Mle");
+        addThMini(table, "Nom et Prénoms");
+        addThMini(table, "Grade");
+        addThMini(table, "Sal. base");
+        addThMini(table, "Sursalaire");
+        addThMini(table, "Indem. & Pr.");
+        addThMini(table, "Total brut");
+        addThMini(table, "Ass. vi.");
+        addThMini(table, "Part patr.");
+        addThMini(table, "Base imp.");
+        addThMini(table, "Chrg");
+        addThMini(table, "IUTS");
+        addThMini(table, "Sal. net");
+        addThMini(table, "Tot. ret.");
+        addThMini(table, "Net payer");
+        addThMini(table, "TPA");
+        addThMini(table, "Masse sal.");
+
+        BigDecimal totBase = BigDecimal.ZERO;
+        BigDecimal totSurSal = BigDecimal.ZERO;
         BigDecimal totIndem = BigDecimal.ZERO;
         BigDecimal totBrut = BigDecimal.ZERO;
         BigDecimal totCnss = BigDecimal.ZERO;
+        BigDecimal totPat = BigDecimal.ZERO;
+        BigDecimal totBaseImp = BigDecimal.ZERO;
         BigDecimal totIuts = BigDecimal.ZERO;
         BigDecimal totNet = BigDecimal.ZERO;
+        BigDecimal totRet = BigDecimal.ZERO;
+        BigDecimal totNetPayer = BigDecimal.ZERO;
+        BigDecimal totTpa = BigDecimal.ZERO;
+        BigDecimal totMasseSal = BigDecimal.ZERO;
 
         for (Object obj : data) {
             if (obj instanceof LivrePaieRowDto row) {
-                addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
-                addTd(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTd(table, row.getEmploi(), Element.ALIGN_LEFT, false);
-                addTd(table, formatMoney(row.getSalaireBase()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getIndemnites()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getSalaireBrut()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getCotisationCnss()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getImpotIuts()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getSalaireNet()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, row.getMatricule(), Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getGrade(), Element.ALIGN_CENTER, false);
+                addTdMini(table, formatMoney(row.getSalaireBase()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getSurSalaire()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getIndemnitesEtPrimes()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getSalaireBrut()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getAssVieillesse()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getPartPatronale()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getBaseImposable()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, String.valueOf(row.getCharges() != null ? row.getCharges() : 0), Element.ALIGN_CENTER, false);
+                addTdMini(table, formatMoney(row.getImpotIuts()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getSalaireNet()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getTotalRetenues()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getNetAPayer()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, formatMoney(row.getTpa()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getMasseSalariale()), Element.ALIGN_RIGHT, true);
 
                 if (row.getSalaireBase() != null) totBase = totBase.add(row.getSalaireBase());
-                if (row.getIndemnites() != null) totIndem = totIndem.add(row.getIndemnites());
+                if (row.getSurSalaire() != null) totSurSal = totSurSal.add(row.getSurSalaire());
+                if (row.getIndemnitesEtPrimes() != null) totIndem = totIndem.add(row.getIndemnitesEtPrimes());
                 if (row.getSalaireBrut() != null) totBrut = totBrut.add(row.getSalaireBrut());
-                if (row.getCotisationCnss() != null) totCnss = totCnss.add(row.getCotisationCnss());
+                if (row.getAssVieillesse() != null) totCnss = totCnss.add(row.getAssVieillesse());
+                if (row.getPartPatronale() != null) totPat = totPat.add(row.getPartPatronale());
+                if (row.getBaseImposable() != null) totBaseImp = totBaseImp.add(row.getBaseImposable());
                 if (row.getImpotIuts() != null) totIuts = totIuts.add(row.getImpotIuts());
                 if (row.getSalaireNet() != null) totNet = totNet.add(row.getSalaireNet());
+                if (row.getTotalRetenues() != null) totRet = totRet.add(row.getTotalRetenues());
+                if (row.getNetAPayer() != null) totNetPayer = totNetPayer.add(row.getNetAPayer());
+                if (row.getTpa() != null) totTpa = totTpa.add(row.getTpa());
+                if (row.getMasseSalariale() != null) totMasseSal = totMasseSal.add(row.getMasseSalariale());
             }
         }
 
         // Ligne Totale
-        addTot(table, "TOTAL GÉNÉRAL", 3, Element.ALIGN_LEFT);
-        addTot(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
-        addTot(table, formatMoney(totIndem), 1, Element.ALIGN_RIGHT);
-        addTot(table, formatMoney(totBrut), 1, Element.ALIGN_RIGHT);
-        addTot(table, formatMoney(totCnss), 1, Element.ALIGN_RIGHT);
-        addTot(table, formatMoney(totIuts), 1, Element.ALIGN_RIGHT);
-        addTot(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, "TOTAL GÉNÉRAL", 3, Element.ALIGN_LEFT);
+        addTotMini(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totSurSal), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totIndem), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totBrut), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totCnss), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totPat), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totBaseImp), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, "—", 1, Element.ALIGN_CENTER);
+        addTotMini(table, formatMoney(totIuts), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totRet), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totNetPayer), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totTpa), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totMasseSal), 1, Element.ALIGN_RIGHT);
 
         doc.add(table);
     }
 
     private void addTableBanque(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(4);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{30, 20, 20, 30});
-        table.setSpacingAfter(8f);
-
-        addTh(table, "ÉTABLISSEMENT BANCAIRE", Element.ALIGN_LEFT);
-        addTh(table, "CODE BANQUE", Element.ALIGN_CENTER);
-        addTh(table, "NB BÉNÉFICIAIRES", Element.ALIGN_CENTER);
-        addTh(table, "MONTANT TOTAL À VIRER", Element.ALIGN_RIGHT);
-
-        BigDecimal totNet = BigDecimal.ZERO;
-        int totBen = 0;
-
+        // Page 2 - ÉTAT DE VIREMENT DES SALAIRES
         for (Object obj : data) {
             if (obj instanceof EtatBanqueGroupeDto bq) {
-                addTd(table, bq.getBanqueNom(), Element.ALIGN_LEFT, false);
-                addTd(table, bq.getCodeBanque(), Element.ALIGN_CENTER, false);
-                addTd(table, String.valueOf(bq.getNombreBeneficiaires()), Element.ALIGN_CENTER, false);
-                addTd(table, formatMoney(bq.getTotalNet()), Element.ALIGN_RIGHT, true);
+                Paragraph pBq = new Paragraph("Établissement : " + bq.getBanqueNom() + " (Code : " + bq.getCodeBanque() + ")", FONT_SUBTITLE);
+                pBq.setSpacingBefore(8f);
+                pBq.setSpacingAfter(4f);
+                doc.add(pBq);
 
-                if (bq.getTotalNet() != null) totNet = totNet.add(bq.getTotalNet());
-                totBen += bq.getNombreBeneficiaires();
+                PdfPTable table = new PdfPTable(7);
+                table.setWidthPercentage(100);
+                table.setWidths(new float[]{10, 28, 12, 12, 20, 6, 12});
+                table.setSpacingAfter(6f);
+
+                addTh(table, "MATRICULE", Element.ALIGN_LEFT);
+                addTh(table, "NOM & PRENOM(S)", Element.ALIGN_LEFT);
+                addTh(table, "CODE BANQUE", Element.ALIGN_CENTER);
+                addTh(table, "CODE GUICHET", Element.ALIGN_CENTER);
+                addTh(table, "COMPTE A CREDITER", Element.ALIGN_LEFT);
+                addTh(table, "CLE", Element.ALIGN_CENTER);
+                addTh(table, "MONTANT", Element.ALIGN_RIGHT);
+
+                if (bq.getVirements() != null) {
+                    for (EtatBanqueGroupeDto.VirementItemDto vir : bq.getVirements()) {
+                        addTd(table, vir.getMatricule(), Element.ALIGN_LEFT, false);
+                        addTd(table, vir.getNomPrenom(), Element.ALIGN_LEFT, false);
+                        addTd(table, vir.getCodeBanque(), Element.ALIGN_CENTER, false);
+                        addTd(table, vir.getCodeGuichet(), Element.ALIGN_CENTER, false);
+                        addTd(table, vir.getCompteACrediter(), Element.ALIGN_LEFT, false);
+                        addTd(table, vir.getCle(), Element.ALIGN_CENTER, false);
+                        addTd(table, formatMoney(vir.getMontant()), Element.ALIGN_RIGHT, true);
+                    }
+                }
+
+                addTot(table, "TOTAL DE L'ORDRE DE VIREMENT (" + bq.getNombreBeneficiaires() + " Bénéficiaires)", 6, Element.ALIGN_LEFT);
+                addTot(table, formatMoney(bq.getTotalNet()), 1, Element.ALIGN_RIGHT);
+                doc.add(table);
+
+                if (bq.getMontantEnLettres() != null && !bq.getMontantEnLettres().isBlank()) {
+                    Paragraph pArr = new Paragraph("Arrêté le présent état à la somme de : " + bq.getMontantEnLettres() + " Francs CFA.", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXT_DARK));
+                    pArr.setSpacingAfter(10f);
+                    doc.add(pArr);
+                }
             }
         }
-
-        addTot(table, "TOTAL DES ORDRES DE VIREMENT", 2, Element.ALIGN_LEFT);
-        addTot(table, String.valueOf(totBen), 1, Element.ALIGN_CENTER);
-        addTot(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
-
-        doc.add(table);
     }
 
     private void addTableCnss(Document doc, List<Object> data) throws DocumentException {
@@ -956,49 +1420,51 @@ public class EtatSynthesePaieService {
     }
 
     private void addTableIuts(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(8);
+        // Page 7 - ÉTAT DES RETENUES IUTS (IFU: 00164311Z)
+        Paragraph pIfu = new Paragraph("N° IFU DE LA BANQUE : 00164311Z", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BPBF_BLUE));
+        pIfu.setSpacingAfter(4f);
+        doc.add(pIfu);
+
+        PdfPTable table = new PdfPTable(6);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{10, 24, 13, 13, 14, 8, 12, 14});
+        table.setWidths(new float[]{8, 38, 14, 14, 10, 16});
         table.setSpacingAfter(8f);
 
-        addTh(table, "MATRICULE", Element.ALIGN_LEFT);
+        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
         addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "SAL. BRUT", Element.ALIGN_RIGHT);
-        addTh(table, "EXONÉRATIONS", Element.ALIGN_RIGHT);
+        addTh(table, "SALAIRE BRUT", Element.ALIGN_RIGHT);
         addTh(table, "BASE IMPOSABLE", Element.ALIGN_RIGHT);
-        addTh(table, "CHG", Element.ALIGN_CENTER);
-        addTh(table, "RÉDUCTION", Element.ALIGN_RIGHT);
-        addTh(table, "IUTS RETENU", Element.ALIGN_RIGHT);
+        addTh(table, "NB CHARGES", Element.ALIGN_CENTER);
+        addTh(table, "IUTS À REVERSER", Element.ALIGN_RIGHT);
 
         BigDecimal totBrut = BigDecimal.ZERO;
         BigDecimal totBase = BigDecimal.ZERO;
-        BigDecimal totRed = BigDecimal.ZERO;
         BigDecimal totIuts = BigDecimal.ZERO;
 
         for (Object obj : data) {
             if (obj instanceof EtatIutsRowDto row) {
-                addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
+                addTd(table, String.valueOf(row.getNumeroOrdre() != null ? row.getNumeroOrdre() : "—"), Element.ALIGN_CENTER, false);
                 addTd(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTd(table, formatMoney(row.getSalaireBrut()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getTotalExonerations()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getBaseImposable()), Element.ALIGN_RIGHT, false);
-                addTd(table, String.valueOf(row.getNombreCharges()), Element.ALIGN_CENTER, false);
-                addTd(table, formatMoney(row.getReductionPourCharges()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getImpotIutsNet()), Element.ALIGN_RIGHT, true);
+                BigDecimal brut = row.getSalaireBruts() != null ? row.getSalaireBruts() : row.getSalaireBrut();
+                BigDecimal base = row.getBaseImposable() != null ? row.getBaseImposable() : BigDecimal.ZERO;
+                BigDecimal iuts = row.getIutsAReverser() != null ? row.getIutsAReverser() : row.getImpotIutsNet();
+                int chg = row.getNbDeCharges() != null ? row.getNbDeCharges() : (row.getNombreCharges() != null ? row.getNombreCharges() : 0);
 
-                if (row.getSalaireBrut() != null) totBrut = totBrut.add(row.getSalaireBrut());
-                if (row.getBaseImposable() != null) totBase = totBase.add(row.getBaseImposable());
-                if (row.getReductionPourCharges() != null) totRed = totRed.add(row.getReductionPourCharges());
-                if (row.getImpotIutsNet() != null) totIuts = totIuts.add(row.getImpotIutsNet());
+                addTd(table, formatMoney(brut), Element.ALIGN_RIGHT, false);
+                addTd(table, formatMoney(base), Element.ALIGN_RIGHT, false);
+                addTd(table, String.valueOf(chg), Element.ALIGN_CENTER, false);
+                addTd(table, formatMoney(iuts), Element.ALIGN_RIGHT, true);
+
+                if (brut != null) totBrut = totBrut.add(brut);
+                if (base != null) totBase = totBase.add(base);
+                if (iuts != null) totIuts = totIuts.add(iuts);
             }
         }
 
-        addTot(table, "TOTAL IUTS À REVERSER", 2, Element.ALIGN_LEFT);
+        addTot(table, "TOTAL DE L'ÉTAT IUTS À REVERSER", 2, Element.ALIGN_LEFT);
         addTot(table, formatMoney(totBrut), 1, Element.ALIGN_RIGHT);
-        addTot(table, "—", 1, Element.ALIGN_CENTER);
         addTot(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
         addTot(table, "—", 1, Element.ALIGN_CENTER);
-        addTot(table, formatMoney(totRed), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totIuts), 1, Element.ALIGN_RIGHT);
 
         doc.add(table);
@@ -1092,33 +1558,42 @@ public class EtatSynthesePaieService {
     }
 
     private void addTableFsp(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(5);
+        // Page 8 - RETENUE FONDS DE SOLIDARITE
+        PdfPTable table = new PdfPTable(6);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{15, 35, 20, 15, 15});
+        table.setWidths(new float[]{8, 14, 38, 16, 8, 16});
         table.setSpacingAfter(8f);
 
+        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
         addTh(table, "MATRICULE", Element.ALIGN_LEFT);
         addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "DIRECTION", Element.ALIGN_LEFT);
-        addTh(table, "ASSIETTE FSP", Element.ALIGN_RIGHT);
-        addTh(table, "RETENUE FSP", Element.ALIGN_RIGHT);
+        addTh(table, "SALAIRE NET", Element.ALIGN_RIGHT);
+        addTh(table, "TAUX", Element.ALIGN_CENTER);
+        addTh(table, "MONTANT", Element.ALIGN_RIGHT);
 
+        BigDecimal totNet = BigDecimal.ZERO;
         BigDecimal totFsp = BigDecimal.ZERO;
 
         for (Object obj : data) {
             if (obj instanceof EtatFspRowDto row) {
+                addTd(table, String.valueOf(row.getNumeroOrdre() != null ? row.getNumeroOrdre() : "—"), Element.ALIGN_CENTER, false);
                 addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
                 addTd(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTd(table, row.getDirection(), Element.ALIGN_LEFT, false);
-                addTd(table, formatMoney(row.getAssietteCalcul()), Element.ALIGN_RIGHT, false);
-                addTd(table, formatMoney(row.getMontantRetenu()), Element.ALIGN_RIGHT, true);
+                BigDecimal net = row.getSalaireNet() != null ? row.getSalaireNet() : row.getAssietteCalcul();
+                BigDecimal m = row.getMontant() != null ? row.getMontant() : row.getMontantRetenu();
 
-                if (row.getMontantRetenu() != null) totFsp = totFsp.add(row.getMontantRetenu());
+                addTd(table, formatMoney(net), Element.ALIGN_RIGHT, false);
+                addTd(table, "1%", Element.ALIGN_CENTER, false);
+                addTd(table, formatMoney(m), Element.ALIGN_RIGHT, true);
+
+                if (net != null) totNet = totNet.add(net);
+                if (m != null) totFsp = totFsp.add(m);
             }
         }
 
-        addTot(table, "TOTAL FONDS DE SOUTIEN PATRIOTIQUE", 3, Element.ALIGN_LEFT);
-        addTot(table, "—", 1, Element.ALIGN_CENTER);
+        addTot(table, "TOTAL DE L'ÉTAT DU FONDS DE SOLIDARITÉ", 3, Element.ALIGN_LEFT);
+        addTot(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
+        addTot(table, "1%", 1, Element.ALIGN_CENTER);
         addTot(table, formatMoney(totFsp), 1, Element.ALIGN_RIGHT);
 
         doc.add(table);
@@ -1245,26 +1720,21 @@ public class EtatSynthesePaieService {
     }
 
     private void addReportFooter(Document doc, EtatSyntheseWrapperDto etat) throws DocumentException {
-        PdfPTable table = new PdfPTable(3);
+        PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{33, 34, 33});
-        table.setSpacingBefore(15f);
+        table.setWidths(new float[]{50, 50});
+        table.setSpacingBefore(18f);
 
-        PdfPCell c1 = new PdfPCell(new Paragraph("Établi par le Responsable Paie\n\n\n_______________________\nDate & Visa", FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK)));
+        PdfPCell c1 = new PdfPCell(new Paragraph("Le Comptable\n\n\n\n\nAhadi Ismaël YONLI", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
         c1.setBorder(Rectangle.NO_BORDER);
         c1.setHorizontalAlignment(Element.ALIGN_CENTER);
 
-        PdfPCell c2 = new PdfPCell(new Paragraph("Vérifié par la DFC / Contrôle de Gestion\n\n\n_______________________\nDate & Visa", FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK)));
+        PdfPCell c2 = new PdfPCell(new Paragraph("Le Directeur Financier et Comptable\n\n\n\n\nInoussa SANOUIDI", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
         c2.setBorder(Rectangle.NO_BORDER);
         c2.setHorizontalAlignment(Element.ALIGN_CENTER);
 
-        PdfPCell c3 = new PdfPCell(new Paragraph("Approuvé par le Directeur Général\n\n\n_______________________\nDate & Signature", FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK)));
-        c3.setBorder(Rectangle.NO_BORDER);
-        c3.setHorizontalAlignment(Element.ALIGN_CENTER);
-
         table.addCell(c1);
         table.addCell(c2);
-        table.addCell(c3);
         doc.add(table);
     }
 
@@ -1285,11 +1755,29 @@ public class EtatSynthesePaieService {
         List<Object> data = etat.getDonnees();
         String type = etat.getTypeEtat();
 
-        if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
-            pw.println("Banque;Code Banque;Bénéficiaires;Montant Net");
+        if ("RECAPITULATIF_GLOBAL".equalsIgnoreCase(type)) {
+            pw.println("Numéro Compte;Intitulé Compte;Débit (FCFA);Crédit (FCFA)");
+            for (Object o : data) {
+                if (o instanceof RecapitulatifGlobalRowDto r) {
+                    pw.println(escape(r.getNumeroCompte()) + ";" + escape(r.getIntituleCompte()) + ";" + (r.getMontantDebit() != null ? r.getMontantDebit() : "") + ";" + (r.getMontantCredit() != null ? r.getMontantCredit() : ""));
+                }
+            }
+        } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type)) {
+            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Soumis;Part Patronale;Part Salariale;Total Cotisations");
+            for (Object o : data) {
+                if (o instanceof EtatCrraeRowDto c) {
+                    pw.println(c.getNumeroOrdre() + ";" + escape(c.getMatricule()) + ";" + escape(c.getNomPrenom()) + ";" + c.getSalaireSoumisCotisation() + ";" + c.getCotisationPatronale() + ";" + c.getCotisationSalariale() + ";" + c.getMontantTotalCotisations());
+                }
+            }
+        } else if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
+            pw.println("Banque;Code Banque;Code Guichet;Compte à Créditer;Clé;Matricule;Nom & Prénoms;Montant Net");
             for (Object o : data) {
                 if (o instanceof EtatBanqueGroupeDto bq) {
-                    pw.println(escape(bq.getBanqueNom()) + ";" + escape(bq.getCodeBanque()) + ";" + bq.getNombreBeneficiaires() + ";" + bq.getTotalNet());
+                    if (bq.getVirements() != null) {
+                        for (EtatBanqueGroupeDto.VirementItemDto v : bq.getVirements()) {
+                            pw.println(escape(bq.getBanqueNom()) + ";" + escape(v.getCodeBanque()) + ";" + escape(v.getCodeGuichet()) + ";" + escape(v.getCompteACrediter()) + ";" + escape(v.getCle()) + ";" + escape(v.getMatricule()) + ";" + escape(v.getNomPrenom()) + ";" + v.getMontant());
+                        }
+                    }
                 }
             }
         } else if ("ETAT_CNSS".equalsIgnoreCase(type)) {
@@ -1300,10 +1788,17 @@ public class EtatSynthesePaieService {
                 }
             }
         } else if ("ETAT_IUTS".equalsIgnoreCase(type)) {
-            pw.println("Matricule;Nom et Prénoms;Salaire Brut;Exonérations;Abattement;Base Imposable;Charges;IUTS Brut;Réduction Charges;IUTS Net");
+            pw.println("N° Ordre;Nom et Prénoms;Total Salaires Bruts;Base Imposable;Nombre de Charges;IUTS Net à Reverser");
             for (Object o : data) {
                 if (o instanceof EtatIutsRowDto i) {
-                    pw.println(escape(i.getMatricule()) + ";" + escape(i.getNomPrenom()) + ";" + i.getSalaireBrut() + ";" + i.getTotalExonerations() + ";" + i.getAbattementForfaitaire() + ";" + i.getBaseImposable() + ";" + i.getNombreCharges() + ";" + i.getImpotIutsBrut() + ";" + i.getReductionPourCharges() + ";" + i.getImpotIutsNet());
+                    pw.println(i.getNumeroOrdre() + ";" + escape(i.getNomPrenom()) + ";" + (i.getSalaireBruts() != null ? i.getSalaireBruts() : i.getSalaireBrut()) + ";" + i.getBaseImposable() + ";" + (i.getNbDeCharges() != null ? i.getNbDeCharges() : i.getNombreCharges()) + ";" + (i.getIutsAReverser() != null ? i.getIutsAReverser() : i.getImpotIutsNet()));
+                }
+            }
+        } else if ("ETAT_FSP".equalsIgnoreCase(type)) {
+            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Net;Taux;Montant");
+            for (Object o : data) {
+                if (o instanceof EtatFspRowDto f) {
+                    pw.println(f.getNumeroOrdre() + ";" + escape(f.getMatricule()) + ";" + escape(f.getNomPrenom()) + ";" + (f.getSalaireNet() != null ? f.getSalaireNet() : f.getAssietteCalcul()) + ";" + (f.getTaux() != null ? f.getTaux() : "1%") + ";" + (f.getMontant() != null ? f.getMontant() : f.getMontantRetenu()));
                 }
             }
         } else if ("ETAT_SALAIRE".equalsIgnoreCase(type)) {
@@ -1314,11 +1809,11 @@ public class EtatSynthesePaieService {
                 }
             }
         } else {
-            // Livre de paie
-            pw.println("Matricule;Nom et Prénoms;Emploi;Direction;Service;Salaire Base;Sursalaire;Indemnités;Salaire Brut;CNSS;IUTS;Précomptes;Total Retenues;Salaire Net");
+            // Livre de paie - 17 colonnes officielles
+            pw.println("Mle;Nom et Prénoms;Grade;Sal. base;Sursalaire;Indem. & Pr.;Total brut;Ass. vi.;Part patr.;Base imp.;Chrg;IUTS;Sal. net;Tot. ret.;Net payer;TPA;Masse sal.");
             for (Object o : data) {
                 if (o instanceof LivrePaieRowDto l) {
-                    pw.println(escape(l.getMatricule()) + ";" + escape(l.getNomPrenom()) + ";" + escape(l.getEmploi()) + ";" + escape(l.getDirection()) + ";" + escape(l.getService()) + ";" + l.getSalaireBase() + ";" + l.getSurSalaire() + ";" + l.getIndemnites() + ";" + l.getSalaireBrut() + ";" + l.getCotisationCnss() + ";" + l.getImpotIuts() + ";" + l.getTotalPrecomptes() + ";" + l.getTotalRetenues() + ";" + l.getSalaireNet());
+                    pw.println(escape(l.getMatricule()) + ";" + escape(l.getNomPrenom()) + ";" + escape(l.getGrade()) + ";" + l.getSalaireBase() + ";" + l.getSurSalaire() + ";" + l.getIndemnitesEtPrimes() + ";" + l.getSalaireBrut() + ";" + l.getAssVieillesse() + ";" + l.getPartPatronale() + ";" + l.getBaseImposable() + ";" + (l.getCharges() != null ? l.getCharges() : 0) + ";" + l.getImpotIuts() + ";" + l.getSalaireNet() + ";" + l.getTotalRetenues() + ";" + l.getNetAPayer() + ";" + l.getTpa() + ";" + l.getMasseSalariale());
                 }
             }
         }
@@ -1365,6 +1860,36 @@ public class EtatSynthesePaieService {
         cell.setHorizontalAlignment(align);
         cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         cell.setPadding(4f);
+        cell.setBorderColor(BORDER_COLOR);
+        table.addCell(cell);
+    }
+
+    private void addThMini(PdfPTable table, String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, FONT_TH_MINI));
+        cell.setBackgroundColor(BPBF_NAVY);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(2f);
+        cell.setBorderColor(BORDER_COLOR);
+        table.addCell(cell);
+    }
+
+    private void addTdMini(PdfPTable table, String text, int align, boolean bold) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", bold ? FONT_TD_BOLD_MINI : FONT_TD_MINI));
+        cell.setHorizontalAlignment(align);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(2f);
+        cell.setBorderColor(BORDER_COLOR);
+        table.addCell(cell);
+    }
+
+    private void addTotMini(PdfPTable table, String text, int colSpan, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", FONT_TD_BOLD_MINI));
+        cell.setColspan(colSpan);
+        cell.setBackgroundColor(HEADER_BG);
+        cell.setHorizontalAlignment(align);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(2f);
         cell.setBorderColor(BORDER_COLOR);
         table.addCell(cell);
     }

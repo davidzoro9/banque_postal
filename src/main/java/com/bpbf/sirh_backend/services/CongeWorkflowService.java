@@ -15,9 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +50,12 @@ public class CongeWorkflowService {
         return congeRepository.findByEmployeeId(employeeId);
     }
 
+    @Transactional(readOnly = true)
+    public List<Conge> getCongesByInterimaire(Long interimaireId) {
+        return congeRepository.findByInterimaireId(interimaireId);
+    }
+
+    // ── ÉTAPE 1 : CRÉATION / SOUMISSION DE LA DEMANDE ──
     @Transactional
     public Conge createConge(Conge conge) {
         if (conge.getEmployee() != null && conge.getEmployee().getId() != null) {
@@ -56,6 +63,18 @@ public class CongeWorkflowService {
             conge.setEmployee(emp);
         }
 
+        // Intérimaire désigné
+        if (conge.getInterimaire() != null && conge.getInterimaire().getId() != null) {
+            Employee inter = employeeRepository.findById(conge.getInterimaire().getId()).orElse(null);
+            conge.setInterimaire(inter);
+            conge.setStatutInterim("EN_ATTENTE_INTERIM");
+            conge.setStatut("EN_ATTENTE_INTERIM");
+        } else {
+            conge.setStatutInterim("NON_REQUIS");
+            conge.setStatut("EN_ATTENTE_N1");
+        }
+
+        // Type d'absence / congé
         if (conge.getTypeAbsenceConge() != null) {
             TypeAbsenceConge type = null;
             if (conge.getTypeAbsenceConge().getId() != null) {
@@ -64,25 +83,10 @@ public class CongeWorkflowService {
             if (type == null && conge.getTypeAbsenceConge().getCode() != null) {
                 type = typeAbsenceCongeRepository.findByCode(conge.getTypeAbsenceConge().getCode()).orElse(null);
             }
-            if (type == null && conge.getTypeAbsenceConge().getName() != null) {
-                String code = conge.getTypeAbsenceConge().getCode() != null ? conge.getTypeAbsenceConge().getCode() : "CONGE_" + System.currentTimeMillis();
-                try {
-                    TypeAbsenceConge newType = new TypeAbsenceConge();
-                    newType.setCode(code);
-                    newType.setName(conge.getTypeAbsenceConge().getName());
-                    type = typeAbsenceCongeRepository.save(newType);
-                } catch (Exception e) {
-                    try {
-                        Long nextId = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) + 1 FROM type_absence_conge", Long.class);
-                        jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name) VALUES (?, ?, ?)", nextId, code, conge.getTypeAbsenceConge().getName());
-                        type = typeAbsenceCongeRepository.findByCode(code).orElse(null);
-                    } catch (Exception ignored) {}
-                }
-            }
             conge.setTypeAbsenceConge(type);
         }
 
-        // Calcul automatique du nombre de jours ouvrables si non spécifié ou si dates valides
+        // Calcul automatique des jours ouvrables
         if (conge.getDateDebut() != null && conge.getDateFin() != null) {
             try {
                 LocalDate start = LocalDate.parse(conge.getDateDebut());
@@ -92,7 +96,7 @@ public class CongeWorkflowService {
                     conge.setNbJours(calculatedDays);
                 }
             } catch (Exception e) {
-                log.warn("Impossible de parser les dates de congé : {} / {}", conge.getDateDebut(), conge.getDateFin());
+                log.warn("Impossible de parser les dates : {} / {}", conge.getDateDebut(), conge.getDateFin());
                 if (conge.getNbJours() == null || conge.getNbJours() <= 0) {
                     conge.setNbJours(1);
                 }
@@ -105,77 +109,147 @@ public class CongeWorkflowService {
             conge.setDateDemande(LocalDate.now().format(ISO_FORMATTER));
         }
 
-        if (conge.getStatut() == null || conge.getStatut().isBlank()) {
-            conge.setStatut("EN_ATTENTE");
+        // Détection automatique de poste sensible BCEAO
+        boolean isSensible = false;
+        if (conge.getEmployee() != null) {
+            String fName = (conge.getEmployee().getFonction() != null ? conge.getEmployee().getFonction().getName() : "") + " "
+                         + (conge.getEmployee().getEmploi() != null ? conge.getEmployee().getEmploi().getName() : "");
+            fName = fName.toLowerCase();
+            if (fName.contains("caisse") || fName.contains("caissier") || fName.contains("trésor")
+                || fName.contains("trader") || fName.contains("gestionnaire de compte")
+                || fName.contains("opérations") || fName.contains("monétique")) {
+                isSensible = true;
+            }
+        }
+        if (Boolean.TRUE.equals(conge.getPosteSensibleBceao())) {
+            isSensible = true;
+        }
+        conge.setPosteSensibleBceao(isSensible);
+        conge.setStatutSi(isSensible ? "A_SUSPENDRE" : "NON_REQUIS");
+
+        // Calcul des jours déductibles selon le type et le quota statutaire/légal non déductible
+        int nbJours = conge.getNbJours() != null ? conge.getNbJours() : 0;
+        int joursDeductibles = 0;
+
+        if (conge.getTypeAbsenceConge() != null) {
+            TypeAbsenceConge type = conge.getTypeAbsenceConge();
+            if (type.isDeductibleDuSolde()) {
+                joursDeductibles = nbJours;
+            } else {
+                int plafond = type.getPlafondJoursNonDeductible();
+                joursDeductibles = Math.max(0, nbJours - plafond);
+            }
+        } else {
+            joursDeductibles = nbJours;
         }
 
-        // Enregistrer le solde avant la demande
+        // Calcul solde avant / après
         if (conge.getEmployee() != null && conge.getEmployee().getId() != null) {
             try {
                 SoldeCongeDto solde = getSoldeForEmployee(conge.getEmployee().getId());
                 if (solde != null && solde.getSoldeRestant() != null) {
                     conge.setSoldeAvantDemande(solde.getSoldeRestant().intValue());
-                    int nbJours = conge.getNbJours() != null ? conge.getNbJours() : 0;
-                    conge.setSoldeApresDemande(Math.max(0, solde.getSoldeRestant().intValue() - nbJours));
+                    conge.setSoldeApresDemande(Math.max(0, solde.getSoldeRestant().intValue() - joursDeductibles));
                 }
             } catch (Exception e) {
-                log.warn("Erreur calcul solde pour employé : {}", e.getMessage());
                 conge.setSoldeAvantDemande(30);
-                conge.setSoldeApresDemande(Math.max(0, 30 - (conge.getNbJours() != null ? conge.getNbJours() : 0)));
+                conge.setSoldeApresDemande(Math.max(0, 30 - joursDeductibles));
             }
         }
-
-        try {
-            return congeRepository.save(conge);
-        } catch (Exception e) {
-            log.error("JPA conge save failed: {}, applying safe fallback SQL insert...", e.getMessage());
-            try {
-                Long nextId = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) + 1 FROM conge", Long.class);
-                conge.setId(nextId);
-                Long empId = conge.getEmployee() != null ? conge.getEmployee().getId() : null;
-                Long tacId = conge.getTypeAbsenceConge() != null ? conge.getTypeAbsenceConge().getId() : null;
-                jdbcTemplate.update(
-                    "INSERT INTO conge (id, employee_id, type_absence_conge_id, date_debut, date_fin, nb_jours, motif, justificatif, date_demande, date_validation, valide_par, motif_refus, solde_avant_demande, solde_apres_demande, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    nextId, empId, tacId, conge.getDateDebut(), conge.getDateFin(), conge.getNbJours(), conge.getMotif(), conge.getJustificatif(), conge.getDateDemande(), conge.getDateValidation(), conge.getValidePar(), conge.getMotifRefus(), conge.getSoldeAvantDemande(), conge.getSoldeApresDemande(), conge.getStatut()
-                );
-                return conge;
-            } catch (Exception ex) {
-                log.error("Fallback SQL insert conge failed: {}", ex.getMessage());
-                throw new RuntimeException("Erreur lors de l'enregistrement de la demande de congé : " + ex.getMessage());
-            }
-        }
-    }
-
-    @Transactional
-    public Conge approuverConge(Long id, String validePar) {
-        Conge conge = getCongeById(id);
-        conge.setStatut("APPROUVE");
-        conge.setDateValidation(LocalDate.now().format(ISO_FORMATTER));
-        conge.setValidePar(validePar != null && !validePar.isBlank() ? validePar : "DRH / Supérieur Hiérarchique");
-        conge.setMotifRefus(null);
-
-        // Si la date du jour est dans la plage de congé, mettre à jour le statut de l'employé
-        try {
-            LocalDate now = LocalDate.now();
-            LocalDate start = LocalDate.parse(conge.getDateDebut());
-            LocalDate end = LocalDate.parse(conge.getDateFin());
-            if (!now.isBefore(start) && !now.isAfter(end) && conge.getEmployee() != null) {
-                conge.getEmployee().setStatut("EN_CONGE");
-                employeeRepository.save(conge.getEmployee());
-            }
-        } catch (Exception ignored) {}
 
         return congeRepository.save(conge);
+    }
+
+    // ── ÉTAPE 2 : AVIS DE L'INTÉRIMAIRE (COLLÈGUE PRESSENTI) ──
+    @Transactional
+    public Conge donnerAvisInterim(Long id, boolean accord, String commentaire, String interimaireNom) {
+        Conge conge = getCongeById(id);
+        conge.setDateAvisInterim(LocalDate.now().format(ISO_FORMATTER));
+        conge.setCommentaireInterim(commentaire != null ? commentaire.trim() : "");
+
+        if (accord) {
+            conge.setStatutInterim("ACCEPTE");
+            conge.setStatut("EN_ATTENTE_N1"); // Passe à l'étape 3 (Visa N+1)
+        } else {
+            conge.setStatutInterim("REFUSE");
+            conge.setStatut("REJETE");
+            String comment = (commentaire != null && !commentaire.isBlank()) ? " : " + commentaire : "";
+            conge.setMotifRefus("Intérim décliné par " + (interimaireNom != null ? interimaireNom : "le collègue") + comment);
+        }
+
+        return congeRepository.save(conge);
+    }
+
+    // ── ÉTAPE 3 : VISA HIÉRARCHIQUE N+1 (DIRECTEUR / CHEF DE PÔLE) ──
+    @Transactional
+    public Conge donnerVisaN1(Long id, boolean accord, String commentaire, String validePar) {
+        Conge conge = getCongeById(id);
+        conge.setDateVisaN1(LocalDate.now().format(ISO_FORMATTER));
+        conge.setVisaN1Par(validePar != null && !validePar.isBlank() ? validePar : "Directeur N+1");
+        conge.setCommentaireN1(commentaire != null ? commentaire.trim() : "");
+
+        if (accord) {
+            conge.setStatut("EN_ATTENTE_DRH"); // Passe à l'étape 4 (Contrôle DRH)
+        } else {
+            conge.setStatut("REJETE");
+            String comment = (commentaire != null && !commentaire.isBlank()) ? " : " + commentaire : "";
+            conge.setMotifRefus("Visa N+1 défavorable" + comment);
+        }
+
+        return congeRepository.save(conge);
+    }
+
+    // ── ÉTAPE 4 : CONTRÔLE ET DÉLIVRANCE DU TITRE DE CONGÉ DRH ──
+    @Transactional
+    public Conge validationFinaleDrh(Long id, boolean accord, String motifRefus, String validePar) {
+        Conge conge = getCongeById(id);
+        conge.setDateVisaDrh(LocalDate.now().format(ISO_FORMATTER));
+        conge.setVisaDrhPar(validePar != null && !validePar.isBlank() ? validePar : "DRH");
+
+        if (accord) {
+            conge.setStatut("APPROUVE");
+            conge.setValidePar(validePar != null && !validePar.isBlank() ? validePar : "DRH");
+            conge.setDateValidation(LocalDate.now().format(ISO_FORMATTER));
+            conge.setMotifRefus(null);
+
+            // Génération du numéro officiel de Titre de Congé
+            conge.setNumeroTitreConge("TC-" + LocalDate.now().getYear() + "-" + String.format("%04d", conge.getId()));
+
+            // Mise à jour de l'employé si déjà en période
+            try {
+                LocalDate now = LocalDate.now();
+                LocalDate start = LocalDate.parse(conge.getDateDebut());
+                LocalDate end = LocalDate.parse(conge.getDateFin());
+                if (!now.isBefore(start) && !now.isAfter(end) && conge.getEmployee() != null) {
+                    conge.getEmployee().setStatut("EN_CONGE");
+                    employeeRepository.save(conge.getEmployee());
+                }
+            } catch (Exception ignored) {}
+        } else {
+            conge.setStatut("REJETE");
+            conge.setMotifRefus(motifRefus != null && !motifRefus.isBlank() ? motifRefus : "Refus DRH non conforme au cadre légal/conventionnel");
+        }
+
+        return congeRepository.save(conge);
+    }
+
+    // ── ÉTAPE 5 : SÉCURITÉ SI (SUSPENSION ACCÈS POSTE SENSIBLE BCEAO) ──
+    @Transactional
+    public Conge actionSecuriteSi(Long id, String statutSi, String operateurSi) {
+        Conge conge = getCongeById(id);
+        conge.setStatutSi(statutSi != null ? statutSi : "ACCES_SUSPENDU");
+        return congeRepository.save(conge);
+    }
+
+    // Compatibilité directe pour les appels 1-clic existants
+    @Transactional
+    public Conge approuverConge(Long id, String validePar) {
+        return validationFinaleDrh(id, true, null, validePar);
     }
 
     @Transactional
     public Conge rejeterConge(Long id, String motifRefus, String rejetePar) {
-        Conge conge = getCongeById(id);
-        conge.setStatut("REJETE");
-        conge.setDateValidation(LocalDate.now().format(ISO_FORMATTER));
-        conge.setValidePar(rejetePar != null && !rejetePar.isBlank() ? rejetePar : "DRH / Supérieur Hiérarchique");
-        conge.setMotifRefus(motifRefus != null && !motifRefus.isBlank() ? motifRefus : "Demande non conforme aux nécessités de service");
-        return congeRepository.save(conge);
+        return validationFinaleDrh(id, false, motifRefus, rejetePar);
     }
 
     @Transactional
@@ -191,6 +265,42 @@ public class CongeWorkflowService {
         congeRepository.deleteById(id);
     }
 
+    // ── QUORUM DE PRÉSENCE DIRECTION (Vérification Règle Max 30% d'Absents) ──
+    @Transactional(readOnly = true)
+    public Map<String, Object> verifierQuorumDirection(Long directionId) {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            Long totalDirection = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM employee WHERE direction_id = ?",
+                Long.class, directionId
+            );
+            if (totalDirection == null || totalDirection == 0) totalDirection = 1L;
+
+            Long absentsActuels = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT e.id) FROM conge c JOIN employee e ON c.employee_id = e.id " +
+                "WHERE e.direction_id = ? AND c.statut = 'APPROUVE' " +
+                "AND CAST(c.date_debut AS DATE) <= CURRENT_DATE AND CAST(c.date_fin AS DATE) >= CURRENT_DATE",
+                Long.class, directionId
+            );
+            if (absentsActuels == null) absentsActuels = 0L;
+
+            double tauxAbsence = Math.round(((double) absentsActuels / (double) totalDirection) * 1000.0) / 10.0;
+            boolean quorumRespecte = tauxAbsence <= 30.0;
+
+            res.put("directionId", directionId);
+            res.put("totalAgents", totalDirection);
+            res.put("absentsActuels", absentsActuels);
+            res.put("tauxAbsencePourcentage", tauxAbsence);
+            res.put("quorumRespecte", quorumRespecte);
+            res.put("seuilMaxAbsentsPourcentage", 30.0);
+        } catch (Exception e) {
+            res.put("quorumRespecte", true);
+            res.put("tauxAbsencePourcentage", 0.0);
+        }
+        return res;
+    }
+
+    // ── SOLDES ET CALCULS LÉGAUX BURKINA FASO ──
     @Transactional(readOnly = true)
     public SoldeCongeDto getSoldeForEmployee(Long employeeId) {
         Employee emp = employeeRepository.findById(employeeId)
@@ -211,13 +321,28 @@ public class CongeWorkflowService {
 
         for (Conge c : employeeConges) {
             int j = c.getNbJours() != null ? c.getNbJours() : 0;
-            if ("APPROUVE".equalsIgnoreCase(c.getStatut()) || "VALIDE".equalsIgnoreCase(c.getStatut())) {
-                joursPris += j;
-                if (dernierConge == null || (c.getDateDebut() != null && c.getDateDebut().compareTo(dernierConge) > 0)) {
-                    dernierConge = c.getDateDebut();
+            int jDeductibles = 0;
+            if (c.getTypeAbsenceConge() != null) {
+                TypeAbsenceConge type = c.getTypeAbsenceConge();
+                if (type.isDeductibleDuSolde()) {
+                    jDeductibles = j;
+                } else {
+                    int plafond = type.getPlafondJoursNonDeductible();
+                    jDeductibles = Math.max(0, j - plafond);
                 }
-            } else if ("EN_ATTENTE".equalsIgnoreCase(c.getStatut()) || "SOUMIS".equalsIgnoreCase(c.getStatut())) {
-                joursEnAttente += j;
+            } else {
+                jDeductibles = j;
+            }
+
+            if (jDeductibles > 0) {
+                if ("APPROUVE".equalsIgnoreCase(c.getStatut()) || "VALIDE".equalsIgnoreCase(c.getStatut())) {
+                    joursPris += jDeductibles;
+                    if (dernierConge == null || (c.getDateDebut() != null && c.getDateDebut().compareTo(dernierConge) > 0)) {
+                        dernierConge = c.getDateDebut();
+                    }
+                } else if (c.getStatut() != null && c.getStatut().toUpperCase().contains("EN_ATTENTE")) {
+                    joursEnAttente += jDeductibles;
+                }
             }
         }
 
@@ -264,9 +389,6 @@ public class CongeWorkflowService {
         return result;
     }
 
-    /**
-     * Calcule le nombre de jours de congé entre deux dates selon les règles configurées (jours ouvrables/calendaires, fériés).
-     */
     public int calculateJoursOuvrables(LocalDate start, LocalDate end) {
         if (start == null || end == null) return 0;
         if (end.isBefore(start)) return 0;
@@ -287,11 +409,10 @@ public class CongeWorkflowService {
                 isExcludedDay = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY);
             } else if ("OUVRABLE_6J".equals(mode)) {
                 isExcludedDay = (day == DayOfWeek.SUNDAY);
-            } else { // CALENDAIRE
+            } else {
                 isExcludedDay = false;
             }
 
-            // Vérifier si c'est un jour férié chômé payé au Burkina Faso
             String dateStr = current.format(ISO_FORMATTER);
             boolean isFerie = checkFeries && jourFerieRepository.findByDate(dateStr)
                     .map(jf -> Boolean.TRUE.equals(jf.getChomePaye()))

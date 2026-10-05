@@ -33,20 +33,60 @@ public class CongeController {
         return ResponseEntity.ok(congeService.getCongesByEmployee(employeeId));
     }
 
+    @GetMapping("/interimaire/{interimaireId}")
+    public ResponseEntity<List<Conge>> getByInterimaire(@PathVariable Long interimaireId) {
+        return ResponseEntity.ok(congeService.getCongesByInterimaire(interimaireId));
+    }
+
+    // ── ÉTAPE 1 : CRÉATION / SOUMISSION ──
     @PostMapping("/create")
     public ResponseEntity<Conge> create(@RequestBody Conge conge) {
         Conge saved = congeService.createConge(conge);
-        if (saved != null && saved.getEmployee() != null) {
-            com.bpbf.sirh_backend.entities.Employee emp = new com.bpbf.sirh_backend.entities.Employee();
-            emp.setId(saved.getEmployee().getId());
-            emp.setMatricule(saved.getEmployee().getMatricule());
-            emp.setNom(saved.getEmployee().getNom());
-            emp.setPrenom(saved.getEmployee().getPrenom());
-            saved.setEmployee(emp);
-        }
         return ResponseEntity.ok(saved);
     }
 
+    // ── ÉTAPE 2 : AVIS INTÉRIMAIRE (COLLÈGUE PRESSENTI) ──
+    @PutMapping("/{id}/avis-interim")
+    public ResponseEntity<Conge> avisInterim(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        boolean accord = Boolean.TRUE.equals(body.get("accord"));
+        String commentaire = (String) body.get("commentaire");
+        String interimaireNom = (String) body.get("interimaireNom");
+        return ResponseEntity.ok(congeService.donnerAvisInterim(id, accord, commentaire, interimaireNom));
+    }
+
+    // ── ÉTAPE 3 : VISA HIÉRARCHIQUE N+1 (DIRECTEUR / CHEF DE PÔLE) ──
+    @PutMapping("/{id}/visa-n1")
+    public ResponseEntity<Conge> visaN1(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        boolean accord = Boolean.TRUE.equals(body.get("accord"));
+        String commentaire = (String) body.get("commentaire");
+        String validePar = (String) body.get("validePar");
+        return ResponseEntity.ok(congeService.donnerVisaN1(id, accord, commentaire, validePar));
+    }
+
+    // ── ÉTAPE 4 : CONTRÔLE ET DÉLIVRANCE TITRE DE CONGÉ DRH ──
+    @PutMapping("/{id}/validation-drh")
+    public ResponseEntity<Conge> validationDrh(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        boolean accord = Boolean.TRUE.equals(body.get("accord"));
+        String motifRefus = (String) body.get("motifRefus");
+        String validePar = (String) body.get("validePar");
+        return ResponseEntity.ok(congeService.validationFinaleDrh(id, accord, motifRefus, validePar));
+    }
+
+    // ── ÉTAPE 5 : ACTION SÉCURITÉ SI (POSTE SENSIBLE BCEAO) ──
+    @PutMapping("/{id}/securite-si")
+    public ResponseEntity<Conge> securiteSi(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String statutSi = body != null ? body.get("statutSi") : "ACCES_SUSPENDU";
+        String operateurSi = body != null ? body.get("operateurSi") : "DSI";
+        return ResponseEntity.ok(congeService.actionSecuriteSi(id, statutSi, operateurSi));
+    }
+
+    // ── QUORUM DIRECTION (RÈGLE MAX 30% D'ABSENTS) ──
+    @GetMapping("/quorum/{directionId}")
+    public ResponseEntity<Map<String, Object>> getQuorumDirection(@PathVariable Long directionId) {
+        return ResponseEntity.ok(congeService.verifierQuorumDirection(directionId));
+    }
+
+    // Compatibilité 1-clic existante
     @PutMapping("/{id}/approuver")
     public ResponseEntity<Conge> approuver(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
         String validePar = body != null ? body.get("validePar") : null;

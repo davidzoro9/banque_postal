@@ -119,6 +119,10 @@ public class EmployeeDto {
     private String categorieLibelle;
     private String echelonLibelle;
 
+    private String superviseurNom;
+    private String superviseurPrenom;
+    private String superviseurMatricule;
+
     // Famille
     private Object conjoint;
     private Object enfants;
@@ -366,4 +370,13 @@ public class EmployeeDto {
     private Integer anciennete;
     public Integer getAnciennete() { return anciennete != null ? anciennete : 0; }
     public void setAnciennete(Integer anciennete) { this.anciennete = anciennete; }
+
+    public String getSuperviseurNom() { return superviseurNom; }
+    public void setSuperviseurNom(String superviseurNom) { this.superviseurNom = superviseurNom; }
+
+    public String getSuperviseurPrenom() { return superviseurPrenom; }
+    public void setSuperviseurPrenom(String superviseurPrenom) { this.superviseurPrenom = superviseurPrenom; }
+
+    public String getSuperviseurMatricule() { return superviseurMatricule; }
+    public void setSuperviseurMatricule(String superviseurMatricule) { this.superviseurMatricule = superviseurMatricule; }
 }

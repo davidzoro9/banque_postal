@@ -16,11 +16,15 @@ public interface DirectionMapper {
     @Mapping(source = "parentDirection.name", target = "parentDirectionLibelle")
     @Mapping(source = "agence.id", target = "agenceId")
     @Mapping(source = "agence.nomAgence", target = "agenceLibelle")
+    @Mapping(source = "directeur.id", target = "directeurId")
+    @Mapping(expression = "java(direction.getDirecteur() != null ? (direction.getDirecteur().getName() != null ? direction.getDirecteur().getName() : (direction.getDirecteur().getPrenom() + \" \" + direction.getDirecteur().getNom())) : null)", target = "directeurLibelle")
+    @Mapping(source = "directeur.matricule", target = "directeurMatricule")
     DirectionDto toDto(Direction direction);
 
     @Mapping(target = "department", ignore = true)
     @Mapping(target = "parentDirection", ignore = true)
     @Mapping(target = "agence", ignore = true)
+    @Mapping(target = "directeur", ignore = true)
     Direction toEntity(DirectionDto directionDto);
 
     List<DirectionDto> toDtos(List<Direction> directions);

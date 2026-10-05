@@ -91,10 +91,24 @@ public class SessionPaieController {
                 }
             }
 
-            // Pour extraordinaire : libellé de la session obligatoire
+            // Pour extraordinaire : libellé de la session obligatoire et nature de la session
             if ("EXTRAORDINAIRE".equals(type)) {
                 if (session.getName() == null || session.getName().trim().isBlank()) {
                     throw new IllegalArgumentException("Le libellé de la session extraordinaire est obligatoire.");
+                }
+                if (session.getNatureSession() == null || session.getNatureSession().isBlank()) {
+                    String n = session.getName().toUpperCase(java.util.Locale.ROOT);
+                    if (n.contains("14") || n.contains("QUATORZIEME")) {
+                        session.setNatureSession("QUATORZIEME_MOIS");
+                    } else if (n.contains("CONGE") || n.contains("CONGÉ")) {
+                        session.setNatureSession("CONGE_PAYE");
+                    } else if (n.contains("RETRAITE")) {
+                        session.setNatureSession("INDEMNITE_RETRAITE");
+                    } else if (n.contains("STC") || n.contains("SOLDE")) {
+                        session.setNatureSession("STC");
+                    } else {
+                        session.setNatureSession("TREIZIEME_MOIS");
+                    }
                 }
             }
 

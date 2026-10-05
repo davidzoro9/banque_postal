@@ -14,6 +14,7 @@ public class EtatBanqueGroupeDto {
     private String codeBanque;
     private Integer nombreBeneficiaires;
     private BigDecimal totalNet;
+    private String montantEnLettres; // Arrêté le présent état à la somme de...
 
     @Builder.Default
     private List<VirementItemDto> virements = new ArrayList<>();
@@ -23,8 +24,16 @@ public class EtatBanqueGroupeDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class VirementItemDto {
+        // Colonnes officielles - Modèle 2 (Page 2) : ÉTAT DE VIREMENT DES SALAIRES
         private String matricule;
         private String nomPrenom;
+        private String codeBanque;
+        private String codeGuichet;
+        private String compteACrediter;
+        private String cle;
+        private BigDecimal montant;
+
+        // Champs de rétrocompatibilité
         private String emploi;
         private String numeroCompte;
         private String iban;

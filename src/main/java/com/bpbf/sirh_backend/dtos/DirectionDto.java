@@ -22,4 +22,8 @@ public class DirectionDto {
 
     private Long agenceId;
     private String agenceLibelle;
+
+    private Long directeurId;
+    private String directeurLibelle;
+    private String directeurMatricule;
 }

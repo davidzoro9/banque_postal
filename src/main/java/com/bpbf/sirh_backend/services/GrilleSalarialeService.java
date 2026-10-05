@@ -51,18 +51,29 @@ public class GrilleSalarialeService {
         final String targetEch = echFromGrade;
 
         return all.stream()
-                .filter(g -> (gradeId == null || (g.getGradeObj() != null && gradeId.equals(g.getGradeObj().getId())))
-                          && (grade == null || grade.trim().isEmpty() 
-                              || grade.equalsIgnoreCase(g.getClasse()) 
-                              || grade.equalsIgnoreCase(g.getGrade())
-                              || (g.getGradeObj() != null && grade.equalsIgnoreCase(g.getGradeObj().getCode())))
-                          && (categorieId == null || (g.getCategorieObj() != null && categorieId.equals(g.getCategorieObj().getId())))
-                          && (targetCat == null || targetCat.trim().isEmpty() || matchCat(targetCat, g.getCategory(), g.getCategory()))
-                          && (echelonId == null || (g.getEchelonObj() != null && echelonId.equals(g.getEchelonObj().getId())))
-                          && (targetEch == null || targetEch.trim().isEmpty() 
-                              || targetEch.equalsIgnoreCase(g.getEchellon())
-                              || ("E" + String.format("%02d", parseEchelonNum(targetEch))).equalsIgnoreCase(g.getEchellon())
-                              || targetEch.equalsIgnoreCase("E" + String.format("%02d", parseEchelonNum(g.getEchellon())))))
+                .filter(g -> {
+                    // Match Catégorie
+                    String catLib = g.getCategorieObj() != null ? g.getCategorieObj().getLibelle() : null;
+                    boolean catMatch = (categorieId != null && g.getCategorieObj() != null && categorieId.equals(g.getCategorieObj().getId()))
+                            || (targetCat != null && !targetCat.trim().isEmpty() && matchCat(targetCat, g.getCategory(), catLib));
+                    if (!catMatch && targetCat != null && !targetCat.trim().isEmpty()) {
+                        return false;
+                    }
+
+                    // Match Échelon
+                    boolean echMatch = (echelonId != null && g.getEchelonObj() != null && echelonId.equals(g.getEchelonObj().getId()))
+                            || (targetEch != null && !targetEch.trim().isEmpty() && matchEch(targetEch, g.getEchellon()));
+                    if (!echMatch && targetEch != null && !targetEch.trim().isEmpty()) {
+                        return false;
+                    }
+
+                    // Match Grade si spécifié et pertinent
+                    if (gradeId != null && g.getGradeObj() != null && !gradeId.equals(g.getGradeObj().getId())) {
+                        return false;
+                    }
+
+                    return true;
+                })
                 .findFirst()
                 .map(grilleSalarialeMapper::toDto)
                 .orElse(null);
@@ -115,6 +126,7 @@ public class GrilleSalarialeService {
     }
 
     private int parseEchelonNum(String s) {
+        if (s == null) return -1;
         try {
             return Integer.parseInt(s.replaceAll("\\D+", ""));
         } catch (Exception e) {
@@ -122,23 +134,44 @@ public class GrilleSalarialeService {
         }
     }
 
+    private boolean matchEch(String targetEch, String dbEch) {
+        if (targetEch == null || dbEch == null) return false;
+        if (targetEch.equalsIgnoreCase(dbEch)) return true;
+        int tNum = parseEchelonNum(targetEch);
+        int dNum = parseEchelonNum(dbEch);
+        return tNum > 0 && tNum == dNum;
+    }
+
     private boolean matchCat(String catCode, String cCode, String cLibelle) {
-        if (catCode == null || cCode == null) return false;
-        if (catCode.equalsIgnoreCase(cCode) || catCode.equalsIgnoreCase(cLibelle)) return true;
-        if (catCode.toUpperCase().startsWith("C") && !catCode.toUpperCase().startsWith("CL")) {
-            String num = catCode.replaceAll("\\D+", "");
-            if (!num.isEmpty() && num.equalsIgnoreCase(cCode)) return true;
-        }
-        if (catCode.toUpperCase().startsWith("CL")) {
-            String numStr = catCode.replaceAll("\\D+", "");
-            if (!numStr.isEmpty()) {
-                try {
-                    int num = Integer.parseInt(numStr);
-                    String[] roman = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"};
-                    if (num >= 1 && num < roman.length && roman[num].equalsIgnoreCase(cCode)) return true;
-                } catch (Exception ignored) {}
+        if (catCode == null) return false;
+        String formattedTarget = GrilleSalariale.formatCategoryCode(catCode);
+        String formattedCode = GrilleSalariale.formatCategoryCode(cCode);
+        String formattedLib = GrilleSalariale.formatCategoryCode(cLibelle);
+
+        if (!formattedTarget.isEmpty()) {
+            if (formattedTarget.equalsIgnoreCase(formattedCode) || formattedTarget.equalsIgnoreCase(formattedLib)) {
+                return true;
             }
         }
+        if (catCode.equalsIgnoreCase(cCode) || (cLibelle != null && catCode.equalsIgnoreCase(cLibelle))) {
+            return true;
+        }
+
+        // Nettoyage des préfixes "Classe" ou "Catégorie"
+        String cleanTarget = catCode.trim().toUpperCase()
+                .replace("CLASSE", "")
+                .replace("CATEGORIE", "")
+                .replace("CAT", "")
+                .trim();
+        String cleanLib = cLibelle != null ? cLibelle.trim().toUpperCase()
+                .replace("CLASSE", "")
+                .replace("CATEGORIE", "")
+                .replace("CAT", "")
+                .trim() : "";
+        if (!cleanTarget.isEmpty() && cleanTarget.equalsIgnoreCase(cleanLib)) {
+            return true;
+        }
+
         return false;
     }
 }

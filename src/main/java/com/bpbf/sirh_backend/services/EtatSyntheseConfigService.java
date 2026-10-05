@@ -145,52 +145,65 @@ public class EtatSyntheseConfigService {
 
     @Transactional
     public void initDefaultConfigs() {
-        if (repository.count() > 0) {
-            return;
-        }
-
-        log.info("Initialisation des 12 états de synthèse officiels dans PostgreSQL...");
+        log.info("Vérification et synchronisation des états de synthèse officiels dans PostgreSQL...");
 
         List<EtatSyntheseConfig> defaults = new ArrayList<>();
 
-        defaults.add(createEntity("LIVRE_PAIE", "Livre de Paie", "Paie Globale", 
-                "Vue matricielle complète des salaires de base, indemnités, cotisations, IUTS, FSP et net à payer.", "menu_book", 1, true, true));
+        defaults.add(createEntity("RECAPITULATIF_GLOBAL", "Récapitulatif Global de la Paie", "Comptabilité & Paie",
+                "Journal comptable officiel des charges (comptes 642, 641) et retenues/salaires nets (compte 3522).", "account_balance_wallet", 1, true, true));
+
+        defaults.add(createEntity("LIVRE_PAIE", "Registre de Paie", "Paie Globale", 
+                "Registre officiel de paie (format paysage 17 colonnes réglementaires : SB, Sursalaire, Indemnités, CNSS, IUTS, Net, TPA, Masse salariale).", "menu_book", 2, true, true));
+
+        defaults.add(createEntity("ETAT_BANQUE", "État de Virement des Salaires", "Bancaire", 
+                "Ordres et récapitulatif des virements bancaires par établissement financier avec code guichet, compte et clé RIB.", "account_balance", 3, true, true));
+
+        defaults.add(createEntity("ETAT_CRRAE_RRPC", "Déclaration Cotisations RRPC (CRRAE 19%)", "Charges Sociales", 
+                "État nominatif mensuel de déclaration des cotisations Régime de Retraite Professionnelle Complémentaire (12,67% patronal, 6,33% salarié).", "security", 4, true, true));
+
+        defaults.add(createEntity("ETAT_CRRAE_RCPNC", "Déclaration Cotisations RCPNC (CRRAE 12%)", "Charges Sociales", 
+                "État nominatif mensuel de déclaration des cotisations Régime Complémentaire de Pension Non Cadre (6% patronal, 6% salarié).", "security", 5, true, true));
+
+        defaults.add(createEntity("ETAT_CRRAE_FAAM", "Déclaration Cotisations FAAM (CRRAE 1,5%)", "Charges Sociales", 
+                "État nominatif mensuel de déclaration des cotisations Fonds d'Action et d'Assistance Médicale (1% patronal, 0,5% salarié).", "health_and_safety", 6, true, true));
+
+        defaults.add(createEntity("ETAT_IUTS", "État des Retenues IUTS", "Fiscalité", 
+                "État déclaratif fiscal officiel de l'IUTS (IFU 00164311Z) : salaires bruts, base imposable, charges de famille et IUTS à reverser.", "receipt_long", 7, true, true));
+
+        defaults.add(createEntity("ETAT_FSP", "Retenue Fonds de Solidarité", "Cotisations Légales", 
+                "État officiel du prélèvement légal obligatoire de 1% au titre du Fonds de Soutien Patriotique.", "shield", 8, true, true));
 
         defaults.add(createEntity("ETAT_NOMINATIF", "État nominatif de paie", "Salaires", 
-                "Détail individuel nominatif par collaborateur avec matricule, emploi et rémunération brute/nette.", "badge", 2, true, true));
+                "Détail individuel nominatif par collaborateur avec matricule, emploi et rémunération brute/nette.", "badge", 9, true, true));
 
         defaults.add(createEntity("ETAT_SALAIRE", "État salaire par direction", "Analytique", 
-                "Consolidation de la masse salariale et ventilation par Direction et Service.", "payments", 3, true, true));
-
-        defaults.add(createEntity("ETAT_BANQUE", "État par banque (Virements)", "Bancaire", 
-                "Ordres et récapitulatif des virements bancaires par établissement financier et IBAN.", "account_balance", 4, true, true));
+                "Consolidation de la masse salariale et ventilation par Direction et Service.", "payments", 10, true, true));
 
         defaults.add(createEntity("ETAT_CNSS", "État Cotisation CNSS", "Charges Sociales", 
-                "Déclaration sociale CNSS : base plafonnée à 800 000 FCFA, part salariale (5.5%), part patronale (16%).", "security", 5, true, true));
-
-        defaults.add(createEntity("ETAT_IUTS", "État IUTS", "Fiscalité", 
-                "Impôt Unique sur les Traitements et Salaires : assiette fiscale, abattements, charges et impôt retenu.", "receipt_long", 6, true, true));
+                "Déclaration sociale CNSS : base plafonnée à 800 000 FCFA, part salariale (5.5%), part patronale (16%).", "security", 11, true, true));
 
         defaults.add(createEntity("ETAT_PRECOMPTE", "État Précompte", "Retenues", 
-                "Synthèse des retenues à la source, acomptes, saisies-arrêts et prêts du personnel.", "credit_card_off", 7, true, true));
-
-        defaults.add(createEntity("ETAT_FSP", "État FSP (Soutien Patriotique)", "Cotisations Légales", 
-                "Fonds de Soutien Patriotique : prélèvement légal obligatoire de 1% sur le salaire net.", "shield", 8, true, true));
+                "Synthèse des retenues à la source, acomptes, saisies-arrêts et prêts du personnel.", "credit_card_off", 12, true, true));
 
         defaults.add(createEntity("ETAT_MUTUELLE", "État Mutuelle", "Assurance & Santé", 
-                "Cotisations à la mutuelle de santé et prévoyance santé des salariés.", "health_and_safety", 9, true, true));
+                "Cotisations à la mutuelle de santé et prévoyance santé des salariés.", "health_and_safety", 13, true, true));
 
         defaults.add(createEntity("ETAT_TYPE_EMPLOYE", "État élément type employé", "Analytique", 
-                "Répartition des charges salariales par catégorie socio-professionnelle et type de contrat.", "people", 10, true, true));
+                "Répartition des charges salariales par catégorie socio-professionnelle et type de contrat.", "people", 14, true, true));
 
         defaults.add(createEntity("ETAT_ELEMENT_SALAIRE", "État Éléments De Salaire", "Rubriques & Primes", 
-                "Ventilation analytique détaillée par rubrique de salaire (indemnités, primes, sursalaire).", "pie_chart", 11, true, true));
+                "Ventilation analytique détaillée par rubrique de salaire (indemnités, primes, sursalaire).", "pie_chart", 15, true, true));
 
         defaults.add(createEntity("ETAT_BULLETIN", "État Bulletin (Contrôle exhaustif)", "Audit & Contrôle", 
-                "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 12, true, true));
+                "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 16, true, true));
 
-        repository.saveAll(defaults);
-        log.info("12 états de synthèse enregistrés avec succès dans PostgreSQL.");
+        for (EtatSyntheseConfig def : defaults) {
+            if (!repository.existsByCode(def.getCode())) {
+                repository.save(def);
+                log.info("État de synthèse ajouté dans PostgreSQL : code={}, libelle={}", def.getCode(), def.getLibelle());
+            }
+        }
+        log.info("Synchronisation des états de synthèse terminée.");
     }
 
     private EtatSyntheseConfig createEntity(String code, String libelle, String categorie, String desc, String icon, int ordre, boolean actif, boolean isSystem) {

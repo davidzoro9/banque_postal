@@ -28,6 +28,7 @@ public class BulletinDto {
     private String gradeLibelle;
     private Long contratId;
     private String typeSession;
+    private String natureSession;
     private LocalDate dateFrom;
     private LocalDate dateTo;
     private BigDecimal scheduledWorkingDays;
@@ -123,6 +124,9 @@ public class BulletinDto {
 
     public String getTypeSession() { return typeSession; }
     public void setTypeSession(String typeSession) { this.typeSession = typeSession; }
+
+    public String getNatureSession() { return natureSession; }
+    public void setNatureSession(String natureSession) { this.natureSession = natureSession; }
 
     public LocalDate getDateFrom() { return dateFrom; }
     public void setDateFrom(LocalDate dateFrom) { this.dateFrom = dateFrom; }

@@ -37,6 +37,9 @@ public class SessionPaie {
     @Column(length = 50)
     private String typeSession; // PAIE_NORMALE, RAPPEL, GRATIFICATION
 
+    @Column(length = 50)
+    private String natureSession; // TREIZIEME_MOIS, QUATORZIEME_MOIS, CONGE_PAYE, STC, INDEMNITE_RETRAITE
+
     @Column(length = 100)
     private String name; // Nom du lot / session
 
@@ -100,6 +103,9 @@ public class SessionPaie {
 
     public String getTypeSession() { return typeSession; }
     public void setTypeSession(String typeSession) { this.typeSession = typeSession; }
+
+    public String getNatureSession() { return natureSession; }
+    public void setNatureSession(String natureSession) { this.natureSession = natureSession; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

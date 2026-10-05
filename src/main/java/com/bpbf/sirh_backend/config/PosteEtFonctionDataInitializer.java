@@ -6,6 +6,7 @@ import com.bpbf.sirh_backend.repositories.EmploiRepository;
 import com.bpbf.sirh_backend.repositories.FonctionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 @Component
 @Order(22)
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class PosteEtFonctionDataInitializer implements CommandLineRunner {
@@ -130,14 +132,12 @@ public class PosteEtFonctionDataInitializer implements CommandLineRunner {
             existing = emploiRepository.findByNameIgnoreCase(name);
         }
 
-        Emploi emploi;
         if (existing.isPresent()) {
-            emploi = existing.get();
-        } else {
-            emploi = new Emploi();
-            emploi.setCode(code);
+            return; // Déjà présent en base, préserver les modifications utilisateur
         }
 
+        Emploi emploi = new Emploi();
+        emploi.setCode(code);
         emploi.setName(name);
         emploi.setDescription(description);
         emploi.setOrdre(ordre);
@@ -150,14 +150,12 @@ public class PosteEtFonctionDataInitializer implements CommandLineRunner {
             existing = fonctionRepository.findByNameIgnoreCase(name);
         }
 
-        Fonction fonction;
         if (existing.isPresent()) {
-            fonction = existing.get();
-        } else {
-            fonction = new Fonction();
-            fonction.setCode(code);
+            return; // Déjà présent en base, préserver les modifications utilisateur
         }
 
+        Fonction fonction = new Fonction();
+        fonction.setCode(code);
         fonction.setName(name);
         fonction.setDescription(description);
         fonction.setTypeNomination(typeNomination);
