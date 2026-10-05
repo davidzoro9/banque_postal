@@ -142,13 +142,9 @@ export class PrecomptesComponent implements OnInit {
   loadPrecomptes(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.precompteService.getAll().pipe(
-      catchError(err => {
-        this.errorMessage = 'Erreur lors du chargement des précomptes depuis PostgreSQL.';
-        return of([]);
-      })
-    ).subscribe(data => {
-      if (data && data.length > 0) {
+    this.precompteService.getAll().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
         this.precomptesList = data.map((p: any) => {
           const montantInitial = Number(p.amount || 0);
           const restant = Number(p.montantRestant !== undefined ? p.montantRestant : montantInitial);
@@ -185,8 +181,15 @@ export class PrecomptesComponent implements OnInit {
       }
       this.applyFilter();
       this.loading = false;
-    });
-  }
+    },
+    error: (err) => {
+      this.errorMessage = 'Erreur lors du chargement des précomptes depuis PostgreSQL.';
+      this.loading = false;
+      this.precomptesList = [];
+      this.applyFilter();
+    }
+  });
+}
 
   applyFilter(): void {
     let list = [...this.precomptesList];

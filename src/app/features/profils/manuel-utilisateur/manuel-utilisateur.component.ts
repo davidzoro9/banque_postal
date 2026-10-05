@@ -84,9 +84,9 @@ export class ManuelUtilisateurComponent implements OnInit {
     }
   }
 
-  downloadManual(fileName: string = 'Guide_Utilisateur_SIGRH_BPBF.pdf'): void {
+  downloadManual(fileName: string = 'Guide_Utilisateur_SIRH_BPBF.pdf'): void {
     const link = document.createElement('a');
-    link.href = 'docs/Guide_Utilisateur_SIGRH_BPBF.pdf';
+    link.href = 'docs/Guide_Utilisateur_SIRH_BPBF.pdf';
     link.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
     link.target = '_blank';
     document.body.appendChild(link);
@@ -204,7 +204,7 @@ export class ManuelUtilisateurComponent implements OnInit {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${chapter.title} - Guide Opérationnel SIGRH BPBF</title>
+        <title>${chapter.title} - Guide Opérationnel SIRH BPBF</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 30px; color: #0f172a; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #004d80; padding-bottom: 15px; margin-bottom: 25px; }
@@ -218,7 +218,7 @@ export class ManuelUtilisateurComponent implements OnInit {
         <div class="header">
           <div>
             <h1 class="title">${chapter.title}</h1>
-            <div class="subtitle">SIGRH Banque Postale du Burkina Faso (BPBF) • ${chapter.summary}</div>
+            <div class="subtitle">SIRH Banque Postale du Burkina Faso (BPBF) • ${chapter.summary}</div>
             <div style="margin-top: 6px; font-size: 12px; color: #004d80; font-weight: bold;">Accès : ${chapter.accessPath}</div>
           </div>
           <div>

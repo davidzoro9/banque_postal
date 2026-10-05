@@ -45,7 +45,7 @@
       <mat-divider></mat-divider>
       @for (n of notifService.notifications$ | async; track n.id) {
         <button mat-menu-item class="notif-item" [class.unread]="!n.read"
-                (click)="notifService.markAsRead(n.id)">
+                (click)="handleNotificationClick(n)">
           <mat-icon class="notif-icon"
             [class.warn]="n.type === 'warning'"
             [class.success]="n.type === 'success'"

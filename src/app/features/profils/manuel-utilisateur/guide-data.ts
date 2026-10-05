@@ -30,12 +30,12 @@ export interface GuideChapter {
 
 export const GUIDE_CHAPTERS: GuideChapter[] = [
   // =========================================================================
-  // CHAPITRE 1 : INTRODUCTION & PRÉSENTATION DU SYSTÈME SIGRH
+  // CHAPITRE 1 : INTRODUCTION & PRÉSENTATION DU SYSTÈME SIRH
   // =========================================================================
   {
     id: 'ch1-introduction',
     number: '01',
-    title: 'Chapitre 1 : Introduction & Présentation Générale du SIGRH',
+    title: 'Chapitre 1 : Introduction & Présentation Générale du SIRH',
     category: 'Vue d\'ensemble',
     summary: 'Présentation de la solution intégrée de gestion des ressources humaines et de la paie de la Banque Postale du Burkina Faso (BPBF).',
     accessPath: 'Accueil Général > Tableau de Bord Principal',
@@ -43,7 +43,7 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
       {
         title: '1.1 Contexte, Objectifs & Architecture',
         accessPath: 'Barre de navigation principale',
-        description: 'Le SIGRH BPBF est une plateforme Full-Web hautement sécurisée qui unifie l\'ensemble des processus RH et paie.',
+        description: 'Le SIRH BPBF est une plateforme Full-Web hautement sécurisée qui unifie l\'ensemble des processus RH et paie.',
         points: [
           'Solution Full-Web moderne accessible via intranet bancaire sécurisé sur tout navigateur moderne sans installation locale.',
           'Architecture en 3 tiers étanche : Frontend Angular 17+ réactif, API REST Spring Boot 3.2 avec contrôles stricts de sécurité, et Base de données relationnelle PostgreSQL 15.',
@@ -77,7 +77,7 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
     number: '02',
     title: 'Chapitre 2 : Nouveautés & Architecture Modulaire',
     category: 'Architecture',
-    summary: 'Évolutions majeures apportées à la plateforme SIGRH, conteneurisation applicative et nouveaux modules.',
+    summary: 'Évolutions majeures apportées à la plateforme SIRH, conteneurisation applicative et nouveaux modules.',
     accessPath: 'Système & Plateforme',
     subsections: [
       {
@@ -126,7 +126,7 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
           'Déconnexion : Toujours cliquer sur le bouton de déconnexion dans le coin supérieur droit avant de quitter votre poste.'
         ],
         steps: [
-          '1. Ouvrir le navigateur et entrer l\'URL du SIGRH',
+          '1. Ouvrir le navigateur et entrer l\'URL du SIRH',
           '2. Renseigner l\'identifiant dans le champ « Identifiant / Matricule »',
           '3. Saisir le mot de passe dans le champ sécurisé',
           '4. Cliquer sur le bouton « Se Connecter »',

@@ -33,23 +33,25 @@ export class CategoriesElementsComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.parametrageService.getAllCategories().pipe(
-      catchError(err => {
+    this.parametrageService.getAllCategories().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.categoriesList = data.map(item => ({
+            id: Number(item.id),
+            code: item.code || '',
+            name: item.name || '',
+            type: (item.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
+          }));
+        } else {
+          this.categoriesList = [];
+        }
+        this.applyFilter();
+      },
+      error: (err) => {
         console.error('Erreur chargement catégories:', err);
-        return of([]);
-      })
-    ).subscribe(data => {
-      if (data && data.length > 0) {
-        this.categoriesList = data.map(item => ({
-          id: Number(item.id),
-          code: item.code || '',
-          name: item.name || '',
-          type: (item.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
-        }));
-      } else {
         this.categoriesList = [];
+        this.applyFilter();
       }
-      this.applyFilter();
     });
   }
 

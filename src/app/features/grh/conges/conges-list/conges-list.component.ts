@@ -25,6 +25,14 @@ export class CongesListComponent implements OnInit, OnDestroy {
   @ViewChild('viewDialogTpl') viewDialogTpl!: TemplateRef<any>;
   @ViewChild('rejectDialogTpl') rejectDialogTpl!: TemplateRef<any>;
   @ViewChild('ferieDialogTpl') ferieDialogTpl!: TemplateRef<any>;
+  @ViewChild('interimDialogTpl') interimDialogTpl!: TemplateRef<any>;
+  @ViewChild('visaN1DialogTpl') visaN1DialogTpl!: TemplateRef<any>;
+  @ViewChild('drhDialogTpl') drhDialogTpl!: TemplateRef<any>;
+
+  workflowTargetConge?: Conge;
+  workflowCommentaire = '';
+  workflowDirectionQuorum: any = null;
+  loadingQuorum = false;
 
   module = APP_MODULES.find(m => m.id === 'conges') || APP_MODULES.find(m => m.id === 'grh')!;
   activeTab: 'DEMANDES' | 'SOLDES' | 'PLANNING' | 'JOURS_FERIES' | 'PARAMETRAGE' = 'DEMANDES';
@@ -246,29 +254,165 @@ export class CongesListComponent implements OnInit, OnDestroy {
     this.soldesDataSource.data = res;
   }
 
-  // --- ACTIONS WORKFLOW ---
-  approuver(conge: Conge): void {
-    if (!conge.id) return;
-    if (!confirm(`Approuver la demande de ${conge.nbJours} jour(s) de congé pour ${conge.employe} ?`)) return;
+  // --- VÉRIFICATION DES RÔLES & PERMISSIONS PAR ÉTAPE ---
+  get currentUserRole(): string {
+    return (this.authService.currentUser?.role || '').toUpperCase();
+  }
 
+  get isDrhOrAdmin(): boolean {
+    const r = this.currentUserRole;
+    return r === 'DRH' || r === 'ADMIN' || r === 'RESPONSABLE_RH';
+  }
+
+  get isValidateurOrAbove(): boolean {
+    const r = this.currentUserRole;
+    return r === 'VALIDATEUR' || this.isDrhOrAdmin || this.authService.hasPermission('CONGE_VALIDATE');
+  }
+
+  get isDsiOrAdmin(): boolean {
+    const r = this.currentUserRole;
+    return r === 'ADMIN' || r === 'DSI' || r === 'IT';
+  }
+
+  isInterimaireFor(conge: Conge): boolean {
+    const curEmpId = this.authService.currentUser?.id;
+    if (!curEmpId) return false;
+    return String(conge.interimaire?.id) === String(curEmpId) || this.isDrhOrAdmin;
+  }
+
+  get canValidate(): boolean {
+    return this.isValidateurOrAbove;
+  }
+
+  // ── ÉTAPE 2 : AVIS INTÉRIMAIRE (COLLÈGUE PRESSENTI) ──
+  ouvrirModalInterim(conge: Conge): void {
+    this.workflowTargetConge = conge;
+    this.workflowCommentaire = '';
+    this.dialog.open(this.interimDialogTpl, { width: '480px' });
+  }
+
+  confirmerAvisInterim(accord: boolean): void {
+    if (!this.workflowTargetConge?.id) return;
     this.isProcessing = true;
-    const currentUserNom = this.authService.currentUser ? 
-      `${this.authService.currentUser.prenom} ${this.authService.currentUser.nom}` : 'DRH';
+    const user = this.authService.currentUser;
+    const nom = user ? `${user.prenom} ${user.nom}` : 'Collègue intérimaire';
 
-    this.congeService.approuver(conge.id, currentUserNom).subscribe({
+    this.congeService.avisInterim(this.workflowTargetConge.id, accord, this.workflowCommentaire, nom).subscribe({
+      next: () => {
+        this.isProcessing = false;
+        this.dialog.closeAll();
+        this.snackBar.open(
+          accord ? "Avis intérim favorable enregistré avec succès." : "Intérim décliné. La demande a été rejetée.",
+          'Fermer', { duration: 3500 }
+        );
+        this.loadConges();
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        alert("Erreur lors de l'enregistrement de l'avis : " + (err?.error?.message || err.message));
+      }
+    });
+  }
+
+  // ── ÉTAPE 3 : VISA HIÉRARCHIQUE N+1 (DIRECTEUR / CHEF DE PÔLE) ──
+  ouvrirModalVisaN1(conge: Conge): void {
+    this.workflowTargetConge = conge;
+    this.workflowCommentaire = '';
+    this.workflowDirectionQuorum = null;
+    this.loadingQuorum = true;
+
+    const dirId = conge.employee?.direction?.id || conge.employee?.directionId;
+    if (dirId) {
+      this.congeService.getQuorumDirection(dirId).subscribe({
+        next: (q) => {
+          this.workflowDirectionQuorum = q;
+          this.loadingQuorum = false;
+        },
+        error: () => this.loadingQuorum = false
+      });
+    } else {
+      this.loadingQuorum = false;
+    }
+
+    this.dialog.open(this.visaN1DialogTpl, { width: '520px' });
+  }
+
+  confirmerVisaN1(accord: boolean): void {
+    if (!this.workflowTargetConge?.id) return;
+    this.isProcessing = true;
+    const user = this.authService.currentUser;
+    const role = user?.role || 'VALIDATEUR';
+    const nom = user ? `${user.prenom} ${user.nom} (${role})` : 'Directeur N+1';
+
+    this.congeService.visaN1(this.workflowTargetConge.id, accord, this.workflowCommentaire, nom).subscribe({
+      next: () => {
+        this.isProcessing = false;
+        this.dialog.closeAll();
+        this.snackBar.open(
+          accord ? "Visa N+1 favorable accordé. Demande transmise à la DRH." : "Visa N+1 refusé.",
+          'Fermer', { duration: 3500 }
+        );
+        this.loadConges();
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        alert("Erreur visa N+1 : " + (err?.error?.message || err.message));
+      }
+    });
+  }
+
+  // ── ÉTAPE 4 : CONTRÔLE ET DÉLIVRANCE TITRE DE CONGÉ DRH ──
+  ouvrirModalValidationDrh(conge: Conge): void {
+    this.workflowTargetConge = conge;
+    this.workflowCommentaire = '';
+    this.dialog.open(this.drhDialogTpl, { width: '520px' });
+  }
+
+  confirmerValidationDrh(accord: boolean): void {
+    if (!this.workflowTargetConge?.id) return;
+    this.isProcessing = true;
+    const user = this.authService.currentUser;
+    const nom = user ? `${user.prenom} ${user.nom} (DRH)` : 'DRH';
+
+    this.congeService.validationDrh(this.workflowTargetConge.id, accord, this.workflowCommentaire, nom).subscribe({
       next: (updated) => {
         this.isProcessing = false;
-        conge.statut = 'APPROUVE';
-        conge.validePar = currentUserNom;
-        conge.dateValidation = new Date().toISOString().split('T')[0];
+        this.dialog.closeAll();
+        const numTitre = updated.numeroTitreConge || 'délivré';
+        this.snackBar.open(
+          accord ? `Demande approuvée avec succès ! Titre de congé N° ${numTitre}.` : "Demande rejetée par la DRH.",
+          'Fermer', { duration: 4000 }
+        );
         this.loadConges();
         this.loadSoldes();
       },
       error: (err) => {
         this.isProcessing = false;
-        alert('Erreur lors de l’approbation : ' + (err?.error?.message || err.message));
+        alert("Erreur validation DRH : " + (err?.error?.message || err.message));
       }
     });
+  }
+
+  // ── ÉTAPE 5 : ACTION SÉCURITÉ SI (RÈGLE PRUDENTIELLE BCEAO) ──
+  toggleSecuriteSi(conge: Conge): void {
+    if (!conge.id) return;
+    const newStatut = conge.statutSi === 'ACCES_SUSPENDU' ? 'ACCES_RESTAURE' : 'ACCES_SUSPENDU';
+    const actionLabel = newStatut === 'ACCES_SUSPENDU' ? 'suspendre temporairement' : 'restaurer';
+    if (!confirm(`Confirmer l'action de sécurité SI : ${actionLabel} les accès informatiques de ${conge.employe} ?`)) return;
+
+    this.congeService.securiteSi(conge.id, newStatut, this.authService.currentUser ? `${this.authService.currentUser.prenom} ${this.authService.currentUser.nom}` : 'DSI').subscribe({
+      next: (upd) => {
+        conge.statutSi = upd.statutSi;
+        this.snackBar.open(`Statut sécurité SI mis à jour : ${newStatut}.`, 'Fermer', { duration: 3000 });
+      },
+      error: (err) => alert("Erreur sécurité SI : " + (err?.error?.message || err.message))
+    });
+  }
+
+  // --- ACTIONS WORKFLOW COMPATIBILITÉ ---
+  approuver(conge: Conge): void {
+    if (!conge.id) return;
+    this.ouvrirModalValidationDrh(conge);
   }
 
   ouvrirModalRejet(conge: Conge): void {
@@ -279,14 +423,19 @@ export class CongesListComponent implements OnInit, OnDestroy {
 
   confirmerRejet(): void {
     if (!this.congeToReject || !this.congeToReject.id) return;
+    if (!this.canValidate) {
+      alert("Votre profil utilisateur n'a pas les droits nécessaires pour refuser cette demande.");
+      return;
+    }
     if (!this.motifRefusSaisi.trim()) {
       alert('Veuillez préciser le motif du refus.');
       return;
     }
 
     this.isProcessing = true;
-    const currentUserNom = this.authService.currentUser ? 
-      `${this.authService.currentUser.prenom} ${this.authService.currentUser.nom}` : 'DRH';
+    const user = this.authService.currentUser;
+    const role = user?.role || 'VALIDATEUR';
+    const currentUserNom = user ? `${user.prenom} ${user.nom} (${role})` : 'DRH';
 
     this.congeService.rejeter(this.congeToReject.id, this.motifRefusSaisi.trim(), currentUserNom).subscribe({
       next: () => {
@@ -398,7 +547,7 @@ export class CongesListComponent implements OnInit, OnDestroy {
 
   // --- STATS KPI ---
   get totalEnAttente(): number {
-    return this.conges.filter(c => c.statut === 'EN_ATTENTE' || c.statut === 'En attente').length;
+    return this.conges.filter(c => c.statut && (c.statut.toUpperCase().includes('EN_ATTENTE') || c.statut === 'SOUMIS')).length;
   }
 
   get totalEnCongeCeMois(): number {
@@ -420,10 +569,16 @@ export class CongesListComponent implements OnInit, OnDestroy {
 
   statutStyle(statut: string): { background: string; color: string; icon: string; label: string } {
     switch (statut) {
+      case 'EN_ATTENTE_INTERIM':
+        return { background: '#fef3c7', color: '#b45309', icon: 'person', label: '1. Avis Intérim' };
+      case 'EN_ATTENTE_N1':
+        return { background: '#ffedd5', color: '#c2410c', icon: 'verified_user', label: '2. Visa Directeur N+1' };
+      case 'EN_ATTENTE_DRH':
+        return { background: '#e0f2fe', color: '#0369a1', icon: 'policy', label: '3. Contrôle DRH' };
       case 'APPROUVE':
       case 'Approuvé':
       case 'VALIDE':
-        return { background: '#ecfdf5', color: '#047857', icon: 'check_circle', label: 'Approuvé' };
+        return { background: '#ecfdf5', color: '#047857', icon: 'check_circle', label: 'Titre délivré' };
       case 'EN_ATTENTE':
       case 'En attente':
       case 'SOUMIS':
@@ -434,7 +589,7 @@ export class CongesListComponent implements OnInit, OnDestroy {
       case 'ANNULE':
         return { background: '#f1f5f9', color: '#64748b', icon: 'block', label: 'Annulé' };
       default:
-        return { background: '#f8fafc', color: '#475569', icon: 'info', label: statut };
+        return { background: '#f8fafc', color: '#475569', icon: 'info', label: statut || 'Inconnu' };
     }
   }
 

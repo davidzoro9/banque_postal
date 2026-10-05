@@ -1,8 +1,8 @@
 <div class="organigramme-page" [class.fullscreen-mode]="isFullScreen">
 
-  <!-- =============================== -->
-  <!-- BARRE D'EN-TÊTE ET OUTILS RH   -->
-  <!-- =============================== -->
+  <!-- ============================================== -->
+  <!-- BARRE D'EN-TÊTE ET OUTILS DE GOUVERNANCE RH   -->
+  <!-- ============================================== -->
   <div class="page-header no-print">
     <div class="header-left">
       <div class="header-icon-box">
@@ -10,12 +10,12 @@
       </div>
       <div>
         <div class="header-title-row">
-          <h1 class="page-title">Organigramme Dynamique & Hiérarchique</h1>
+          <h1 class="page-title">Organigramme Général BPBF</h1>
           <span class="badge-status-live">
-            <span class="pulse-dot"></span> PostgreSQL Direct
+            <span class="pulse-dot"></span> PostgreSQL & Workflow Congé
           </span>
         </div>
-        <p class="page-subtitle">Cartographie interactive BPBF — Arborescence managériale, structurelle et modification du rattachement en temps réel</p>
+        <p class="page-subtitle">Cartographie institutionnelle — Conseil d'Administration, Direction Générale, Directions, Départements & Services</p>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
           type="text"
           [(ngModel)]="searchTerm"
           (input)="onSearchChange()"
-          placeholder="Rechercher collaborateur, poste, direction..."
+          placeholder="Rechercher direction, service, directeur..."
           class="search-input"
         />
         @if (searchTerm) {
@@ -43,23 +43,23 @@
         <button
           type="button"
           class="toggle-btn"
-          [class.active]="activeTab === 'managerial'"
-          (click)="activeTab = 'managerial'"
-          matTooltip="Arbre Managériel (Managers & Subordonnés - Style Odoo)"
+          [class.active]="activeTab === 'bpbf'"
+          (click)="activeTab = 'bpbf'"
+          matTooltip="Organigramme officiel BPBF (Gouvernance, DG, DGA, 10 Directions)"
         >
-          <mat-icon>people_outline</mat-icon>
-          <span>Vue Managériale</span>
+          <mat-icon>account_balance</mat-icon>
+          <span>Organigramme BPBF</span>
         </button>
 
         <button
           type="button"
           class="toggle-btn"
-          [class.active]="activeTab === 'structural'"
-          (click)="activeTab = 'structural'"
-          matTooltip="Arbre Structurel (Directions, Départements, Services)"
+          [class.active]="activeTab === 'managerial'"
+          (click)="activeTab = 'managerial'"
+          matTooltip="Arbre Managériel (Managers & Subordonnés - Style Odoo)"
         >
-          <mat-icon>apartment</mat-icon>
-          <span>Vue Structurelle</span>
+          <mat-icon>people_outline</mat-icon>
+          <span>Arbre Hiérarchique</span>
         </button>
 
         <button
@@ -67,12 +67,23 @@
           class="toggle-btn"
           [class.active]="activeTab === 'directory'"
           (click)="activeTab = 'directory'"
-          matTooltip="Annuaire & Affectations hiérarchiques rapides"
+          matTooltip="Annuaire & Affectations rapides"
         >
           <mat-icon>table_chart</mat-icon>
-          <span>Annuaire & Affectations</span>
+          <span>Annuaire Effectifs</span>
         </button>
       </div>
+
+      <!-- Bouton Ajouter un Bloc -->
+      <button
+        type="button"
+        class="action-btn-primary"
+        (click)="openAddBlockModal()"
+        matTooltip="Créer une nouvelle direction, département ou service dans la banque"
+      >
+        <mat-icon>add_box</mat-icon>
+        <span>Ajouter un bloc</span>
+      </button>
 
       <!-- Contrôles de Dépliage (Vue Arbre) -->
       @if (activeTab !== 'directory') {
@@ -96,7 +107,10 @@
           <button type="button" class="ctrl-btn" (click)="zoomIn()" matTooltip="Zoom avant">
             <mat-icon>add</mat-icon>
           </button>
-          <button type="button" class="ctrl-btn" (click)="resetZoom()" matTooltip="Réinitialiser (100%)">
+          <button type="button" class="ctrl-btn" (click)="fitToScreen()" matTooltip="Ajuster l'organigramme à l'écran">
+            <mat-icon>fit_screen</mat-icon>
+          </button>
+          <button type="button" class="ctrl-btn" (click)="resetZoom()" matTooltip="Réinitialiser zoom (100%)">
             <mat-icon>restart_alt</mat-icon>
           </button>
         </div>
@@ -129,24 +143,200 @@
   @if (isLoading) {
     <div class="loading-state">
       <div class="spinner"></div>
-      <p>Synchronisation des structures et liaisons hiérarchiques depuis PostgreSQL...</p>
+      <p>Chargement des structures institutionnelles et des nominations depuis PostgreSQL...</p>
     </div>
   }
 
   <!-- ==================================================== -->
-  <!-- VUE 1 : HIÉRARCHIE MANAGÉRIALE (STYLE ODOO TREE)     -->
+  <!-- VUE 1 : ORGANIGRAMME OFFICIEL BPBF (FIDÈLE AU MODÈLE) -->
+  <!-- ==================================================== -->
+  @if (!isLoading && activeTab === 'bpbf') {
+    <div class="tree-workspace">
+
+      <!-- Surface de l'organigramme avec Zoom & Déplacement panoramique (Pan) -->
+      <div
+        class="chart-viewport"
+        #chartContainer
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onMouseMove($event)"
+        (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()"
+        (wheel)="onWheel($event)"
+      >
+        <div
+          class="tree-canvas"
+          [style.transform]="'scale(' + zoomLevel + ')'"
+          [style.transform-origin]="'top center'"
+        >
+          <div class="bpbf-official-sheet">
+
+            <!-- Titre Officiel Souligné -->
+            <div class="bpbf-official-heading">
+              <h1 class="bpbf-title-text">Organigramme de la Banque Postale du Burkina Faso (BPBF)</h1>
+              <div class="bpbf-title-underline"></div>
+            </div>
+
+            <!-- GOUVERNANCE SUPÉRIEURE (CA, Comités, DG, DGA, Audit/Risques, Secrétariat, Légende) -->
+            <div class="bpbf-governance-layer">
+
+              <!-- AILE GAUCHE : LES 3 COMITÉS + AUDIT INTERNE + RISQUE ET CONFORMITÉ -->
+              <div class="gov-left-wing">
+                <!-- Les 3 Comités alignés horizontalement -->
+                <div class="comites-row-container">
+                  <div class="comites-top-bar"></div>
+                  <div class="comites-cards-flex">
+                    @for (cNode of comiteNodes; track cNode.id) {
+                      <div class="comite-column-cell">
+                        <div class="comite-top-stem"></div>
+                        <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: cNode }"></ng-container>
+                        @if (cNode.code === 'COM_RISQUES') {
+                          <div class="functional-stem-down risques-stem"></div>
+                        } @else if (cNode.code === 'COM_AUDIT') {
+                          <div class="functional-stem-down audit-stem"></div>
+                        } @else {
+                          <div class="functional-stem-down credit-stem"></div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Directions Audit & Risques empilées sous les comités -->
+                <div class="audit-risques-stack">
+                  @if (auditDirNode) {
+                    <div class="stacked-dir-item audit-item">
+                      <div class="functional-h-connector audit-in"></div>
+                      <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: auditDirNode }"></ng-container>
+                      <div class="hierarchical-h-line-to-dg audit-out"></div>
+                    </div>
+                  }
+                  @if (risquesDirNode) {
+                    <div class="stacked-dir-item risques-item">
+                      <div class="functional-h-connector risques-in"></div>
+                      <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: risquesDirNode }"></ng-container>
+                      <div class="hierarchical-h-line-to-dg risques-out"></div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- ÉPINE CENTRALE : CA -> DG -> DGA -->
+              <div class="gov-center-spine">
+                <!-- Raccordement horizontal vers comités -->
+                <div class="ca-to-comites-bar"></div>
+
+                <!-- Conseil d'Administration (CA) -->
+                @if (caNode) {
+                  <div class="spine-card ca-card">
+                    <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: caNode }"></ng-container>
+                  </div>
+                }
+
+                <!-- Ligne verticale CA -> DG -->
+                <div class="vertical-spine-line v-ca-dg"></div>
+
+                <!-- Directeur Général (DG) -->
+                @if (dgNode) {
+                  <div class="spine-card dg-card">
+                    <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: dgNode }"></ng-container>
+                  </div>
+                }
+
+                <!-- Ligne verticale DG -> DGA (avec carrefour des liens hiérarchiques) -->
+                <div class="vertical-spine-line v-dg-dga">
+                  <div class="spine-hub-left"></div>
+                  <div class="spine-hub-right"></div>
+                </div>
+
+                <!-- Directeur Général Adjoint (DGA) -->
+                @if (dgaNode) {
+                  <div class="spine-card dga-card">
+                    <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: dgaNode }"></ng-container>
+                  </div>
+                }
+
+                <!-- Ligne verticale DGA -> Barre opérationnelle -->
+                <div class="vertical-spine-line v-dga-ops"></div>
+              </div>
+
+              <!-- AILE DROITE : LÉGENDE + SECRÉTARIAT DE DIRECTION -->
+              <div class="gov-right-wing">
+                <!-- Boîte de Légende Institutionnelle -->
+                <div class="bpbf-official-legend-box">
+                  <div class="legend-title">Légende :</div>
+                  <div class="legend-entry">
+                    <span class="legend-stroke solid-stroke"></span>
+                    <span class="legend-text">Lien hiérarchique</span>
+                  </div>
+                  <div class="legend-entry">
+                    <span class="legend-stroke dashed-stroke"></span>
+                    <span class="legend-text">Lien fonctionnel</span>
+                  </div>
+                </div>
+
+                <!-- Secrétariat de Direction -->
+                @if (secDirNode) {
+                  <div class="secretariat-container">
+                    <div class="secretariat-h-connector"></div>
+                    <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: secDirNode }"></ng-container>
+                  </div>
+                }
+              </div>
+
+            </div>
+
+            <!-- SECTION OPÉRATIONNELLE : LES 10 COLONNES SOUS LE DGA -->
+            <div class="bpbf-operational-layer">
+              <!-- Barre de distribution horizontale couvrant les colonnes -->
+              <div class="ops-distribution-bus"></div>
+
+              <!-- Les 10 colonnes côte-à-côte -->
+              <div class="ops-columns-row">
+                @for (colNode of dgaChildren; track colNode.id) {
+                  <div class="ops-column-unit">
+                    <!-- Tige verticale d'entrée depuis le bus -->
+                    <div class="col-entry-stem"></div>
+
+                    <!-- En-tête de colonne (Direction ou Département) -->
+                    <div class="col-header-box">
+                      <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: colNode }"></ng-container>
+                    </div>
+
+                    <!-- Services empilés VERTICALEMENT dans la colonne -->
+                    @if (colNode.children && colNode.children.length > 0) {
+                      <div class="col-services-vertical-stack">
+                        <div class="services-stack-spine"></div>
+                        @for (srvNode of colNode.children; track srvNode.id) {
+                          <div class="service-stack-cell">
+                            <div class="srv-inlet-arrow"></div>
+                            <ng-container *ngTemplateOutlet="bpbfUnitCardTpl; context: { $implicit: srvNode }"></ng-container>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- VUE 2 : HIÉRARCHIE MANAGÉRIALE DIRECTE (STYLE ODOO)  -->
   <!-- ==================================================== -->
   @if (!isLoading && activeTab === 'managerial') {
     <div class="tree-workspace">
-
-      <!-- Bandeau d'alerte collaborateurs en attente de rattachement -->
       @if (unassignedEmployees.length > 0) {
         <div class="unassigned-banner">
           <div class="banner-left">
             <mat-icon class="banner-icon">info</mat-icon>
             <div>
-              <strong>{{ unassignedEmployees.length }} collaborateur(s) en attente de supérieur hiérarchique direct</strong>
-              <p>Ces agents ne sont pas encore reliés dans l'arbre hiérarchique. Cliquez sur un collaborateur ci-dessous pour lui désigner son responsable.</p>
+              <strong>{{ unassignedEmployees.length }} collaborateur(s) sans supérieur hiérarchique direct</strong>
+              <p>Cliquez sur un agent pour lui désigner son responsable hiérarchique.</p>
             </div>
           </div>
           <div class="banner-chips">
@@ -167,20 +357,21 @@
                 children: []
               })">
                 <mat-icon>person_add</mat-icon>
-                {{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }})
-              </span>
-            }
-            @if (unassignedEmployees.length > 8) {
-              <span class="unassigned-more" (click)="activeTab = 'directory'">
-                +{{ unassignedEmployees.length - 8 }} autres dans l'annuaire...
+                {{ emp.nom }} {{ emp.prenom }}
               </span>
             }
           </div>
         </div>
       }
 
-      <!-- Arbre de commande managérial -->
-      <div class="chart-viewport" #chartContainer>
+      <div
+        class="chart-viewport"
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onMouseMove($event)"
+        (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()"
+        (wheel)="onWheel($event)"
+      >
         <div
           class="tree-canvas"
           [style.transform]="'scale(' + zoomLevel + ')'"
@@ -201,44 +392,19 @@
   }
 
   <!-- ==================================================== -->
-  <!-- VUE 2 : HIÉRARCHIE STRUCTURELLE (INSTITUTIONNELLE)   -->
-  <!-- ==================================================== -->
-  @if (!isLoading && activeTab === 'structural') {
-    <div class="tree-workspace">
-      <div class="chart-viewport">
-        <div
-          class="tree-canvas"
-          [style.transform]="'scale(' + zoomLevel + ')'"
-          [style.transform-origin]="'top center'"
-        >
-          <div class="org-tree-wrapper">
-            <ul class="tree-root-level">
-              @for (rootNode of structuralTree; track rootNode.id) {
-                <li>
-                  <ng-container *ngTemplateOutlet="structuralNodeTpl; context: { $implicit: rootNode }"></ng-container>
-                </li>
-              }
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================================================== -->
-  <!-- VUE 3 : ANNUAIRE & AFFECTATIONS (TABLEAU RAPIDE)     -->
+  <!-- VUE 3 : ANNUAIRE EFFECTIFS & VALIDATION DES CONGÉS   -->
   <!-- ==================================================== -->
   @if (!isLoading && activeTab === 'directory') {
     <div class="directory-container">
       <div class="directory-card">
         <div class="directory-header">
           <div class="dir-title-box">
-            <h3>Annuaire Hiérarchique des Effectifs</h3>
+            <h3>Annuaire Institutionnel & Validation Hiérarchique des Congés</h3>
             <span class="count-badge">{{ employees.length }} collaborateurs</span>
           </div>
           <div class="dir-info">
-            <mat-icon>help_outline</mat-icon>
-            <span>Vous pouvez modifier directement le supérieur hiérarchique de chaque employé via le bouton d'action.</span>
+            <mat-icon>verified_user</mat-icon>
+            <span>Le supérieur hiérarchique de chaque collaborateur est le validateur direct pour ses demandes de congés.</span>
           </div>
         </div>
 
@@ -248,48 +414,48 @@
               <tr>
                 <th>Agent</th>
                 <th>Matricule</th>
-                <th>Poste & Fonction</th>
-                <th>Direction / Département</th>
+                <th>Poste / Fonction</th>
+                <th>Direction</th>
                 <th>Service</th>
-                <th>Supérieur Direct (Superviseur)</th>
-                <th class="text-center">Actions</th>
+                <th>Supérieur (Validateur Congé)</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               @for (emp of employees; track emp.id) {
-                <tr [class.highlight-row]="searchTerm && (emp.nom + ' ' + emp.prenom + ' ' + emp.matricule).toLowerCase().includes(searchTerm.toLowerCase())">
+                <tr>
                   <td>
-                    <div class="agent-identity">
-                      <div class="agent-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(emp), 2)">
+                    <div class="agent-cell">
+                      <div class="agent-mini-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(emp), 2)">
                         {{ getInitials(emp.nom, emp.prenom) }}
                       </div>
-                      <div class="agent-names">
-                        <strong class="clickable-name" (click)="navigateToEmployee(emp)">{{ emp.nom }} {{ emp.prenom }}</strong>
-                        <span class="agent-email">{{ emp.email || emp.emailPro || '—' }}</span>
+                      <div>
+                        <strong>{{ emp.nom }} {{ emp.prenom }}</strong>
+                        <small class="text-muted">{{ emp.email || emp.emailPro || '—' }}</small>
                       </div>
                     </div>
                   </td>
-                  <td><span class="matricule-badge">{{ emp.matricule }}</span></td>
-                  <td><span class="role-text">{{ getEmployeeRole(emp) }}</span></td>
-                  <td>{{ emp.direction || emp.departement || '—' }}</td>
+                  <td><span class="font-mono badge-mat">{{ emp.matricule }}</span></td>
+                  <td>{{ getEmployeeRole(emp) }}</td>
+                  <td>{{ emp.direction || '—' }}</td>
                   <td>{{ emp.service || '—' }}</td>
                   <td>
-                    @if (emp.superviseurNom || emp.superviseurMatricule) {
-                      <div class="supervisor-pill">
-                        <mat-icon>person</mat-icon>
-                        <span>{{ emp.superviseurNom }} {{ emp.superviseurPrenom }}</span>
-                        @if (emp.superviseurMatricule) {
-                          <small>({{ emp.superviseurMatricule }})</small>
-                        }
-                      </div>
+                    @if (emp.superviseurId) {
+                      @let sup = findEmployeeById(emp.superviseurId);
+                      <span class="badge-sup-active">
+                        <mat-icon>check_circle</mat-icon>
+                        {{ sup ? sup.nom + ' ' + sup.prenom : 'Supérieur ID ' + emp.superviseurId }}
+                      </span>
                     } @else {
-                      <span class="no-supervisor-badge">Non défini</span>
+                      <span class="badge-sup-missing">
+                        <mat-icon>warning</mat-icon> Non défini
+                      </span>
                     }
                   </td>
-                  <td class="text-center">
+                  <td>
                     <button
                       type="button"
-                      class="btn-edit-sup"
+                      class="btn-table-edit"
                       (click)="openReassignModal({
                         id: '' + emp.id,
                         title: emp.nom + ' ' + emp.prenom,
@@ -305,10 +471,10 @@
                         expanded: false,
                         children: []
                       })"
-                      matTooltip="Changer de supérieur hiérarchique"
+                      matTooltip="Modifier le supérieur hiérarchique"
                     >
                       <mat-icon>edit</mat-icon>
-                      <span>Rattacher</span>
+                      <span>Affecter</span>
                     </button>
                   </td>
                 </tr>
@@ -321,30 +487,266 @@
   }
 
   <!-- ==================================================== -->
-  <!-- TEMPLATE RÉCURSIF : NŒUD MANAGÉRIAL (ODOO-STYLE)     -->
+  <!-- TEMPLATE 0 : CARTE UNITAIRE OFFICIELLE BPBF (FIDÈLE)  -->
+  <!-- ==================================================== -->
+  <ng-template #bpbfUnitCardTpl let-node>
+    <div
+      class="bpbf-official-card"
+      [class.card-ca]="node.customClass === 'bpbf-ca'"
+      [class.card-dg]="node.customClass === 'bpbf-dg'"
+      [class.card-dga]="node.customClass === 'bpbf-dga'"
+      [class.card-comite]="node.customClass === 'bpbf-comite'"
+      [class.card-secretariat]="node.customClass === 'bpbf-secretariat'"
+      [class.card-audit]="node.customClass === 'bpbf-audit'"
+      [class.card-risques]="node.customClass === 'bpbf-risques'"
+      [class.card-dir]="node.customClass === 'bpbf-dir'"
+      [class.card-dep]="node.customClass === 'bpbf-dep'"
+      [class.card-srv]="node.customClass === 'bpbf-srv'"
+      [class.search-highlight]="node.isSearchMatch"
+      [class.active-selected]="selectedNode?.id === node.id"
+      (click)="openNodeDetails(node)"
+    >
+      <!-- Barre d'actions rapides au survol -->
+      <div class="bpbf-card-hover-actions no-print" (click)="$event.stopPropagation()">
+        <!-- Bouton Nommer Responsable / Directeur -->
+        <button
+          type="button"
+          class="card-act-btn director-btn"
+          (click)="openAssignDirectorModal(node, $event)"
+          [matTooltip]="node.directeurLibelle ? 'Changer le Titulaire : ' + node.directeurLibelle : 'Nommer le Directeur / Responsable'"
+        >
+          <mat-icon>badge</mat-icon>
+        </button>
+        <!-- Bouton Éditer -->
+        <button
+          type="button"
+          class="card-act-btn edit-btn"
+          (click)="openEditBlockModal(node, $event)"
+          matTooltip="Modifier l'intitulé"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+        <!-- Bouton Ajouter sous-unité -->
+        @if (node.type !== 'SERVICE') {
+          <button
+            type="button"
+            class="card-act-btn add-btn"
+            (click)="openAddBlockModal(node, $event)"
+            matTooltip="Ajouter un sous-service"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+        }
+        <!-- Bouton Supprimer -->
+        <button
+          type="button"
+          class="card-act-btn del-btn"
+          (click)="deleteBlock(node, $event)"
+          matTooltip="Supprimer ce bloc"
+        >
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+
+      <!-- Intitulé Officiel du Bloc -->
+      <div class="bpbf-card-title">
+        {{ node.title }}
+      </div>
+
+      <!-- Titulaire / Responsable nommé (si présent ou bouton nommer) -->
+      <div
+        class="bpbf-card-director"
+        [class.has-person]="!!node.directeurLibelle"
+        (click)="openAssignDirectorModal(node, $event)"
+        [matTooltip]="node.directeurLibelle ? 'Cliquer pour modifier le titulaire' : 'Cliquer pour nommer'"
+      >
+        @if (node.directeurLibelle) {
+          <div class="director-chip">
+            <mat-icon class="chip-icon">account_circle</mat-icon>
+            <span class="chip-name">{{ node.directeurLibelle }}</span>
+            @if (node.directeurMatricule) {
+              <span class="chip-mat font-mono">({{ node.directeurMatricule }})</span>
+            }
+          </div>
+        } @else {
+          <button type="button" class="btn-nominate-pill no-print" (click)="openAssignDirectorModal(node, $event)">
+            <mat-icon>person_add_alt</mat-icon>
+            <span>Nommer</span>
+          </button>
+        }
+      </div>
+
+      <!-- Effectif rattaché si > 0 -->
+      @if (node.directReportsCount > 0 || (node.badgeLabel && node.badgeLabel !== '0 agent(s)')) {
+        <div class="bpbf-card-meta">
+          <span>{{ node.badgeLabel }}</span>
+        </div>
+      }
+    </div>
+  </ng-template>
+
+  <!-- ==================================================== -->
+  <!-- TEMPLATE 1 : NŒUD DE L'ORGANIGRAMME BPBF             -->
+  <!-- ==================================================== -->
+  <ng-template #bpbfNodeTpl let-node>
+    <div class="bpbf-node-wrapper" [class.has-children]="node.children?.length > 0">
+      
+      <!-- Carte du bloc BPBF -->
+      <div
+        class="bpbf-block-card"
+        [class.bpbf-ca-card]="node.customClass === 'bpbf-ca'"
+        [class.bpbf-dg-card]="node.customClass === 'bpbf-dg'"
+        [class.bpbf-dga-card]="node.customClass === 'bpbf-dga'"
+        [class.bpbf-comite-card]="node.customClass === 'bpbf-comite'"
+        [class.bpbf-secretariat-card]="node.customClass === 'bpbf-secretariat'"
+        [class.bpbf-audit-card]="node.customClass === 'bpbf-audit'"
+        [class.bpbf-risques-card]="node.customClass === 'bpbf-risques'"
+        [class.bpbf-dir-card]="node.customClass === 'bpbf-dir'"
+        [class.bpbf-dep-card]="node.customClass === 'bpbf-dep'"
+        [class.bpbf-srv-card]="node.customClass === 'bpbf-srv'"
+        [class.search-match]="node.isSearchMatch"
+        [class.selected-node]="selectedNode?.id === node.id"
+        (click)="openNodeDetails(node)"
+      >
+        <!-- En-tête : Code & Actions rapides -->
+        <div class="block-card-header">
+          <span class="block-code">{{ node.code || node.type }}</span>
+          <div class="card-quick-actions" (click)="$event.stopPropagation()">
+            <!-- Nommer directeur -->
+            <button
+              type="button"
+              class="quick-action-btn director-btn"
+              (click)="openAssignDirectorModal(node, $event)"
+              [matTooltip]="node.directeurLibelle ? 'Changer le Directeur / Responsable' : 'Nommer un Directeur / Responsable'"
+            >
+              <mat-icon>badge</mat-icon>
+            </button>
+            <!-- Modifier bloc -->
+            <button
+              type="button"
+              class="quick-action-btn"
+              (click)="openEditBlockModal(node, $event)"
+              matTooltip="Modifier l'intitulé ou le code du bloc"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+            <!-- Ajouter sous-bloc -->
+            @if (node.type !== 'SERVICE') {
+              <button
+                type="button"
+                class="quick-action-btn"
+                (click)="openAddBlockModal(node, $event)"
+                matTooltip="Ajouter une sous-unité (Service, etc.)"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+            }
+            <!-- Supprimer -->
+            <button
+              type="button"
+              class="quick-action-btn delete-btn"
+              (click)="deleteBlock(node, $event)"
+              matTooltip="Supprimer ce bloc"
+            >
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Corps : Titre du bloc -->
+        <div class="block-card-body">
+          <h3 class="block-title">{{ node.title }}</h3>
+          
+          <!-- Indication de lien fonctionnel si applicable -->
+          @if (node.functionalParentName) {
+            <div class="functional-link-indicator">
+              <span class="dotted-badge">┄┄ Lien fonctionnel : {{ node.functionalParentName }}</span>
+            </div>
+          }
+
+          <!-- Responsable / Directeur nommé -->
+          <div class="block-director-box" [class.has-director]="!!node.directeurLibelle" (click)="openAssignDirectorModal(node, $event)" matTooltip="Cliquer pour nommer ou changer le Directeur">
+            @if (node.directeurLibelle) {
+              <div class="director-info">
+                <mat-icon class="crown-icon">account_circle</mat-icon>
+                <div class="director-text">
+                  <span class="director-role">Directeur / Responsable :</span>
+                  <strong class="director-name">{{ node.directeurLibelle }}</strong>
+                  @if (node.directeurMatricule) {
+                    <span class="director-mat font-mono">({{ node.directeurMatricule }})</span>
+                  }
+                </div>
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px; margin-left: auto; opacity: 0.7;">edit</mat-icon>
+              </div>
+            } @else {
+              <button
+                type="button"
+                class="btn-nominate-empty"
+                (click)="openAssignDirectorModal(node, $event)"
+              >
+                <mat-icon>person_add_alt</mat-icon>
+                <span>+ Nommer Directeur / Responsable</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Pied de carte : Effectifs et Toggle -->
+        <div class="block-card-footer">
+          <div class="effectif-chip">
+            <mat-icon>group</mat-icon>
+            <span>{{ node.badgeLabel }}</span>
+          </div>
+
+          @if (node.children?.length > 0) {
+            <button
+              type="button"
+              class="btn-toggle-subunits"
+              (click)="toggleNode(node, $event)"
+              [matTooltip]="node.expanded ? 'Replier les sous-unités' : 'Déplier les sous-unités'"
+            >
+              <span>{{ node.children.length }} sous-bloc(s)</span>
+              <mat-icon>{{ node.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Enfants / Sous-unités (Niveau hiérarchique suivant) -->
+      @if (node.children?.length > 0 && node.expanded) {
+        <div class="bpbf-children-branch" [class.horizontal-flex]="node.level >= 2">
+          @for (child of node.children; track child.id) {
+            <div class="bpbf-child-item">
+              <div class="connector-line"></div>
+              <ng-container *ngTemplateOutlet="bpbfNodeTpl; context: { $implicit: child }"></ng-container>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </ng-template>
+
+  <!-- ==================================================== -->
+  <!-- TEMPLATE 2 : NŒUD MANAGÉRIAL DIRECT (STYLE ODOO)     -->
   <!-- ==================================================== -->
   <ng-template #managerialNodeTpl let-node>
     <div
       class="node-card"
-      [class.node-executive]="node.type === 'EXECUTIVE'"
-      [class.node-manager]="node.isManager"
+      [class.executive-card]="node.type === 'EXECUTIVE'"
       [class.search-match]="node.isSearchMatch"
       [class.selected-node]="selectedNode?.id === node.id"
       (click)="openNodeDetails(node)"
     >
-      <!-- En-tête de la carte -->
       <div class="card-top-bar">
         <span class="node-unit-badge" [class]="node.badgeClass">
-          {{ node.badgeLabel || 'BPBF' }}
+          {{ node.badgeLabel }}
         </span>
-
-        <!-- Menu d'action rapide sur la carte (Modifier Odoo-style) -->
-        <div class="node-quick-actions" (click)="$event.stopPropagation()">
+        <div class="node-actions-menu" (click)="$event.stopPropagation()">
           <button
             type="button"
             class="node-action-btn"
             (click)="openReassignModal(node, $event)"
-            matTooltip="Modifier le supérieur ou rattachement"
+            matTooltip="Changer de responsable"
           >
             <mat-icon>edit</mat-icon>
           </button>
@@ -352,28 +754,26 @@
             type="button"
             class="node-action-btn"
             (click)="openAttachModal(node, $event)"
-            matTooltip="Rattacher un collaborateur sous ce responsable"
+            matTooltip="Rattacher un agent sous ce responsable"
           >
             <mat-icon>person_add</mat-icon>
           </button>
         </div>
       </div>
 
-      <!-- Corps : Avatar & Informations -->
       <div class="card-main-body">
         <div class="node-avatar" [style.background-color]="node.avatarColor">
           {{ node.avatarInitials }}
         </div>
         <div class="node-content">
-          <h4 class="node-title" [matTooltip]="node.title">{{ node.title }}</h4>
+          <h4 class="node-title">{{ node.title }}</h4>
           <p class="node-subtitle">{{ node.subtitle }}</p>
           @if (node.matricule) {
-            <span class="node-mat">{{ node.matricule }}</span>
+            <span class="node-mat font-mono">{{ node.matricule }}</span>
           }
         </div>
       </div>
 
-      <!-- Pied de carte : Compteur et Toggle de branche -->
       <div class="card-footer">
         @if (node.directReportsCount > 0) {
           <div class="subordinates-info">
@@ -381,13 +781,11 @@
             <span><strong>{{ node.directReportsCount }}</strong> direct(s) · {{ node.totalSubordinatesCount }} total</span>
           </div>
 
-          <!-- Bouton Déplier/Replier la branche (+ / -) -->
           <button
             type="button"
             class="toggle-branch-btn"
             [class.collapsed]="!node.expanded"
             (click)="toggleNode(node, $event)"
-            [matTooltip]="node.expanded ? 'Replier cette branche' : 'Déplier les subordonnés'"
           >
             <mat-icon>{{ node.expanded ? 'remove' : 'add' }}</mat-icon>
           </button>
@@ -400,76 +798,11 @@
       </div>
     </div>
 
-    <!-- Branche des subordonnés directs (Récursive) -->
     @if (node.children?.length > 0 && node.expanded) {
       <ul class="tree-children-level">
         @for (child of node.children; track child.id) {
           <li>
             <ng-container *ngTemplateOutlet="managerialNodeTpl; context: { $implicit: child }"></ng-container>
-          </li>
-        }
-      </ul>
-    }
-  </ng-template>
-
-  <!-- ==================================================== -->
-  <!-- TEMPLATE RÉCURSIF : NŒUD STRUCTUREL (INSTITUTIONNEL) -->
-  <!-- ==================================================== -->
-  <ng-template #structuralNodeTpl let-node>
-    <div
-      class="node-card structural-card"
-      [class.structural-root]="node.level === 0"
-      [class.structural-dir]="node.type === 'DIRECTION'"
-      [class.structural-srv]="node.type === 'SERVICE'"
-      [class.search-match]="node.isSearchMatch"
-      [class.selected-node]="selectedNode?.id === node.id"
-      (click)="openNodeDetails(node)"
-    >
-      <div class="card-top-bar">
-        <span class="node-unit-badge" [class]="node.badgeClass">
-          {{ node.badgeLabel }}
-        </span>
-      </div>
-
-      <div class="card-main-body">
-        <div class="node-avatar struct-avatar" [style.background-color]="node.avatarColor">
-          {{ node.avatarInitials }}
-        </div>
-        <div class="node-content">
-          <h4 class="node-title">{{ node.title }}</h4>
-          <p class="node-subtitle">{{ node.subtitle }}</p>
-        </div>
-      </div>
-
-      <div class="card-footer">
-        @if (node.children?.length > 0) {
-          <div class="subordinates-info">
-            <mat-icon>account_balance</mat-icon>
-            <span><strong>{{ node.children.length }}</strong> sous-unité(s)</span>
-          </div>
-
-          <button
-            type="button"
-            class="toggle-branch-btn"
-            [class.collapsed]="!node.expanded"
-            (click)="toggleNode(node, $event)"
-          >
-            <mat-icon>{{ node.expanded ? 'remove' : 'add' }}</mat-icon>
-          </button>
-        } @else {
-          <div class="leaf-agent-info">
-            <mat-icon>business</mat-icon>
-            <span>Unité finale</span>
-          </div>
-        }
-      </div>
-    </div>
-
-    @if (node.children?.length > 0 && node.expanded) {
-      <ul class="tree-children-level">
-        @for (child of node.children; track child.id) {
-          <li>
-            <ng-container *ngTemplateOutlet="structuralNodeTpl; context: { $implicit: child }"></ng-container>
           </li>
         }
       </ul>
@@ -490,6 +823,9 @@
           <div>
             <h3 class="drawer-name">{{ selectedNode.title }}</h3>
             <p class="drawer-role">{{ selectedNode.subtitle }}</p>
+            @if (selectedNode.code) {
+              <span class="drawer-code-badge font-mono">Code: {{ selectedNode.code }}</span>
+            }
           </div>
         </div>
         <button type="button" class="drawer-close-btn" (click)="closeDrawer()">
@@ -498,87 +834,105 @@
       </div>
 
       <div class="drawer-body">
-        <!-- Informations clés -->
+
+        <!-- Responsable & Directeur actuel -->
         <div class="drawer-section">
-          <h5 class="section-title">Informations de rattachement</h5>
+          <h5 class="section-title">Direction & Responsabilité</h5>
           <div class="detail-row">
-            <span class="detail-label">Unité / Direction :</span>
-            <span class="detail-value">{{ selectedNode.unit || '—' }}</span>
+            <span class="detail-label">Directeur / Responsable :</span>
+            <span class="detail-value highlight-sup">
+              {{ selectedNode.directeurLibelle || 'Non désigné' }}
+            </span>
           </div>
-          @if (selectedNode.matricule) {
+          @if (selectedNode.directeurMatricule) {
             <div class="detail-row">
-              <span class="detail-label">Matricule :</span>
-              <span class="detail-value font-mono">{{ selectedNode.matricule }}</span>
+              <span class="detail-label">Matricule Directeur :</span>
+              <span class="detail-value font-mono">{{ selectedNode.directeurMatricule }}</span>
             </div>
           }
           @if (selectedNode.parentName) {
             <div class="detail-row">
-              <span class="detail-label">Supérieur direct :</span>
-              <span class="detail-value highlight-sup">{{ selectedNode.parentName }}</span>
+              <span class="detail-label">Rattachement supérieur :</span>
+              <span class="detail-value">{{ selectedNode.parentName }}</span>
             </div>
           }
-          @if (selectedNode.email) {
+          @if (selectedNode.functionalParentName) {
             <div class="detail-row">
-              <span class="detail-label">Email :</span>
-              <span class="detail-value">{{ selectedNode.email }}</span>
-            </div>
-          }
-          @if (selectedNode.telephone) {
-            <div class="detail-row">
-              <span class="detail-label">Téléphone :</span>
-              <span class="detail-value">{{ selectedNode.telephone }}</span>
+              <span class="detail-label">Lien fonctionnel :</span>
+              <span class="detail-value text-amber-700">{{ selectedNode.functionalParentName }}</span>
             </div>
           }
         </div>
 
-        <!-- Actions rapides de modification Odoo-style -->
-        @if (selectedNode.type === 'EMPLOYEE' || selectedNode.type === 'EXECUTIVE') {
-          <div class="drawer-actions-box">
-            <button
-              type="button"
-              class="btn-drawer-action primary"
-              (click)="openReassignModal(selectedNode)"
-            >
-              <mat-icon>edit</mat-icon>
-              <span>Changer de supérieur / affectation</span>
-            </button>
+        <!-- Impact sur la validation des congés -->
+        <div class="conge-impact-box">
+          <mat-icon class="impact-icon">event_available</mat-icon>
+          <div>
+            <strong>Workflow des Congés</strong>
+            <p>
+              @if (selectedNode.directeurLibelle) {
+                Les collaborateurs rattachés à ce bloc soumettent leurs demandes de congés à <strong>{{ selectedNode.directeurLibelle }}</strong> pour validation hiérarchique.
+              } @else {
+                Aucun directeur n'étant nommé, les demandes de congé de cette unité remonteront automatiquement au niveau supérieur.
+              }
+            </p>
+          </div>
+        </div>
+
+        <!-- Boutons d'action rapides sur le bloc -->
+        <div class="drawer-actions-box">
+          <button
+            type="button"
+            class="btn-drawer-action primary"
+            (click)="openAssignDirectorModal(selectedNode)"
+          >
+            <mat-icon>badge</mat-icon>
+            <span>Nommer / Changer le Directeur</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-drawer-action secondary"
+            (click)="openEditBlockModal(selectedNode)"
+          >
+            <mat-icon>edit</mat-icon>
+            <span>Modifier l'intitulé / bloc</span>
+          </button>
+
+          @if (selectedNode.type !== 'SERVICE') {
             <button
               type="button"
               class="btn-drawer-action secondary"
-              (click)="openAttachModal(selectedNode)"
+              (click)="openAddBlockModal(selectedNode)"
             >
-              <mat-icon>person_add</mat-icon>
-              <span>Rattacher un subordonné</span>
+              <mat-icon>add_box</mat-icon>
+              <span>Ajouter une sous-unité</span>
             </button>
-            @if (selectedNode.data) {
-              <button
-                type="button"
-                class="btn-drawer-action outline"
-                (click)="navigateToEmployee(selectedNode.data)"
-              >
-                <mat-icon>badge</mat-icon>
-                <span>Voir le dossier RH complet</span>
-              </button>
-            }
-          </div>
-        }
+          }
 
-        <!-- Liste des subordonnés directs ou membres de l'unité -->
+          <button
+            type="button"
+            class="btn-drawer-action danger"
+            (click)="deleteBlock(selectedNode)"
+          >
+            <mat-icon>delete_outline</mat-icon>
+            <span>Supprimer ce bloc</span>
+          </button>
+        </div>
+
+        <!-- Liste des collaborateurs rattachés -->
         <div class="drawer-section">
-          <div class="sub-header-row">
-            <h5 class="section-title">
-              @if (selectedNode.type === 'EMPLOYEE' || selectedNode.type === 'EXECUTIVE') {
-                Collaborateurs directs ({{ selectedNodeEmployees.length }})
-              } @else {
-                Agents affectés à cette unité ({{ selectedNodeEmployees.length }})
-              }
-            </h5>
+          <div class="section-header-flex">
+            <h5 class="section-title">Collaborateurs rattachés ({{ selectedNodeEmployees.length }})</h5>
           </div>
 
           @if (selectedNodeEmployees.length === 0) {
-            <p class="empty-subs">Aucun collaborateur direct rattaché pour le moment.</p>
+            <div class="empty-subs-msg">
+              <mat-icon>info_outline</mat-icon>
+              <span>Aucun agent directement affecté à cette unité pour le moment.</span>
+            </div>
           } @else {
-            <div class="subordinates-list">
+            <div class="subs-list">
               @for (sub of selectedNodeEmployees; track sub.id) {
                 <div class="sub-item" (click)="navigateToEmployee(sub)">
                   <div class="sub-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(sub), 2)">
@@ -587,7 +941,7 @@
                   <div class="sub-info">
                     <span class="sub-name">{{ sub.nom }} {{ sub.prenom }}</span>
                     <span class="sub-role">{{ getEmployeeRole(sub) }}</span>
-                    <span class="sub-mat">{{ sub.matricule }}</span>
+                    <span class="sub-mat font-mono">{{ sub.matricule }}</span>
                   </div>
                   <mat-icon class="sub-arrow">chevron_right</mat-icon>
                 </div>
@@ -600,118 +954,120 @@
   }
 
   <!-- ==================================================== -->
-  <!-- MODAL 1 : CHANGER DE SUPÉRIEUR / RATTACHEMENT        -->
+  <!-- MODAL 1 : NOMMER / CHANGER LE DIRECTEUR DU BLOC      -->
   <!-- ==================================================== -->
-  @if (isReassignModalOpen && reassignTarget) {
-    <div class="modal-backdrop" (click)="closeReassignModal()">
-      <div class="reassign-dialog" (click)="$event.stopPropagation()">
-        <div class="dialog-header">
-          <div class="dialog-title-group">
-            <div class="dialog-icon-badge">
-              <mat-icon>supervisor_account</mat-icon>
-            </div>
+  @if (isDirectorModalOpen && directorTargetNode) {
+    <div class="bpbf-modal-overlay" (click)="closeAssignDirectorModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <mat-icon class="modal-icon text-indigo-700">badge</mat-icon>
             <div>
-              <h3 class="dialog-title">Modifier le Rattachement Hiérarchique</h3>
-              <p class="dialog-subtitle">Sélectionnez le nouveau supérieur direct et les structures de rattachement</p>
+              <h3>Nommer le Directeur / Responsable</h3>
+              <p class="modal-subtitle">Bloc : <strong>{{ directorTargetNode.title }}</strong></p>
             </div>
           </div>
-          <button type="button" class="close-dialog-btn" (click)="closeReassignModal()">
+          <button type="button" class="btn-close" (click)="closeAssignDirectorModal()">
             <mat-icon>close</mat-icon>
           </button>
         </div>
 
-        <div class="dialog-body">
-          <!-- Carte récapitulative de l'employé -->
-          <div class="target-emp-summary">
-            <div class="target-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(reassignTarget), 2)">
-              {{ getInitials(reassignTarget.nom, reassignTarget.prenom) }}
-            </div>
-            <div class="target-details">
-              <strong>{{ reassignTarget.nom }} {{ reassignTarget.prenom }}</strong>
-              <span class="target-role">{{ getEmployeeRole(reassignTarget) }} · {{ reassignTarget.matricule }}</span>
-              <span class="target-current-sup">
-                Supérieur actuel :
-                <em>
-                  @if (reassignTarget.superviseurNom) {
-                    {{ reassignTarget.superviseurNom }} {{ reassignTarget.superviseurPrenom }}
-                  } @else {
-                    Non défini (Direction Générale)
-                  }
-                </em>
-              </span>
-            </div>
-          </div>
-
-          @if (reassignSuccessMsg) {
-            <div class="success-alert">
+        <div class="modal-body">
+          @if (directorSuccessMsg) {
+            <div class="success-banner">
               <mat-icon>check_circle</mat-icon>
-              <span>{{ reassignSuccessMsg }}</span>
+              <span>{{ directorSuccessMsg }}</span>
             </div>
           }
 
-          <!-- Formulaire de sélection -->
           <div class="form-group">
-            <label class="form-label">Nouveau Supérieur Hiérarchique Direct :</label>
-            <div class="sup-search-filter">
+            <label class="form-label">Rechercher parmi les agents disponibles dans la banque :</label>
+            <div class="search-input-wrapper">
               <mat-icon>search</mat-icon>
               <input
                 type="text"
-                [(ngModel)]="supervisorSearchQuery"
-                placeholder="Filtrer les responsables par nom, poste, matricule..."
-                class="filter-input"
+                [(ngModel)]="directorSearchQuery"
+                placeholder="Nom, matricule, poste, direction..."
+                class="form-control"
               />
             </div>
-
-            <select [(ngModel)]="reassignSupervisorId" class="form-select-full">
-              <option [ngValue]="null">— Aucun supérieur direct (Rattachement Direction Générale) —</option>
-              @for (sup of getEligibleSupervisors(); track sup.id) {
-                <option [value]="sup.id">
-                  {{ sup.nom }} {{ sup.prenom }} — {{ getEmployeeRole(sup) }} ({{ sup.matricule }})
-                </option>
-              }
-            </select>
-            <span class="field-hint">Les subordonnés de cet employé sont automatiquement exclus pour éviter les boucles cycliques.</span>
           </div>
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label">Direction de rattachement :</label>
-              <select [(ngModel)]="reassignDirectionId" class="form-select">
-                <option [ngValue]="null">— Conserver la direction actuelle —</option>
-                @for (dir of directions; track dir.id) {
-                  <option [value]="dir.id">{{ dir.libelle || dir.name }} ({{ dir.code }})</option>
-                }
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label">Sélectionner l'agent à nommer :</label>
+            <div class="eligible-list-box">
+              <!-- Option Retirer le directeur -->
+              <div
+                class="eligible-item remove-director-item"
+                [class.selected]="selectedDirectorEmployeeId === null"
+                (click)="selectedDirectorEmployeeId = null"
+              >
+                <mat-icon class="text-slate-400">person_off</mat-icon>
+                <div>
+                  <strong>Aucun Directeur (Poste vacant)</strong>
+                  <small class="text-muted">Retirer le directeur actuellement nommé</small>
+                </div>
+              </div>
 
-            <div class="form-group">
-              <label class="form-label">Service de rattachement :</label>
-              <select [(ngModel)]="reassignServiceId" class="form-select">
-                <option [ngValue]="null">— Conserver le service actuel —</option>
-                @for (srv of services; track srv.id) {
-                  <option [value]="srv.id">{{ srv.libelle || srv.name }} ({{ srv.code }})</option>
-                }
-              </select>
+              <!-- Liste des employés -->
+              @for (emp of getFilteredEmployeesForDirector(); track emp.id) {
+                <div
+                  class="eligible-item"
+                  [class.selected]="selectedDirectorEmployeeId === ('' + emp.id)"
+                  (click)="selectedDirectorEmployeeId = '' + emp.id"
+                >
+                  <div class="eligible-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(emp), 2)">
+                    {{ getInitials(emp.nom, emp.prenom) }}
+                  </div>
+                  <div class="eligible-info">
+                    <div class="eligible-name">
+                      <strong>{{ emp.nom }} {{ emp.prenom }}</strong>
+                      <span class="font-mono text-muted">({{ emp.matricule }})</span>
+                    </div>
+                    <span class="eligible-role">{{ getEmployeeRole(emp) }}</span>
+                    <span class="eligible-dept text-muted">{{ emp.direction || emp.service || 'Banque Postale' }}</span>
+                  </div>
+                  @if (selectedDirectorEmployeeId === ('' + emp.id)) {
+                    <mat-icon class="check-icon">check_circle</mat-icon>
+                  }
+                </div>
+              }
             </div>
+          </div>
+
+          <!-- Case à cocher : Synchronisation pour la validation des congés -->
+          <div class="checkbox-option-box">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [(ngModel)]="syncEmployeesLeaveSupervisor"
+              />
+              <span>
+                <strong>Définir également comme supérieur hiérarchique direct de tous les agents de cette unité</strong>
+                <small class="d-block text-muted">
+                  Permet d'acheminer automatiquement les demandes de congés de ces collaborateurs vers ce Directeur pour validation.
+                </small>
+              </span>
+            </label>
           </div>
         </div>
 
-        <div class="dialog-footer">
-          <button type="button" class="btn-cancel" (click)="closeReassignModal()" [disabled]="isSavingReassign">
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAssignDirectorModal()">
             Annuler
           </button>
           <button
             type="button"
-            class="btn-save"
-            (click)="saveReassignment()"
-            [disabled]="isSavingReassign"
+            class="btn btn-primary"
+            [disabled]="isSavingDirector"
+            (click)="saveDirectorAssignment()"
           >
-            @if (isSavingReassign) {
-              <span class="mini-spinner"></span>
-              <span>Enregistrement...</span>
+            @if (isSavingDirector) {
+              <span class="spinner-sm"></span>
+              <span>Enregistrement dans PostgreSQL...</span>
             } @else {
-              <mat-icon>check</mat-icon>
-              <span>Enregistrer le rattachement</span>
+              <mat-icon>save</mat-icon>
+              <span>Valider la nomination</span>
             }
           </button>
         </div>
@@ -720,61 +1076,396 @@
   }
 
   <!-- ==================================================== -->
-  <!-- MODAL 2 : RATTACHER UN COLLABORATEUR SOUS UN MANAGER -->
+  <!-- MODAL 2 : AJOUTER UN NOUVEAU BLOC STRUCTUREL        -->
   <!-- ==================================================== -->
-  @if (isAttachModalOpen && attachTargetManager) {
-    <div class="modal-backdrop" (click)="closeAttachModal()">
-      <div class="reassign-dialog" (click)="$event.stopPropagation()">
-        <div class="dialog-header">
-          <div class="dialog-title-group">
-            <div class="dialog-icon-badge">
-              <mat-icon>person_add</mat-icon>
-            </div>
+  @if (isAddBlockModalOpen) {
+    <div class="bpbf-modal-overlay" (click)="closeAddBlockModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <mat-icon class="modal-icon text-blue-700">add_box</mat-icon>
             <div>
-              <h3 class="dialog-title">Rattacher un Collaborateur</h3>
-              <p class="dialog-subtitle">Affecter un agent sous la responsabilité de <strong>{{ attachTargetManager.nom }} {{ attachTargetManager.prenom }}</strong></p>
+              <h3>Ajouter un Bloc dans l'Organigramme</h3>
+              <p class="modal-subtitle">Création d'une entité persistée dans PostgreSQL</p>
             </div>
           </div>
-          <button type="button" class="close-dialog-btn" (click)="closeAttachModal()">
+          <button type="button" class="btn-close" (click)="closeAddBlockModal()">
             <mat-icon>close</mat-icon>
           </button>
         </div>
 
-        <div class="dialog-body">
+        <div class="modal-body">
+          @if (addBlockError) {
+            <div class="error-banner">
+              <mat-icon>error</mat-icon>
+              <span>{{ addBlockError }}</span>
+            </div>
+          }
+
           <div class="form-group">
-            <label class="form-label">Sélectionnez le collaborateur à placer sous ce responsable :</label>
-            <select [(ngModel)]="attachEmployeeId" class="form-select-full">
-              <option [ngValue]="null">— Choisissez un employé dans la liste —</option>
+            <label class="form-label">Type d'entité :</label>
+            <div class="type-selector-tabs">
+              <button
+                type="button"
+                class="type-tab-btn"
+                [class.active]="newBlockType === 'direction'"
+                (click)="newBlockType = 'direction'"
+              >
+                Direction
+              </button>
+              <button
+                type="button"
+                class="type-tab-btn"
+                [class.active]="newBlockType === 'departement'"
+                (click)="newBlockType = 'departement'"
+              >
+                Département
+              </button>
+              <button
+                type="button"
+                class="type-tab-btn"
+                [class.active]="newBlockType === 'service'"
+                (click)="newBlockType = 'service'"
+              >
+                Service
+              </button>
+              <button
+                type="button"
+                class="type-tab-btn"
+                [class.active]="newBlockType === 'comite'"
+                (click)="newBlockType = 'comite'"
+              >
+                Comité CA
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Intitulé du bloc * :</label>
+            <input
+              type="text"
+              [(ngModel)]="newBlockName"
+              placeholder="Ex : Direction de la Conformité et RSE, Service Support Client..."
+              class="form-control"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Code unique (laisser vide pour génération auto) :</label>
+            <input
+              type="text"
+              [(ngModel)]="newBlockCode"
+              placeholder="Ex : DIR_CONF, SRV_CLIENT"
+              class="form-control font-mono uppercase"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description ou missions :</label>
+            <textarea
+              [(ngModel)]="newBlockDescription"
+              rows="2"
+              placeholder="Missions et responsabilités de l'entité..."
+              class="form-control"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Rattachement hiérarchique supérieur :</label>
+            <select [(ngModel)]="newBlockParentId" class="form-control">
+              <option [ngValue]="null">-- Sélectionner le parent --</option>
+              @for (dir of directions; track dir.id) {
+                <option [value]="dir.id">{{ dir.libelle || dir.name }} ({{ dir.code }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Directeur / Responsable (Optionnel) :</label>
+            <select [(ngModel)]="newBlockDirectorId" class="form-control">
+              <option [ngValue]="null">-- Aucun directeur pour le moment --</option>
               @for (emp of employees; track emp.id) {
-                @if (emp.id !== attachTargetManager.id) {
-                  <option [value]="emp.id">
-                    {{ emp.nom }} {{ emp.prenom }} — {{ getEmployeeRole(emp) }} ({{ emp.matricule }})
-                    @if (!emp.superviseurId) {
-                      [Sans supérieur]
-                    }
-                  </option>
+                <option [value]="emp.id">{{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }})</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAddBlockModal()">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="isSavingNewBlock"
+            (click)="saveNewBlock()"
+          >
+            @if (isSavingNewBlock) {
+              <span class="spinner-sm"></span>
+              <span>Création en cours...</span>
+            } @else {
+              <mat-icon>add</mat-icon>
+              <span>Créer le bloc</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- MODAL 3 : ÉDITER UN BLOC STRUCTUREL EXISTANT        -->
+  <!-- ==================================================== -->
+  @if (isEditBlockModalOpen && editTargetNode) {
+    <div class="bpbf-modal-overlay" (click)="closeEditBlockModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <mat-icon class="modal-icon text-amber-600">edit</mat-icon>
+            <div>
+              <h3>Modifier le Bloc</h3>
+              <p class="modal-subtitle">Bloc : <strong>{{ editTargetNode.title }}</strong></p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeEditBlockModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (editBlockError) {
+            <div class="error-banner">
+              <mat-icon>error</mat-icon>
+              <span>{{ editBlockError }}</span>
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label">Intitulé du bloc * :</label>
+            <input
+              type="text"
+              [(ngModel)]="editBlockName"
+              class="form-control"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Code du bloc :</label>
+            <input
+              type="text"
+              [(ngModel)]="editBlockCode"
+              class="form-control font-mono uppercase"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description :</label>
+            <textarea
+              [(ngModel)]="editBlockDescription"
+              rows="2"
+              class="form-control"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeEditBlockModal()">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="isSavingEditBlock"
+            (click)="saveBlockEdit()"
+          >
+            @if (isSavingEditBlock) {
+              <span class="spinner-sm"></span>
+              <span>Modification en cours...</span>
+            } @else {
+              <mat-icon>save</mat-icon>
+              <span>Enregistrer les modifications</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- MODAL 4 : RATTACHEMENT HIÉRARCHIQUE EMPLOYÉ          -->
+  <!-- ==================================================== -->
+  @if (isReassignModalOpen && reassignTarget) {
+    <div class="bpbf-modal-overlay" (click)="closeReassignModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <mat-icon class="modal-icon text-indigo-700">supervisor_account</mat-icon>
+            <div>
+              <h3>Rattachement Hiérarchique de l'Agent</h3>
+              <p class="modal-subtitle">Collaborateur : <strong>{{ reassignTarget.nom }} {{ reassignTarget.prenom }}</strong> ({{ reassignTarget.matricule }})</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeReassignModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (reassignSuccessMsg) {
+            <div class="success-banner">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ reassignSuccessMsg }}</span>
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label">Rechercher le supérieur hiérarchique :</label>
+            <div class="search-input-wrapper">
+              <mat-icon>search</mat-icon>
+              <input
+                type="text"
+                [(ngModel)]="supervisorSearchQuery"
+                placeholder="Nom, matricule, poste..."
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Sélectionner le supérieur (Validateur des congés) :</label>
+            <div class="eligible-list-box">
+              <div
+                class="eligible-item remove-director-item"
+                [class.selected]="reassignSupervisorId === null"
+                (click)="reassignSupervisorId = null"
+              >
+                <mat-icon class="text-slate-400">person_off</mat-icon>
+                <div>
+                  <strong>Aucun supérieur hiérarchique direct</strong>
+                  <small class="text-muted">Agent rattaché directement à la Direction Générale</small>
+                </div>
+              </div>
+
+              @for (emp of getEligibleSupervisors(); track emp.id) {
+                <div
+                  class="eligible-item"
+                  [class.selected]="reassignSupervisorId === ('' + emp.id)"
+                  (click)="reassignSupervisorId = '' + emp.id"
+                >
+                  <div class="eligible-avatar" [style.background-color]="getAvatarColor(getEmployeeRole(emp), 2)">
+                    {{ getInitials(emp.nom, emp.prenom) }}
+                  </div>
+                  <div class="eligible-info">
+                    <div class="eligible-name">
+                      <strong>{{ emp.nom }} {{ emp.prenom }}</strong>
+                      <span class="font-mono text-muted">({{ emp.matricule }})</span>
+                    </div>
+                    <span class="eligible-role">{{ getEmployeeRole(emp) }}</span>
+                    <span class="eligible-dept text-muted">{{ emp.direction || emp.service || 'Banque Postale' }}</span>
+                  </div>
+                  @if (reassignSupervisorId === ('' + emp.id)) {
+                    <mat-icon class="check-icon">check_circle</mat-icon>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Direction d'affectation :</label>
+              <select [(ngModel)]="reassignDirectionId" class="form-control">
+                <option value="">-- Non spécifiée --</option>
+                @for (d of directions; track d.id) {
+                  <option [value]="d.id">{{ d.libelle || d.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Service d'affectation :</label>
+              <select [(ngModel)]="reassignServiceId" class="form-control">
+                <option value="">-- Non spécifié --</option>
+                @for (s of services; track s.id) {
+                  <option [value]="s.id">{{ s.libelle || s.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeReassignModal()">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="isSavingReassign"
+            (click)="saveReassignment()"
+          >
+            @if (isSavingReassign) {
+              <span class="spinner-sm"></span>
+              <span>Enregistrement...</span>
+            } @else {
+              <mat-icon>save</mat-icon>
+              <span>Mettre à jour le rattachement</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================================================== -->
+  <!-- MODAL 5 : RATTACHER UN COLLABORATEUR SOUS UN MANAGER -->
+  <!-- ==================================================== -->
+  @if (isAttachModalOpen && attachTargetManager) {
+    <div class="bpbf-modal-overlay" (click)="closeAttachModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <mat-icon class="modal-icon text-indigo-700">person_add</mat-icon>
+            <div>
+              <h3>Rattacher un Collaborateur</h3>
+              <p class="modal-subtitle">Sous le responsable : <strong>{{ attachTargetManager.nom }} {{ attachTargetManager.prenom }}</strong></p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" (click)="closeAttachModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Sélectionner l'agent à subordonner :</label>
+            <select [(ngModel)]="attachEmployeeId" class="form-control">
+              <option [ngValue]="null">-- Sélectionner un collaborateur --</option>
+              @for (emp of employees; track emp.id) {
+                @if ('' + emp.id !== '' + attachTargetManager.id) {
+                  <option [value]="emp.id">{{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }}) - {{ getEmployeeRole(emp) }}</option>
                 }
               }
             </select>
           </div>
         </div>
 
-        <div class="dialog-footer">
-          <button type="button" class="btn-cancel" (click)="closeAttachModal()" [disabled]="isSavingAttach">
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAttachModal()">
             Annuler
           </button>
           <button
             type="button"
-            class="btn-save"
+            class="btn btn-primary"
+            [disabled]="isSavingAttach || !attachEmployeeId"
             (click)="saveAttachment()"
-            [disabled]="!attachEmployeeId || isSavingAttach"
           >
             @if (isSavingAttach) {
-              <span class="mini-spinner"></span>
+              <span class="spinner-sm"></span>
               <span>Rattachement en cours...</span>
             } @else {
               <mat-icon>link</mat-icon>
-              <span>Valider le rattachement</span>
+              <span>Confirmer le rattachement</span>
             }
           </button>
         </div>

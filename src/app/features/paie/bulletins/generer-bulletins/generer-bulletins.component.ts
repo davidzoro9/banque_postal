@@ -38,7 +38,20 @@ export class GenererBulletinsComponent implements OnInit {
   modeComparatifMminus1 = false;
 
   // === GESTION DES SESSIONS & NAVIGATION ===
-  vueActive: 'LISTE_SESSIONS' | 'DETAIL_SESSION' = 'LISTE_SESSIONS';
+  vueActive: 'LISTE_SESSIONS' | 'DETAIL_SESSION' | 'SIMULATION' = 'LISTE_SESSIONS';
+  vuePrecedente: 'LISTE_SESSIONS' | 'DETAIL_SESSION' = 'LISTE_SESSIONS';
+
+  basculerVersSimulation(): void {
+    if (this.vueActive !== 'SIMULATION') {
+      this.vuePrecedente = this.vueActive;
+    }
+    this.vueActive = 'SIMULATION';
+  }
+
+  retourAuxSessions(): void {
+    this.vueActive = this.vuePrecedente || 'LISTE_SESSIONS';
+  }
+
   listeSessions: any[] = [];
   currentSession: any = null;
   showCreateSessionModal: boolean = false;
@@ -48,7 +61,7 @@ export class GenererBulletinsComponent implements OnInit {
     name: '',
     periode: `${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][new Date().getMonth()]} ${new Date().getFullYear()}`,
     typeSession: 'ORDINAIRE',
-    natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | 'STC',
+    natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE',
     codeSession: `SESS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
     modeCible: 'TOUS' as 'TOUS' | 'SELECTION'
   };
@@ -197,7 +210,7 @@ export class GenererBulletinsComponent implements OnInit {
       annee: this.selectedYear,
       name: '',
       typeSession: 'ORDINAIRE',
-      natureExtraordinaire: '13EME_MOIS',
+      natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE',
       periode: '',
       codeSession: '',
       modeCible: 'TOUS'
@@ -261,6 +274,21 @@ export class GenererBulletinsComponent implements OnInit {
       this.newSessionForm.codeSession = `SESS-13EME-${y}-${m}`;
       this.newSessionForm.modeCible = 'TOUS';
       this.changerModeCibleNouvelleSession('TOUS');
+    } else if (this.newSessionForm.natureExtraordinaire === '14EME_MOIS') {
+      this.newSessionForm.name = `14ème Mois ${y}`;
+      this.newSessionForm.codeSession = `SESS-14EME-${y}-${m}`;
+      this.newSessionForm.modeCible = 'TOUS';
+      this.changerModeCibleNouvelleSession('TOUS');
+    } else if (this.newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
+      this.newSessionForm.name = `Congés Payés — ${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-CP-${y}-${m}`;
+      this.newSessionForm.modeCible = 'SELECTION';
+      this.changerModeCibleNouvelleSession('SELECTION');
+    } else if (this.newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
+      this.newSessionForm.name = `Indemnités de Départ à la Retraite — ${y}`;
+      this.newSessionForm.codeSession = `SESS-RETR-${y}-${m}`;
+      this.newSessionForm.modeCible = 'SELECTION';
+      this.changerModeCibleNouvelleSession('SELECTION');
     } else {
       this.newSessionForm.name = `Solde de Tout Compte — ${nomMois} ${y}`;
       this.newSessionForm.codeSession = `SESS-STC-${y}-${m}`;
@@ -280,15 +308,19 @@ export class GenererBulletinsComponent implements OnInit {
     const isExtra = this.newSessionForm.typeSession === 'EXTRAORDINAIRE';
 
     if (isExtra) {
-      if (!this.newSessionForm.name || this.newSessionForm.name.trim() === '') {
-        if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
-          this.newSessionForm.name = `13ème Mois ${y}`;
-        } else {
-          this.newSessionForm.name = `Solde de Tout Compte — ${nomMois} ${y}`;
-        }
+      let prefix = 'STC';
+      if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
+        prefix = '13EME';
+      } else if (this.newSessionForm.natureExtraordinaire === '14EME_MOIS') {
+        prefix = '14EME';
+      } else if (this.newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
+        prefix = 'CP';
+      } else if (this.newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
+        prefix = 'RETR';
+      } else {
+        prefix = 'STC';
       }
-      const prefix = this.newSessionForm.natureExtraordinaire === '13EME_MOIS' ? '13EME' : 'STC';
-      this.newSessionForm.periode = `${this.newSessionForm.name}`;
+      this.newSessionForm.periode = `${this.newSessionForm.name || prefix}`;
       this.newSessionForm.codeSession = `SESS-${prefix}-${y}-${m}`;
     } else {
       this.newSessionForm.periode = `${nomMois} ${y}`;
@@ -460,6 +492,7 @@ export class GenererBulletinsComponent implements OnInit {
       annee: this.newSessionForm.annee,
       periode: this.newSessionForm.periode,
       typeSession: this.newSessionForm.typeSession,
+      natureSession: this.newSessionForm.typeSession === 'EXTRAORDINAIRE' ? this.newSessionForm.natureExtraordinaire : null,
       statut: 'BROUILLON'
     };
 
@@ -631,17 +664,18 @@ export class GenererBulletinsComponent implements OnInit {
     }
     this.isCalculating = true;
     const body = (employeeIds && employeeIds.length > 0) ? employeeIds : null;
-    this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${this.currentSession.id}/generer`, body).pipe(
-      catchError(err => {
+    this.http.post<any[]>(`${environment.apiUrl}/paie/sessions/${this.currentSession.id}/generer`, body).subscribe({
+      next: (bulletins) => {
+        this.bulletins = (bulletins || []).map(b => this.adapterBulletinFromBackend(b));
+        if (this.bulletins.length > 0) {
+          this.currentSession.statut = 'GENERE';
+        }
+        this.isCalculating = false;
+      },
+      error: (err) => {
         alert('Erreur lors de la génération: ' + (err?.error?.message || err.message));
-        return of([]);
-      })
-    ).subscribe(bulletins => {
-      this.bulletins = (bulletins || []).map(b => this.adapterBulletinFromBackend(b));
-      if (this.bulletins.length > 0) {
-        this.currentSession.statut = 'GENERE';
+        this.isCalculating = false;
       }
-      this.isCalculating = false;
     });
   }
 

@@ -1,13 +1,19 @@
 <div class="list-page">
 
   <!-- HERO HEADER -->
-  <div class="page-header">
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div class="ph-content">
       <div class="ph-icon"><mat-icon>beach_access</mat-icon></div>
       <div>
         <h1>Gestion des Congés & Absences</h1>
         <p>Banque Postale du Burkina Faso — Workflow de validation, soldes et planning prévisionnel</p>
       </div>
+    </div>
+    <div>
+      <button mat-raised-button color="primary" (click)="nouveauConge()"
+        style="background: #0060B3; color: white; font-weight: 700; height: 42px; border-radius: 8px; padding: 0 20px; box-shadow: 0 4px 12px rgba(0,96,179,0.25);">
+        <mat-icon style="margin-right: 6px;">add_circle</mat-icon> + Saisir une demande (GRH / Agent)
+      </button>
     </div>
   </div>
 
@@ -69,7 +75,7 @@
       <mat-icon>event_available</mat-icon> Jours Fériés Légaux ({{ joursFeriesDataSource.data.length }})
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'PARAMETRAGE'" (click)="setTab('PARAMETRAGE')">
-      <mat-icon>tune</mat-icon> ⚙️ Règles & Paramètres
+      <mat-icon>tune</mat-icon> Règles & Paramètres
     </button>
   </div>
 
@@ -183,8 +189,34 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef style="text-align: right;">Actions</th>
             <td mat-cell *matCellDef="let row" style="text-align: right;">
-              <div style="display: inline-flex; gap: 6px; align-items: center;">
-                @if (row.statut === 'EN_ATTENTE' || row.statut === 'En attente') {
+              <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                
+                <!-- Étape 2 : Avis Intérim (Collègue pressenti) -->
+                @if (row.statut === 'EN_ATTENTE_INTERIM' && isInterimaireFor(row)) {
+                  <button mat-flat-button class="action-btn-sm warning" style="background: #f59e0b; color: white;"
+                          (click)="ouvrirModalInterim(row); $event.stopPropagation()" title="Donner votre avis d'intérimaire">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">how_to_reg</mat-icon> Avis Intérim
+                  </button>
+                }
+
+                <!-- Étape 3 : Visa N+1 (Directeur / Chef de pôle) -->
+                @if (row.statut === 'EN_ATTENTE_N1' && isValidateurOrAbove) {
+                  <button mat-flat-button class="action-btn-sm info" style="background: #0284c7; color: white;"
+                          (click)="ouvrirModalVisaN1(row); $event.stopPropagation()" title="Viser la demande (Quorum direction)">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">verified_user</mat-icon> Visa N+1
+                  </button>
+                }
+
+                <!-- Étape 4 : Contrôle & Délivrance Titre DRH -->
+                @if (row.statut === 'EN_ATTENTE_DRH' && isDrhOrAdmin) {
+                  <button mat-flat-button class="action-btn-sm success" style="background: #059669; color: white;"
+                          (click)="ouvrirModalValidationDrh(row); $event.stopPropagation()" title="Contrôle DRH et délivrance Titre de Congé">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">policy</mat-icon> Contrôle DRH
+                  </button>
+                }
+
+                <!-- Fallback compatibilité : EN_ATTENTE legacy -->
+                @if ((row.statut === 'EN_ATTENTE' || row.statut === 'En attente') && canValidate) {
                   <button mat-flat-button color="primary" class="action-btn-sm success"
                           (click)="approuver(row); $event.stopPropagation()" title="Approuver la demande">
                     <mat-icon>check</mat-icon> Valider
@@ -194,6 +226,22 @@
                     <mat-icon>close</mat-icon> Refuser
                   </button>
                 }
+
+                <!-- Étape 5 : Action Sécurité SI (Poste Sensible BCEAO) -->
+                @if (row.statut === 'APPROUVE' && row.posteSensibleBceao && isDsiOrAdmin) {
+                  <button mat-stroked-button class="action-btn-sm"
+                          [style.color]="row.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#dc2626'"
+                          [style.borderColor]="row.statutSi === 'ACCES_SUSPENDU' ? '#fdba74' : '#fca5a5'"
+                          (click)="toggleSecuriteSi(row); $event.stopPropagation()"
+                          [title]="row.statutSi === 'ACCES_SUSPENDU' ? 'Restaurer les accès SI' : 'Suspendre les accès SI (Règle prudentielle BCEAO)'">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 2px; vertical-align: middle;">
+                      {{ row.statutSi === 'ACCES_SUSPENDU' ? 'lock' : 'lock_open' }}
+                    </mat-icon>
+                    {{ row.statutSi === 'ACCES_SUSPENDU' ? 'SI Suspendu' : 'Suspendre SI' }}
+                  </button>
+                }
+
+                <!-- Voir détails -->
                 <button mat-icon-button (click)="voirConge(row); $event.stopPropagation()" title="Voir les détails complets">
                   <mat-icon style="color: #0060B3;">visibility</mat-icon>
                 </button>
@@ -468,8 +516,8 @@
           <ng-container matColumnDef="chomePaye">
             <th mat-header-cell *matHeaderCellDef style="width: 140px;"> Chômé & Payé </th>
             <td mat-cell *matCellDef="let jf">
-              <span style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">
-                ✓ Chômé & Payé
+              <span style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 11px;">
+                Chômé & Payé
               </span>
             </td>
           </ng-container>
@@ -527,7 +575,7 @@
         <!-- 1. Droit annuel par défaut -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
-            🏖️ Droit annuel de base (en jours)
+            Droit annuel conventionnel (en jours)
           </label>
           <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
             Nombre total de jours de congé annuel payé accordé par an (Standard BF : 30 jours).
@@ -542,7 +590,7 @@
         <!-- 2. Acquisition mensuelle -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
-            📈 Taux d'acquisition mensuel (jours / mois)
+            Taux d'acquisition mensuel (jours / mois)
           </label>
           <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
             Fraction de congé cumulée par mois complet de travail effectif (ex: 2.5 j/mois pour 30j/an).
@@ -557,7 +605,7 @@
         <!-- 3. Règle de décompte hebdomadaire (Week-ends) -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; grid-column: span 2;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
-            🗓️ Mode de décompte des congés (Prise en compte des week-ends)
+            Mode de décompte des congés (Prise en compte des week-ends)
           </label>
           <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
             Choisissez comment les jours de repos hebdomadaires sont traités lors du calcul de la durée du congé :
@@ -581,7 +629,7 @@
         <!-- 4. Déduction des jours fériés légaux -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
-            🌴 Prise en compte des Jours Fériés Légaux
+            Prise en compte des Jours Fériés Légaux
           </label>
           <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
             Si un jour férié chômé payé tombe pendant les congés de l'agent :
@@ -595,7 +643,7 @@
         <!-- 5. Plafond de report -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
-            🔄 Plafond de report annuel
+            Plafond de report annuel
           </label>
           <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
             Nombre maximal de jours non pris reportables sur l'exercice N+1 :
@@ -689,14 +737,235 @@
 </ng-template>
 
 <!-- ========================================== -->
-<!-- MODAL : DÉTAILS DE LA DEMANDE DE CONGÉ -->
+<!-- MODAL : ÉTAPE 2 - AVIS INTÉRIMAIRE (COLLÈGUE) -->
+<!-- ========================================== -->
+<ng-template #interimDialogTpl>
+  <div style="padding: 8px 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; color: #b45309;">
+        <mat-icon>how_to_reg</mat-icon>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Avis Intérimaire — Collègue Pressenti</h2>
+      </div>
+      <button mat-icon-button mat-dialog-close><mat-icon>close</mat-icon></button>
+    </div>
+
+    @if (workflowTargetConge) {
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; color: #92400e;">
+          <p style="margin: 0 0 6px; font-weight: 700;">
+            Désignation comme collègue intérimaire par {{ workflowTargetConge.employe }}.
+          </p>
+          <div style="font-size: 12px;">
+            Période : <strong>Du {{ workflowTargetConge.dateDebut | date:'dd/MM/yyyy' }} au {{ workflowTargetConge.dateFin | date:'dd/MM/yyyy' }}</strong> ({{ workflowTargetConge.nbJours }} jour(s) ouvrable(s)).
+          </div>
+        </div>
+
+        <p style="margin: 0; color: #475569; line-height: 1.5;">
+          Conformément à la procédure de la banque, veuillez donner votre accord pour la prise en charge et le suivi des dossiers courants pendant cette absence.
+        </p>
+
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Observations / Remarques éventuelles
+          </label>
+          <textarea [(ngModel)]="workflowCommentaire" rows="3"
+                    placeholder="Ex: Dossiers prioritaires identifiés, passation convenue le..."
+                    style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; box-sizing: border-box;"></textarea>
+        </div>
+      </div>
+    }
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+      <button mat-stroked-button mat-dialog-close [disabled]="isProcessing">Annuler</button>
+      <button mat-stroked-button color="warn" (click)="confirmerAvisInterim(false)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">thumb_down</mat-icon> Décliner l'intérim
+      </button>
+      <button mat-raised-button style="background: #059669; color: white;" (click)="confirmerAvisInterim(true)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">thumb_up</mat-icon> Confirmer l'accord d'intérim
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL : ÉTAPE 3 - VISA N+1 (DIRECTEUR / PÔLE) -->
+<!-- ========================================== -->
+<ng-template #visaN1DialogTpl>
+  <div style="padding: 8px 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; color: #0060B3;">
+        <mat-icon>verified_user</mat-icon>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Visa Hiérarchique N+1 (Directeur / Chef de Pôle)</h2>
+      </div>
+      <button mat-icon-button mat-dialog-close><mat-icon>close</mat-icon></button>
+    </div>
+
+    @if (workflowTargetConge) {
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        
+        <!-- Résumé agent -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 14px; color: #0f172a;">{{ workflowTargetConge.employe }}</strong>
+            <span style="font-weight: 700; color: #0060B3;">{{ workflowTargetConge.nbJours }} jour(s) ouvrable(s)</span>
+          </div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+            Du {{ workflowTargetConge.dateDebut | date:'dd/MM/yyyy' }} au {{ workflowTargetConge.dateFin | date:'dd/MM/yyyy' }}
+          </div>
+        </div>
+
+        <!-- Avis intérim info -->
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; color: #065f46; font-size: 12px;">
+          <strong>Intérim accepté :</strong>
+          {{ workflowTargetConge.interimaire?.prenom }} {{ workflowTargetConge.interimaire?.nom || 'Collègue désigné' }}
+          @if (workflowTargetConge.commentaireInterim) {
+            <span style="display: block; font-style: italic; margin-top: 2px;">« {{ workflowTargetConge.commentaireInterim }} »</span>
+          }
+        </div>
+
+        <!-- Quorum Direction Widget (30% Max Absents) -->
+        <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; background: white;">
+          <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #0284c7;">pie_chart</mat-icon>
+            Règle de Continuité de Service & Quorum Direction (Seuil max : 30% d'absents)
+          </div>
+
+          @if (loadingQuorum) {
+            <div style="font-size: 12px; color: #64748b;">Calcul du taux d'absence en cours...</div>
+          } @else if (workflowDirectionQuorum) {
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+              <span>Effectif Direction : <strong>{{ workflowDirectionQuorum.totalAgents }} agent(s)</strong></span>
+              <span>Absents actuels : <strong>{{ workflowDirectionQuorum.absentsActuels }} agent(s)</strong></span>
+              <span [style.color]="workflowDirectionQuorum.quorumRespecte ? '#059669' : '#dc2626'" style="font-weight: 800;">
+                Taux : {{ workflowDirectionQuorum.tauxAbsencePourcentage }}%
+              </span>
+            </div>
+            
+            @if (workflowDirectionQuorum.quorumRespecte) {
+              <div style="background: #f0fdf4; color: #15803d; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">
+                Quorum de présence respecté (moins de 30% d'effectif absent).
+              </div>
+            } @else {
+              <div style="background: #fef2f2; color: #b91c1c; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">
+                Seuil prudentiel de 30% d'absents dépassé dans ce pôle. Vérifiez la couverture avant accord.
+              </div>
+            }
+          } @else {
+            <div style="font-size: 12px; color: #64748b;">Quorum conforme au niveau pôle.</div>
+          }
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Avis hiérarchique / Consignes de passation
+          </label>
+          <textarea [(ngModel)]="workflowCommentaire" rows="2"
+                    placeholder="Observations pour la DRH..."
+                    style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; box-sizing: border-box;"></textarea>
+        </div>
+      </div>
+    }
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+      <button mat-stroked-button mat-dialog-close [disabled]="isProcessing">Annuler</button>
+      <button mat-stroked-button color="warn" (click)="confirmerVisaN1(false)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">close</mat-icon> Refuser le visa
+      </button>
+      <button mat-raised-button color="primary" style="background: #0060B3; color: white;" (click)="confirmerVisaN1(true)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">check</mat-icon> Accorder le visa N+1
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL : ÉTAPE 4 - CONTRÔLE ET DÉLIVRANCE DRH -->
+<!-- ========================================== -->
+<ng-template #drhDialogTpl>
+  <div style="padding: 8px 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; color: #047857;">
+        <mat-icon>policy</mat-icon>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Contrôle Légal DRH & Délivrance du Titre de Congé</h2>
+      </div>
+      <button mat-icon-button mat-dialog-close><mat-icon>close</mat-icon></button>
+    </div>
+
+    @if (workflowTargetConge) {
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        
+        <!-- Récapitulatif -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 15px; color: #0f172a;">{{ workflowTargetConge.employe }}</strong>
+            <span style="font-size: 14px; font-weight: 800; color: #059669;">{{ workflowTargetConge.nbJours }} jour(s) ouvrables</span>
+          </div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+            Période : Du <strong>{{ workflowTargetConge.dateDebut | date:'dd/MM/yyyy' }}</strong> au <strong>{{ workflowTargetConge.dateFin | date:'dd/MM/yyyy' }}</strong>
+          </div>
+        </div>
+
+        <!-- Traçabilité étapes 2 et 3 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px; color: #166534;">
+            <div><strong>Intérim validé</strong></div>
+            <div style="font-size: 11px; margin-top: 2px;">{{ workflowTargetConge.interimaire?.prenom }} {{ workflowTargetConge.interimaire?.nom || 'Collègue' }}</div>
+          </div>
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 10px; color: #075985;">
+            <div><strong>Visa N+1 accordé</strong></div>
+            <div style="font-size: 11px; margin-top: 2px;">Par {{ workflowTargetConge.visaN1Par || 'Directeur' }}</div>
+          </div>
+        </div>
+
+        <!-- Alerte Poste Sensible BCEAO -->
+        @if (workflowTargetConge.posteSensibleBceao) {
+          <div style="background: #fff7ed; border: 1px solid #ffedd5; border-radius: 8px; padding: 10px 12px; color: #c2410c; display: flex; gap: 10px; align-items: center;">
+            <mat-icon style="font-size: 20px; width: 20px; height: 20px; color: #ea580c;">security</mat-icon>
+            <div style="font-size: 12px;">
+              <strong>Règle Prudentielle BCEAO :</strong> Poste sensible détecté. L'approbation générera une alerte à la Direction Informatique (DSI) pour suspension temporaire des accès informatiques la veille du départ.
+            </div>
+          </div>
+        }
+
+        <!-- Motif / Justificatif -->
+        @if (workflowTargetConge.motif) {
+          <div style="font-size: 12px; color: #475569;">
+            Motif : <em>« {{ workflowTargetConge.motif }} »</em>
+          </div>
+        }
+
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+            Observations DRH / Mentions sur le Titre de Congé
+          </label>
+          <textarea [(ngModel)]="workflowCommentaire" rows="2"
+                    placeholder="Observations éventuelles pour le dossier de paie..."
+                    style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; box-sizing: border-box;"></textarea>
+        </div>
+      </div>
+    }
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+      <button mat-stroked-button mat-dialog-close [disabled]="isProcessing">Annuler</button>
+      <button mat-stroked-button color="warn" (click)="confirmerValidationDrh(false)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">block</mat-icon> Refuser la demande
+      </button>
+      <button mat-raised-button style="background: #059669; color: white;" (click)="confirmerValidationDrh(true)" [disabled]="isProcessing">
+        <mat-icon style="margin-right: 4px;">verified</mat-icon> Approuver & Délivrer Titre de Congé
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL : DÉTAILS DE LA DEMANDE DE CONGÉ & TIMELINE -->
 <!-- ========================================== -->
 <ng-template #viewDialogTpl>
   <div style="padding: 8px 4px;">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0060B3; padding-bottom: 12px; margin-bottom: 16px;">
       <div style="display: flex; align-items: center; gap: 8px; color: #0060B3;">
         <mat-icon>beach_access</mat-icon>
-        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Détail de la Demande de Congé</h2>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Détail de la Demande & Circuit de Validation</h2>
       </div>
       <button mat-icon-button mat-dialog-close><mat-icon>close</mat-icon></button>
     </div>
@@ -716,6 +985,129 @@
             <mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;">{{ statutStyle(selectedConge.statut).icon }}</mat-icon>
             {{ statutStyle(selectedConge.statut).label }}
           </span>
+        </div>
+
+        <!-- Titre de congé officiel si délivré -->
+        @if (selectedConge.numeroTitreConge) {
+          <div style="background: #ecfdf5; border: 2px dashed #059669; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 11px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">Titre de Congé Payé Officiel</div>
+              <div style="font-size: 16px; font-weight: 800; color: #065f46; font-family: monospace; margin-top: 2px;">
+                {{ selectedConge.numeroTitreConge }}
+              </div>
+            </div>
+            <button mat-stroked-button (click)="imprimerAttestation(selectedConge)" style="color: #047857; border-color: #059669;">
+              <mat-icon style="margin-right: 4px;">print</mat-icon> Imprimer Titre
+            </button>
+          </div>
+        }
+
+        <!-- 5-Step Circuit Bancaire Stepper -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: white;">
+          <div style="font-size: 12px; font-weight: 700; color: #0060B3; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">timeline</mat-icon>
+            Circuit d'Approbation Réglementaire (Workflow A — 5 Étapes)
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;">
+            
+            <!-- Étape 1 : Soumission -->
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; background: #0284c7; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">1</div>
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #0f172a;">Soumission de la demande (Agent)</strong>
+                  <span style="color: #64748b; font-size: 11px;">{{ (selectedConge.dateDemande || selectedConge.dateDebut) | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div style="color: #64748b; font-size: 11px;">Préavis respecté. {{ selectedConge.nbJours }} jour(s) sollicités.</div>
+              </div>
+            </div>
+
+            <!-- Étape 2 : Avis Intérim -->
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div [style.background]="selectedConge.statutInterim === 'ACCEPTE' ? '#059669' : (selectedConge.statutInterim === 'REFUSE' ? '#dc2626' : '#f59e0b')"
+                   style="width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">2</div>
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #0f172a;">Avis Intérimaire (Collègue pressenti)</strong>
+                  <span style="font-weight: 700;" [style.color]="selectedConge.statutInterim === 'ACCEPTE' ? '#059669' : (selectedConge.statutInterim === 'REFUSE' ? '#dc2626' : '#d97706')">
+                    {{ selectedConge.statutInterim || 'EN_ATTENTE_INTERIM' }}
+                  </span>
+                </div>
+                <div style="color: #475569; font-size: 11px;">
+                  Collègue : <strong>{{ selectedConge.interimaire?.prenom }} {{ selectedConge.interimaire?.nom || 'Désigné' }}</strong>
+                  @if (selectedConge.commentaireInterim) {
+                    &mdash; <em>« {{ selectedConge.commentaireInterim }} »</em>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 3 : Visa N+1 -->
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div [style.background]="selectedConge.dateVisaN1 ? '#059669' : (selectedConge.statut === 'EN_ATTENTE_N1' ? '#f59e0b' : '#94a3b8')"
+                   style="width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">3</div>
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #0f172a;">Visa N+1 (Directeur / Chef de Pôle)</strong>
+                  <span style="color: #64748b; font-size: 11px;">{{ selectedConge.dateVisaN1 ? (selectedConge.dateVisaN1 | date:'dd/MM/yyyy') : 'En attente' }}</span>
+                </div>
+                <div style="color: #475569; font-size: 11px;">
+                  @if (selectedConge.visaN1Par) {
+                    Visé par : <strong>{{ selectedConge.visaN1Par }}</strong>
+                    @if (selectedConge.commentaireN1) {
+                      &mdash; <em>« {{ selectedConge.commentaireN1 }} »</em>
+                    }
+                  } @else {
+                    <span>Contrôle de quorum (max 30% d'absents) en cours.</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 4 : Contrôle DRH & Titre de Congé -->
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div [style.background]="selectedConge.statut === 'APPROUVE' ? '#059669' : (selectedConge.statut === 'REJETE' ? '#dc2626' : (selectedConge.statut === 'EN_ATTENTE_DRH' ? '#f59e0b' : '#94a3b8'))"
+                   style="width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">4</div>
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #0f172a;">Contrôle Réglementaire & Décision DRH</strong>
+                  <span style="color: #64748b; font-size: 11px;">{{ selectedConge.dateVisaDrh ? (selectedConge.dateVisaDrh | date:'dd/MM/yyyy') : 'En attente' }}</span>
+                </div>
+                <div style="color: #475569; font-size: 11px;">
+                  @if (selectedConge.statut === 'APPROUVE') {
+                    <span style="color: #059669; font-weight: 700;">Titre de congé délivré par {{ selectedConge.visaDrhPar || selectedConge.validePar || 'DRH' }}</span>
+                  } @else if (selectedConge.statut === 'REJETE') {
+                    <span style="color: #dc2626; font-weight: 700;">Refus : {{ selectedConge.motifRefus }}</span>
+                  } @else {
+                    <span>Vérification des droits acquis et conformité légale.</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 5 : Sécurité Informatique (BCEAO) -->
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div [style.background]="selectedConge.posteSensibleBceao ? (selectedConge.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#0284c7') : '#94a3b8'"
+                   style="width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">5</div>
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #0f172a;">Sécurité SI — Règle Prudentielle BCEAO</strong>
+                  <span style="font-weight: 700;" [style.color]="selectedConge.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#64748b'">
+                    {{ selectedConge.posteSensibleBceao ? selectedConge.statutSi : 'NON REQUIS' }}
+                  </span>
+                </div>
+                <div style="color: #475569; font-size: 11px;">
+                  @if (selectedConge.posteSensibleBceao) {
+                    <span>Poste sensible : suspension des habilitations informatiques la veille du départ requise.</span>
+                  } @else {
+                    <span>Poste non sensible aux risques d'opérations bancaires directes.</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <!-- Détails de la période -->
@@ -762,13 +1154,6 @@
           </div>
         }
 
-        <!-- Traçabilité validation -->
-        @if (selectedConge.dateValidation) {
-          <div style="font-size: 11px; color: #64748b; text-align: right;">
-            Traité le {{ selectedConge.dateValidation | date:'dd/MM/yyyy' }} par <strong>{{ selectedConge.validePar || 'DRH' }}</strong>
-          </div>
-        }
-
       </div>
     }
 
@@ -780,7 +1165,7 @@
       </div>
 
       <div style="display: flex; gap: 8px;">
-        @if (selectedConge?.statut === 'EN_ATTENTE' || selectedConge?.statut === 'En attente') {
+        @if (canValidate && (selectedConge?.statut === 'EN_ATTENTE' || selectedConge?.statut === 'En attente')) {
           <button mat-stroked-button color="warn" (click)="dialog.closeAll(); ouvrirModalRejet(selectedConge!)">
             Refuser
           </button>

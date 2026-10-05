@@ -1,22 +1,36 @@
 <div class="section-page">
 
   <div class="sec-breadcrumb">
-    <span class="link" (click)="cancel()">Congés & Absences</span>
+    <span class="link" (click)="cancel()">Congés &amp; Absences</span>
     <span class="sep">›</span>
     <span class="current">Nouvelle demande</span>
   </div>
 
   <mat-card class="section-card">
     <mat-card-header>
-      <div mat-card-avatar class="header-avatar" style="background: linear-gradient(135deg, #0060B3, #0284c7); color: white; display: flex; align-items: center; justify-content: center; border-radius: 10px; width: 44px; height: 44px;">
-        <mat-icon>beach_access</mat-icon>
+      <div mat-card-avatar class="header-avatar" style="background: linear-gradient(135deg, #0060B3, #0284c7); color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; width: 42px; height: 42px;">
+        <mat-icon>event_available</mat-icon>
       </div>
-      <mat-card-title style="font-size: 18px; font-weight: 700; color: #0060B3;">Demande de Congé / Absence</mat-card-title>
-      <mat-card-subtitle>Banque Postale du Burkina Faso — Décompte automatique et contrôle des droits</mat-card-subtitle>
+      <mat-card-title style="font-size: 17px; font-weight: 700; color: #0060B3;">Demande de Congé / Absence</mat-card-title>
+      <mat-card-subtitle>Banque Postale du Burkina Faso — Calcul automatique du départ, de la durée et du retour</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content style="padding-top: 16px;">
       <form [formGroup]="form">
+
+        <!-- OPTION DÉLÉGATION DRH / AGENT INDISPONIBLE -->
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <mat-icon style="color: #16a34a; font-size: 24px; width: 24px; height: 24px;">medical_services</mat-icon>
+            <div>
+              <div style="font-weight: 700; color: #166534; font-size: 13px;">Saisie par délégation DRH (Agent indisponible / Maladie / Accident)</div>
+              <div style="font-size: 11.5px; color: #15803d; margin-top: 2px;">
+                Cochez cette option si l'employé est indisponible (notification verbale/SMS, certificat médical sous 72h).
+              </div>
+            </div>
+          </div>
+          <mat-slide-toggle formControlName="saisieParDrh" color="primary"></mat-slide-toggle>
+        </div>
 
         <!-- 1. IDENTIFICATION AGENT -->
         <p class="form-section-label">1. Agent concerné</p>
@@ -65,7 +79,7 @@
         }
 
         <!-- 2. TYPE & PÉRIODE DU CONGÉ -->
-        <p class="form-section-label" style="margin-top: 20px;">2. Type & Période du congé</p>
+        <p class="form-section-label" style="margin-top: 20px;">2. Type &amp; Période du congé</p>
         <div class="form-grid-2">
 
           <mat-form-field appearance="outline" class="span-2">
@@ -80,38 +94,129 @@
             </mat-select>
           </mat-form-field>
 
+          <!-- DATE DE DÉPART (INTERDICTION DU DIMANCHE) -->
           <mat-form-field appearance="outline">
-            <mat-label>Date de début *</mat-label>
-            <input matInput [matDatepicker]="startPicker" formControlName="dateDebut" placeholder="JJ/MM/AAAA">
+            <mat-label>Date de départ souhaitée *</mat-label>
+            <input matInput [matDatepicker]="startPicker" [matDatepickerFilter]="dateFilter" formControlName="dateDebut" placeholder="JJ/MM/AAAA">
             <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
             <mat-datepicker #startPicker></mat-datepicker>
+            <mat-hint>On ne commence pas un congé un dimanche (repos dominical obligatoire).</mat-hint>
           </mat-form-field>
 
+          <!-- NOMBRE DE JOURS DEMANDÉS -->
           <mat-form-field appearance="outline">
-            <mat-label>Date de fin *</mat-label>
-            <input matInput [matDatepicker]="endPicker" formControlName="dateFin" placeholder="JJ/MM/AAAA">
-            <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
-            <mat-datepicker #endPicker></mat-datepicker>
+            <mat-label>Nombre de jours ouvrables souhaités *</mat-label>
+            <input matInput type="number" min="1" max="90" formControlName="dureeDemandee" placeholder="Ex: 15">
+            <span matSuffix style="font-weight: 700; color: #64748b; margin-right: 8px;">jours</span>
+            <mat-hint>Le système calcule automatiquement la fin et la date exacte de retour.</mat-hint>
           </mat-form-field>
 
+          <!-- RACCOURCIS DE SÉLECTION RAPIDE DE DURÉE -->
+          <div class="span-2 quick-duration-box">
+            <span class="quick-title">Choix rapide de durée :</span>
+            <div class="quick-chips">
+              @for (d of dureesRapides; track d) {
+                <button type="button" class="btn-chip" [class.selected]="form.get('dureeDemandee')?.value === d" (click)="choisirDureeRapide(d)">
+                  {{ d }} jours
+                </button>
+              }
+            </div>
+          </div>
+
+        </div>
+
+        <!-- CARTOUCHE DE SYNTHÈSE DU DÉPART ET DU RETOUR CALCULÉ PAR LE SYSTÈME -->
+        <div class="planning-projection-card">
+          <div class="projection-header">
+            <mat-icon style="color: #0060B3; font-size: 20px; width: 20px; height: 20px;">calendar_month</mat-icon>
+            <span class="projection-title">Projection calculée par le système (Règle conventionnelle BPBF)</span>
+          </div>
+
+          <div class="projection-grid">
+            <div class="projection-item start">
+              <span class="proj-badge">1. DÉPART EN CONGÉ</span>
+              <span class="proj-date">{{ form.get('dateDebut')?.value | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
+              <span class="proj-note">Premier jour d'absence (Ouvrable)</span>
+            </div>
+
+            <div class="projection-item end">
+              <span class="proj-badge">2. DERNIER JOUR DE CONGÉ</span>
+              <span class="proj-date">{{ form.get('dateFin')?.value | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
+              <span class="proj-note">Fin officielle du congé</span>
+            </div>
+
+            <div class="projection-item return highlight">
+              <span class="proj-badge return-badge">3. DATE DE REPRISE (RETOUR)</span>
+              <span class="proj-date return-date">{{ dateReprisePrevue | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
+              <span class="proj-note return-note">Reprise effective du service au bureau à 07h30</span>
+            </div>
+          </div>
+
+          <div class="projection-footer">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #0284c7;">verified</mat-icon>
+            <span>
+              Décompte certifié : <strong>{{ nbJours }} jour(s) ouvrable(s)</strong> décomptés. Les dimanches, week-ends et jours fériés légaux sont automatiquement exclus du décompte.
+            </span>
+          </div>
         </div>
 
         <!-- BANDEAU CALCUL DURÉE ET SIMULATION SOLDE -->
         @if (nbJours > 0) {
-          <div class="simulation-banner" [class.warning]="isSoldeInsuffisant">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <mat-icon [style.color]="isSoldeInsuffisant ? '#dc2626' : '#059669'">
-                {{ isSoldeInsuffisant ? 'warning' : 'check_circle' }}
+          <div class="simulation-banner" 
+               [class.warning]="isSoldeInsuffisant" 
+               [class.has-depassement]="hasDepassementQuota && !isSoldeInsuffisant"
+               [class.non-deductible]="!isTypeTotalementDeductible && !hasDepassementQuota">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <mat-icon [style.color]="isSoldeInsuffisant ? '#dc2626' : (hasDepassementQuota ? '#ea580c' : (isTypeTotalementDeductible ? '#059669' : '#0284c7'))">
+                {{ isSoldeInsuffisant ? 'warning' : (hasDepassementQuota ? 'error_outline' : (isTypeTotalementDeductible ? 'check_circle' : 'verified_user')) }}
               </mat-icon>
-              <div>
-                <div style="font-size: 14px; font-weight: 700; color: #0f172a;">
-                  Durée calculée : <strong>{{ nbJours }} jour(s) ouvrable(s)</strong> (hors week-ends et jours fériés légaux)
+              <div style="flex-grow: 1;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <span>Durée retenue : <strong>{{ nbJours }} jour(s) ouvrable(s)</strong></span>
+                  @if (isTypeMaladie) {
+                    <span style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 2px 10px; border-radius: 4px; border: 1px solid #bae6fd;">
+                      Selon Prescription Médicale (Certificat requis sous 72h)
+                    </span>
+                  } @else if (!isTypeTotalementDeductible && plafondNonDeductible > 0) {
+                    <span style="font-size: 11px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 4px;">
+                      Quota statutaire non déductible : {{ plafondNonDeductible }} jour(s)
+                    </span>
+                  }
                 </div>
+
                 @if (selectedEmployeeSolde) {
-                  <div style="font-size: 12px; color: #475569; margin-top: 2px;">
-                    Solde après validation : <strong>{{ soldeApresPrise }} jour(s)</strong>
-                    @if (isSoldeInsuffisant) {
-                      <span style="color: #dc2626; font-weight: 700;"> — Attention : La durée demandée dépasse le solde disponible !</span>
+                  <div style="font-size: 12px; margin-top: 4px; line-height: 1.5;">
+                    @if (isTypeTotalementDeductible) {
+                      <span style="color: #475569;">
+                        Congé annuel ordinaire &mdash; Solde après validation : <strong>{{ soldeApresPrise }} jour(s)</strong>
+                      </span>
+                      @if (isSoldeInsuffisant) {
+                        <span style="color: #dc2626; font-weight: 700;"> — Attention : La durée demandée dépasse le solde disponible !</span>
+                      }
+                    } @else if (isTypeMaladie) {
+                      <div style="color: #0369a1;">
+                        <strong>Arrêt de travail / Congé de maladie :</strong>
+                        La durée de <strong>{{ nbJours }} jour(s)</strong> dépend exclusivement de la prescription du médecin.
+                        Ce repos médical est pris en charge sans déduction sur vos congés annuels payés.
+                        &mdash; Solde annuel disponible préservé : <strong>{{ selectedEmployeeSolde.soldeRestant }} jour(s)</strong>.
+                      </div>
+                    } @else if (hasDepassementQuota) {
+                      <div style="color: #9a3412;">
+                        <strong>Plafond statutaire dépassé :</strong> {{ plafondNonDeductible }} jour(s) sont couverts au titre de {{ selectedTypeName }} (non déductibles), 
+                        mais <strong>{{ joursExcedentairesDeductibles }} jour(s) excédentaire(s)</strong> sont imputés sur le solde de congés annuels.
+                        <div style="margin-top: 2px;">
+                          Solde annuel après validation : <strong>{{ soldeApresPrise }} jour(s)</strong>
+                          @if (isSoldeInsuffisant) {
+                            <span style="color: #dc2626; font-weight: 700;"> — Attention : Les jours excédentaires dépassent votre solde de congé annuel !</span>
+                          }
+                        </div>
+                      </div>
+                    } @else {
+                      <div style="color: #0369a1;">
+                        <strong>Type réglementaire spécial ({{ selectedTypeName }}) :</strong> Entièrement couvert par le quota légal/conventionnel ({{ nbJours }} j sur {{ plafondNonDeductible }} j max).
+                        Ce congé <strong>n'affecte pas</strong> le solde de congés annuels payés.
+                        &mdash; Solde annuel disponible préservé : <strong>{{ selectedEmployeeSolde.soldeRestant }} jour(s)</strong>.
+                      </div>
                     }
                   </div>
                 }
@@ -120,15 +225,56 @@
           </div>
         }
 
-        <!-- 3. MOTIF & JUSTIFICATIF -->
-        <p class="form-section-label" style="margin-top: 20px;">3. Motif & Justificatif</p>
+        <!-- ALERTE PRÉAVIS 15 JOURS -->
+        @if (form.get('dateDebut')?.value && isPreavisInsuffisant && !form.get('saisieParDrh')?.value) {
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin: 12px 0; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #b45309;">
+            <mat-icon style="color: #d97706; font-size: 20px; width: 20px; height: 20px;">info</mat-icon>
+            <div>
+              <strong>Spécificité réglementaire BF :</strong> La date de départ est dans <strong>{{ preavisJours }} jour(s)</strong>. Le délai réglementaire conseillé pour les congés payés annuels est de <strong>15 jours de préavis</strong> pour permettre la validation N+1 et le contrôle DRH.
+            </div>
+          </div>
+        }
+
+        <!-- 3. ORGANISATION DE L'INTÉRIM & SÉCURITÉ BCEAO -->
+        <p class="form-section-label" style="margin-top: 20px;">3. Organisation de l'Intérim &amp; Spécificités Réglementaires (BCEAO)</p>
+        <div class="form-grid-2">
+
+          <!-- Désignation du collègue intérimaire -->
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Désigner le collègue assurant l'intérim (Facultatif si réorganisation directe au guichet)</mat-label>
+            <mat-select formControlName="interimaireId">
+              <mat-option [value]="null">— Aucun intérimaire ou réorganisation directe en agence —</mat-option>
+              @for (col of availableInterimaires; track col.id) {
+                <mat-option [value]="col.id">
+                  {{ col.prenom }} {{ col.nom }} ({{ col.matricule }}) — {{ col.poste || col.fonction || 'Collaborateur' }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-hint>Si désigné, le collègue pressenti recevra une notification pour valider la prise en charge sous 24h.</mat-hint>
+          </mat-form-field>
+
+          <!-- Checkbox Poste Sensible BCEAO -->
+          <div class="span-2" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+            <div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 13px;">Poste sensible (Règle Prudentielle BCEAO)</div>
+              <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                Exige la suspension temporaire des accès et habilitations informatiques par la DSI la veille du départ en congé.
+              </div>
+            </div>
+            <mat-slide-toggle formControlName="posteSensibleBceao" color="primary"></mat-slide-toggle>
+          </div>
+
+        </div>
+
+        <!-- 4. MOTIF & JUSTIFICATIF -->
+        <p class="form-section-label" style="margin-top: 20px;">4. Motif &amp; Justificatif</p>
         <div class="form-grid-1">
 
           <mat-form-field appearance="outline">
-            <mat-label>Motif de la demande *</mat-label>
-            <textarea matInput formControlName="motif" rows="3"
-                      placeholder="Décrivez le motif de votre départ en congé ou absence…"></textarea>
-            <mat-error>Le motif est requis (au moins 5 caractères).</mat-error>
+            <mat-label>Motif de la demande</mat-label>
+            <textarea matInput formControlName="motif" rows="2"
+                      placeholder="Ex: Congé annuel payé légal, Convenance personnelle, Repos..."></textarea>
+            <mat-hint>Facultatif : Si laissé vide, le motif sera automatiquement renseigné par le système.</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -142,17 +288,17 @@
       </form>
     </mat-card-content>
 
-    <mat-card-actions style="padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+    <mat-card-actions style="padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
       <button mat-stroked-button (click)="cancel()">Annuler</button>
       <button mat-raised-button color="primary" (click)="save()"
-              [disabled]="saving || form.invalid"
-              style="background: #0060B3; color: white; font-weight: 700; padding: 0 24px; height: 42px; border-radius: 8px;">
+              [disabled]="saving"
+              style="background: #0060B3; color: white; font-weight: 700; padding: 0 28px; height: 42px; border-radius: 4px;">
         @if (saving) {
           <mat-icon class="spin-icon">sync</mat-icon>
         } @else {
-          <mat-icon style="margin-right: 4px;">send</mat-icon>
+          <mat-icon style="margin-right: 6px;">send</mat-icon>
         }
-        <span>{{ saving ? 'Envoi en cours...' : 'Soumettre la Demande' }}</span>
+        <span>{{ saving ? 'Enregistrement en cours...' : 'Soumettre la Demande' }}</span>
       </button>
     </mat-card-actions>
   </mat-card>

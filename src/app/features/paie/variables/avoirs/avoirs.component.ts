@@ -152,13 +152,9 @@ export class AvoirsComponent implements OnInit {
   loadAvoirs(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.avoirService.getAll().pipe(
-      catchError(err => {
-        this.errorMessage = 'Erreur lors du chargement des rappels depuis PostgreSQL.';
-        return of([]);
-      })
-    ).subscribe(data => {
-      if (data && data.length > 0) {
+    this.avoirService.getAll().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
         this.avoirsList = data.map((a: any) => {
           const montantTotal = Number(a.amount || a.montant || 0);
           const restant = Number(a.montantRestant !== undefined ? a.montantRestant : montantTotal);
@@ -195,8 +191,15 @@ export class AvoirsComponent implements OnInit {
       }
       this.applyFilter();
       this.loading = false;
-    });
-  }
+    },
+    error: (err) => {
+      this.errorMessage = 'Erreur lors du chargement des rappels depuis PostgreSQL.';
+      this.loading = false;
+      this.avoirsList = [];
+      this.applyFilter();
+    }
+  });
+}
 
   applyFilter(): void {
     let list = [...this.avoirsList];

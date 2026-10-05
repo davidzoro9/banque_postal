@@ -16,10 +16,16 @@ import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
 import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
 import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.component';
+import { CalculatriceSimulationComponent } from './simulation/calculatrice-simulation.component';
 
 const routes: Routes = [
   { path: '', component: PaieOverviewComponent },
   
+  // 0. Calculatrice & Simulation de Rémunération Pré-embauche
+  { path: 'simulateur', component: CalculatriceSimulationComponent },
+  { path: 'calculatrice', component: CalculatriceSimulationComponent },
+  { path: 'simulation', redirectTo: 'simulateur', pathMatch: 'full' },
+
   // États de synthèse (sous-menus individuels)
   { path: 'etats-synthese', component: EtatsSyntheseComponent },
   { path: 'etats-synthese/:code', component: EtatsSyntheseComponent },

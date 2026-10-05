@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import {
@@ -265,12 +265,14 @@ export class EmployeeService {
 
   refresh(): void {
     this.http.get<any[]>(`${environment.apiUrl}/employes/all`).pipe(
-      map(list => list.map(item => this.toFrontend(item))),
-      catchError(() => of([]))
+      map(list => list.map(item => this.toFrontend(item)))
     ).subscribe({
       next: (list) => {
         this.employees = list;
         this.employeesSubject.next(this.employees);
+      },
+      error: (err) => {
+        console.error('[EmployeeService] Erreur lors du chargement des employés:', err);
       }
     });
   }
@@ -282,10 +284,10 @@ export class EmployeeService {
         this.employees = list;
         this.employeesSubject.next(this.employees);
       }),
-      catchError(() => {
+      catchError((err) => {
         this.employees = [];
         this.employeesSubject.next([]);
-        return of([]);
+        return throwError(() => err);
       })
     );
   }

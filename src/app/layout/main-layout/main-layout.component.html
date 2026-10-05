@@ -39,12 +39,30 @@
   <mat-sidenav-container class="sidenav-container" autosize>
 
     <!-- Drawer gauche : menu du module actif -->
-    <mat-sidenav #leftSidenav mode="side" opened class="left-sidenav">
+    <mat-sidenav #leftSidenav mode="side" opened class="left-sidenav"
+                 (mouseenter)="onDrawerMouseEnter()"
+                 (mouseleave)="onDrawerMouseLeave()">
       <app-nav-drawer></app-nav-drawer>
     </mat-sidenav>
 
+    <!-- Zone capteur pleine hauteur sur le bord gauche : réapparition automatique dès qu'on s'approche du bord gauche -->
+    @if (!(moduleNav.drawerOpen$ | async)) {
+      <div class="left-edge-hover-sensor" 
+           (mouseenter)="openDrawerImmediate()" 
+           (mousemove)="openDrawerImmediate()"
+           (click)="openDrawerImmediate()"
+           matTooltip="Déplier le menu">
+        <div class="sensor-indicator">
+          <mat-icon>chevron_right</mat-icon>
+        </div>
+      </div>
+    }
+
     <!-- Contenu principal -->
-    <mat-sidenav-content class="main-content">
+    <mat-sidenav-content class="main-content"
+                         (mouseenter)="onContentMouseEnter()"
+                         (mousemove)="onContentMouseMove($event)"
+                         (mouseleave)="onContentMouseLeave($event)">
       <div class="page-wrapper">
         <router-outlet></router-outlet>
       </div>

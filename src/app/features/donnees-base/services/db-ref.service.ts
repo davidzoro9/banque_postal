@@ -27,9 +27,13 @@ export interface RefItem {
   directeurId?: string;
   directeurLibelle?: string;
   categorieId?:   string;   // utilisé par Grille salariale
+  categorieCode?: string;
   categorieLibelle?: string;
   echelonId?:     string;   // utilisé par Grille salariale
+  echelonCode?:   string;
+  echelonLibelle?: string;
   gradeId?:       string;   // utilisé par Grille salariale
+  gradeCode?:     string;
   gradeLibelle?: string;
   echelle?:       string;   // utilisé par Grille salariale
   echellon?:      string;   // utilisé par Grille salariale
@@ -182,37 +186,60 @@ const BACKEND_MAP: Record<string, {
   'direction': {
     segment: 'directions',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name || dto.libelle, name: dto.name || dto.libelle, description: dto.description || '', actif: true,
                        parentDirectionId: dto.parentDirectionId ? String(dto.parentDirectionId) : undefined,
                        parentDirectionLibelle: dto.parentDirectionLibelle || '',
                        departementId: dto.departmentId ? String(dto.departmentId) : undefined,
                        departementLibelle: dto.departmentLibelle || '',
                        departmentLibelle: dto.departmentLibelle || '' ,
                        agenceId: dto.agenceId ? String(dto.agenceId) : undefined,
-                       agenceLibelle: dto.agenceLibelle || ''
+                       agenceLibelle: dto.agenceLibelle || '',
+                       directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
+                       directeurLibelle: dto.directeurLibelle || ''
                      }),
-    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+    toBack:  item => ({ code: item.code, name: item.libelle || item.name, description: item.description,
                         parentDirectionId: item.parentDirectionId ? Number(item.parentDirectionId) : null,
-                        departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
-    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                        departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null,
+                        directeurId: item.directeurId ? Number(item.directeurId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle || item.name, description: item.description,
                              parentDirectionId: item.parentDirectionId ? Number(item.parentDirectionId) : null,
-                             departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null }),
+                             departmentId: item.departementId ? Number(item.departementId) : null, agenceId: item.agenceId ? Number(item.agenceId) : null,
+                             directeurId: item.directeurId ? Number(item.directeurId) : null }),
+  },
+  'departement': {
+    segment: 'departments',
+    getAllPath: '',
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name || dto.libelle, name: dto.name || dto.libelle, description: dto.description || '', actif: true,
+                       directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
+                       directeurLibelle: dto.directeurLibelle || '',
+                       directionId: dto.directionId ? String(dto.directionId) : undefined,
+                       directionLibelle: dto.directionLibelle || '' }),
+    toBack:  item => ({ code: item.code, name: item.libelle || item.name, description: item.description,
+                        directeurId: item.directeurId ? Number(item.directeurId) : null,
+                        directionId: item.directionId ? Number(item.directionId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle || item.name, description: item.description,
+                             directeurId: item.directeurId ? Number(item.directeurId) : null,
+                             directionId: item.directionId ? Number(item.directionId) : null }),
   },
   'service': {
     segment: 'services',
     getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
+    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name || dto.libelle, name: dto.name || dto.libelle, description: dto.description || '', actif: true,
                        directionId:   dto.directionId   ? String(dto.directionId)   : undefined,
                        directionLibelle: dto.directionLibelle || '',
                        departementId: dto.departmentId  ? String(dto.departmentId)  : undefined,
                        departementLibelle: dto.departmentLibelle || '',
-                       departmentLibelle: dto.departmentLibelle || '' }),
-    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
+                       departmentLibelle: dto.departmentLibelle || '',
+                       directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
+                       directeurLibelle: dto.directeurLibelle || '' }),
+    toBack:  item => ({ code: item.code, name: item.libelle || item.name, description: item.description,
                         directionId:  item.directionId   ? Number(item.directionId)   : null,
-                        departmentId: item.departementId ? Number(item.departementId) : null }),
-    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
+                        departmentId: item.departementId ? Number(item.departementId) : null,
+                        directeurId: item.directeurId ? Number(item.directeurId) : null }),
+    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle || item.name, description: item.description,
                              directionId:  item.directionId   ? Number(item.directionId)   : null,
-                             departmentId: item.departementId ? Number(item.departementId) : null }),
+                             departmentId: item.departementId ? Number(item.departementId) : null,
+                             directeurId: item.directeurId ? Number(item.directeurId) : null }),
   },
   'profil': {
     segment: 'ref-data/profil',
@@ -481,21 +508,6 @@ const BACKEND_MAP: Record<string, {
     toBackUpdate: item => ({ id: item.id, code: item.code, name: item.libelle }),
   },
 
-  'departement': {
-    segment: 'departments',
-    getAllPath: '',
-    toFront: dto => ({ id: String(dto.id), code: dto.code, libelle: dto.name, description: dto.description || '', actif: true,
-                       directionId: dto.directionId ? String(dto.directionId) : undefined,
-                       directionLibelle: dto.directionLibelle || '',
-                       directeurId: dto.directeurId ? String(dto.directeurId) : undefined,
-                       directeurLibelle: dto.directeurLibelle || '' }),
-    toBack:  item => ({ code: item.code, name: item.libelle, description: item.description,
-                        directionId: item.directionId ? Number(item.directionId) : null,
-                        directeurId: item.directeurId ? Number(item.directeurId) : null }),
-    toBackUpdate: item => ({ id: Number(item.id), code: item.code, name: item.libelle, description: item.description,
-                             directionId: item.directionId ? Number(item.directionId) : null,
-                             directeurId: item.directeurId ? Number(item.directeurId) : null }),
-  },
   'type-retenue-employe': {
     segment: 'type-retenue',
     getAllPath: '',
@@ -642,7 +654,7 @@ export class DbRefService {
         catchError(err => {
           console.warn(`[DbRefService] Backend error for "${type}":`, err.message);
           this.getSubject(type).next([]);
-          return of([]);
+          return throwError(() => err);
         })
       );
     }
@@ -662,7 +674,7 @@ export class DbRefService {
       catchError(err => {
         console.warn(`[DbRefService] Backend error for generic "${type}":`, err.message);
         this.getSubject(type).next([]);
-        return of([]);
+        return throwError(() => err);
       })
     );
   }

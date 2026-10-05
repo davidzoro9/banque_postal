@@ -877,6 +877,16 @@
 
       @if (type === 'departement') {
         <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Directeur / Responsable du département</mat-label>
+          <mat-select formControlName="directeurId" placeholder="Sélectionner le directeur">
+            <mat-option [value]="null">-- Aucun directeur désigné --</mat-option>
+            @for (d of directeursList; track d.id) {
+              <mat-option [value]="d.id">{{ d.libelle }} ({{ d.description }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Direction de rattachement</mat-label>
           <mat-select formControlName="directionId" placeholder="Sélectionner la direction de rattachement">
             <mat-option [value]="null">Direction Générale Adjointe (DGA) [Par défaut]</mat-option>
@@ -889,6 +899,16 @@
       }
 
       @if (type === 'direction') {
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Directeur / Responsable de la direction</mat-label>
+          <mat-select formControlName="directeurId" placeholder="Sélectionner le directeur">
+            <mat-option [value]="null">-- Aucun directeur désigné --</mat-option>
+            @for (d of directeursList; track d.id) {
+              <mat-option [value]="d.id">{{ d.libelle }} ({{ d.description }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Direction parente / Rattachement hiérarchique</mat-label>
           <mat-select formControlName="parentDirectionId" placeholder="Sélectionner la direction parente">
@@ -980,7 +1000,7 @@
             <mat-error>La Direction de rattachement est obligatoire</mat-error>
           }
           @if (formGroup.get('directionId')?.value) {
-            <mat-hint style="color: #0060B3; font-weight: 500;">✓ Rattaché à la direction sélectionnée</mat-hint>
+            <mat-hint style="color: #0060B3; font-weight: 500;">Rattaché à la direction sélectionnée</mat-hint>
           }
         </mat-form-field>
       </div>

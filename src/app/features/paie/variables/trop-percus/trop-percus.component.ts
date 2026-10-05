@@ -169,15 +169,18 @@ export class TropPercusComponent implements OnInit {
   loadTropPercus(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.tropPercuService.getAll().pipe(
-      catchError(err => {
+    this.tropPercuService.getAll().subscribe({
+      next: (data) => {
+        this.tropPercusList = data || [];
+        this.applyFilter();
+        this.loading = false;
+      },
+      error: (err) => {
         this.errorMessage = 'Erreur lors du chargement des trop-perçus depuis PostgreSQL.';
-        return of([]);
-      })
-    ).subscribe(data => {
-      this.tropPercusList = data || [];
-      this.applyFilter();
-      this.loading = false;
+        this.tropPercusList = [];
+        this.applyFilter();
+        this.loading = false;
+      }
     });
   }
 

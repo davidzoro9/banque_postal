@@ -1,0 +1,439 @@
+<div class="simulation-container">
+
+  <!-- EN-TÊTE INSTITUTIONNEL BPBF -->
+  <div class="header-banner">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>calculate</mat-icon>
+      </div>
+      <div>
+        <h1>Simulateur de Rémunération &amp; Pré-embauche</h1>
+        <p>Aide à la décision RH : Déterminez le sursalaire optimal à proposer ou simulez le salaire net prévisionnel selon la convention BPBF.</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-print" (click)="imprimerFiche()">
+        <mat-icon>print</mat-icon> Imprimer la fiche
+      </button>
+    </div>
+  </div>
+
+  <!-- GRILLE PRINCIPALE (SAISIE À GAUCHE + RÉSULTATS À DROITE) -->
+  <div class="main-grid">
+
+    <!-- COLONNE GAUCHE : PARAMÈTRES DE SAISIE -->
+    <div class="params-column">
+      <mat-card class="box-card">
+        <mat-card-header>
+          <div class="card-title-group">
+            <span class="card-main-title">Paramètres de la simulation</span>
+            <span class="card-main-subtitle">Prétentions salariales, classification conventionnelle et charges fiscales</span>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content class="form-body">
+          
+          <!-- 1. OBJECTIF FINANCIER & MODE DE CALCUL -->
+          <div class="form-section-title first-section">
+            <span>1. Mode de calcul</span>
+          </div>
+
+          <!-- SÉLECTEUR SEGMENTÉ BANCAIRE (ZÉRO EMOJI) -->
+          <div class="segmented-control">
+            <button type="button" class="segment-btn" [class.active]="mode === 'NET_VERS_SURSALAIRE'" (click)="changerMode('NET_VERS_SURSALAIRE')">
+              <span class="segment-title">Net cible demandé</span>
+              <span class="segment-desc">Détermination du sursalaire</span>
+            </button>
+            <button type="button" class="segment-btn" [class.active]="mode === 'SURSALAIRE_VERS_NET'" (click)="changerMode('SURSALAIRE_VERS_NET')">
+              <span class="segment-title">Sursalaire proposé</span>
+              <span class="segment-desc">Simulation du salaire net</span>
+            </button>
+          </div>
+
+          <!-- CHAMP DU MONTANT -->
+          <div *ngIf="mode === 'NET_VERS_SURSALAIRE'" class="amount-field-wrapper">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Salaire net mensuel souhaité</mat-label>
+              <input matInput type="number" [(ngModel)]="netCibleSouhaite" (ngModelChange)="lancerSimulation()" placeholder="Ex: 350000" min="50000" step="10000">
+              <span matSuffix class="field-currency">FCFA</span>
+              <mat-hint>Montant net cible attendu sur le compte du collaborateur</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <div *ngIf="mode === 'SURSALAIRE_VERS_NET'" class="amount-field-wrapper">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Sursalaire mensuel brut proposé</mat-label>
+              <input matInput type="number" [(ngModel)]="surSalairePropose" (ngModelChange)="lancerSimulation()" placeholder="Ex: 50000" min="0" step="5000">
+              <span matSuffix class="field-currency">FCFA</span>
+              <mat-hint>Complément brut contractuel en sus de la grille conventionnelle</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- 2. POSITIONNEMENT CONVENTIONNEL BPBF -->
+          <div class="form-section-title">
+            <span>2. Positionnement conventionnel (Grille BPBF)</span>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Catégorie / Classe Professionnelle</mat-label>
+              <mat-select [(ngModel)]="selectedCategorie" (selectionChange)="onClassificationChange()">
+                <mat-optgroup label="GROUPE I : Agents &amp; Employés">
+                  <ng-container *ngFor="let c of categories">
+                    <mat-option *ngIf="c.groupe === 'GROUPE I'" [value]="c.code">
+                      {{ c.libelle }}
+                    </mat-option>
+                  </ng-container>
+                </mat-optgroup>
+                <mat-optgroup label="GROUPE II : Maîtrise &amp; Cadres Moyens">
+                  <ng-container *ngFor="let c of categories">
+                    <mat-option *ngIf="c.groupe === 'GROUPE II'" [value]="c.code">
+                      {{ c.libelle }}
+                    </mat-option>
+                  </ng-container>
+                </mat-optgroup>
+                <mat-optgroup label="GROUPE III : Cadres &amp; Cadres Supérieurs">
+                  <ng-container *ngFor="let c of categories">
+                    <mat-option *ngIf="c.groupe === 'GROUPE III'" [value]="c.code">
+                      {{ c.libelle }}
+                    </mat-option>
+                  </ng-container>
+                </mat-optgroup>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Échelon</mat-label>
+              <mat-select [(ngModel)]="selectedEchelon" (selectionChange)="onClassificationChange()">
+                <mat-option *ngFor="let ech of echelons" [value]="ech">
+                  Échelon {{ ech }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- ENCADRÉ SALAIRE DE BASE CONVENTIONNEL -->
+            <div class="convention-salary-box">
+              <span class="box-label">Salaire de base conventionnel</span>
+              <span class="box-value">{{ formatFcfa(salaireBaseAffiche) }}</span>
+            </div>
+          </div>
+
+          <!-- 3. SITUATION FAMILIALE & CHARGES FISCALES -->
+          <div class="form-section-title">
+            <span>3. Situation familiale &amp; Fiscalité</span>
+          </div>
+
+          <div class="form-row grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Personnes à charge</mat-label>
+              <mat-select [(ngModel)]="nombrePersonnesCharge" (selectionChange)="lancerSimulation()">
+                <mat-option [value]="0">0 charge</mat-option>
+                <mat-option [value]="1">1 charge (-8% IUTS)</mat-option>
+                <mat-option [value]="2">2 charges (-10% IUTS)</mat-option>
+                <mat-option [value]="3">3 charges (-12% IUTS)</mat-option>
+                <mat-option [value]="4">4 charges ou plus (-14% IUTS)</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <div class="tax-rate-box">
+              <span class="tax-label">Réduction légale IUTS</span>
+              <span class="tax-value">-{{ getTauxReductionCharge(nombrePersonnesCharge) }} %</span>
+            </div>
+          </div>
+
+          <!-- 4. AFFECTATION & AVANTAGES -->
+          <div class="form-section-title">
+            <span>4. Affectation &amp; Indemnités de fonction</span>
+          </div>
+
+          <div class="form-row grid-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Poste / Emploi à pourvoir</mat-label>
+              <mat-select [(ngModel)]="selectedEmploiId" (selectionChange)="onEmploiChange()">
+                <mat-option [value]="null">-- Non spécifié --</mat-option>
+                <mat-option *ngFor="let emp of emplois" [value]="emp.id">
+                  {{ emp.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fonction de nomination</mat-label>
+              <mat-select [(ngModel)]="selectedFonctionId" (selectionChange)="onFonctionChange()">
+                <mat-option [value]="null">-- Aucune fonction particulière --</mat-option>
+                <mat-option *ngFor="let f of fonctions" [value]="f.id">
+                  {{ f.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- AVANTAGES EN NATURE (SANS EMOJIS) -->
+          <div class="avantages-nature-group">
+            <label class="checkbox-container">
+              <input type="checkbox" [(ngModel)]="vehiculeFourni" (change)="onAvantageChange()">
+              <span>Véhicule de fonction attribué (neutralise l'indemnité de transport)</span>
+            </label>
+            <label class="checkbox-container">
+              <input type="checkbox" [(ngModel)]="logementFourni" (change)="onAvantageChange()">
+              <span>Logement de fonction attribué (neutralise l'indemnité de logement)</span>
+            </label>
+          </div>
+
+          <!-- BOUTON RECALCULER -->
+          <div class="form-actions">
+            <button mat-flat-button color="primary" class="btn-calculate" (click)="lancerSimulation()" [disabled]="enChargement">
+              <mat-icon [class.spin-icon]="enChargement">{{ enChargement ? 'sync' : 'refresh' }}</mat-icon>
+              <span>{{ enChargement ? 'Calcul en cours...' : 'Actualiser le calcul' }}</span>
+            </button>
+          </div>
+
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- COLONNE DROITE : RÉSULTATS DU CALCUL -->
+    <div class="results-column">
+
+      <!-- EN CHARGEMENT -->
+      <div *ngIf="enChargement" class="loading-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Calcul fiscal et conventionnel en cours...</span>
+      </div>
+
+      <!-- MESSAGE D'ERREUR SI ÉCHEC -->
+      <div *ngIf="messageErreur" class="error-box">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ messageErreur }}</span>
+      </div>
+
+      <div *ngIf="resultat && !enChargement" class="results-wrapper">
+
+        <!-- PROFIL MÉTIER RETENU -->
+        <div *ngIf="resultat.emploiNom || resultat.fonctionNom" class="resultat-profil-bar">
+          <mat-icon>badge</mat-icon>
+          <span *ngIf="resultat.emploiNom">Poste ciblé : <strong>{{ resultat.emploiNom }}</strong></span>
+          <span *ngIf="resultat.fonctionNom"> • Fonction d'encadrement : <strong>{{ resultat.fonctionNom }}</strong></span>
+        </div>
+
+        <!-- 1. CARTE SYNTHÈSE INSTITUTIONNELLE (ÉLÉGANTE & SOBRE) -->
+        <div class="summary-hero-card">
+          
+          <!-- MODE 1 : SURSALAIRE À PROPOSER -->
+          <div *ngIf="mode === 'NET_VERS_SURSALAIRE'">
+            <div class="hero-top-badge">RÉSULTAT DE LA NÉGOCIATION</div>
+            <div class="hero-label">Sursalaire brut mensuel à contracter :</div>
+            <div class="hero-amount primary-text">{{ formatFcfa(resultat.surSalaire) }}</div>
+            <div class="hero-subtext">
+              Montant requis pour garantir un salaire net de <strong>{{ formatFcfa(resultat.netCibleSouhaite) }}</strong>
+            </div>
+          </div>
+
+          <!-- MODE 2 : SALAIRE NET OBTENU -->
+          <div *ngIf="mode === 'SURSALAIRE_VERS_NET'">
+            <div class="hero-top-badge">RÉSULTAT DU CALCUL</div>
+            <div class="hero-label">Salaire net mensuel prévisionnel :</div>
+            <div class="hero-amount success-text">{{ formatFcfa(resultat.salaireNet) }}</div>
+            <div class="hero-subtext">
+              Établi avec un sursalaire brut contractuel de <strong>{{ formatFcfa(resultat.surSalaire) }}</strong>
+            </div>
+          </div>
+
+          <div *ngIf="resultat.message" class="hero-explanation">
+            <mat-icon>info</mat-icon>
+            <span>{{ resultat.message }}</span>
+          </div>
+        </div>
+
+        <!-- 2. TROIS CARTES KPI DE SYNTHÈSE -->
+        <div class="kpi-summary-grid">
+          
+          <div class="kpi-card">
+            <div class="kpi-icon"><mat-icon>payments</mat-icon></div>
+            <div class="kpi-info">
+              <span class="kpi-lbl">Rémunération Brute</span>
+              <span class="kpi-val">{{ formatFcfa(resultat.remunerationBrute) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon"><mat-icon>receipt</mat-icon></div>
+            <div class="kpi-info">
+              <span class="kpi-lbl">Total Retenues (CNSS + IUTS)</span>
+              <span class="kpi-val">{{ formatFcfa(resultat.totalRetenuesSalariales) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon"><mat-icon>account_balance</mat-icon></div>
+            <div class="kpi-info">
+              <span class="kpi-lbl">Coût Total Banque (Employeur)</span>
+              <span class="kpi-val">{{ formatFcfa(resultat.coutTotalEmployeur) }}</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3. TABLEAU DÉTAILLÉ DU BULLETIN PRÉVISIONNEL -->
+        <mat-card class="breakdown-card">
+          <mat-card-header>
+            <div class="card-title-group">
+              <span class="card-main-title">Décomposition du bulletin prévisionnel</span>
+              <span class="card-main-subtitle">Conforme au barème IUTS (Circulaire MINEFID N°2020-0432) et aux cotisations CNSS</span>
+            </div>
+          </mat-card-header>
+
+          <mat-card-content>
+            <table class="detail-table">
+              <thead>
+                <tr>
+                  <th>Rubrique</th>
+                  <th>Base</th>
+                  <th>Taux</th>
+                  <th class="text-right">Part Salarié</th>
+                  <th class="text-right">Part Banque</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="row-gain">
+                  <td><strong>Salaire de Base Conventionnel</strong></td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.salaireBase) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.surSalaire > 0" class="row-gain ss-row">
+                  <td><strong>Sursalaire contractuel</strong></td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.surSalaire) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.indemniteLogement > 0" class="row-gain">
+                  <td>Indemnité de Logement</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteLogement) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.indemniteTransport > 0" class="row-gain">
+                  <td>Indemnité de Transport</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteTransport) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="(resultat.indemniteSujetion || 0) > 0" class="row-gain">
+                  <td>Indemnité de Sujétion (Statutaire)</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteSujetion) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.indemniteFonction > 0" class="row-gain">
+                  <td>Indemnité de Fonction</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteFonction) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.indemniteCaisse > 0" class="row-gain">
+                  <td>Indemnité de Caisse</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteCaisse) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="(resultat.indemniteCashPoint || 0) > 0" class="row-gain">
+                  <td>Prime Cash Point</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteCashPoint) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="(resultat.autresIndemnites || 0) - (resultat.indemniteSujetion || 0) - (resultat.indemniteCashPoint || 0) > 0" class="row-gain">
+                  <td>Autres indemnités spécifiques</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="text-right gain">+ {{ formatFcfa((resultat.autresIndemnites || 0) - (resultat.indemniteSujetion || 0) - (resultat.indemniteCashPoint || 0)) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr class="row-subtotal">
+                  <td colspan="3"><strong>RÉMUNÉRATION BRUTE TOTALE</strong></td>
+                  <td class="text-right"><strong>{{ formatFcfa(resultat.remunerationBrute) }}</strong></td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <!-- DÉDUCTIONS -->
+                <tr class="row-deduction">
+                  <td>Cotisation CNSS Salariale</td>
+                  <td>{{ formatFcfa(resultat.baseCnss) }}</td>
+                  <td>5.5 %</td>
+                  <td class="text-right deduction">- {{ formatFcfa(resultat.cotisationCnss) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr class="row-fiscal-info">
+                  <td colspan="5">
+                    <span class="fiscal-badge">Fiscalité :</span>
+                    Brut après CNSS : <strong>{{ formatFcfa(resultat.brutApresCnss) }}</strong> • 
+                    Abattement (20%) : <strong>{{ formatFcfa(resultat.abattementForfaitaire) }}</strong> • 
+                    Base IUTS : <strong>{{ formatFcfa(resultat.baseImposableIuts) }}</strong>
+                  </td>
+                </tr>
+
+                <tr class="row-deduction">
+                  <td>
+                    Impôt IUTS 
+                    <span *ngIf="resultat.nombrePersonnesCharge > 0" class="charges-note">
+                      ({{ resultat.nombrePersonnesCharge }} charge(s) : -{{ resultat.tauxReductionCharges }}%)
+                    </span>
+                  </td>
+                  <td>{{ formatFcfa(resultat.baseImposableIuts) }}</td>
+                  <td>Barème légal</td>
+                  <td class="text-right deduction">- {{ formatFcfa(resultat.iutsNet) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <!-- CHARGE PATRONALE -->
+                <tr class="row-patronale">
+                  <td>Cotisation CNSS Patronale (PF + AT/MP + Retraite)</td>
+                  <td>{{ formatFcfa(resultat.baseCnss) }}</td>
+                  <td>16.0 %</td>
+                  <td class="text-right">-</td>
+                  <td class="text-right patronale">+ {{ formatFcfa(resultat.cotisationCnssPatronale) }}</td>
+                </tr>
+
+                <!-- TOTAUX FINAUX -->
+                <tr class="row-net">
+                  <td colspan="3"><strong>SALAIRE NET À PAYER</strong></td>
+                  <td class="text-right net-final"><strong>{{ formatFcfa(resultat.salaireNet) }}</strong></td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr class="row-cout-employeur">
+                  <td colspan="4"><strong>COÛT TOTAL BANQUE</strong></td>
+                  <td class="text-right cout-final"><strong>{{ formatFcfa(resultat.coutTotalEmployeur) }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -20,7 +20,28 @@ export interface Conge {
   motifRefus?: string;
   soldeAvantDemande?: number;
   soldeApresDemande?: number;
-  statut: 'EN_ATTENTE' | 'APPROUVE' | 'REJETE' | 'ANNULE' | 'En attente' | 'Approuvé' | 'Refusé' | string;
+  statut: 'EN_ATTENTE_INTERIM' | 'EN_ATTENTE_N1' | 'EN_ATTENTE_DRH' | 'APPROUVE' | 'REJETE' | 'ANNULE' | 'EN_ATTENTE' | string;
+
+  // ── ÉTAPE 2 : AVIS DU COLLÈGUE PRESSENTI (INTÉRIMAIRE) ──
+  interimaire?: any;
+  interimaireId?: number | string;
+  statutInterim?: 'EN_ATTENTE_INTERIM' | 'ACCEPTE' | 'REFUSE' | 'NON_REQUIS' | string;
+  dateAvisInterim?: string;
+  commentaireInterim?: string;
+
+  // ── ÉTAPE 3 : VISA HIÉRARCHIQUE N+1 (DIRECTEUR / CHEF DE PÔLE) ──
+  visaN1Par?: string;
+  dateVisaN1?: string;
+  commentaireN1?: string;
+
+  // ── ÉTAPE 4 : CONTRÔLE ET TITRE DE CONGÉ DRH ──
+  visaDrhPar?: string;
+  dateVisaDrh?: string;
+  numeroTitreConge?: string;
+
+  // ── ÉTAPE 5 : RÈGLE PRUDENTIELLE BCEAO (SUSPENSION ACCÈS SI) ──
+  posteSensibleBceao?: boolean;
+  statutSi?: 'NON_REQUIS' | 'A_SUSPENDRE' | 'ACCES_SUSPENDU' | 'ACCES_RESTAURE' | string;
 }
 
 export interface SoldeConge {
@@ -41,6 +62,8 @@ export interface TypeAbsenceConge {
   id?: number;
   code: string;
   name: string;
+  deductibleDuSolde?: boolean;
+  dureeMaxLegaleJours?: number;
 }
 
 export interface JourFerie {
@@ -78,19 +101,61 @@ export class CongeService {
     return this.http.get<Conge[]>(`${environment.apiUrl}/conges/employe/${employeeId}`);
   }
 
+  getByInterimaire(interimaireId: number | string): Observable<Conge[]> {
+    return this.http.get<Conge[]>(`${environment.apiUrl}/conges/interimaire/${interimaireId}`);
+  }
+
   create(conge: any): Observable<Conge> {
     return this.http.post<Conge>(`${environment.apiUrl}/conges/create`, conge);
   }
 
+  // ── ÉTAPE 2 : AVIS INTÉRIMAIRE ──
+  avisInterim(id: number | string, accord: boolean, commentaire?: string, interimaireNom?: string): Observable<Conge> {
+    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/avis-interim`, {
+      accord,
+      commentaire: commentaire || '',
+      interimaireNom: interimaireNom || ''
+    });
+  }
+
+  // ── ÉTAPE 3 : VISA HIÉRARCHIQUE N+1 ──
+  visaN1(id: number | string, accord: boolean, commentaire?: string, validePar?: string): Observable<Conge> {
+    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/visa-n1`, {
+      accord,
+      commentaire: commentaire || '',
+      validePar: validePar || 'Directeur N+1'
+    });
+  }
+
+  // ── ÉTAPE 4 : CONTRÔLE ET DÉLIVRANCE TITRE DE CONGÉ DRH ──
+  validationDrh(id: number | string, accord: boolean, motifRefus?: string, validePar?: string): Observable<Conge> {
+    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/validation-drh`, {
+      accord,
+      motifRefus: motifRefus || '',
+      validePar: validePar || 'DRH'
+    });
+  }
+
+  // ── ÉTAPE 5 : ACTION SÉCURITÉ SI (BCEAO) ──
+  securiteSi(id: number | string, statutSi: string, operateurSi?: string): Observable<Conge> {
+    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/securite-si`, {
+      statutSi,
+      operateurSi: operateurSi || 'Direction Informatique'
+    });
+  }
+
+  // ── VÉRIFICATION QUORUM DIRECTION (RÈGLE MAX 30% ABSENTS) ──
+  getQuorumDirection(directionId: number | string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/conges/quorum/${directionId}`);
+  }
+
+  // Méthodes directes (compatibilité)
   approuver(id: number | string, validePar?: string): Observable<Conge> {
-    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/approuver`, { validePar: validePar || 'DRH / Direction' });
+    return this.validationDrh(id, true, undefined, validePar);
   }
 
   rejeter(id: number | string, motifRefus: string, rejetePar?: string): Observable<Conge> {
-    return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/rejeter`, {
-      motifRefus: motifRefus || 'Non conforme aux nécessités de service',
-      rejetePar: rejetePar || 'DRH / Direction'
-    });
+    return this.validationDrh(id, false, motifRefus, rejetePar);
   }
 
   annuler(id: number | string): Observable<Conge> {
@@ -139,4 +204,3 @@ export class CongeService {
     return this.http.put<ParametrageConge>(`${environment.apiUrl}/conges/parametrage`, config);
   }
 }
-

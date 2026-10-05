@@ -37,6 +37,14 @@ export class ToolbarComponent {
     this.router.navigate(['/mon-espace']);
   }
 
+  handleNotificationClick(n: any): void {
+    if (!n) return;
+    this.notifService.markAsRead(n.id);
+    if (n.route) {
+      this.router.navigateByUrl(n.route);
+    }
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/auth/login']);

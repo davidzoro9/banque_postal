@@ -53,35 +53,33 @@ export class ElementsSalaireComponent implements OnInit {
 
   loadCategories(): void {
     this.isLoading = true;
-    this.parametrageService.getAllCategories().pipe(
-      catchError(err => {
+    this.parametrageService.getAllCategories().subscribe({
+      next: (data) => {
+        if (data && data.length > 0) {
+          this.categoriesList = data.map(c => ({
+            id: Number(c.id),
+            code: c.code || '',
+            name: c.name || '',
+            type: (c.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
+          }));
+        } else {
+          this.categoriesList = [];
+        }
+        this.loadElements();
+      },
+      error: (err) => {
         console.error('Erreur chargement catégories:', err);
-        return of([]);
-      })
-    ).subscribe(data => {
-      if (data && data.length > 0) {
-        this.categoriesList = data.map(c => ({
-          id: Number(c.id),
-          code: c.code || '',
-          name: c.name || '',
-          type: (c.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
-        }));
-      } else {
         this.categoriesList = [];
+        this.loadElements();
       }
-      this.loadElements();
     });
   }
 
   loadElements(): void {
-    this.parametrageService.getAllElements().pipe(
-      catchError(err => {
-        console.error('Erreur chargement éléments:', err);
-        return of([]);
-      })
-    ).subscribe(data => {
-      this.isLoading = false;
-      if (data && data.length > 0) {
+    this.parametrageService.getAllElements().subscribe({
+      next: (data) => {
+        this.isLoading = false;
+        if (data && data.length > 0) {
         this.elementsList = data.map((r: SalaryElementDto) => {
           const numCatId = r.categoryId != null ? Number(r.categoryId) : 0;
           const matchingCat = this.categoriesList.find(c => c.id === numCatId);
@@ -110,8 +108,15 @@ export class ElementsSalaireComponent implements OnInit {
         this.elementsList = [];
       }
       this.applyFilter();
-    });
-  }
+    },
+    error: (err) => {
+      console.error('Erreur chargement éléments:', err);
+      this.isLoading = false;
+      this.elementsList = [];
+      this.applyFilter();
+    }
+  });
+}
 
   applyFilter(): void {
     let list = [...this.elementsList];

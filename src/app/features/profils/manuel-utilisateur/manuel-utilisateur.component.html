@@ -5,11 +5,11 @@
       <div class="ph-badge">BPBF</div>
       <div>
         <h1>Manuel d'Utilisation & Guide Opérationnel Complet</h1>
-        <p>Documentation technique exhaustive, démarches et manipulations pas-à-pas pour chaque module du SIGRH</p>
+        <p>Documentation technique exhaustive, démarches et manipulations pas-à-pas pour chaque module du SIRH</p>
       </div>
     </div>
     <div class="header-actions">
-      <button type="button" class="btn-download-main" (click)="downloadManual('Guide_Utilisateur_SIGRH_BPBF.pdf')">
+      <button type="button" class="btn-download-main" (click)="downloadManual('Guide_Utilisateur_SIRH_BPBF.pdf')">
         <span>Télécharger le Manuel Officiel (PDF - 79 pages)</span>
       </button>
     </div>
@@ -29,7 +29,7 @@
     <div class="stat-divider"></div>
     <div class="stat-item">
       <span class="stat-number">v12.0.7</span>
-      <span class="stat-label">Référentiel ResHum Dz / SIGRH v3</span>
+      <span class="stat-label">Référentiel ResHum Dz / SIRH v3</span>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
@@ -102,7 +102,7 @@
           <div class="chapter-title-wrapper">
             <div class="chapter-meta">
               <span class="chapter-tag">{{ chapter.category }}</span>
-              <span class="chapter-ref">SIGRH-BPBF-DOC-{{ chapter.number }}</span>
+              <span class="chapter-ref">SIRH-BPBF-DOC-{{ chapter.number }}</span>
             </div>
             <h2 class="chapter-title">{{ chapter.title }}</h2>
             <p class="chapter-summary">{{ chapter.summary }}</p>
@@ -239,7 +239,7 @@
           <button type="button" class="btn-print-chapter" (click)="printChapter(chapter)">
             <span>Imprimer la Fiche Manipulations</span>
           </button>
-          <button type="button" class="btn-download-guide" (click)="downloadManual('Guide_Utilisateur_SIGRH_BPBF.pdf')">
+          <button type="button" class="btn-download-guide" (click)="downloadManual('Guide_Utilisateur_SIRH_BPBF.pdf')">
             <span>Télécharger le Guide PDF Complet</span>
           </button>
         </div>

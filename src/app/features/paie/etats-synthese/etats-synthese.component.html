@@ -209,63 +209,115 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 1. TABLEAU : LIVRE DE PAIE (REGISTRE)      -->
     <!-- ========================================== -->
-    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'LIVRE_PAIE' && filteredRows.length > 0">
+    <!-- 0. TABLEAU : RÉCAPITULATIF GLOBAL (PAGE 1) -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'RECAPITULATIF_GLOBAL' && filteredRows.length > 0">
+      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">RÉCAPITULATIF GLOBAL DE LA PAIE — JOURNAL DÉBIT / CRÉDIT</span>
+        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Balance Comptable Équilibrée</span>
+      </div>
       <table class="bpbf-table">
         <thead>
           <tr>
-            <th>Matricule</th>
-            <th>Nom et Prénoms</th>
-            <th>Emploi / Poste</th>
-            <th>Direction</th>
-            <th class="text-right">Sal. Base</th>
-            <th class="text-right">Sursalaire</th>
-            <th class="text-right">Indemnités</th>
-            <th class="text-right">Sal. Brut</th>
-            <th class="text-right">CNSS</th>
-            <th class="text-right">IUTS</th>
-            <th class="text-right">Précomptes</th>
-            <th class="text-right">Total Ret.</th>
-            <th class="text-right col-net">Net à Payer</th>
+            <th style="width: 15%;">Numéro de Compte</th>
+            <th style="width: 45%;">Intitulé du Compte</th>
+            <th class="text-right" style="width: 20%;">Débit (FCFA)</th>
+            <th class="text-right" style="width: 20%;">Crédit (FCFA)</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of filteredRows">
-            <td class="font-mono font-bold">{{ row.matricule }}</td>
-            <td class="font-bold">{{ row.nomPrenom }}</td>
-            <td>{{ row.emploi }}</td>
-            <td>{{ row.direction }}</td>
-            <td class="text-right">{{ formatFcfa(row.salaireBase) }}</td>
-            <td class="text-right">{{ formatFcfa(row.surSalaire) }}</td>
-            <td class="text-right">{{ formatFcfa(row.indemnites) }}</td>
-            <td class="text-right font-bold">{{ formatFcfa(row.salaireBrut) }}</td>
-            <td class="text-right">{{ formatFcfa(row.cotisationCnss) }}</td>
-            <td class="text-right">{{ formatFcfa(row.impotIuts) }}</td>
-            <td class="text-right">{{ formatFcfa(row.totalPrecomptes) }}</td>
-            <td class="text-right text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
-            <td class="text-right col-net font-bold">{{ formatFcfa(row.salaireNet) }}</td>
+            <td class="font-mono font-bold">{{ row.numeroCompte }}</td>
+            <td class="font-bold">{{ row.intituleCompte }}</td>
+            <td class="text-right font-mono">{{ row.montantDebit > 0 ? formatFcfa(row.montantDebit) : '—' }}</td>
+            <td class="text-right font-mono text-danger">{{ row.montantCredit > 0 ? formatFcfa(row.montantCredit) : '—' }}</td>
           </tr>
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="4" class="font-bold">TOTAL GÉNÉRAL DU LIVRE DE PAIE</td>
-            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalBrut) }}</td>
-            <td class="text-right">—</td>
-            <td class="text-right">—</td>
-            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalBrut) }}</td>
-            <td class="text-right">—</td>
-            <td class="text-right">—</td>
-            <td class="text-right">—</td>
-            <td class="text-right font-bold text-danger">{{ formatFcfa(etatData?.totalRetenues) }}</td>
-            <td class="text-right col-net font-bold">{{ formatFcfa(etatData?.totalNet) }}</td>
+            <td colspan="2" class="font-bold">TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE)</td>
+            <td class="text-right font-bold col-net">{{ formatFcfa(etatData?.totalMasseSalariale) }}</td>
+            <td class="text-right font-bold col-net">{{ formatFcfa(etatData?.totalMasseSalariale) }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. TABLEAU : ÉTAT PAR BANQUE (VIREMENTS)   -->
+    <!-- 1. TABLEAU : LIVRE DE PAIE (REGISTRE OFFICIEL 17 COLONNES - PAGE 3) -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'LIVRE_PAIE' && filteredRows.length > 0">
+      <div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 10px 16px; margin-bottom: 12px; border-radius: 4px;">
+        <span style="font-weight: 800; color: #0284c7; font-size: 13px;">REGISTRE GÉNÉRAL DE PAIE — 17 COLONNES OFFICIELLES</span>
+      </div>
+      <table class="bpbf-table font-compact" style="font-size: 11.5px;">
+        <thead>
+          <tr>
+            <th>Mle</th>
+            <th>Nom et Prénoms</th>
+            <th>Grade</th>
+            <th class="text-right">Sal. base</th>
+            <th class="text-right">Sursalaire</th>
+            <th class="text-right">Indem. &amp; Pr.</th>
+            <th class="text-right">Total brut</th>
+            <th class="text-right">Ass. vi.</th>
+            <th class="text-right">Part patr.</th>
+            <th class="text-right">Base imp.</th>
+            <th class="text-center">Chrg</th>
+            <th class="text-right">IUTS</th>
+            <th class="text-right">Sal. net</th>
+            <th class="text-right">Tot. ret.</th>
+            <th class="text-right col-net">Net payer</th>
+            <th class="text-right">TPA</th>
+            <th class="text-right">Masse sal.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td class="text-center font-mono">{{ row.grade || '—' }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireBase) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.surSalaire) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.indemnitesEtPrimes || row.indemnites) }}</td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.assVieillesse || row.cotisationCnss) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.partPatronale) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.baseImposable) }}</td>
+            <td class="text-center font-bold">{{ row.charges != null ? row.charges : 0 }}</td>
+            <td class="text-right font-mono text-danger">{{ formatFcfa(row.impotIuts) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireNet) }}</td>
+            <td class="text-right font-mono text-danger">{{ formatFcfa(row.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.netAPayer || row.salaireNet) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.tpa) }}</td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.masseSalariale) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" class="font-bold">TOTAL GÉNÉRAL DU REGISTRE DE PAIE</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalBrut) }}</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalCotisationsPatronales) }}</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-center">—</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalNet) }}</td>
+            <td class="text-right font-bold text-danger">{{ formatFcfa(etatData?.totalRetenues) }}</td>
+            <td class="text-right col-net font-bold">{{ formatFcfa(etatData?.totalNet) }}</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">{{ formatFcfa(etatData?.totalMasseSalariale) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. TABLEAU : ÉTAT DE VIREMENT DES SALAIRES (PAGE 2) -->
     <!-- ========================================== -->
     <div class="bank-view" *ngIf="!isLoading && selectedEtat === 'ETAT_BANQUE' && filteredRows.length > 0">
       <div class="bank-group-card" *ngFor="let bq of filteredRows">
@@ -273,10 +325,10 @@
           <div class="bg-title">
             <mat-icon>account_balance</mat-icon>
             <span class="bq-name">{{ bq.banqueNom }}</span>
-            <span class="badge-code">{{ bq.codeBanque }}</span>
+            <span class="badge-code">Code Banque : {{ bq.codeBanque }}</span>
           </div>
           <div class="bg-metrics">
-            <span class="metric-benef">{{ bq.nombreBeneficiaires }} virement(s)</span>
+            <span class="metric-benef">{{ bq.nombreBeneficiaires }} ordre(s) de virement</span>
             <span class="metric-total">{{ formatFcfa(bq.totalNet) }}</span>
           </div>
         </div>
@@ -285,25 +337,82 @@
           <table class="bpbf-table">
             <thead>
               <tr>
-                <th>N° Mat</th>
-                <th>Bénéficiaire</th>
-                <th>Fonction</th>
-                <th>Numéro de Compte / IBAN</th>
-                <th class="text-right">Montant Net à Virer</th>
+                <th>Matricule</th>
+                <th>Nom &amp; Prénom(s)</th>
+                <th class="text-center">Code Banque</th>
+                <th class="text-center">Code Guichet</th>
+                <th>Compte à créditer</th>
+                <th class="text-center">Clé</th>
+                <th class="text-right">Montant Net</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let vir of bq.virements">
-                <td class="font-mono">{{ vir.matricule }}</td>
+                <td class="font-mono font-bold">{{ vir.matricule }}</td>
                 <td class="font-bold">{{ vir.nomPrenom }}</td>
-                <td>{{ vir.emploi }}</td>
-                <td class="font-mono">{{ vir.numeroCompte }}</td>
-                <td class="text-right font-bold col-net">{{ formatFcfa(vir.montantNet) }}</td>
+                <td class="text-center font-mono">{{ vir.codeBanque }}</td>
+                <td class="text-center font-mono">{{ vir.codeGuichet }}</td>
+                <td class="font-mono font-bold">{{ vir.compteACrediter || vir.numeroCompte }}</td>
+                <td class="text-center font-mono">{{ vir.cle }}</td>
+                <td class="text-right font-bold col-net font-mono">{{ formatFcfa(vir.montant || vir.montantNet) }}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="6" class="font-bold">TOTAL DE L'ORDRE DE VIREMENT ({{ bq.nombreBeneficiaires }} Bénéficiaires)</td>
+                <td class="text-right font-bold col-net">{{ formatFcfa(bq.totalNet) }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+
+        <div *ngIf="bq.montantEnLettres" style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 13px; font-weight: 700; color: #1e293b;">
+          Arrêté le présent état à la somme de : <span style="color: #0060B3; text-transform: uppercase;">{{ bq.montantEnLettres }}</span> Francs CFA.
+        </div>
       </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2b. TABLEAU : COTISATIONS CRRAE (PAGES 4, 5, 6) -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_CRRAE_RRPC' || selectedEtat === 'ETAT_CRRAE_RCPNC' || selectedEtat === 'ETAT_CRRAE_FAAM') && filteredRows.length > 0">
+      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">{{ getSelectedEtatObj().libelle | uppercase }}</span>
+        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Déclaration Mensuelle des Cotisations</span>
+      </div>
+      <table class="bpbf-table">
+        <thead>
+          <tr>
+            <th class="text-center">N° d'Ordre</th>
+            <th>Matricule</th>
+            <th>Nom et Prénoms</th>
+            <th class="text-right">Salaire Soumis</th>
+            <th class="text-right">Part Employeur</th>
+            <th class="text-right">Part Salariale</th>
+            <th class="text-right col-net">Total Cotisations</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="text-center font-mono">{{ row.numeroOrdre }}</td>
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireSoumisCotisation) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.cotisationPatronale) }}</td>
+            <td class="text-right font-mono text-danger">{{ formatFcfa(row.cotisationSalariale) }}</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.montantTotalCotisations) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" class="font-bold">TOTAL DE LA DÉCLARATION DES COTISATIONS</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-right font-bold text-danger">—</td>
+            <td class="text-right col-net font-bold">—</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
 
     <!-- ========================================== -->
@@ -333,52 +442,57 @@
             <td class="font-bold">{{ row.nomPrenom }}</td>
             <td class="font-mono">{{ row.noCnss }}</td>
             <td>{{ row.dateEmbauche }}</td>
-            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
-            <td class="text-right font-bold">{{ formatFcfa(row.assietteCotisable) }}</td>
-            <td class="text-right text-danger">{{ formatFcfa(row.partSalariale) }}</td>
-            <td class="text-right">{{ formatFcfa(row.partPatronalePrestations) }}</td>
-            <td class="text-right">{{ formatFcfa(row.partPatronaleRisques) }}</td>
-            <td class="text-right">{{ formatFcfa(row.partPatronaleRetraite) }}</td>
-            <td class="text-right font-bold">{{ formatFcfa(row.totalPartPatronale) }}</td>
-            <td class="text-right col-net font-bold">{{ formatFcfa(row.totalCotisationCnss) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireBrut) }}</td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.assietteCotisable) }}</td>
+            <td class="text-right font-mono text-danger">{{ formatFcfa(row.partSalariale) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.partPatronalePrestations) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.partPatronaleRisques) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.partPatronaleRetraite) }}</td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.totalPartPatronale) }}</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.totalCotisationCnss) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- ========================================== -->
-    <!-- 4. TABLEAU : ÉTAT FISCAL IUTS              -->
+    <!-- 4. TABLEAU : ÉTAT DES RETENUES IUTS (PAGE 7) -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_IUTS' && filteredRows.length > 0">
+      <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 10px 16px; margin-bottom: 14px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px; font-family: monospace;">N° IFU DE LA BANQUE : 00164311Z</span>
+        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">État des Retenues IUTS — Déclaration Mensuelle Officielle</span>
+      </div>
       <table class="bpbf-table">
         <thead>
           <tr>
-            <th>Matricule</th>
+            <th class="text-center">N° d'Ordre</th>
             <th>Nom et Prénoms</th>
-            <th class="text-right">Salaire Brut</th>
-            <th class="text-right">Exonérations</th>
-            <th class="text-right">Abattement Forfaitaire</th>
+            <th class="text-right">Total Salaires Bruts</th>
             <th class="text-right">Base Imposable IUTS</th>
-            <th class="text-center">Charges</th>
-            <th class="text-right">IUTS Brut</th>
-            <th class="text-right">Réduction Charges</th>
-            <th class="text-right col-net">IUTS Net Retenu</th>
+            <th class="text-center">Nb de charges</th>
+            <th class="text-right col-net">IUTS Net à Reverser</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of filteredRows">
-            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="text-center font-mono">{{ row.numeroOrdre || '—' }}</td>
             <td class="font-bold">{{ row.nomPrenom }}</td>
-            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
-            <td class="text-right">{{ formatFcfa(row.totalExonerations) }}</td>
-            <td class="text-right">{{ formatFcfa(row.abattementForfaitaire) }}</td>
-            <td class="text-right font-bold">{{ formatFcfa(row.baseImposable) }}</td>
-            <td class="text-center">{{ row.nombreCharges }}</td>
-            <td class="text-right">{{ formatFcfa(row.impotIutsBrut) }}</td>
-            <td class="text-right text-success">{{ formatFcfa(row.reductionPourCharges) }}</td>
-            <td class="text-right col-net font-bold text-danger">{{ formatFcfa(row.impotIutsNet) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireBruts || row.salaireBrut) }}</td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.baseImposable) }}</td>
+            <td class="text-center font-bold">{{ row.nbDeCharges != null ? row.nbDeCharges : (row.nombreCharges != null ? row.nombreCharges : 0) }}</td>
+            <td class="text-right col-net font-bold text-danger font-mono">{{ formatFcfa(row.iutsAReverser || row.impotIutsNet) }}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2" class="font-bold">TOTAL DE L'ÉTAT IUTS À REVERSER</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(etatData?.totalBrut) }}</td>
+            <td class="text-right font-bold">—</td>
+            <td class="text-center">—</td>
+            <td class="text-right col-net font-bold text-danger font-mono">—</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
@@ -495,32 +609,42 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 8. TABLEAU : ÉTAT FSP                      -->
+    <!-- 8. TABLEAU : RETENUE FONDS DE SOLIDARITÉ (PAGE 8) -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_FSP' && filteredRows.length > 0">
+      <div style="background: #fffbeb; border: 1.5px solid #fde68a; padding: 10px 16px; margin-bottom: 14px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; color: #b45309; font-size: 13.5px;">ÉTAT DES RETENUES — RETENUE FONDS DE SOLIDARITÉ</span>
+        <span style="font-size: 12px; color: #b45309; font-weight: 600;">Déclaration Mensuelle (Taux légal : 1% du salaire net)</span>
+      </div>
       <table class="bpbf-table">
         <thead>
           <tr>
+            <th class="text-center">N° d'Ordre</th>
             <th>Matricule</th>
             <th>Nom et Prénoms</th>
-            <th>Direction</th>
-            <th class="text-right">Salaire Brut</th>
-            <th class="text-right">Assiette FSP</th>
-            <th class="text-center">Taux FSP</th>
-            <th class="text-right col-net">Retenue FSP</th>
+            <th class="text-right">Salaire Net</th>
+            <th class="text-center">Taux</th>
+            <th class="text-right col-net">Montant</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of filteredRows">
+            <td class="text-center font-mono">{{ row.numeroOrdre || '—' }}</td>
             <td class="font-mono font-bold">{{ row.matricule }}</td>
             <td class="font-bold">{{ row.nomPrenom }}</td>
-            <td>{{ row.direction }}</td>
-            <td class="text-right">{{ formatFcfa(row.salaireBrut) }}</td>
-            <td class="text-right">{{ formatFcfa(row.assietteCalcul) }}</td>
-            <td class="text-center">{{ row.tauxFsp }}%</td>
-            <td class="text-right font-bold text-danger col-net">{{ formatFcfa(row.montantRetenu) }}</td>
+            <td class="text-right font-mono">{{ formatFcfa(row.salaireNet || row.assietteCalcul) }}</td>
+            <td class="text-center font-bold">{{ row.taux || '1%' }}</td>
+            <td class="text-right col-net font-bold text-danger font-mono">{{ formatFcfa(row.montant || row.montantRetenu) }}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" class="font-bold">TOTAL DU FONDS DE SOLIDARITÉ</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(etatData?.totalNet) }}</td>
+            <td class="text-center font-bold">1%</td>
+            <td class="text-right col-net font-bold text-danger font-mono">—</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
@@ -692,6 +816,22 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SIGNATAIRES OFFICIELS BPBF                 -->
+    <!-- ========================================== -->
+    <div class="official-signers-footer" *ngIf="!isLoading && filteredRows.length > 0">
+      <div class="signer-box">
+        <span class="signer-title">Le Comptable</span>
+        <div class="signer-signature-space"></div>
+        <span class="signer-name">Ahadi Ismaël YONLI</span>
+      </div>
+      <div class="signer-box">
+        <span class="signer-title">Le Directeur Financier et Comptable</span>
+        <div class="signer-signature-space"></div>
+        <span class="signer-name">Inoussa SANOUIDI</span>
+      </div>
     </div>
 
   </div>

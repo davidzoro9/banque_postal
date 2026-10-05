@@ -222,7 +222,7 @@ export interface Employee {
   emailPro?: string;
   numeroPoste?: string;
   directeurHierarchique?: string;
-  superviseurId?: number | string;
+  superviseurId?: number | string | null;
   superviseurNom?: string;
   superviseurPrenom?: string;
   superviseurMatricule?: string;

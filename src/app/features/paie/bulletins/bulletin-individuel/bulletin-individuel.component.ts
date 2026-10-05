@@ -1213,7 +1213,7 @@ export class BulletinIndividuelComponent implements OnInit {
       error: (err) => {
         this.isSavingBulletin = false;
         const msg = err?.error?.message || (typeof err?.error === 'string' ? err.error : null) || err?.message || 'Erreur inconnue';
-        alert(`❌ Erreur lors de l'enregistrement du bulletin : ${msg}`);
+        alert(`Erreur lors de l'enregistrement du bulletin : ${msg}`);
       }
     });
   }

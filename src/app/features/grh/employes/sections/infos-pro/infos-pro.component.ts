@@ -53,7 +53,12 @@ export class InfosProComponent implements OnInit {
   echelons: RefItem[] = [];
   grillesSalariales: RefItem[] = [];
   paramGroupes: RefItem[] = [];
+  allEmployees: Employee[] = [];
   readonly String = String; // pour usage dans le template
+
+  get availableSuperviseurs(): Employee[] {
+    return (this.allEmployees || []).filter(e => String(e.id) !== String(this.empId));
+  }
 
   readonly statuts: StatutEmploye[] = ['Actif', 'Inactif', 'Suspendu', "Période d'essai", 'Congé maladie', 'Détaché'];
 
@@ -98,9 +103,11 @@ export class InfosProComponent implements OnInit {
       banques: this.banques$,
       paramsRetraite: this.dbRefService.getItems('param-retraite'),
       paramGroupes: this.dbRefService.getItems('param-groupe'),
+      allEmployees: this.employeeService.getAll(),
       employee: this.employeeService.getById(this.empId)
     }).subscribe({
       next: (res) => {
+        this.allEmployees = res.allEmployees || [];
         this.emplois = (res.emplois || []).slice().sort((a, b) => (a.ordre ?? 999) - (b.ordre ?? 999));
         this.services = res.services || [];
         this.directions = res.directions || [];
@@ -248,6 +255,7 @@ export class InfosProComponent implements OnInit {
       agenceId:             [null],
       directionId:          [null],
       departmentId:         [null],
+      superviseurId:        [null],
 
       gradeId:              [null, Validators.required],
       categorieId:          [null, Validators.required],
@@ -489,6 +497,7 @@ export class InfosProComponent implements OnInit {
       agenceId:         resolvedAgenceId,
       directionId:      resolvedDirId,
       departmentId:     resolvedDepId,
+      superviseurId:    e.superviseurId != null ? String(e.superviseurId) : null,
       regimeSecuriteSocialId: resolvedRegimeId,
 
       gradeId: resolvedGradeId,
@@ -992,6 +1001,7 @@ export class InfosProComponent implements OnInit {
       agenceId: v.agenceId,
       directionId: v.directionId,
       departmentId: v.departmentId,
+      superviseurId: v.superviseurId ? Number(v.superviseurId) : null,
 
       gradeId: v.gradeId ? String(v.gradeId) : undefined,
       categorieId: v.categorieId ? String(v.categorieId) : undefined,

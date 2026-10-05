@@ -121,7 +121,7 @@ export interface TrancheIuts {
             La base imposable est arrondie à la <strong>centaine inférieure</strong> (TRUNC -2).
           </p>
           <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:12px; color:#92400e;">
-            <strong>⚖️ Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
+            <strong>Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
             • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000</strong>)<br>
             • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000</strong>)<br>
             • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000</strong>) — sans cumul

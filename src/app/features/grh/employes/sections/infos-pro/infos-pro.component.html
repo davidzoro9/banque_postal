@@ -153,6 +153,22 @@
               }
             </mat-select>
           </mat-form-field>
+
+          <!-- 8. Supérieur hiérarchique -->
+          <mat-form-field appearance="outline">
+            <mat-label>Supérieur hiérarchique</mat-label>
+            <mat-select formControlName="superviseurId" [compareWith]="compareIds">
+              <mat-option [value]="null">
+                — Aucun supérieur hiérarchique —
+              </mat-option>
+              @for (sup of availableSuperviseurs; track sup.id) {
+                <mat-option [value]="sup.id">
+                  {{ sup.matricule }} — {{ sup.nom }} {{ sup.prenom }} ({{ sup.fonction || sup.poste || 'Agent' }})
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix style="color: #0060B3;">supervisor_account</mat-icon>
+          </mat-form-field>
         </div>
 
         <p class="form-section-label">Classification</p>

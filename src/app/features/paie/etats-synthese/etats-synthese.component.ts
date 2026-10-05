@@ -395,6 +395,10 @@ export class EtatsSyntheseComponent implements OnInit {
     if (!slug) return 'LIVRE_PAIE';
     const clean = slug.toLowerCase().replace(/_/g, '-');
     const SLUG_MAP: Record<string, string> = {
+      'recapitulatif-global': 'RECAPITULATIF_GLOBAL',
+      'crrae-rrpc': 'ETAT_CRRAE_RRPC',
+      'crrae-rcpnc': 'ETAT_CRRAE_RCPNC',
+      'crrae-faam': 'ETAT_CRRAE_FAAM',
       'livre-paie': 'LIVRE_PAIE',
       'nominatif': 'ETAT_NOMINATIF',
       'etat-nominatif': 'ETAT_NOMINATIF',
@@ -433,6 +437,10 @@ export class EtatsSyntheseComponent implements OnInit {
 
   resolveSlugFromCode(code: string): string {
     const CODE_TO_SLUG: Record<string, string> = {
+      'RECAPITULATIF_GLOBAL': 'recapitulatif-global',
+      'ETAT_CRRAE_RRPC': 'crrae-rrpc',
+      'ETAT_CRRAE_RCPNC': 'crrae-rcpnc',
+      'ETAT_CRRAE_FAAM': 'crrae-faam',
       'LIVRE_PAIE': 'livre-paie',
       'ETAT_NOMINATIF': 'nominatif',
       'ETAT_SALAIRE': 'direction',
@@ -508,7 +516,25 @@ export class EtatsSyntheseComponent implements OnInit {
   }
 
   get isCustomEtat(): boolean {
-    const builtIn = ['LIVRE_PAIE', 'ETAT_NOMINATIF', 'ETAT_SALAIRE', 'ETAT_BANQUE', 'ETAT_CNSS', 'ETAT_IUTS', 'ETAT_PRECOMPTE', 'ETAT_FSP', 'ETAT_MUTUELLE', 'ETAT_TYPE_EMPLOYE', 'ETAT_ELEMENTS_SALAIRE', 'ETAT_ELEMENT_SALAIRE', 'ETAT_BULLETIN'];
+    const builtIn = [
+      'RECAPITULATIF_GLOBAL',
+      'ETAT_CRRAE_RRPC',
+      'ETAT_CRRAE_RCPNC',
+      'ETAT_CRRAE_FAAM',
+      'LIVRE_PAIE',
+      'ETAT_NOMINATIF',
+      'ETAT_SALAIRE',
+      'ETAT_BANQUE',
+      'ETAT_CNSS',
+      'ETAT_IUTS',
+      'ETAT_PRECOMPTE',
+      'ETAT_FSP',
+      'ETAT_MUTUELLE',
+      'ETAT_TYPE_EMPLOYE',
+      'ETAT_ELEMENTS_SALAIRE',
+      'ETAT_ELEMENT_SALAIRE',
+      'ETAT_BULLETIN'
+    ];
     return !builtIn.includes(this.selectedEtat);
   }
 

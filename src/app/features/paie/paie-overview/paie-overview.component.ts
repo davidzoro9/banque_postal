@@ -19,6 +19,14 @@ export class PaieOverviewComponent implements OnInit {
 
   sections = [
     {
+      title: 'Simulateur & Calculatrice RH',
+      badge: 'Négociation & Embauche',
+      icon: 'calculate',
+      color: '#003366',
+      description: 'Simulation interactive de rémunération : déterminez le sursalaire optimal pour un net cible ou calculez le net prévisionnel.',
+      route: '/paie/simulateur'
+    },
+    {
       title: 'Génération des Bulletins',
       badge: 'Mois en cours',
       icon: 'add_circle_outline',

@@ -21,6 +21,7 @@ import { UrssafComponent } from './declarations/urssaf/urssaf.component';
 import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.component';
 import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
 import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.component';
+import { CalculatriceSimulationComponent } from './simulation/calculatrice-simulation.component';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -47,7 +48,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     UrssafComponent,
     ParametragePaieComponent,
     TypesRetenuesComponent,
-    EtatsSyntheseComponent
+    EtatsSyntheseComponent,
+    CalculatriceSimulationComponent
   ],
   imports: [
     CommonModule,

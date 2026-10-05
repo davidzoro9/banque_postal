@@ -98,6 +98,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       icon: 'payments',
       children: [
         { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
+        { id: 'simulateur-rh', label: 'Simulateur & Calculatrice RH', icon: 'calculate', route: '/paie/simulateur' },
         { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
         { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' },
         { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' }
@@ -108,18 +109,22 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'États de synthèse',
       icon: 'assessment',
       children: [
-        { id: 'etat-livre-paie', label: 'Livre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
+        { id: 'etat-recapitulatif-global', label: 'Récapitulatif Global de la Paie', icon: 'account_balance', route: '/paie/etats-synthese/recapitulatif-global' },
+        { id: 'etat-banque', label: 'État de Virement des Salaires', icon: 'payments', route: '/paie/etats-synthese/banque' },
+        { id: 'etat-livre-paie', label: 'Livre de Paie (17 colonnes)', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
+        { id: 'etat-crrae-rrpc', label: 'Déclaration Cotisations RRPC (19%)', icon: 'security', route: '/paie/etats-synthese/crrae-rrpc' },
+        { id: 'etat-crrae-rcpnc', label: 'Déclaration Cotisations RCPNC (12%)', icon: 'security', route: '/paie/etats-synthese/crrae-rcpnc' },
+        { id: 'etat-crrae-faam', label: 'Déclaration Cotisations FAAM (1,5%)', icon: 'security', route: '/paie/etats-synthese/crrae-faam' },
+        { id: 'etat-iuts', label: 'État Retenues IUTS (IFU)', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
+        { id: 'etat-fsp', label: 'Retenue Fonds de Solidarité (1%)', icon: 'shield', route: '/paie/etats-synthese/fsp' },
+        { id: 'etat-cnss', label: 'État Cotisation CNSS', icon: 'security', route: '/paie/etats-synthese/cnss' },
         { id: 'etat-nominatif', label: 'État nominatif de paie', icon: 'badge', route: '/paie/etats-synthese/nominatif' },
         { id: 'etat-direction', label: 'État salaire par direction', icon: 'payments', route: '/paie/etats-synthese/direction' },
-        { id: 'etat-banque', label: 'État par banque (Virements)', icon: 'account_balance', route: '/paie/etats-synthese/banque' },
-        { id: 'etat-cnss', label: 'État Cotisation CNSS', icon: 'security', route: '/paie/etats-synthese/cnss' },
-        { id: 'etat-iuts', label: 'État IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
         { id: 'etat-precompte', label: 'État Précompte', icon: 'credit_card_off', route: '/paie/etats-synthese/precompte' },
-        { id: 'etat-fsp', label: 'État FSP (Soutien Patriotique)', icon: 'shield', route: '/paie/etats-synthese/fsp' },
         { id: 'etat-mutuelle', label: 'État Mutuelle', icon: 'health_and_safety', route: '/paie/etats-synthese/mutuelle' },
         { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
         { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
-        { id: 'etat-bulletin', label: 'État Bulletin (Contrôle exhaustif)', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
+        { id: 'etat-bulletin', label: 'État Bulletin (Contrôle)', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
       ]
     }
   ],
@@ -227,6 +232,22 @@ export class ModuleNavService {
     this.toggleDrawer();
   }
 
+  openDrawer(): void {
+    if (!this.drawerOpenSubject.getValue()) {
+      this.drawerOpenSubject.next(true);
+    }
+  }
+
+  closeDrawer(): void {
+    if (this.drawerOpenSubject.getValue()) {
+      this.drawerOpenSubject.next(false);
+    }
+  }
+
+  setDrawerOpen(open: boolean): void {
+    this.drawerOpenSubject.next(open);
+  }
+
   private menuUpdatedSubject = new BehaviorSubject<void>(undefined);
   menuUpdated$: Observable<void> = this.menuUpdatedSubject.asObservable();
 
@@ -255,6 +276,10 @@ export class ModuleNavService {
 
   private slugifyCode(code: string): string {
     const CODE_TO_SLUG: Record<string, string> = {
+      'RECAPITULATIF_GLOBAL': 'recapitulatif-global',
+      'ETAT_CRRAE_RRPC': 'crrae-rrpc',
+      'ETAT_CRRAE_RCPNC': 'crrae-rcpnc',
+      'ETAT_CRRAE_FAAM': 'crrae-faam',
       'LIVRE_PAIE': 'livre-paie',
       'ETAT_NOMINATIF': 'nominatif',
       'ETAT_SALAIRE': 'direction',
