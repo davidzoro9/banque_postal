@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { BulletinPdfService } from '../../paie/services/bulletin-pdf.service';
+import { CongeService, TypeAbsenceConge, JourFerie } from '../../grh/conges/services/conge.service';
 import { environment } from '../../../../environments/environment';
 import { of, forkJoin } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -58,6 +59,31 @@ export class MonEspaceComponent implements OnInit {
   };
   mesConges: any[] = [];
 
+  // Demande de Congé / Absence intégrée dans Mon Espace (zéro redirection)
+  showDemandeCongeModal = false;
+  congeEnvoyeSuccess = false;
+  isSubmittingConge = false;
+  typesConge: TypeAbsenceConge[] = [];
+  joursFeries: JourFerie[] = [];
+  colleaguesList: any[] = [];
+  congeForm = {
+    typeAbsenceCongeId: null as any,
+    dateDebut: new Date(),
+    dureeDemandee: 15,
+    dateFin: new Date(),
+    motif: '',
+    justificatif: '',
+    interimaireId: null as any,
+    posteSensibleBceao: false
+  };
+  dateReprisePrevue: Date | null = null;
+  dureesRapides = [5, 10, 15, 20, 25, 30];
+
+  dateFilter = (d: Date | null): boolean => {
+    if (!d) return true;
+    return d.getDay() !== 0; // Dimanche interdit
+  };
+
   // Demande de Bulletin RH
   showDemandeBulletinModal = false;
   demandeEnvoyeeSuccess = false;
@@ -78,7 +104,8 @@ export class MonEspaceComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private authService: AuthService,
-    private bulletinPdfService: BulletinPdfService
+    private bulletinPdfService: BulletinPdfService,
+    private congeService: CongeService
   ) {}
 
   ngOnInit(): void {
@@ -100,8 +127,8 @@ export class MonEspaceComponent implements OnInit {
         // 1. Identifier l'agent dans le référentiel employé
         const empList = employees || [];
         this.currentAgent = this.identifierAgent(empList);
-
         const empId = this.currentAgent?.id;
+        this.colleaguesList = empList.filter(e => !empId || String(e.id) !== String(empId));
 
         // 2. Si l'employé a un ID en base, charger aussi ses bulletins spécifiques
         if (empId) {
@@ -675,6 +702,200 @@ export class MonEspaceComponent implements OnInit {
       setTimeout(() => {
         this.fermerModalDemandeBulletin();
       }, 2500);
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // GESTION DEMANDE DE CONGÉ INTÉGRÉE DANS MON ESPACE
+  // ─────────────────────────────────────────────────────────────
+
+  ouvrirModalDemandeConge(): void {
+    const dateInitiale = this.getProchainJourOuvrable(new Date());
+    this.congeForm = {
+      typeAbsenceCongeId: this.typesConge.length > 0 ? this.typesConge[0].id : null,
+      dateDebut: dateInitiale,
+      dureeDemandee: 15,
+      dateFin: dateInitiale,
+      motif: '',
+      justificatif: '',
+      interimaireId: null,
+      posteSensibleBceao: false
+    };
+    this.congeEnvoyeSuccess = false;
+    this.isSubmittingConge = false;
+
+    // 1. Charger types de congé si nécessaire
+    if (this.typesConge.length === 0) {
+      this.congeService.getTypes().subscribe({
+        next: (t) => {
+          this.typesConge = t || [];
+          if (this.typesConge.length > 0 && !this.congeForm.typeAbsenceCongeId) {
+            const annuel = this.typesConge.find(tc => (tc.code || '').toUpperCase().includes('ANNUEL'));
+            this.congeForm.typeAbsenceCongeId = annuel ? annuel.id : this.typesConge[0].id;
+          }
+          this.recalculerDatesConge();
+        }
+      });
+    }
+
+    // 2. Charger jours fériés si nécessaire
+    if (this.joursFeries.length === 0) {
+      this.congeService.getJoursFeries().subscribe({
+        next: (jf) => {
+          this.joursFeries = jf || [];
+          this.recalculerDatesConge();
+        }
+      });
+    }
+
+    this.recalculerDatesConge();
+    this.showDemandeCongeModal = true;
+  }
+
+  fermerModalDemandeConge(): void {
+    this.showDemandeCongeModal = false;
+    this.congeEnvoyeSuccess = false;
+    this.isSubmittingConge = false;
+  }
+
+  choisirDureeRapide(jours: number): void {
+    this.congeForm.dureeDemandee = jours;
+    this.recalculerDatesConge();
+  }
+
+  onDateDebutChange(nouvelleDate: any): void {
+    if (nouvelleDate) {
+      const d = new Date(nouvelleDate);
+      if (d.getDay() === 0) {
+        d.setDate(d.getDate() + 1);
+        this.congeForm.dateDebut = d;
+      } else {
+        this.congeForm.dateDebut = d;
+      }
+      this.recalculerDatesConge();
+    }
+  }
+
+  recalculerDatesConge(): void {
+    const debutVal = this.congeForm.dateDebut;
+    const nbJours = Number(this.congeForm.dureeDemandee) || 15;
+    if (!debutVal || nbJours <= 0) return;
+
+    let cur = new Date(debutVal);
+    if (cur.getDay() === 0) {
+      cur.setDate(cur.getDate() + 1);
+      this.congeForm.dateDebut = new Date(cur);
+    }
+
+    let joursComptes = 0;
+    let dernierJour = new Date(cur);
+
+    while (joursComptes < nbJours) {
+      const dow = cur.getDay();
+      const isWeekend = (dow === 0 || dow === 6); // Dimanche et Samedi
+      const isFerie = this.isJourFerie(cur);
+
+      if (!isWeekend && !isFerie) {
+        joursComptes++;
+        dernierJour = new Date(cur);
+      }
+
+      if (joursComptes < nbJours) {
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    let reprise = new Date(dernierJour);
+    reprise.setDate(reprise.getDate() + 1);
+    while (reprise.getDay() === 0 || reprise.getDay() === 6 || this.isJourFerie(reprise)) {
+      reprise.setDate(reprise.getDate() + 1);
+    }
+
+    this.congeForm.dateFin = dernierJour;
+    this.dateReprisePrevue = reprise;
+  }
+
+  isJourFerie(d: Date): boolean {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const iso = `${y}-${m}-${day}`;
+    return this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
+  }
+
+  private getProchainJourOuvrable(base: Date): Date {
+    let d = new Date(base);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 1);
+    while (d.getDay() === 0 || d.getDay() === 6 || this.isJourFerie(d)) {
+      d.setDate(d.getDate() + 1);
+    }
+    return d;
+  }
+
+  private formatDateToIso(rawDate: any): string {
+    if (!rawDate) return '';
+    if (rawDate instanceof Date) {
+      const y = rawDate.getFullYear();
+      const m = String(rawDate.getMonth() + 1).padStart(2, '0');
+      const d = String(rawDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    const dObj = new Date(rawDate);
+    if (!isNaN(dObj.getTime())) {
+      const y = dObj.getFullYear();
+      const m = String(dObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return String(rawDate);
+  }
+
+  soumettreDemandeConge(): void {
+    const empId = this.currentAgent?.id || this.currentUser?.id;
+    if (!empId) {
+      alert('Identifiant collaborateur introuvable. Veuillez recharger la page.');
+      return;
+    }
+
+    this.isSubmittingConge = true;
+    const typeSelected = this.typesConge.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));
+    const empName = this.currentAgent
+      ? `${this.currentAgent.prenom || ''} ${this.currentAgent.nom || ''}`.trim().toUpperCase()
+      : (this.currentUser?.nom || 'COLLABORATEUR');
+
+    const payload = {
+      employee: { id: Number(empId) },
+      employe: empName,
+      typeAbsenceConge: typeSelected ? { id: typeSelected.id, code: typeSelected.code, name: typeSelected.name } : null,
+      type: typeSelected ? typeSelected.name : 'Congé annuel payé',
+      dateDebut: this.formatDateToIso(this.congeForm.dateDebut),
+      dateFin: this.formatDateToIso(this.congeForm.dateFin),
+      nbJours: Number(this.congeForm.dureeDemandee) || 15,
+      motif: this.congeForm.motif || `Demande de ${typeSelected?.name || 'congé'} (${this.congeForm.dureeDemandee} jours ouvrables)`,
+      justificatif: this.congeForm.justificatif,
+      interimaire: this.congeForm.interimaireId ? { id: Number(this.congeForm.interimaireId) } : null,
+      posteSensibleBceao: !!this.congeForm.posteSensibleBceao,
+      statut: this.congeForm.interimaireId ? 'EN_ATTENTE_INTERIM' : 'EN_ATTENTE_N1',
+      dateDemande: new Date().toISOString().split('T')[0]
+    };
+
+    this.congeService.create(payload).subscribe({
+      next: () => {
+        this.isSubmittingConge = false;
+        this.congeEnvoyeSuccess = true;
+        // Rafraîchir les compteurs et l'historique sans quitter la page
+        if (empId) {
+          this.chargerSoldesConges(empId);
+        }
+        setTimeout(() => {
+          this.fermerModalDemandeConge();
+        }, 2200);
+      },
+      error: (err) => {
+        this.isSubmittingConge = false;
+        alert('Erreur lors de la transmission : ' + (err?.error?.message || err.message));
+      }
     });
   }
 
