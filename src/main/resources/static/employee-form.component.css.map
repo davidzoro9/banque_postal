@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/grh/employes/employee-form/employee-form.component.scss"],
-  "sourcesContent": [".spin-icon { animation: spin 1s linear infinite; }\r\n@keyframes spin { to { transform: rotate(360deg); } }\r\n"],
-  "mappings": ";AAAA,CAAA;AAAa,aAAA,KAAA,GAAA,OAAA;;AACb,WADa;AACK;AAAK,eAAA,OAAA;;;",
-  "names": []
-}

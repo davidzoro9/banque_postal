@@ -27,6 +27,12 @@ public class Conge {
     private String dateFin;
     private Integer nbJours;
     
+    @Column(name = "employe_nom")
+    private String employe;
+
+    @Column(name = "type_nom")
+    private String type;
+    
     @Column(length = 1000)
     private String motif;
     
@@ -93,6 +99,30 @@ public class Conge {
 
     @Column(name = "statut_si")
     private String statutSi = "NON_REQUIS"; // NON_REQUIS, A_SUSPENDRE, ACCES_SUSPENDU, ACCES_RESTAURE
+
+    public String getEmploye() {
+        if (employe != null && !employe.trim().isEmpty() && !employe.equalsIgnoreCase("Agent non spécifié")) {
+            return employe;
+        }
+        if (employee != null) {
+            String p = employee.getPrenom() != null ? employee.getPrenom().trim() : "";
+            String n = employee.getNom() != null ? employee.getNom().trim() : "";
+            String full = (p + " " + n).trim();
+            if (!full.isEmpty()) return full;
+            if (employee.getName() != null) return employee.getName().trim();
+        }
+        return employe != null ? employe : "Collaborateur BPBF";
+    }
+
+    public String getType() {
+        if (type != null && !type.trim().isEmpty()) {
+            return type;
+        }
+        if (typeAbsenceConge != null) {
+            return typeAbsenceConge.getName() != null ? typeAbsenceConge.getName() : typeAbsenceConge.getCode();
+        }
+        return "Congé annuel payé";
+    }
 
     public Conge() {}
 }

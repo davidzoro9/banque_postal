@@ -9,14 +9,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"api/employes", "api/employees"})
+@RequestMapping({"/api/employes", "/api/employees", "api/employes", "api/employees"})
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final EmployeeProcessService employeeProcessService;
 
-    @GetMapping("/all")
+    @GetMapping({"", "/all"})
     public List<EmployeeDto> getAll() {
         return employeeService.getAllEmployees();
     }

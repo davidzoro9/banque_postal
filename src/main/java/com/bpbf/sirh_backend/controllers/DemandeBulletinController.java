@@ -23,6 +23,34 @@ public class DemandeBulletinController {
         return ResponseEntity.ok(demandeBulletinRepository.findAllByOrderByDateDemandeDesc());
     }
 
+    @GetMapping("/mes-demandes")
+    public ResponseEntity<List<DemandeBulletin>> getMesDemandes(
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) String matricule,
+            @RequestParam(required = false) String employeeName) {
+        List<DemandeBulletin> all = demandeBulletinRepository.findAllByOrderByDateDemandeDesc();
+        if (employeeId == null && (matricule == null || matricule.isBlank()) && (employeeName == null || employeeName.isBlank())) {
+            return ResponseEntity.ok(all);
+        }
+        final String mNorm = matricule != null ? matricule.trim().toUpperCase() : "";
+        final String nNorm = employeeName != null ? employeeName.trim().toUpperCase() : "";
+
+        List<DemandeBulletin> filtered = all.stream().filter(d -> {
+            if (employeeId != null && d.getEmployeeId() != null && d.getEmployeeId().equals(employeeId)) {
+                return true;
+            }
+            if (!mNorm.isEmpty() && d.getMatricule() != null && d.getMatricule().trim().toUpperCase().equals(mNorm)) {
+                return true;
+            }
+            if (!nNorm.isEmpty() && d.getEmployeeName() != null && d.getEmployeeName().trim().toUpperCase().contains(nNorm)) {
+                return true;
+            }
+            return false;
+        }).toList();
+
+        return ResponseEntity.ok(filtered);
+    }
+
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<DemandeBulletin>> getByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(demandeBulletinRepository.findByEmployeeIdOrderByDateDemandeDesc(employeeId));
@@ -40,7 +68,7 @@ public class DemandeBulletinController {
         return ResponseEntity.ok(saved);
     }
 
-    @PutMapping("/{id}/traiter")
+    @PutMapping({"/{id}", "/{id}/traiter"})
     public ResponseEntity<DemandeBulletin> traiter(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {

@@ -58,9 +58,33 @@ public class CongeWorkflowService {
     // ── ÉTAPE 1 : CRÉATION / SOUMISSION DE LA DEMANDE ──
     @Transactional
     public Conge createConge(Conge conge) {
+        // Résolution robuste de l'employé pour ne JAMAIS avoir "Agent non spécifié"
+        Employee emp = null;
         if (conge.getEmployee() != null && conge.getEmployee().getId() != null) {
-            Employee emp = employeeRepository.findById(conge.getEmployee().getId()).orElse(null);
+            emp = employeeRepository.findById(conge.getEmployee().getId()).orElse(null);
+        }
+        if (emp == null && conge.getEmployee() != null && conge.getEmployee().getMatricule() != null && !conge.getEmployee().getMatricule().trim().isEmpty()) {
+            emp = employeeRepository.findByMatricule(conge.getEmployee().getMatricule().trim()).orElse(null);
+        }
+        if (emp == null && conge.getEmploye() != null && !conge.getEmploye().trim().isEmpty()) {
+            final String searchName = conge.getEmploye().trim().toUpperCase();
+            emp = employeeRepository.findAll().stream()
+                    .filter(e -> {
+                        String eNom = e.getNom() != null ? e.getNom().trim().toUpperCase() : "";
+                        String ePrenom = e.getPrenom() != null ? e.getPrenom().trim().toUpperCase() : "";
+                        String full = (ePrenom + " " + eNom).trim();
+                        return (!eNom.isEmpty() && searchName.contains(eNom)) || (!full.isEmpty() && full.contains(searchName));
+                    })
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (emp != null) {
             conge.setEmployee(emp);
+            String p = emp.getPrenom() != null ? emp.getPrenom().trim() : "";
+            String n = emp.getNom() != null ? emp.getNom().trim() : "";
+            conge.setEmploye((p + " " + n).trim());
+        } else if (conge.getEmploye() == null || conge.getEmploye().isBlank()) {
+            conge.setEmploye("Collaborateur BPBF");
         }
 
         // Intérimaire désigné

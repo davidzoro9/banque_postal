@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/grh/absences/absences-form/absences-form.component.scss"],
-  "sourcesContent": [".spin-icon { animation: spin 1s linear infinite; }\r\n@keyframes spin { to { transform: rotate(360deg); } }\r\n\r\n.duree-row {\r\n  display: flex;\r\n  gap: 12px;\r\n  align-items: flex-start;\r\n\r\n  .duree-field { flex: 2; }\r\n  .unite-field { flex: 1; }\r\n}\r\n\r\n.form-grid-1 {\r\n  display: grid;\r\n  grid-template-columns: 1fr;\r\n  gap: 16px;\r\n}\r\n"],
-  "mappings": ";AAAA,CAAA;AAAa,aAAA,KAAA,GAAA,OAAA;;AACb,WADa;AACK;AAAK,eAAA,OAAA;;;AAEvB,CAAA;AACE,WAAA;AACA,OAAA;AACA,eAAA;;AAEA,CALF,UAKE,CAAA;AAAe,QAAA;;AACf,CANF,UAME,CAAA;AAAe,QAAA;;AAGjB,CAAA;AACE,WAAA;AACA,yBAAA;AACA,OAAA;;",
-  "names": []
-}
