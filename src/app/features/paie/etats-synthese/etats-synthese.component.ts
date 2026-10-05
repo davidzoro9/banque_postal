@@ -509,6 +509,26 @@ export class EtatsSyntheseComponent implements OnInit {
 
     this.etatService.downloadExcel(filter).subscribe({
       next: (blob) => {
+        this.triggerDownload(blob, `etat-${this.selectedEtat.toLowerCase()}.xlsx`);
+        this.isExporting = false;
+      },
+      error: () => {
+        this.isExporting = false;
+      }
+    });
+  }
+
+  exportCsv(): void {
+    this.isExporting = true;
+    const filter: EtatSyntheseFilter = {
+      typeEtat: this.selectedEtat,
+      sessionPaieId: this.selectedSessionId,
+      directionId: this.selectedDirectionId,
+      banque: this.selectedBanque
+    };
+
+    this.etatService.downloadCsv(filter).subscribe({
+      next: (blob) => {
         this.triggerDownload(blob, `etat-${this.selectedEtat.toLowerCase()}.csv`);
         this.isExporting = false;
       },
@@ -532,6 +552,11 @@ export class EtatsSyntheseComponent implements OnInit {
   formatFcfa(val: number | null | undefined): string {
     if (val === null || val === undefined) return '0 F';
     return Math.round(val).toLocaleString('fr-FR') + ' F';
+  }
+
+  getSum(field: string): number {
+    if (!this.filteredRows || this.filteredRows.length === 0) return 0;
+    return this.filteredRows.reduce((acc, row) => acc + (Number((row as any)[field]) || 0), 0);
   }
 
   get isCustomEtat(): boolean {

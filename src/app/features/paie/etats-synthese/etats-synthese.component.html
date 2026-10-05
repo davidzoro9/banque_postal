@@ -60,9 +60,21 @@
         class="btn-export btn-excel"
         (click)="exportExcel()"
         [disabled]="isExporting || isLoading"
-        matTooltip="Télécharger au format Excel / CSV avec BOM UTF-8"
+        matTooltip="Télécharger le classeur officiel Excel (.xlsx multi-colonnes)"
       >
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">table_view</mat-icon>
         <span>Exporter Excel</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-export btn-csv"
+        (click)="exportCsv()"
+        [disabled]="isExporting || isLoading"
+        matTooltip="Télécharger au format CSV délimité pour progiciels comptables (.csv)"
+      >
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">text_snippet</mat-icon>
+        <span>Exporter CSV</span>
       </button>
 
       <button
@@ -416,10 +428,10 @@
         <tfoot>
           <tr class="total-row">
             <td colspan="3" class="font-bold">TOTAL DE LA DÉCLARATION DES COTISATIONS</td>
-            <td class="text-right font-bold">—</td>
-            <td class="text-right font-bold">—</td>
-            <td class="text-right font-bold text-danger">—</td>
-            <td class="text-right col-net font-bold">—</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('salaireSoumisCotisation')) }}</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('cotisationPatronale')) }}</td>
+            <td class="text-right font-bold font-mono text-danger">{{ formatFcfa(getSum('cotisationSalariale')) }}</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(getSum('montantTotalCotisations')) }}</td>
           </tr>
         </tfoot>
       </table>

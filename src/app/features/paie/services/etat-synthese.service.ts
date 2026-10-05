@@ -127,4 +127,15 @@ export class EtatSyntheseService {
 
     return this.http.get(`${this.baseUrl}/excel`, { params, responseType: 'blob' });
   }
+
+  downloadCsv(filters: EtatSyntheseFilter): Observable<Blob> {
+    let params = new HttpParams();
+    if (filters.typeEtat) params = params.set('typeEtat', filters.typeEtat);
+    if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
+    if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
+    if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
+    if (filters.banque && filters.banque !== 'TOUTES') params = params.set('banque', filters.banque);
+
+    return this.http.get(`${this.baseUrl}/csv`, { params, responseType: 'blob' });
+  }
 }
