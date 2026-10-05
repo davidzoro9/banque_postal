@@ -36,6 +36,9 @@ public class EtatSynthesePaieService {
     private final BulletinLotRepository bulletinLotRepository;
     private final DirectionRepository directionRepository;
     private final SignataireConfigService signataireConfigService;
+    private final PrecompteRepository precompteRepository;
+    private final AvoirRepository avoirRepository;
+    private final TropPercuRepository tropPercuRepository;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -300,6 +303,31 @@ public class EtatSynthesePaieService {
             BigDecimal tpa = sBrut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
             BigDecimal masseSal = sBrut.add(partPat);
 
+            BigDecimal rappels = BigDecimal.ZERO;
+            BigDecimal tropPercus = BigDecimal.ZERO;
+            BigDecimal precomptes = BigDecimal.ZERO;
+
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    String typeLigne = l.getTypeLigne() != null ? l.getTypeLigne().toUpperCase(Locale.ROOT) : "";
+                    BigDecimal montant = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+
+                    if (code.contains("RAPPEL") || code.contains("AVOIR") || lib.contains("RAPPEL") || lib.contains("AVOIR")) {
+                        rappels = rappels.add(montant);
+                    } else if (code.contains("TROP") || lib.contains("TROP") || lib.contains("PERCU")) {
+                        tropPercus = tropPercus.add(montant);
+                    } else if ("PRECOMPTE".equals(typeLigne) || code.startsWith("PREC_") || code.contains("PRET") || code.contains("AVANCE") || lib.contains("PRÉCOMPTE") || lib.contains("PRECOMPTE") || lib.contains("PRÊT")) {
+                        precomptes = precomptes.add(montant);
+                    }
+                }
+            }
+
+            if (precomptes.compareTo(BigDecimal.ZERO) == 0 && b.getTotalPrecomptes() != null) {
+                precomptes = b.getTotalPrecomptes();
+            }
+
             rows.add(LivrePaieRowDto.builder()
                     .bulletinId(b.getId())
                     .matricule(mat)
@@ -325,7 +353,9 @@ public class EtatSynthesePaieService {
                     .indemnites(indem)
                     .totalAvoirs(sBrut)
                     .cotisationCnss(cnss)
-                    .totalPrecomptes(b.getTotalPrecomptes() != null ? b.getTotalPrecomptes() : BigDecimal.ZERO)
+                    .totalPrecomptes(precomptes)
+                    .totalRappels(rappels)
+                    .totalTropPercus(tropPercus)
                     .build());
         }
         return rows;
@@ -581,27 +611,64 @@ public class EtatSynthesePaieService {
 
     private List<EtatPrecompteRowDto> buildEtatPrecompteRows(List<Bulletin> bulletins) {
         List<EtatPrecompteRowDto> rows = new ArrayList<>();
+        Set<String> processedKeys = new HashSet<>();
+
         for (Bulletin b : bulletins) {
             Employee e = b.getEmployee();
             String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
             String nom = e != null ? ((e.getPrenom() != null ? e.getPrenom() : "") + " " + (e.getNom() != null ? e.getNom() : "")).trim().toUpperCase(Locale.ROOT) : "—";
+            Long empId = e != null ? e.getId() : null;
 
             if (b.getLines() != null) {
                 for (BulletinLine l : b.getLines()) {
-                    if ("PRECOMPTE".equalsIgnoreCase(l.getTypeLigne()) || (l.getCode() != null && l.getCode().startsWith("PREC_"))) {
+                    String typeLigne = l.getTypeLigne() != null ? l.getTypeLigne().toUpperCase(Locale.ROOT) : "";
+                    String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+
+                    if ("PRECOMPTE".equalsIgnoreCase(typeLigne) || code.startsWith("PREC_") || code.contains("PRET") || code.contains("AVANCE") || lib.contains("PRÉCOMPTE") || lib.contains("PRECOMPTE") || lib.contains("PRÊT")) {
                         BigDecimal montant = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
-                        BigDecimal base = l.getBaseCalcul() != null ? l.getBaseCalcul() : montant;
+                        BigDecimal base = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? l.getBaseCalcul() : montant.multiply(new BigDecimal("12"));
+
+                        String libelle = l.getLibelle() != null ? l.getLibelle() : "Précompte / Avance";
+                        String key = mat + "_" + libelle;
+                        processedKeys.add(key);
 
                         rows.add(EtatPrecompteRowDto.builder()
                                 .matricule(mat)
                                 .nomPrenom(nom)
-                                .typePrecompte(l.getLibelle() != null ? l.getLibelle() : "Précompte / Avance")
+                                .typePrecompte(libelle)
                                 .organismeBeneficiaire("BANQUE POSTALE DU BURKINA FASO")
                                 .montantTotalInitial(base)
                                 .retenuePeriode(montant)
                                 .soldeRestantDu(base.subtract(montant).max(BigDecimal.ZERO))
                                 .echeanceCourante(1)
                                 .nombreEcheancesTotal(12)
+                                .build());
+                    }
+                }
+            }
+
+            if (empId != null && precompteRepository != null) {
+                List<Precompte> dbPrecomptes = precompteRepository.findByEmployeeId(empId);
+                for (Precompte p : dbPrecomptes) {
+                    String typeP = p.getSalaryElement() != null ? p.getSalaryElement().getName() : (p.getMotif() != null ? p.getMotif() : "Prêt du Personnel");
+                    String key = mat + "_" + typeP;
+                    if (!processedKeys.contains(key)) {
+                        processedKeys.add(key);
+                        BigDecimal retMens = p.getRetenueMensuelle() != null ? p.getRetenueMensuelle() : (p.getAmount() != null && p.getEcheance() != null && p.getEcheance() > 0 ? p.getAmount().divide(new BigDecimal(p.getEcheance()), 0, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+                        BigDecimal totalInit = p.getAmount() != null ? p.getAmount() : retMens.multiply(new BigDecimal("12"));
+                        BigDecimal solde = p.getMontantRestant() != null ? p.getMontantRestant() : totalInit.subtract(retMens).max(BigDecimal.ZERO);
+
+                        rows.add(EtatPrecompteRowDto.builder()
+                                .matricule(mat)
+                                .nomPrenom(nom)
+                                .typePrecompte(typeP)
+                                .organismeBeneficiaire("BANQUE POSTALE DU BURKINA FASO")
+                                .montantTotalInitial(totalInit)
+                                .retenuePeriode(retMens)
+                                .soldeRestantDu(solde)
+                                .echeanceCourante(1)
+                                .nombreEcheancesTotal(p.getEcheance() != null ? p.getEcheance() : 12)
                                 .build());
                     }
                 }
@@ -667,6 +734,9 @@ public class EtatSynthesePaieService {
         BigDecimal totalFsp = BigDecimal.ZERO;
         BigDecimal totalPrecomptes = BigDecimal.ZERO;
 
+        BigDecimal totalRappels = BigDecimal.ZERO;
+        BigDecimal totalTropPercus = BigDecimal.ZERO;
+
         for (Bulletin b : bulletins) {
             if (b.getSalaireBase() != null) totalSalBase = totalSalBase.add(b.getSalaireBase());
             if (b.getSurSalaire() != null) totalSurSal = totalSurSal.add(b.getSurSalaire());
@@ -680,12 +750,24 @@ public class EtatSynthesePaieService {
                 for (BulletinLine l : b.getLines()) {
                     String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
                     String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    String typeL = l.getTypeLigne() != null ? l.getTypeLigne().toUpperCase(Locale.ROOT) : "";
+                    BigDecimal m = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+
                     if (c.contains("CRRAE") || lib.contains("CRRAE")) {
                         if (l.getMontant() != null) totalCrraeSal = totalCrraeSal.add(l.getMontant());
                         if (l.getPartPatronale() != null) totalCrraePatronale = totalCrraePatronale.add(l.getPartPatronale());
                     }
                     if (c.contains("FSP") || c.contains("SOLIDAR") || lib.contains("SOLIDAR")) {
                         if (l.getMontant() != null) totalFsp = totalFsp.add(l.getMontant());
+                    }
+                    if (c.contains("RAPPEL") || c.contains("AVOIR") || lib.contains("RAPPEL") || lib.contains("AVOIR")) {
+                        totalRappels = totalRappels.add(m);
+                    }
+                    if (c.contains("TROP") || lib.contains("TROP") || lib.contains("PERCU")) {
+                        totalTropPercus = totalTropPercus.add(m);
+                    }
+                    if ("PRECOMPTE".equals(typeL) || c.startsWith("PREC_") || c.contains("PRET") || c.contains("AVANCE")) {
+                        totalPrecomptes = totalPrecomptes.add(m);
                     }
                 }
             }
@@ -727,6 +809,17 @@ public class EtatSynthesePaieService {
                     .intituleCompte("Indemnités, primes et gratifications diverses")
                     .sens("DEBIT")
                     .montantDebit(totalIndemnites)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("CHARGES_PERSONNEL")
+                    .build());
+        }
+
+        if (totalRappels.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("642500")
+                    .intituleCompte("Rappels sur salaires antérieurs (Avoirs accordés)")
+                    .sens("DEBIT")
+                    .montantDebit(totalRappels)
                     .montantCredit(BigDecimal.ZERO)
                     .categorieComptable("CHARGES_PERSONNEL")
                     .build());
@@ -837,6 +930,17 @@ public class EtatSynthesePaieService {
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalPrecomptes)
+                    .categorieComptable("CREANCES_PERSONNEL")
+                    .build());
+        }
+
+        if (totalTropPercus.compareTo(BigDecimal.ZERO) > 0) {
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte("428700")
+                    .intituleCompte("Personnel - Trop-perçus régularisés sur salaires antérieurs")
+                    .sens("CREDIT")
+                    .montantDebit(BigDecimal.ZERO)
+                    .montantCredit(totalTropPercus)
                     .categorieComptable("CREANCES_PERSONNEL")
                     .build());
         }
@@ -1769,85 +1873,440 @@ public class EtatSynthesePaieService {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
 
-        // Titre et métadonnées
+        // Titre et métadonnées d'en-tête
         pw.println("BANQUE POSTALE DU BURKINA FASO");
         pw.println("ÉTAT DE SYNTHÈSE : " + etat.getTitreEtat());
-        pw.println("SESSION : " + etat.getCodeSession() + ";PÉRIODE : " + etat.getPeriode());
+        pw.println("SESSION : " + (etat.getCodeSession() != null ? etat.getCodeSession() : "—") + ";PÉRIODE : " + (etat.getPeriode() != null ? etat.getPeriode() : "—"));
         pw.println("");
 
-        List<Object> data = etat.getDonnees();
+        List<Object> data = etat.getDonnees() != null ? etat.getDonnees() : Collections.emptyList();
         String type = etat.getTypeEtat();
 
         if ("RECAPITULATIF_GLOBAL".equalsIgnoreCase(type)) {
-            pw.println("Numéro Compte;Intitulé Compte;Débit (FCFA);Crédit (FCFA)");
+            pw.println("Numéro Compte;Intitulé Compte;Sens;Débit (FCFA);Crédit (FCFA)");
             for (Object o : data) {
                 if (o instanceof RecapitulatifGlobalRowDto r) {
-                    pw.println(escape(r.getNumeroCompte()) + ";" + escape(r.getIntituleCompte()) + ";" + (r.getMontantDebit() != null ? r.getMontantDebit() : "") + ";" + (r.getMontantCredit() != null ? r.getMontantCredit() : ""));
+                    pw.println(escape(r.getNumeroCompte()) + ";" +
+                               escape(r.getIntituleCompte()) + ";" +
+                               escape(r.getSens()) + ";" +
+                               formatCsvMontant(r.getMontantDebit()) + ";" +
+                               formatCsvMontant(r.getMontantCredit()));
                 }
             }
+            pw.println("TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE);;; " + formatCsvMontant(etat.getTotalMasseSalariale()) + ";" + formatCsvMontant(etat.getTotalMasseSalariale()));
+
         } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Soumis;Part Patronale;Part Salariale;Total Cotisations");
+            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Soumis (FCFA);Part Employeur (FCFA);Part Salariale (FCFA);Total Cotisations (FCFA)");
+            BigDecimal totSoumis = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totSal = BigDecimal.ZERO;
+            BigDecimal totGlob = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatCrraeRowDto c) {
-                    pw.println(c.getNumeroOrdre() + ";" + escape(c.getMatricule()) + ";" + escape(c.getNomPrenom()) + ";" + c.getSalaireSoumisCotisation() + ";" + c.getCotisationPatronale() + ";" + c.getCotisationSalariale() + ";" + c.getMontantTotalCotisations());
+                    pw.println(c.getNumeroOrdre() + ";" +
+                               escape(c.getMatricule()) + ";" +
+                               escape(c.getNomPrenom()) + ";" +
+                               formatCsvMontant(c.getSalaireSoumisCotisation()) + ";" +
+                               formatCsvMontant(c.getCotisationPatronale()) + ";" +
+                               formatCsvMontant(c.getCotisationSalariale()) + ";" +
+                               formatCsvMontant(c.getMontantTotalCotisations()));
+
+                    if (c.getSalaireSoumisCotisation() != null) totSoumis = totSoumis.add(c.getSalaireSoumisCotisation());
+                    if (c.getCotisationPatronale() != null) totPat = totPat.add(c.getCotisationPatronale());
+                    if (c.getCotisationSalariale() != null) totSal = totSal.add(c.getCotisationSalariale());
+                    if (c.getMontantTotalCotisations() != null) totGlob = totGlob.add(c.getMontantTotalCotisations());
                 }
             }
+            pw.println("TOTAL DE LA DÉCLARATION DES COTISATIONS;;;" + formatCsvMontant(totSoumis) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totSal) + ";" + formatCsvMontant(totGlob));
+
         } else if ("ETAT_BANQUE".equalsIgnoreCase(type)) {
-            pw.println("Banque;Code Banque;Code Guichet;Compte à Créditer;Clé;Matricule;Nom & Prénoms;Montant Net");
+            pw.println("Banque;Matricule;Nom & Prénom(s);Code Banque;Code Guichet;Compte à créditer;Clé;Montant Net (FCFA)");
+            BigDecimal totalNetBq = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatBanqueGroupeDto bq) {
                     if (bq.getVirements() != null) {
                         for (EtatBanqueGroupeDto.VirementItemDto v : bq.getVirements()) {
-                            pw.println(escape(bq.getBanqueNom()) + ";" + escape(v.getCodeBanque()) + ";" + escape(v.getCodeGuichet()) + ";" + escape(v.getCompteACrediter()) + ";" + escape(v.getCle()) + ";" + escape(v.getMatricule()) + ";" + escape(v.getNomPrenom()) + ";" + v.getMontant());
+                            pw.println(escape(bq.getBanqueNom()) + ";" +
+                                       escape(v.getMatricule()) + ";" +
+                                       escape(v.getNomPrenom()) + ";" +
+                                       escape(v.getCodeBanque()) + ";" +
+                                       escape(v.getCodeGuichet()) + ";" +
+                                       escape(v.getCompteACrediter()) + ";" +
+                                       escape(v.getCle()) + ";" +
+                                       formatCsvMontant(v.getMontant() != null ? v.getMontant() : v.getMontantNet()));
+                            if (v.getMontant() != null) totalNetBq = totalNetBq.add(v.getMontant());
+                            else if (v.getMontantNet() != null) totalNetBq = totalNetBq.add(v.getMontantNet());
                         }
                     }
                 }
             }
+            pw.println("TOTAL DES ORDRES DE VIREMENT;;;;;;;" + formatCsvMontant(totalNetBq));
+
         } else if ("ETAT_CNSS".equalsIgnoreCase(type)) {
-            pw.println("Matricule;Nom et Prénoms;N° CNSS;Assiette Cotisable;Part Salariale 5.5%;Prestations Fam. 7%;Risques Pro 3.5%;Retraite 5.5%;Total CNSS");
+            pw.println("Matricule;Nom et Prénoms;N° CNSS;Date Embauche;Salaire Brut (FCFA);Assiette CNSS (plaf. 800k);Part Sal. (5.5%);Prest. Fam. (7.0%);Risques Pro (3.5%);Retraite Pat. (5.5%);Total Patronal;Total reversé CNSS");
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totAss = BigDecimal.ZERO;
+            BigDecimal totSal = BigDecimal.ZERO;
+            BigDecimal totPf = BigDecimal.ZERO;
+            BigDecimal totRp = BigDecimal.ZERO;
+            BigDecimal totRetPat = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totRev = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatCnssRowDto c) {
-                    pw.println(escape(c.getMatricule()) + ";" + escape(c.getNomPrenom()) + ";" + escape(c.getNoCnss()) + ";" + c.getAssietteCotisable() + ";" + c.getPartSalariale() + ";" + c.getPartPatronalePrestations() + ";" + c.getPartPatronaleRisques() + ";" + c.getPartPatronaleRetraite() + ";" + c.getTotalCotisationCnss());
+                    pw.println(escape(c.getMatricule()) + ";" +
+                               escape(c.getNomPrenom()) + ";" +
+                               escape(c.getNoCnss()) + ";" +
+                               escape(c.getDateEmbauche()) + ";" +
+                               formatCsvMontant(c.getSalaireBrut()) + ";" +
+                               formatCsvMontant(c.getAssietteCotisable()) + ";" +
+                               formatCsvMontant(c.getPartSalariale()) + ";" +
+                               formatCsvMontant(c.getPartPatronalePrestations()) + ";" +
+                               formatCsvMontant(c.getPartPatronaleRisques()) + ";" +
+                               formatCsvMontant(c.getPartPatronaleRetraite()) + ";" +
+                               formatCsvMontant(c.getTotalPartPatronale()) + ";" +
+                               formatCsvMontant(c.getTotalCotisationCnss()));
+
+                    if (c.getSalaireBrut() != null) totBrut = totBrut.add(c.getSalaireBrut());
+                    if (c.getAssietteCotisable() != null) totAss = totAss.add(c.getAssietteCotisable());
+                    if (c.getPartSalariale() != null) totSal = totSal.add(c.getPartSalariale());
+                    if (c.getPartPatronalePrestations() != null) totPf = totPf.add(c.getPartPatronalePrestations());
+                    if (c.getPartPatronaleRisques() != null) totRp = totRp.add(c.getPartPatronaleRisques());
+                    if (c.getPartPatronaleRetraite() != null) totRetPat = totRetPat.add(c.getPartPatronaleRetraite());
+                    if (c.getTotalPartPatronale() != null) totPat = totPat.add(c.getTotalPartPatronale());
+                    if (c.getTotalCotisationCnss() != null) totRev = totRev.add(c.getTotalCotisationCnss());
                 }
             }
+            pw.println("TOTAL DÉCLARATIF COTISATIONS CNSS;;;;" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totAss) + ";" + formatCsvMontant(totSal) + ";" + formatCsvMontant(totPf) + ";" + formatCsvMontant(totRp) + ";" + formatCsvMontant(totRetPat) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totRev));
+
         } else if ("ETAT_IUTS".equalsIgnoreCase(type)) {
-            pw.println("N° Ordre;Nom et Prénoms;Total Salaires Bruts;Base Imposable;Nombre de Charges;IUTS Net à Reverser");
+            pw.println("N° d'Ordre;Nom et Prénoms;Total Salaires Bruts (FCFA);Base Imposable IUTS (FCFA);Nb de charges;IUTS Net à Reverser (FCFA)");
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totBase = BigDecimal.ZERO;
+            BigDecimal totIuts = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatIutsRowDto i) {
-                    pw.println(i.getNumeroOrdre() + ";" + escape(i.getNomPrenom()) + ";" + (i.getSalaireBruts() != null ? i.getSalaireBruts() : i.getSalaireBrut()) + ";" + i.getBaseImposable() + ";" + (i.getNbDeCharges() != null ? i.getNbDeCharges() : i.getNombreCharges()) + ";" + (i.getIutsAReverser() != null ? i.getIutsAReverser() : i.getImpotIutsNet()));
+                    BigDecimal brut = i.getSalaireBruts() != null ? i.getSalaireBruts() : i.getSalaireBrut();
+                    BigDecimal netIuts = i.getIutsAReverser() != null ? i.getIutsAReverser() : i.getImpotIutsNet();
+                    Integer ch = i.getNbDeCharges() != null ? i.getNbDeCharges() : i.getNombreCharges();
+
+                    pw.println((i.getNumeroOrdre() != null ? i.getNumeroOrdre() : "—") + ";" +
+                               escape(i.getNomPrenom()) + ";" +
+                               formatCsvMontant(brut) + ";" +
+                               formatCsvMontant(i.getBaseImposable()) + ";" +
+                               (ch != null ? ch : 0) + ";" +
+                               formatCsvMontant(netIuts));
+
+                    if (brut != null) totBrut = totBrut.add(brut);
+                    if (i.getBaseImposable() != null) totBase = totBase.add(i.getBaseImposable());
+                    if (netIuts != null) totIuts = totIuts.add(netIuts);
                 }
             }
+            pw.println("TOTAL DE L'ÉTAT IUTS À REVERSER;;" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totBase) + ";;" + formatCsvMontant(totIuts));
+
         } else if ("ETAT_FSP".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Net;Taux;Montant");
+            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Salaire Net (FCFA);Taux;Montant (FCFA)");
+            BigDecimal totNet = BigDecimal.ZERO;
+            BigDecimal totFsp = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatFspRowDto f) {
-                    pw.println(f.getNumeroOrdre() + ";" + escape(f.getMatricule()) + ";" + escape(f.getNomPrenom()) + ";" + (f.getSalaireNet() != null ? f.getSalaireNet() : f.getAssietteCalcul()) + ";" + (f.getTaux() != null ? f.getTaux() : "1%") + ";" + (f.getMontant() != null ? f.getMontant() : f.getMontantRetenu()));
+                    BigDecimal net = f.getSalaireNet() != null ? f.getSalaireNet() : f.getAssietteCalcul();
+                    BigDecimal m = f.getMontant() != null ? f.getMontant() : f.getMontantRetenu();
+
+                    pw.println((f.getNumeroOrdre() != null ? f.getNumeroOrdre() : "—") + ";" +
+                               escape(f.getMatricule()) + ";" +
+                               escape(f.getNomPrenom()) + ";" +
+                               formatCsvMontant(net) + ";" +
+                               (f.getTaux() != null ? f.getTaux() : "1%") + ";" +
+                               formatCsvMontant(m));
+
+                    if (net != null) totNet = totNet.add(net);
+                    if (m != null) totFsp = totFsp.add(m);
                 }
             }
+            pw.println("TOTAL DU FONDS DE SOLIDARITÉ PATRIOTIQUE;;;" + formatCsvMontant(totNet) + ";1%;" + formatCsvMontant(totFsp));
+
         } else if ("ETAT_SALAIRE".equalsIgnoreCase(type)) {
-            pw.println("Direction;Département;Effectif;Salaire Base;Indemnités;Salaire Brut;Charges Patronales;Masse Salariale Totale;Retenues;Salaire Net");
+            pw.println("Direction;Département;Effectif;Salaire Base (FCFA);Indemnités (FCFA);Salaire Brut (FCFA);Charges Patronales (FCFA);Masse Salariale Totale (FCFA);Retenues (FCFA);Net Payé (FCFA)");
+            int totEff = 0;
+            BigDecimal totBase = BigDecimal.ZERO;
+            BigDecimal totIndem = BigDecimal.ZERO;
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totMasse = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNet = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof EtatSalaireDirectionRowDto s) {
-                    pw.println(escape(s.getDirectionNom()) + ";" + escape(s.getDepartementNom()) + ";" + s.getEffectif() + ";" + s.getTotalSalaireBase() + ";" + s.getTotalIndemnites() + ";" + s.getTotalBrut() + ";" + s.getTotalCotisationsPatronales() + ";" + s.getTotalMasseSalariale() + ";" + s.getTotalRetenues() + ";" + s.getTotalNet());
+                    pw.println(escape(s.getDirectionNom()) + ";" +
+                               escape(s.getDepartementNom()) + ";" +
+                               s.getEffectif() + ";" +
+                               formatCsvMontant(s.getTotalSalaireBase()) + ";" +
+                               formatCsvMontant(s.getTotalIndemnites()) + ";" +
+                               formatCsvMontant(s.getTotalBrut()) + ";" +
+                               formatCsvMontant(s.getTotalCotisationsPatronales()) + ";" +
+                               formatCsvMontant(s.getTotalMasseSalariale()) + ";" +
+                               formatCsvMontant(s.getTotalRetenues()) + ";" +
+                               formatCsvMontant(s.getTotalNet()));
+
+                    totEff += s.getEffectif() != null ? s.getEffectif() : 0;
+                    if (s.getTotalSalaireBase() != null) totBase = totBase.add(s.getTotalSalaireBase());
+                    if (s.getTotalIndemnites() != null) totIndem = totIndem.add(s.getTotalIndemnites());
+                    if (s.getTotalBrut() != null) totBrut = totBrut.add(s.getTotalBrut());
+                    if (s.getTotalCotisationsPatronales() != null) totPat = totPat.add(s.getTotalCotisationsPatronales());
+                    if (s.getTotalMasseSalariale() != null) totMasse = totMasse.add(s.getTotalMasseSalariale());
+                    if (s.getTotalRetenues() != null) totRet = totRet.add(s.getTotalRetenues());
+                    if (s.getTotalNet() != null) totNet = totNet.add(s.getTotalNet());
                 }
             }
+            pw.println("TOTAL CONSOLIDÉ TOUTES DIRECTIONS;;" + totEff + ";" + formatCsvMontant(totBase) + ";" + formatCsvMontant(totIndem) + ";" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totMasse) + ";" + formatCsvMontant(totRet) + ";" + formatCsvMontant(totNet));
+
+        } else if ("ETAT_NOMINATIF".equalsIgnoreCase(type)) {
+            pw.println("Matricule;Nom et Prénoms;Poste / Classification;Direction;Salaire Base (FCFA);Sal. Brut (FCFA);Total Ret. (FCFA);Net Payé (FCFA)");
+            BigDecimal totBase = BigDecimal.ZERO;
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNet = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatNominatifRowDto n) {
+                    pw.println(escape(n.getMatricule()) + ";" +
+                               escape(n.getNomPrenom()) + ";" +
+                               escape(n.getPoste() + (n.getClassification() != null ? " (" + n.getClassification() + ")" : "")) + ";" +
+                               escape(n.getDirection()) + ";" +
+                               formatCsvMontant(n.getSalaireBase()) + ";" +
+                               formatCsvMontant(n.getSalaireBrut()) + ";" +
+                               formatCsvMontant(n.getTotalRetenues()) + ";" +
+                               formatCsvMontant(n.getSalaireNet()));
+
+                    if (n.getSalaireBase() != null) totBase = totBase.add(n.getSalaireBase());
+                    if (n.getSalaireBrut() != null) totBrut = totBrut.add(n.getSalaireBrut());
+                    if (n.getTotalRetenues() != null) totRet = totRet.add(n.getTotalRetenues());
+                    if (n.getSalaireNet() != null) totNet = totNet.add(n.getSalaireNet());
+                }
+            }
+            pw.println("TOTAL GÉNÉRAL DE L'ÉTAT NOMINATIF;;;;" + formatCsvMontant(totBase) + ";" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totRet) + ";" + formatCsvMontant(totNet));
+
+        } else if ("ETAT_PRECOMPTE".equalsIgnoreCase(type)) {
+            pw.println("Matricule;Nom et Prénoms;Type de Précompte / Prêt;Organisme Bénéficiaire;Montant Initial (FCFA);Retenue Période (FCFA);Solde Restant Dû (FCFA)");
+            BigDecimal totInit = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totSolde = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatPrecompteRowDto p) {
+                    pw.println(escape(p.getMatricule()) + ";" +
+                               escape(p.getNomPrenom()) + ";" +
+                               escape(p.getTypePrecompte()) + ";" +
+                               escape(p.getOrganismeBeneficiaire()) + ";" +
+                               formatCsvMontant(p.getMontantTotalInitial()) + ";" +
+                               formatCsvMontant(p.getRetenuePeriode()) + ";" +
+                               formatCsvMontant(p.getSoldeRestantDu()));
+
+                    if (p.getMontantTotalInitial() != null) totInit = totInit.add(p.getMontantTotalInitial());
+                    if (p.getRetenuePeriode() != null) totRet = totRet.add(p.getRetenuePeriode());
+                    if (p.getSoldeRestantDu() != null) totSolde = totSolde.add(p.getSoldeRestantDu());
+                }
+            }
+            pw.println("TOTAL DES PRÉCOMPTES ET RETENUES;;;;" + formatCsvMontant(totInit) + ";" + formatCsvMontant(totRet) + ";" + formatCsvMontant(totSolde));
+
+        } else if ("ETAT_MUTUELLE".equalsIgnoreCase(type)) {
+            pw.println("Matricule;Nom et Prénoms;Direction;Formule / Régime;Part Salariale (FCFA);Part Patronale (FCFA);Total Cotisation Mutuelle (FCFA)");
+            BigDecimal totSal = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totCot = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatMutuelleRowDto m) {
+                    pw.println(escape(m.getMatricule()) + ";" +
+                               escape(m.getNomPrenom()) + ";" +
+                               escape(m.getDirection()) + ";" +
+                               escape(m.getFormuleMutuelle()) + ";" +
+                               formatCsvMontant(m.getPartSalariale()) + ";" +
+                               formatCsvMontant(m.getPartPatronale()) + ";" +
+                               formatCsvMontant(m.getTotalCotisation()));
+
+                    if (m.getPartSalariale() != null) totSal = totSal.add(m.getPartSalariale());
+                    if (m.getPartPatronale() != null) totPat = totPat.add(m.getPartPatronale());
+                    if (m.getTotalCotisation() != null) totCot = totCot.add(m.getTotalCotisation());
+                }
+            }
+            pw.println("TOTAL DES COTISATIONS MUTUELLE DE SANTÉ;;;;" + formatCsvMontant(totSal) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totCot));
+
+        } else if ("ETAT_TYPE_EMPLOYE".equalsIgnoreCase(type)) {
+            pw.println("Statut / Type d'Employé;Effectif;Salaire Base (FCFA);Indemnités (FCFA);Salaire Brut (FCFA);Charges Patronales (FCFA);Retenues (FCFA);Net Global (FCFA);Net Moyen (FCFA)");
+            int totEff = 0;
+            BigDecimal totBase = BigDecimal.ZERO;
+            BigDecimal totIndem = BigDecimal.ZERO;
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNet = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatTypeEmployeRowDto te) {
+                    pw.println(escape(te.getTypeEmploye()) + ";" +
+                               te.getEffectif() + ";" +
+                               formatCsvMontant(te.getTotalSalaireBase()) + ";" +
+                               formatCsvMontant(te.getTotalIndemnites()) + ";" +
+                               formatCsvMontant(te.getTotalBrut()) + ";" +
+                               formatCsvMontant(te.getTotalCotisationsPatronales()) + ";" +
+                               formatCsvMontant(te.getTotalRetenues()) + ";" +
+                               formatCsvMontant(te.getTotalNet()) + ";" +
+                               formatCsvMontant(te.getSalaireMoyenNet()));
+
+                    totEff += te.getEffectif() != null ? te.getEffectif() : 0;
+                    if (te.getTotalSalaireBase() != null) totBase = totBase.add(te.getTotalSalaireBase());
+                    if (te.getTotalIndemnites() != null) totIndem = totIndem.add(te.getTotalIndemnites());
+                    if (te.getTotalBrut() != null) totBrut = totBrut.add(te.getTotalBrut());
+                    if (te.getTotalCotisationsPatronales() != null) totPat = totPat.add(te.getTotalCotisationsPatronales());
+                    if (te.getTotalRetenues() != null) totRet = totRet.add(te.getTotalRetenues());
+                    if (te.getTotalNet() != null) totNet = totNet.add(te.getTotalNet());
+                }
+            }
+            BigDecimal moyNet = totEff > 0 ? totNet.divide(new BigDecimal(totEff), 0, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            pw.println("TOTAL GÉNÉRAL PAR STATUT;" + totEff + ";" + formatCsvMontant(totBase) + ";" + formatCsvMontant(totIndem) + ";" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totRet) + ";" + formatCsvMontant(totNet) + ";" + formatCsvMontant(moyNet));
+
+        } else if ("ETAT_ELEMENTS_SALAIRE".equalsIgnoreCase(type) || "ETAT_ELEMENT_SALAIRE".equalsIgnoreCase(type)) {
+            pw.println("Code Rubrique;Libellé de l'Élément;Nature / Type;Nombre Bénéficiaires;Part Salariale (FCFA);Part Patronale (FCFA);Total Général (FCFA)");
+            int totBenef = 0;
+            BigDecimal totSal = BigDecimal.ZERO;
+            BigDecimal totPat = BigDecimal.ZERO;
+            BigDecimal totGlob = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatElementSalaireRowDto el) {
+                    pw.println(escape(el.getCodeRubrique()) + ";" +
+                               escape(el.getLibelleRubrique()) + ";" +
+                               escape(el.getTypeRubrique()) + ";" +
+                               el.getNombreBeneficiaires() + ";" +
+                               formatCsvMontant(el.getTotalMontantSalarial()) + ";" +
+                               formatCsvMontant(el.getTotalMontantPatronal()) + ";" +
+                               formatCsvMontant(el.getTotalGlobal()));
+
+                    totBenef += el.getNombreBeneficiaires() != null ? el.getNombreBeneficiaires() : 0;
+                    if (el.getTotalMontantSalarial() != null) totSal = totSal.add(el.getTotalMontantSalarial());
+                    if (el.getTotalMontantPatronal() != null) totPat = totPat.add(el.getTotalMontantPatronal());
+                    if (el.getTotalGlobal() != null) totGlob = totGlob.add(el.getTotalGlobal());
+                }
+            }
+            pw.println("TOTAL DES RUBRIQUES DE SALAIRE;;;" + totBenef + ";" + formatCsvMontant(totSal) + ";" + formatCsvMontant(totPat) + ";" + formatCsvMontant(totGlob));
+
+        } else if ("ETAT_BULLETIN".equalsIgnoreCase(type)) {
+            pw.println("Code Bulletin;Matricule;Nom et Prénoms;Direction;Type Session;Statut;Salaire Brut (FCFA);Total Retenues (FCFA);Net à Payer (FCFA);Justification Écart");
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNet = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatBulletinControleRowDto b) {
+                    pw.println(escape(b.getCodeBulletin()) + ";" +
+                               escape(b.getMatricule()) + ";" +
+                               escape(b.getNomPrenom()) + ";" +
+                               escape(b.getDirection()) + ";" +
+                               escape(b.getTypeSession()) + ";" +
+                               escape(b.getStatut()) + ";" +
+                               formatCsvMontant(b.getSalaireBrut()) + ";" +
+                               formatCsvMontant(b.getTotalRetenues()) + ";" +
+                               formatCsvMontant(b.getSalaireNet()) + ";" +
+                               escape(b.getJustificationEcart() != null ? b.getJustificationEcart() : "—"));
+
+                    if (b.getSalaireBrut() != null) totBrut = totBrut.add(b.getSalaireBrut());
+                    if (b.getTotalRetenues() != null) totRet = totRet.add(b.getTotalRetenues());
+                    if (b.getSalaireNet() != null) totNet = totNet.add(b.getSalaireNet());
+                }
+            }
+            pw.println("TOTAL CONTRÔLE DE TOUS LES BULLETINS;;;;;;" + formatCsvMontant(totBrut) + ";" + formatCsvMontant(totRet) + ";" + formatCsvMontant(totNet) + ";");
+
         } else {
-            // Livre de paie - 17 colonnes officielles
+            // Livre de paie - 17 colonnes officielles réglementaires (Modèle 3)
             pw.println("Mle;Nom et Prénoms;Grade;Sal. base;Sursalaire;Indem. & Pr.;Total brut;Ass. vi.;Part patr.;Base imp.;Chrg;IUTS;Sal. net;Tot. ret.;Net payer;TPA;Masse sal.");
+            BigDecimal totBase = BigDecimal.ZERO;
+            BigDecimal totSurSal = BigDecimal.ZERO;
+            BigDecimal totIndem = BigDecimal.ZERO;
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totAssVi = BigDecimal.ZERO;
+            BigDecimal totPartPat = BigDecimal.ZERO;
+            BigDecimal totBaseImp = BigDecimal.ZERO;
+            BigDecimal totIuts = BigDecimal.ZERO;
+            BigDecimal totSalNet = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNetPayer = BigDecimal.ZERO;
+            BigDecimal totTpa = BigDecimal.ZERO;
+            BigDecimal totMasseSal = BigDecimal.ZERO;
+
             for (Object o : data) {
                 if (o instanceof LivrePaieRowDto l) {
-                    pw.println(escape(l.getMatricule()) + ";" + escape(l.getNomPrenom()) + ";" + escape(l.getGrade()) + ";" + l.getSalaireBase() + ";" + l.getSurSalaire() + ";" + l.getIndemnitesEtPrimes() + ";" + l.getSalaireBrut() + ";" + l.getAssVieillesse() + ";" + l.getPartPatronale() + ";" + l.getBaseImposable() + ";" + (l.getCharges() != null ? l.getCharges() : 0) + ";" + l.getImpotIuts() + ";" + l.getSalaireNet() + ";" + l.getTotalRetenues() + ";" + l.getNetAPayer() + ";" + l.getTpa() + ";" + l.getMasseSalariale());
+                    pw.println(escape(l.getMatricule()) + ";" +
+                               escape(l.getNomPrenom()) + ";" +
+                               escape(l.getGrade()) + ";" +
+                               formatCsvMontant(l.getSalaireBase()) + ";" +
+                               formatCsvMontant(l.getSurSalaire()) + ";" +
+                               formatCsvMontant(l.getIndemnitesEtPrimes() != null ? l.getIndemnitesEtPrimes() : l.getIndemnites()) + ";" +
+                               formatCsvMontant(l.getSalaireBrut()) + ";" +
+                               formatCsvMontant(l.getAssVieillesse() != null ? l.getAssVieillesse() : l.getCotisationCnss()) + ";" +
+                               formatCsvMontant(l.getPartPatronale()) + ";" +
+                               formatCsvMontant(l.getBaseImposable()) + ";" +
+                               (l.getCharges() != null ? l.getCharges() : 0) + ";" +
+                               formatCsvMontant(l.getImpotIuts()) + ";" +
+                               formatCsvMontant(l.getSalaireNet()) + ";" +
+                               formatCsvMontant(l.getTotalRetenues()) + ";" +
+                               formatCsvMontant(l.getNetAPayer() != null ? l.getNetAPayer() : l.getSalaireNet()) + ";" +
+                               formatCsvMontant(l.getTpa()) + ";" +
+                               formatCsvMontant(l.getMasseSalariale()));
+
+                    if (l.getSalaireBase() != null) totBase = totBase.add(l.getSalaireBase());
+                    if (l.getSurSalaire() != null) totSurSal = totSurSal.add(l.getSurSalaire());
+                    BigDecimal ind = l.getIndemnitesEtPrimes() != null ? l.getIndemnitesEtPrimes() : l.getIndemnites();
+                    if (ind != null) totIndem = totIndem.add(ind);
+                    if (l.getSalaireBrut() != null) totBrut = totBrut.add(l.getSalaireBrut());
+                    BigDecimal ass = l.getAssVieillesse() != null ? l.getAssVieillesse() : l.getCotisationCnss();
+                    if (ass != null) totAssVi = totAssVi.add(ass);
+                    if (l.getPartPatronale() != null) totPartPat = totPartPat.add(l.getPartPatronale());
+                    if (l.getBaseImposable() != null) totBaseImp = totBaseImp.add(l.getBaseImposable());
+                    if (l.getImpotIuts() != null) totIuts = totIuts.add(l.getImpotIuts());
+                    if (l.getSalaireNet() != null) totSalNet = totSalNet.add(l.getSalaireNet());
+                    if (l.getTotalRetenues() != null) totRet = totRet.add(l.getTotalRetenues());
+                    BigDecimal netP = l.getNetAPayer() != null ? l.getNetAPayer() : l.getSalaireNet();
+                    if (netP != null) totNetPayer = totNetPayer.add(netP);
+                    if (l.getTpa() != null) totTpa = totTpa.add(l.getTpa());
+                    if (l.getMasseSalariale() != null) totMasseSal = totMasseSal.add(l.getMasseSalariale());
                 }
             }
+            pw.println("TOTAL GÉNÉRAL DU REGISTRE DE PAIE;;;" +
+                       formatCsvMontant(totBase) + ";" +
+                       formatCsvMontant(totSurSal) + ";" +
+                       formatCsvMontant(totIndem) + ";" +
+                       formatCsvMontant(totBrut) + ";" +
+                       formatCsvMontant(totAssVi) + ";" +
+                       formatCsvMontant(totPartPat) + ";" +
+                       formatCsvMontant(totBaseImp) + ";;" +
+                       formatCsvMontant(totIuts) + ";" +
+                       formatCsvMontant(totSalNet) + ";" +
+                       formatCsvMontant(totRet) + ";" +
+                       formatCsvMontant(totNetPayer) + ";" +
+                       formatCsvMontant(totTpa) + ";" +
+                       formatCsvMontant(totMasseSal));
         }
 
-        // Ajout du BOM UTF-8 pour ouverture parfaite dans Excel
+        // Ajout du BOM UTF-8 (EF BB BF) pour ouverture native et propre sous Microsoft Excel
         byte[] bom = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
         byte[] contentBytes = sw.toString().getBytes(StandardCharsets.UTF_8);
         byte[] result = new byte[bom.length + contentBytes.length];
         System.arraycopy(bom, 0, result, 0, bom.length);
         System.arraycopy(contentBytes, 0, result, bom.length, contentBytes.length);
         return result;
+    }
+
+    private String formatCsvMontant(BigDecimal bd) {
+        if (bd == null) return "0";
+        return bd.setScale(0, RoundingMode.HALF_UP).toPlainString();
     }
 
     private String escape(String s) {

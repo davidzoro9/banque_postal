@@ -34,7 +34,9 @@ public class LivrePaieRowDto {
     private String direction;
     private String service;
     private BigDecimal indemnites;        // Alias pour indemnitesEtPrimes
-    private BigDecimal totalAvoirs;
     private BigDecimal cotisationCnss;    // Alias pour assVieillesse
     private BigDecimal totalPrecomptes;
+    private BigDecimal totalAvoirs;
+    private BigDecimal totalRappels;
+    private BigDecimal totalTropPercus;
 }
