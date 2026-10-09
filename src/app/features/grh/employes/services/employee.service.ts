@@ -80,7 +80,9 @@ export class EmployeeService {
 
   constructor(private http: HttpClient) {
     this.initLocalEmployees();
-    this.refresh();
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token')) {
+      this.refresh(true);
+    }
   }
 
   private initLocalEmployees(): void {

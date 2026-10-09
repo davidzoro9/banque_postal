@@ -52,15 +52,31 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
     this.services = this.employeeService.getServices();
+
     this.employeeService.employees$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.services = this.employeeService.getServices();
       this.applyFilters();
     });
+
     this.dbRefService.getItems('param-groupe').pipe(takeUntil(this.destroy$)).subscribe(list => {
       this.paramGroupes = list || [];
     });
+
     this.dbRefService.getItems('param-retraite').pipe(takeUntil(this.destroy$)).subscribe(list => {
       this.paramRetraite = list || [];
     });
+
+    // Chargement immédiat depuis le backend PostgreSQL
+    this.employeeService.getAll(true).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.services = this.employeeService.getServices();
+        this.applyFilters();
+      },
+      error: (err) => {
+        console.error('Erreur lors du chargement des employés:', err);
+      }
+    });
+
     this.applyFilters();
   }
 
@@ -77,6 +93,12 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   applyFilters(): void {
     const results = this.employeeService.search(this.searchQuery, this.selectedStatut, this.selectedService);
     this.dataSource.data = results;
+    if (this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
+    if (this.sort) {
+      this.dataSource.sort = this.sort;
+    }
   }
 
   clearFilters(): void {
@@ -221,75 +243,78 @@ export class EmployeeListComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getDateRetraite(emp: Employee): { dateStr: string; yearsLeft: number | null } {
-    let birthDate: Date | null = null;
-    if (emp.dateNaissance) {
-      birthDate = new Date(emp.dateNaissance);
-    }
-
-    const fonction = (emp.fonction || emp.poste || '').toLowerCase();
-    const cat = (emp.categoriePro || '').toUpperCase();
-
-    // 1. Détermination du Groupe de l'employé via le Paramétrage Groupe (catégories rattachées)
-    let groupe = '';
-    const match = (this.paramGroupes || []).find((g: any) => Array.isArray(g.categories) && g.categories.includes(cat));
-    if (match) {
-      groupe = match.grade || match.libelle || match.code || '';
-    }
-
-    if (!groupe) {
-      if (cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8')) {
-        groupe = 'GROUPE III';
-      } else if (cat.startsWith('CL1') || cat.startsWith('CL2') || cat.startsWith('CL3') || cat.startsWith('CL4')) {
-        groupe = 'GROUPE II';
-      } else if (cat.startsWith('C')) {
-        groupe = 'GROUPE I';
-      } else {
-        groupe = 'GROUPE I';
+    if (!emp) return { dateStr: '—', yearsLeft: null };
+    try {
+      let birthDate: Date | null = null;
+      if (emp.dateNaissance) {
+        birthDate = new Date(emp.dateNaissance);
       }
-    }
 
-    // 2. Récupération de l'âge de retraite paramétré dans les données de base pour ce Groupe
-    let ageRetraite = 60;
-    const param = (this.paramRetraite || []).find((p: any) =>
-      (p.libelle && p.libelle.includes(groupe)) ||
-      (p.grade && p.grade.includes(groupe)) ||
-      (p.code && p.code.includes(groupe))
-    );
-    if (param && (param.taux || param.montant)) {
-      ageRetraite = Number(param.taux || param.montant);
-    } else {
-      ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
-    }
+      const cat = (emp.categoriePro || '').toUpperCase();
 
-    if (!birthDate || isNaN(birthDate.getTime())) {
-      if (emp.dateEmbauche) {
-        const emb = new Date(emp.dateEmbauche);
-        if (!isNaN(emb.getTime())) {
-          const retYear = emb.getFullYear() + 35;
-          const retDate = new Date(retYear, emb.getMonth(), emb.getDate());
-          const now = new Date();
-          const yearsLeft = retYear - now.getFullYear();
-          return {
-            dateStr: retDate.toLocaleDateString('fr-FR'),
-            yearsLeft
-          };
+      // 1. Détermination du Groupe de l'employé via le Paramétrage Groupe (catégories rattachées)
+      let groupe = '';
+      const match = (this.paramGroupes || []).find((g: any) => Array.isArray(g.categories) && g.categories.includes(cat));
+      if (match) {
+        groupe = match.grade || match.libelle || match.code || '';
+      }
+
+      if (!groupe) {
+        if (cat.startsWith('CL5') || cat.startsWith('CL6') || cat.startsWith('CL7') || cat.startsWith('CL8')) {
+          groupe = 'GROUPE III';
+        } else if (cat.startsWith('CL1') || cat.startsWith('CL2') || cat.startsWith('CL3') || cat.startsWith('CL4')) {
+          groupe = 'GROUPE II';
+        } else {
+          groupe = 'GROUPE I';
         }
       }
+
+      // 2. Récupération de l'âge de retraite paramétré dans les données de base pour ce Groupe
+      let ageRetraite = 60;
+      const param = (this.paramRetraite || []).find((p: any) =>
+        (p.libelle && String(p.libelle).includes(groupe)) ||
+        (p.grade && String(p.grade).includes(groupe)) ||
+        (p.code && String(p.code).includes(groupe))
+      );
+      if (param && (param.taux || param.montant)) {
+        ageRetraite = Number(param.taux || param.montant);
+      } else {
+        ageRetraite = groupe === 'GROUPE III' ? 65 : 60;
+      }
+
+      if (!birthDate || isNaN(birthDate.getTime())) {
+        if (emp.dateEmbauche) {
+          const emb = new Date(emp.dateEmbauche);
+          if (!isNaN(emb.getTime())) {
+            const retYear = emb.getFullYear() + 35;
+            const retDate = new Date(retYear, emb.getMonth(), emb.getDate());
+            const now = new Date();
+            const yearsLeft = retYear - now.getFullYear();
+            return {
+              dateStr: retDate.toLocaleDateString('fr-FR'),
+              yearsLeft
+            };
+          }
+        }
+        return { dateStr: '—', yearsLeft: null };
+      }
+
+      const retYear = birthDate.getFullYear() + ageRetraite;
+      const retDate = new Date(retYear, birthDate.getMonth(), birthDate.getDate());
+      const now = new Date();
+      const yearsLeft = Math.ceil((retDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+
+      return {
+        dateStr: retDate.toLocaleDateString('fr-FR'),
+        yearsLeft: Math.max(0, yearsLeft)
+      };
+    } catch (e) {
       return { dateStr: '—', yearsLeft: null };
     }
-
-    const retYear = birthDate.getFullYear() + ageRetraite;
-    const retDate = new Date(retYear, birthDate.getMonth(), birthDate.getDate());
-    const now = new Date();
-    const yearsLeft = Math.ceil((retDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-
-    return {
-      dateStr: retDate.toLocaleDateString('fr-FR'),
-      yearsLeft: Math.max(0, yearsLeft)
-    };
   }
 
-  getStatutStyle(statut: StatutEmploye) {
-    return STATUT_COLORS[statut] || { color: '#0060B3', background: '#e0f2fe' };
+  getStatutStyle(statut?: string | null) {
+    if (!statut) return { color: '#0060B3', background: '#e0f2fe' };
+    return (STATUT_COLORS as Record<string, { background: string; color: string }>)[statut] || { color: '#0060B3', background: '#e0f2fe' };
   }
 }
