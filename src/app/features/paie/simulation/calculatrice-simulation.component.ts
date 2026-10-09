@@ -147,6 +147,34 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
       error: (e) => console.warn('Erreur chargement fonctions:', e)
     });
     this.subscriptions.add(subFnc);
+
+    // 4. Chargement dynamique des Catégories et Échelons depuis la base de données
+    const subCat = this.dbRefService.getItems('categorie').subscribe({
+      next: (items) => {
+        if (items && items.length > 0) {
+          this.categories = items.map(c => ({
+            code: c.code,
+            libelle: c.libelle || c.name || `Catégorie ${c.code}`,
+            groupe: c.description || (['1', '2', '3', '4', '5', '6', '7'].includes(c.code) ? 'GROUPE I' : (['I', 'II', 'III', 'IV'].includes(c.code) ? 'GROUPE II' : 'GROUPE III'))
+          }));
+        }
+      },
+      error: (e) => console.warn('Erreur chargement categories DB:', e)
+    });
+    this.subscriptions.add(subCat);
+
+    const subEch = this.dbRefService.getItems('echelon').subscribe({
+      next: (items) => {
+        if (items && items.length > 0) {
+          const parsed = items.map(e => Number(e.code) || Number(e.libelle)).filter(n => !isNaN(n) && n > 0);
+          if (parsed.length > 0) {
+            this.echelons = Array.from(new Set(parsed)).sort((a, b) => a - b);
+          }
+        }
+      },
+      error: (e) => console.warn('Erreur chargement echelons DB:', e)
+    });
+    this.subscriptions.add(subEch);
   }
 
   /**
@@ -372,6 +400,8 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
       indemniteTransport: this.indemniteTransport || 0,
       indemniteFonction: this.indemniteFonction || 0,
       indemniteCaisse: this.indemniteCaisse || 0,
+      indemniteSujetion: this.indemniteSujetion || 0,
+      indemniteCashPoint: this.indemniteCashPoint || 0,
       autresIndemnites: this.autresIndemnites || 0,
       emploiId: this.selectedEmploiId ? Number(this.selectedEmploiId) : undefined,
       emploiNom: this.getNomEmploiSelectionne(),

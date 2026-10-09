@@ -2,14 +2,12 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { PaieOverviewComponent } from './paie-overview/paie-overview.component';
 import { GenererBulletinsComponent } from './bulletins/generer-bulletins/generer-bulletins.component';
-import { BulletinIndividuelComponent } from './bulletins/bulletin-individuel/bulletin-individuel.component';
 import { HistoriqueBulletinsComponent } from './bulletins/historique-bulletins/historique-bulletins.component';
 import { CategoriesElementsComponent } from './parametrage/categories-elements/categories-elements.component';
 import { ElementsSalaireComponent } from './parametrage/elements-salaire/elements-salaire.component';
 import { AvoirsComponent } from './variables/avoirs/avoirs.component';
 import { PrecomptesComponent } from './variables/precomptes/precomptes.component';
 import { TropPercusComponent } from './variables/trop-percus/trop-percus.component';
-import { RubriquesPaieComponent } from './elements/rubriques-paie/rubriques-paie.component';
 import { CotisationsPaieComponent } from './elements/cotisations-paie/cotisations-paie.component';
 import { DsnComponent } from './declarations/dsn/dsn.component';
 import { UrssafComponent } from './declarations/urssaf/urssaf.component';
@@ -17,6 +15,7 @@ import { ParametragePaieComponent } from './parametrage-paie/parametrage-paie.co
 import { TypesRetenuesComponent } from './types-retenues/types-retenues.component';
 import { EtatsSyntheseComponent } from './etats-synthese/etats-synthese.component';
 import { CalculatriceSimulationComponent } from './simulation/calculatrice-simulation.component';
+import { ComptesComptablesComponent } from './parametrage/comptes-comptables/comptes-comptables.component';
 
 const routes: Routes = [
   { path: '', component: PaieOverviewComponent },
@@ -50,6 +49,8 @@ const routes: Routes = [
   { path: 'trop-percus', redirectTo: 'variables/trop-percus', pathMatch: 'full' },
 
   // 3. Paramétrage de la Paie
+  { path: 'comptes-comptables', component: ComptesComptablesComponent },
+  { path: 'parametrage/comptes-comptables', component: ComptesComptablesComponent },
   { path: 'parametrage/categories', component: CategoriesElementsComponent },
   { path: 'parametrage/elements', component: ElementsSalaireComponent },
   { path: 'parametrage/cotisations', component: CotisationsPaieComponent },

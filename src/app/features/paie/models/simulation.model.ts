@@ -16,6 +16,8 @@ export interface SimulationRequest {
   indemniteTransport?: number;
   indemniteFonction?: number;
   indemniteCaisse?: number;
+  indemniteSujetion?: number;
+  indemniteCashPoint?: number;
   autresIndemnites?: number;
   emploiId?: number;
   emploiNom?: string;

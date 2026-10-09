@@ -9,7 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
-import { CongeService, Conge, SoldeConge, JourFerie, ParametrageConge } from '../services/conge.service';
+import { CongeService, Conge, SoldeConge, JourFerie, ParametrageConge, TypeAbsenceConge } from '../services/conge.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
@@ -47,6 +47,14 @@ export class CongesListComponent implements OnInit, OnDestroy {
     bloquerSiSoldeInsuffisant: false
   };
   savingConfig = false;
+
+  // --- CATALOGUE DES AUTRES CONGÉS & ABSENCES ---
+  typesAbsenceList: TypeAbsenceConge[] = [];
+  editingTypeAbsence: TypeAbsenceConge | null = null;
+  typeAbsenceFormModel: TypeAbsenceConge = { code: '', name: '', categorie: 'CONGE', dureeMaxLegaleJours: 30, deductibleDuSolde: true, sexeRequis: 'TOUS' };
+  savingTypeAbsence = false;
+  showTypeModal = false;
+  selectedSoldeType: string = 'CONGE_ANNUEL';
 
   // --- JOURS FÉRIÉS ---
   joursFeries: JourFerie[] = [];
@@ -101,6 +109,7 @@ export class CongesListComponent implements OnInit, OnDestroy {
     this.loadSoldes();
     this.loadJoursFeries();
     this.loadParametrage();
+    this.loadTypesAbsence();
 
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
@@ -709,4 +718,164 @@ export class CongesListComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  // --- GESTION DU CATALOGUE DES AUTRES TYPES DE CONGÉS ---
+  savingAllTypes: boolean = false;
+
+  loadTypesAbsence(): void {
+    this.congeService.getTypes().subscribe({
+      next: (types) => {
+        this.typesAbsenceList = (types || []).map(t => ({
+          ...t,
+          remunere: t.remunere !== undefined ? t.remunere : true,
+          tauxRemuneration: t.tauxRemuneration !== undefined ? t.tauxRemuneration : 100,
+          justificatifRequis: t.justificatifRequis !== undefined ? t.justificatifRequis : false,
+          typeJustificatif: t.typeJustificatif || '',
+          deductibleDuSolde: !!t.deductibleDuSolde,
+          actif: t.actif !== undefined ? t.actif : true,
+          dureeMaxLegaleJours: t.dureeMaxLegaleJours !== undefined ? t.dureeMaxLegaleJours : 3
+        }));
+      },
+      error: () => this.typesAbsenceList = []
+    });
+  }
+
+  saveAllTypesAbsence(): void {
+    this.savingAllTypes = true;
+    this.congeService.batchUpdateTypes(this.typesAbsenceList).subscribe({
+      next: () => {
+        this.savingAllTypes = false;
+        this.snackBar.open('Paramétrage des Autres Types de Congés & Absences enregistré avec succès.', 'Fermer', { duration: 3500 });
+        this.loadTypesAbsence();
+      },
+      error: () => {
+        this.savingAllTypes = false;
+        this.snackBar.open('Erreur lors de l\'enregistrement des types de congés.', 'Fermer', { duration: 3500 });
+      }
+    });
+  }
+
+  addTypeRow(): void {
+    const idx = this.typesAbsenceList.length + 1;
+    const newType: TypeAbsenceConge = {
+      code: 'TYPE_' + idx,
+      name: 'Nouveau Type ' + idx,
+      categorie: 'PERMISSION',
+      dureeMaxLegaleJours: 3,
+      deductibleDuSolde: false,
+      sexeRequis: 'TOUS',
+      remunere: true,
+      tauxRemuneration: 100,
+      justificatifRequis: false,
+      typeJustificatif: 'Justificatif requis',
+      actif: true
+    };
+    this.typesAbsenceList.push(newType);
+  }
+
+  deleteTypeRow(index: number, t: TypeAbsenceConge): void {
+    if (t.id) {
+      if (confirm(`Confirmez-vous la suppression du type "${t.name}" ?`)) {
+        this.congeService.deleteType(t.id).subscribe({
+          next: () => {
+            this.snackBar.open('Type de congé supprimé.', 'Fermer', { duration: 3000 });
+            this.loadTypesAbsence();
+          },
+          error: () => this.loadTypesAbsence()
+        });
+      }
+    } else {
+      this.typesAbsenceList.splice(index, 1);
+    }
+  }
+
+  openAddTypeModal(): void {
+    this.addTypeRow();
+  }
+
+  openEditTypeModal(t: TypeAbsenceConge): void {
+    this.editingTypeAbsence = t;
+    this.typeAbsenceFormModel = { ...t };
+    this.showTypeModal = true;
+  }
+
+  closeTypeModal(): void {
+    this.showTypeModal = false;
+    this.editingTypeAbsence = null;
+    this.savingTypeAbsence = false;
+  }
+
+  saveTypeAbsence(): void {
+    if (!this.typeAbsenceFormModel.name || !this.typeAbsenceFormModel.name.trim()) {
+      alert('Veuillez renseigner le libellé du type de congé.');
+      return;
+    }
+    if (!this.typeAbsenceFormModel.code) {
+      this.typeAbsenceFormModel.code = this.typeAbsenceFormModel.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    }
+    this.savingTypeAbsence = true;
+    if (this.editingTypeAbsence && this.editingTypeAbsence.id) {
+      this.congeService.updateType(this.editingTypeAbsence.id, this.typeAbsenceFormModel).subscribe({
+        next: () => {
+          this.snackBar.open('Type de congé mis à jour.', 'Fermer', { duration: 3000 });
+          this.closeTypeModal();
+          this.loadTypesAbsence();
+        },
+        error: () => {
+          alert('Erreur lors de la mise à jour.');
+          this.savingTypeAbsence = false;
+        }
+      });
+    } else {
+      this.congeService.createType(this.typeAbsenceFormModel).subscribe({
+        next: () => {
+          this.snackBar.open('Nouveau type de congé enregistré dans PostgreSQL.', 'Fermer', { duration: 3000 });
+          this.closeTypeModal();
+          this.loadTypesAbsence();
+        },
+        error: () => {
+          alert('Erreur lors de l\'enregistrement.');
+          this.savingTypeAbsence = false;
+        }
+      });
+    }
+  }
+
+  deleteTypeAbsence(t: TypeAbsenceConge): void {
+    this.deleteTypeRow(0, t);
+  }
+
+  getAgentLeavesDetail(empId: number): Array<{ typeName: string; joursPris: number; quotaMax?: number; deductible: boolean }> {
+    const agentConges = this.conges.filter(c => {
+      const eId = c.employee?.id || (c as any).employeeId;
+      return String(eId) === String(empId) && (c.statut === 'APPROUVE' || c.statut === 'VALIDE');
+    });
+
+    return this.typesAbsenceList.map(t => {
+      const pris = agentConges
+        .filter(c => (c.typeAbsenceConge?.id && c.typeAbsenceConge.id === t.id) || (c.type && c.type.toLowerCase().includes(t.name.toLowerCase())))
+        .reduce((sum, c) => sum + (c.nbJours || 0), 0);
+      return {
+        typeName: t.name,
+        joursPris: pris,
+        quotaMax: t.dureeMaxLegaleJours,
+        deductible: !!t.deductibleDuSolde
+      };
+    });
+  }
+
+  isDataUrl(val?: string): boolean {
+    return !!val && val.startsWith('data:');
+  }
+
+  downloadJustificatif(conge: Conge): void {
+    if (!conge || !conge.justificatif) return;
+    const link = document.createElement('a');
+    link.href = conge.justificatif;
+    link.download = conge.justificatifNom || `justificatif_absence_${conge.id || 'doc'}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
+

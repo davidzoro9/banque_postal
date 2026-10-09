@@ -27,36 +27,60 @@ export class PaieOverviewComponent implements OnInit {
       route: '/paie/simulateur'
     },
     {
-      title: 'Génération des Bulletins',
-      badge: 'Mois en cours',
-      icon: 'add_circle_outline',
+      title: 'Traitement & Bulletins de Paie',
+      badge: 'Sessions & Lots',
+      icon: 'receipt_long',
       color: '#00875A',
-      description: 'Calcul et génération automatisés des bulletins de paie, primes, indemnités et cotisations.',
-      route: '/paie/bulletins/generer'
+      description: 'Calcul et génération automatisés des bulletins de paie par session, primes, indemnités et cotisations.',
+      route: '/paie/lots'
     },
     {
       title: 'Historique des Bulletins',
       badge: 'Archives',
       icon: 'history',
       color: '#0288d1',
-      description: 'Consultation, téléchargement PDF et réimpression des bulletins de paie calculés.',
+      description: 'Consultation, téléchargement PDF certifié et réimpression des bulletins de paie calculés.',
       route: '/paie/bulletins/historique'
     },
     {
-      title: 'Rubriques & Cotisations',
-      badge: 'Rubriques & Cotisations',
-      icon: 'calculate',
-      color: '#f57c00',
-      description: 'Paramétrage des rubriques de gain, retenues fiscales (IUTS) et cotisations sociales (CNSS/CARFO).',
-      route: '/paie/elements/rubriques'
+      title: 'Variables de Paie',
+      badge: 'Avoirs & Précomptes',
+      icon: 'price_change',
+      color: '#7b1fa2',
+      description: 'Gestion des rappels (avoirs), précomptes multi-échéances et régularisations de trop-perçus.',
+      route: '/paie/variables/precomptes'
     },
     {
-      title: 'Retenues sur Salaire',
-      badge: 'Retenues & Avances',
+      title: 'États de Synthèse & Livre de Paie',
+      badge: 'Reporting Légal',
+      icon: 'analytics',
+      color: '#0e7490',
+      description: 'Livre de paie officiel, états des cotisations CNSS, récapitulatifs IUTS, virements et billets.',
+      route: '/paie/etats-synthese'
+    },
+    {
+      title: 'Paramétrage des Rubriques',
+      badge: 'Rubriques & Cotisations',
+      icon: 'tune',
+      color: '#f57c00',
+      description: 'Paramétrage des rubriques de gain, retenues fiscales (IUTS) et cotisations sociales (CNSS/CRRAE).',
+      route: '/paie/parametrage/elements'
+    },
+    {
+      title: 'Types de Retenues Salariales',
+      badge: 'Retenues',
       icon: 'money_off',
-      color: '#7b1fa2',
-      description: 'Gestion des avances, acomptes, remboursements et retenues attribués aux agents.',
-      route: '/donnees-base/admin/type-retenue-employe'
+      color: '#c026d3',
+      description: 'Configuration des catégories de retenues (prêts, acomptes, cotisations mutuelle, saisies-arrêts).',
+      route: '/paie/types-retenues'
+    },
+    {
+      title: 'Comptes Comptables de Paie',
+      badge: 'SYSCOHADA & OD',
+      icon: 'account_tree',
+      color: '#003366',
+      description: 'Paramétrage du plan de comptes SYSCOHADA (Classe 6 et Classe 4) pour la génération des écritures d\'OD de paie.',
+      route: '/paie/comptes-comptables'
     }
   ];
 

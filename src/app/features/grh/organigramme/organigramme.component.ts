@@ -410,7 +410,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // ── NIVEAU 0 : CONSEIL D'ADMINISTRATION (CA) ──
     const caDir = allDirs.find(d => d.code === 'DIR_CA') || {
-      id: '62',
+      id: undefined,
       code: 'DIR_CA',
       libelle: "Conseil d'Administration (CA)",
       name: "Conseil d'Administration (CA)",
@@ -422,13 +422,13 @@ export class OrganigrammeComponent implements OnInit {
 
     // ── 3 COMITÉS SPÉCIALISÉS SOUS LE CA (Comité Risques, Comité Audit, Comité supérieur de crédit) ──
     const comRisquesRef = allDirs.find(d => d.code === 'COM_RISQUES') || {
-      id: '63', code: 'COM_RISQUES', libelle: 'Comité Risques', name: 'Comité Risques', description: 'Comité Risques auprès du CA', actif: true
+      id: undefined, code: 'COM_RISQUES', libelle: 'Comité Risques', name: 'Comité Risques', description: 'Comité Risques auprès du CA', actif: true
     };
     const comAuditRef = allDirs.find(d => d.code === 'COM_AUDIT') || {
-      id: '64', code: 'COM_AUDIT', libelle: 'Comité Audit', name: 'Comité Audit', description: 'Comité Audit auprès du CA', actif: true
+      id: undefined, code: 'COM_AUDIT', libelle: 'Comité Audit', name: 'Comité Audit', description: 'Comité Audit auprès du CA', actif: true
     };
     const comCreditRef = allDirs.find(d => d.code === 'COM_CREDIT') || {
-      id: '65', code: 'COM_CREDIT', libelle: 'Comité supérieur de crédit', name: 'Comité supérieur de crédit', description: 'Comité Crédit auprès du CA', actif: true
+      id: undefined, code: 'COM_CREDIT', libelle: 'Comité supérieur de crédit', name: 'Comité supérieur de crédit', description: 'Comité Crédit auprès du CA', actif: true
     };
 
     const createComiteNode = (com: RefItem): OrgTreeNode => {
@@ -468,14 +468,14 @@ export class OrganigrammeComponent implements OnInit {
 
     // ── NIVEAU 1 : DIRECTEUR GÉNÉRAL (DG) ──
     const dgDir = allDirs.find(d => d.code === 'DIR-001' || d.code === 'DIR_DG') || {
-      id: '1', code: 'DIR-001', libelle: 'Directeur Général (DG)', name: 'Directeur Général (DG)', description: 'Direction Générale', actif: true
+      id: undefined, code: 'DIR-001', libelle: 'Directeur Général (DG)', name: 'Directeur Général (DG)', description: 'Direction Générale', actif: true
     };
     const dgEmp = this.findEmployeeById(dgDir.directeurId);
     const dgDirecteur = dgEmp ? `${dgEmp.nom} ${dgEmp.prenom}` : dgDir.directeurLibelle;
 
     // ── Rattachés au DG : Audit Interne, Risque & Conformité, Secrétariat de Direction, DGA ──
     const auditDir: RefItem = allDirs.find(d => d.code === 'DIR_AUDIT') || {
-      id: '52', code: 'DIR_AUDIT', libelle: 'Direction Audit Interne', name: 'Direction Audit Interne', description: '', actif: true
+      id: undefined, code: 'DIR_AUDIT', libelle: 'Direction Audit Interne', name: 'Direction Audit Interne', description: '', actif: true
     };
     const auditEmp = this.findEmployeeById(auditDir.directeurId);
     const auditDirNode: OrgTreeNode = {
@@ -505,7 +505,7 @@ export class OrganigrammeComponent implements OnInit {
     };
 
     const risquesDir: RefItem = allDirs.find(d => d.code === 'DIR_RISQUES') || {
-      id: '53', code: 'DIR_RISQUES', libelle: 'Direction Risque et conformité', name: 'Direction Risque et conformité', description: '', actif: true
+      id: undefined, code: 'DIR_RISQUES', libelle: 'Direction Risque et conformité', name: 'Direction Risque et conformité', description: '', actif: true
     };
     const risquesEmp = this.findEmployeeById(risquesDir.directeurId);
     const risquesDirNode: OrgTreeNode = {
@@ -535,7 +535,7 @@ export class OrganigrammeComponent implements OnInit {
     };
 
     const secDir: RefItem = allDirs.find(d => d.code === 'SEC_DIR') || {
-      id: '67', code: 'SEC_DIR', libelle: 'Secrétariat de Direction', name: 'Secrétariat de Direction', description: '', actif: true
+      id: undefined, code: 'SEC_DIR', libelle: 'Secrétariat de Direction', name: 'Secrétariat de Direction', description: '', actif: true
     };
     const secEmp = this.findEmployeeById(secDir.directeurId);
     const secDirNode: OrgTreeNode = {
@@ -565,7 +565,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // ── NIVEAU 2 : DIRECTEUR GÉNÉRAL ADJOINT (DGA) ──
     const dgaDir: RefItem = allDirs.find(d => d.code === 'DIR_DGA') || {
-      id: '66', code: 'DIR_DGA', libelle: 'Directeur Général Adjoint (DGA)', name: 'Directeur Général Adjoint (DGA)', description: '', actif: true
+      id: undefined, code: 'DIR_DGA', libelle: 'Directeur Général Adjoint (DGA)', name: 'Directeur Général Adjoint (DGA)', description: '', actif: true
     };
     const dgaEmp = this.findEmployeeById(dgaDir.directeurId);
     const dgaDirecteur = dgaEmp ? `${dgaEmp.nom} ${dgaEmp.prenom}` : dgaDir.directeurLibelle;
@@ -575,7 +575,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 1. Direction des Entreprises et institutionnels
     const dirEntreprises = allDirs.find(d => d.code === 'DIR_ENTREPRISES' || (d.libelle && d.libelle.toLowerCase().includes('entreprises'))) || {
-      id: '54', code: 'DIR_ENTREPRISES', libelle: 'Direction des Entreprises et institutionnels', name: 'Direction des Entreprises et institutionnels', description: '', actif: true
+      id: undefined, code: 'DIR_ENTREPRISES', libelle: 'Direction des Entreprises et institutionnels', name: 'Direction des Entreprises et institutionnels', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirEntreprises, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_PME', title: 'Service PME/PMI' },
@@ -585,13 +585,13 @@ export class OrganigrammeComponent implements OnInit {
 
     // 2. Département Marketing, commercial et communication
     const depMarketing = allDeps.find(d => d.code === 'DEP_MARKETING' || (d.libelle && d.libelle.toLowerCase().includes('marketing'))) || {
-      id: '55', code: 'DEP_MARKETING', libelle: 'Département Marketing, commercial et communication', name: 'Département Marketing, commercial et communication', description: '', actif: true
+      id: undefined, code: 'DEP_MARKETING', libelle: 'Département Marketing, commercial et communication', name: 'Département Marketing, commercial et communication', description: '', actif: true
     };
     dgaChildren.push(createDepartmentNode(depMarketing, 'DGA', `dir-${dgaDir.id || dgaDir.code}`));
 
     // 3. Direction Réseau
     const dirReseau = allDirs.find(d => d.code === 'DIR_RESEAU' || (d.libelle && d.libelle.toLowerCase().includes('réseau')) || (d.libelle && d.libelle.toLowerCase().includes('reseau'))) || {
-      id: '56', code: 'DIR_RESEAU', libelle: 'Direction Réseau', name: 'Direction Réseau', description: '', actif: true
+      id: undefined, code: 'DIR_RESEAU', libelle: 'Direction Réseau', name: 'Direction Réseau', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirReseau, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_AGENCE', title: 'Service Agence' },
@@ -601,7 +601,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 4. Direction des Engagements
     const dirEngag = allDirs.find(d => d.code === 'DIR_ENGAGEMENTS' || (d.libelle && d.libelle.toLowerCase().includes('engagements'))) || {
-      id: '57', code: 'DIR_ENGAGEMENTS', libelle: 'Direction des Engagements', name: 'Direction des Engagements', description: '', actif: true
+      id: undefined, code: 'DIR_ENGAGEMENTS', libelle: 'Direction des Engagements', name: 'Direction des Engagements', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirEngag, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_SUIVI_ENGAG', title: 'Service Suivi des Engagements' },
@@ -611,7 +611,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 5. Direction des Opérations bancaires
     const dirOps = allDirs.find(d => d.code === 'DIR_OPERATIONS' || (d.libelle && d.libelle.toLowerCase().includes('opérations')) || (d.libelle && d.libelle.toLowerCase().includes('operations'))) || {
-      id: '58', code: 'DIR_OPERATIONS', libelle: 'Direction des Opérations bancaires', name: 'Direction des Opérations bancaires', description: '', actif: true
+      id: undefined, code: 'DIR_OPERATIONS', libelle: 'Direction des Opérations bancaires', name: 'Direction des Opérations bancaires', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirOps, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_OPS_DOMESTIQUES', title: 'Service des Opérations domestiques' },
@@ -620,7 +620,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 6. Direction Affaires juridiques & contentieux
     const dirJuridique = allDirs.find(d => d.code === 'DIR_JURIDIQUE' || (d.libelle && d.libelle.toLowerCase().includes('juridique'))) || {
-      id: '59', code: 'DIR_JURIDIQUE', libelle: 'Direction Affaires juridiques & contentieux', name: 'Direction Affaires juridiques & contentieux', description: '', actif: true
+      id: undefined, code: 'DIR_JURIDIQUE', libelle: 'Direction Affaires juridiques & contentieux', name: 'Direction Affaires juridiques & contentieux', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirJuridique, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_JURIDIQUE_GOUV', title: 'Service Affaires juridiques & Gouvernance' },
@@ -629,13 +629,13 @@ export class OrganigrammeComponent implements OnInit {
 
     // 7. Département Trésorerie
     const depTresor = allDeps.find(d => d.code === 'DEP_TRESORERIE' || (d.libelle && d.libelle.toLowerCase().includes('trésorerie')) || (d.libelle && d.libelle.toLowerCase().includes('tresorerie'))) || {
-      id: '60', code: 'DEP_TRESORERIE', libelle: 'Département Trésorerie', name: 'Département Trésorerie', description: '', actif: true
+      id: undefined, code: 'DEP_TRESORERIE', libelle: 'Département Trésorerie', name: 'Département Trésorerie', description: '', actif: true
     };
     dgaChildren.push(createDepartmentNode(depTresor, 'DGA', `dir-${dgaDir.id || dgaDir.code}`));
 
     // 8. Direction des Systèmes d'informations
     const dirDsi = allDirs.find(d => d.code === 'DIR_DSI' || (d.libelle && d.libelle.toLowerCase().includes('systèmes')) || (d.libelle && d.libelle.toLowerCase().includes('systemes'))) || {
-      id: '51', code: 'DIR_DSI', libelle: "Direction des Systèmes d'informations", name: "Direction des Systèmes d'informations", description: '', actif: true
+      id: undefined, code: 'DIR_DSI', libelle: "Direction des Systèmes d'informations", name: "Direction des Systèmes d'informations", description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirDsi, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_BDD_APPS', title: 'Service Base de données et applications' },
@@ -645,7 +645,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 9. Direction Administration et Moyens Généraux
     const dirDamg = allDirs.find(d => d.code === 'DIR_DAMG' || (d.libelle && d.libelle.toLowerCase().includes('moyens généraux')) || (d.libelle && d.libelle.toLowerCase().includes('moyens generaux'))) || {
-      id: '61', code: 'DIR_DAMG', libelle: 'Direction Administration et Moyens Généraux', name: 'Direction Administration et Moyens Généraux', description: '', actif: true
+      id: undefined, code: 'DIR_DAMG', libelle: 'Direction Administration et Moyens Généraux', name: 'Direction Administration et Moyens Généraux', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirDamg, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_MOYENS_SEC', title: 'Service Moyens généraux et Sécurité' },
@@ -654,7 +654,7 @@ export class OrganigrammeComponent implements OnInit {
 
     // 10. Direction Financière et comptable
     const dirDfc = allDirs.find(d => d.code === 'DIR_DFC' || (d.libelle && d.libelle.toLowerCase().includes('financière')) || (d.libelle && d.libelle.toLowerCase().includes('financiere'))) || {
-      id: '50', code: 'DIR_DFC', libelle: 'Direction Financière et comptable', name: 'Direction Financière et comptable', description: '', actif: true
+      id: undefined, code: 'DIR_DFC', libelle: 'Direction Financière et comptable', name: 'Direction Financière et comptable', description: '', actif: true
     };
     dgaChildren.push(createDirectionNode(dirDfc, 'DGA', `dir-${dgaDir.id || dgaDir.code}`, [
       { code: 'SRV_COMPTA_FISC', title: 'Service Comptabilité et fiscalité' },

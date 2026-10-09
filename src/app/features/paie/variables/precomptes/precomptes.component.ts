@@ -44,6 +44,20 @@ export class PrecomptesComponent implements OnInit {
   selectedPrecompte: PrecompteModel | null = null;
   loadingDetail: boolean = false;
 
+  // Modal Solder (action métier avec justificatif et motif)
+  showSolderModal: boolean = false;
+  solderTarget: PrecompteModel | null = null;
+  solderMotif: string = '';
+  solderJustificatif: string = '';
+  solderFileName: string = '';
+  isSoldering: boolean = false;
+
+  // Modal Suspendre (action métier avec motif de suspension)
+  showSuspendreModal: boolean = false;
+  suspendreTarget: PrecompteModel | null = null;
+  suspendreMotif: string = '';
+  isSuspending: boolean = false;
+
   // Calculs KPI & Progression visuelle
   getProgress(p: PrecompteModel): number {
     const initial = Number(p.amount || 0);
@@ -183,7 +197,7 @@ export class PrecomptesComponent implements OnInit {
       this.loading = false;
     },
     error: (err) => {
-      this.errorMessage = 'Erreur lors du chargement des précomptes depuis PostgreSQL.';
+      this.errorMessage = 'Erreur lors du chargement des précomptes.';
       this.loading = false;
       this.precomptesList = [];
       this.applyFilter();
@@ -365,7 +379,7 @@ export class PrecomptesComponent implements OnInit {
         }
       },
       error: () => {
-        this.formModel.reference = `PREC-${new Date().getFullYear()}-0001`;
+        this.formModel.reference = '';
       }
     });
 
@@ -491,7 +505,7 @@ export class PrecomptesComponent implements OnInit {
     } else {
       this.precompteService.create(payload).subscribe({
         next: () => {
-          this.showFlash('Nouveau précompte enregistré dans PostgreSQL.');
+          this.showFlash('Nouveau précompte enregistré avec succès.');
           this.closeModal();
           this.loadPrecomptes();
         },
@@ -499,6 +513,105 @@ export class PrecomptesComponent implements OnInit {
           alert('Erreur lors de l\'enregistrement du précompte.');
           this.isSaving = false;
         }
+      });
+    }
+  }
+
+  // --- ACTIONS METIER SUR LE STATUT (SOLDER / SUSPENDRE / REPRENDRE) ---
+  openSolderModal(p: PrecompteModel): void {
+    this.solderTarget = p;
+    this.solderMotif = 'Règlement anticipé / Quittance caisse';
+    this.solderJustificatif = '';
+    this.solderFileName = '';
+    this.showSolderModal = true;
+  }
+
+  closeSolderModal(): void {
+    this.showSolderModal = false;
+    this.solderTarget = null;
+    this.isSoldering = false;
+  }
+
+  onSolderFileSelected(event: any): void {
+    const file = event.target?.files?.[0];
+    if (file) {
+      this.solderFileName = file.name;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.solderJustificatif = String(reader.result || file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  confirmSolder(): void {
+    if (!this.solderTarget) return;
+    const targetId = this.solderTarget.id || this.solderTarget.precompteId!;
+    this.isSoldering = true;
+    this.precompteService.solder(targetId, this.solderJustificatif || this.solderFileName || 'Quittance jointe', this.solderMotif).subscribe({
+      next: () => {
+        this.showFlash(`Le précompte de ${this.solderTarget?.employeeName} a été passé à l'état SOLDÉ.`);
+        this.closeSolderModal();
+        if (this.showDetailModal && this.selectedPrecompte && (this.selectedPrecompte.id === targetId || this.selectedPrecompte.precompteId === targetId)) {
+          this.closeDetailModal();
+        }
+        this.loadPrecomptes();
+      },
+      error: () => {
+        alert('Erreur lors du passage à l\'état soldé.');
+        this.isSoldering = false;
+      }
+    });
+  }
+
+  openSuspendreModal(p: PrecompteModel): void {
+    this.suspendreTarget = p;
+    this.suspendreMotif = 'Difficulté financière passagère / Accord DRH';
+    this.showSuspendreModal = true;
+  }
+
+  closeSuspendreModal(): void {
+    this.showSuspendreModal = false;
+    this.suspendreTarget = null;
+    this.isSuspending = false;
+  }
+
+  confirmSuspendre(): void {
+    if (!this.suspendreTarget) return;
+    if (!this.suspendreMotif || !this.suspendreMotif.trim()) {
+      alert('Veuillez renseigner un motif pour la suspension de ce mois.');
+      return;
+    }
+    const targetId = this.suspendreTarget.id || this.suspendreTarget.precompteId!;
+    this.isSuspending = true;
+    this.precompteService.suspendre(targetId, this.suspendreMotif.trim()).subscribe({
+      next: () => {
+        this.showFlash(`Prélèvement suspendu ce mois pour ${this.suspendreTarget?.employeeName}.`);
+        this.closeSuspendreModal();
+        if (this.showDetailModal && this.selectedPrecompte && (this.selectedPrecompte.id === targetId || this.selectedPrecompte.precompteId === targetId)) {
+          this.closeDetailModal();
+        }
+        this.loadPrecomptes();
+      },
+      error: () => {
+        alert('Erreur lors de la suspension du précompte.');
+        this.isSuspending = false;
+      }
+    });
+  }
+
+  reprendrePrecompte(p: PrecompteModel): void {
+    const targetId = p.id || p.precompteId!;
+    if (confirm(`Confirmez-vous la reprise des prélèvements mensuels pour ${p.employeeName} ?`)) {
+      this.precompteService.reprendre(targetId).subscribe({
+        next: () => {
+          this.showFlash(`Les prélèvements mensuels ont repris pour ${p.employeeName}.`);
+          if (this.showDetailModal && this.selectedPrecompte && (this.selectedPrecompte.id === targetId || this.selectedPrecompte.precompteId === targetId)) {
+            this.closeDetailModal();
+          }
+          this.loadPrecomptes();
+        },
+        error: () => alert('Erreur lors de la reprise du précompte.')
       });
     }
   }

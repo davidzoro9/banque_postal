@@ -1184,6 +1184,9 @@
 
     .signataire-card-header {
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
 
       .signataire-badge {
         display: inline-block;
@@ -1201,6 +1204,65 @@
           color: #1d4ed8;
         }
       }
+
+      .signataire-mat-badge {
+        font-size: 11px;
+        font-weight: 700;
+        color: #0060b3;
+        background: #e0f2fe;
+        padding: 2px 8px;
+        border-radius: 4px;
+        letter-spacing: 0.3px;
+      }
+    }
+
+    .selected-agent-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+
+      .agent-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #0060b3;
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &.avatar-primary {
+          background: #0d9488;
+        }
+      }
+
+      .agent-chip-info {
+        flex: 1;
+        min-width: 0;
+
+        .agent-chip-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .agent-chip-sub {
+          font-size: 11px;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
     }
 
     .form-group {
@@ -1210,6 +1272,32 @@
         margin-bottom: 0;
       }
     }
+  }
+}
+
+:host-context(html.dark-theme) {
+  .signataire-card {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+  .signataire-mat-badge {
+    background: #0369a1 !important;
+    color: #f0f9ff !important;
+  }
+  .selected-agent-chip {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    .agent-chip-name {
+      color: #f8fafc !important;
+    }
+    .agent-chip-sub {
+      color: #94a3b8 !important;
+    }
+  }
+  select.form-control {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
   }
 }
 

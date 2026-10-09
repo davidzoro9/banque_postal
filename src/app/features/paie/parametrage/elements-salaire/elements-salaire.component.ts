@@ -14,6 +14,7 @@ export interface SalaryElementModel {
   formule?: string;
   calculationMethod: 'MONTANT_FIXE' | 'POURCENTAGE' | 'FORMULE_COMPLEXE' | 'SAISIE_MANUELLE' | 'FIXE' | 'FORMULE' | 'GRILLE' | string;
   calculMethod?: string;
+  methodCalcul?: string;
   isCotisable: boolean;
   isImposable: boolean;
   ordre: number;
@@ -201,7 +202,7 @@ export class ElementsSalaireComponent implements OnInit {
       rate: this.formModel.rate,
       formule: this.formModel.formule || this.formModel.formula,
       formula: this.formModel.formule || this.formModel.formula,
-      methodCalcul: this.formModel.calculationMethod,
+      methodCalcul: this.formModel.methodCalcul || this.formModel.calculationMethod || 'MONTANT_FIXE',
       isCotisable: this.formModel.isCotisable,
       isImposable: this.formModel.isImposable,
       ordre: Number(this.formModel.ordre || 1),
@@ -246,6 +247,7 @@ export class ElementsSalaireComponent implements OnInit {
 
   toggleStatut(el: SalaryElementModel): void {
     const newStatut = !el.statut;
+    const methodCalculVal = el.methodCalcul || el.calculationMethod || 'MONTANT_FIXE';
     const payload: SalaryElementDto = {
       code: el.code,
       name: el.name,
@@ -253,7 +255,7 @@ export class ElementsSalaireComponent implements OnInit {
       salaryCategoryId: el.categoryId,
       rate: el.rate,
       formule: el.formule,
-      methodCalcul: el.calculationMethod,
+      methodCalcul: methodCalculVal,
       isCotisable: el.isCotisable,
       isImposable: el.isImposable,
       ordre: el.ordre,
@@ -302,6 +304,8 @@ export class ElementsSalaireComponent implements OnInit {
       formula: '',
       formule: '',
       calculationMethod: 'MONTANT_FIXE',
+      calculMethod: 'MONTANT_FIXE',
+      methodCalcul: 'MONTANT_FIXE',
       isCotisable: true,
       isImposable: true,
       ordre: 1,

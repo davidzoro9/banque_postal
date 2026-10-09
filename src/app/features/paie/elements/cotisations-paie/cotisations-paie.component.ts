@@ -85,7 +85,7 @@ export interface TrancheIuts {
                     <option value="Salaire brut imposable">Salaire brut imposable</option>
                     <option value="Salaire de base">Salaire de base</option>
                     <option value="Masse salariale brute">Masse salariale brute</option>
-                    <option value="Plafond CNSS">Plafond CNSS (600 000)</option>
+                    <option value="Plafond CNSS">Plafond CNSS (800 000)</option>
                   </select>
                 </td>
                 <td>
@@ -563,7 +563,7 @@ export class CotisationsPaieComponent implements OnInit {
       next: () => {
         this.closeAddModal();
         this.chargerDonnees();
-        this.showNotification('Nouvelle cotisation enregistrée avec succès dans PostgreSQL !');
+        this.showNotification('Nouvelle cotisation enregistrée avec succès !');
       },
       error: (err) => {
         console.error('Erreur création cotisation:', err);
@@ -590,7 +590,7 @@ export class CotisationsPaieComponent implements OnInit {
   sauvegarderTout(): void {
     const editables = this.cotisations.filter(c => c.isEditing);
     if (editables.length === 0) {
-      this.showNotification('Tous les taux sont déjà synchronisés avec PostgreSQL.');
+      this.showNotification('Tous les taux sont déjà à jour.');
       return;
     }
 
@@ -603,7 +603,7 @@ export class CotisationsPaieComponent implements OnInit {
           completed++;
           if (completed === editables.length) {
             this.chargerDonnees();
-            this.showNotification('Taux de cotisations enregistrés avec succès dans PostgreSQL !');
+            this.showNotification('Taux de cotisations enregistrés avec succès !');
           }
         },
         error: (err) => console.error('Erreur save cotisation:', err)

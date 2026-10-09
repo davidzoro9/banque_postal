@@ -21,8 +21,10 @@ export interface EtatSyntheseConfig {
 export interface SignatairesEtat {
   titreSignataire1: string;
   nomSignataire1: string;
+  employeeId1?: number | null;
   titreSignataire2: string;
   nomSignataire2: string;
+  employeeId2?: number | null;
 }
 
 export interface EtatSyntheseFilter {

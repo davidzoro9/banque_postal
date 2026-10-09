@@ -1,225 +1,530 @@
-<div class="section-page">
+<div class="conges-page-container">
 
-  <div class="sec-breadcrumb">
-    <span class="link" (click)="cancel()">Congés &amp; Absences</span>
-    <span class="sep">›</span>
-    <span class="current">Nouvelle demande</span>
+  <!-- ======================================================== -->
+  <!-- EN-TÊTE DE PAGE & BREADCRUMB                             -->
+  <!-- ======================================================== -->
+  <div class="page-top-bar">
+    <div class="breadcrumb-trail">
+      <span class="crumb-link" (click)="cancel()">
+        <mat-icon class="crumb-icon">arrow_back</mat-icon>
+        État &amp; Historique des Congés &amp; Absences
+      </span>
+      <span class="crumb-separator">/</span>
+      <span class="crumb-active">Autorisation d'Absence Exceptionnelle (DRH)</span>
+    </div>
+
+    <div class="top-status-badge">
+      <mat-icon class="pulse-icon">health_and_safety</mat-icon>
+      <span>Portail DRH &bull; Régularisation administrative pour empêchement</span>
+    </div>
   </div>
 
-  <mat-card class="section-card">
-    <mat-card-header>
-      <div mat-card-avatar class="header-avatar" style="background: linear-gradient(135deg, #0060B3, #0284c7); color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; width: 42px; height: 42px;">
-        <mat-icon>event_available</mat-icon>
+  <!-- ======================================================== -->
+  <!-- BANDEAU SUPÉRIEUR BRANDÉ BPBF                            -->
+  <!-- ======================================================== -->
+  <div class="card-brand-header">
+    <div class="brand-left">
+      <div class="brand-badge-icon">
+        <mat-icon>medical_services</mat-icon>
       </div>
-      <mat-card-title style="font-size: 17px; font-weight: 700; color: #0060B3;">Demande de Congé / Absence</mat-card-title>
-      <mat-card-subtitle>Banque Postale du Burkina Faso — Calcul automatique du départ, de la durée et du retour</mat-card-subtitle>
-    </mat-card-header>
+      <div class="brand-titles">
+        <h1 class="main-title">Autorisation d'Absence Exceptionnelle (DRH)</h1>
+        <p class="subtitle">Banque Postale du Burkina Faso &bull; Régularisation administrative d'urgence pour accident, maladie subite ou cas de force majeure empêchant l'agent de se déplacer</p>
+      </div>
+    </div>
 
-    <mat-card-content style="padding-top: 16px;">
-      <form [formGroup]="form">
+    <div class="delegation-toggle-wrap">
+      <mat-icon style="color: #6ee7b7;">verified_user</mat-icon>
+      <span style="font-size: 13px; font-weight: 700; color: #ffffff;">Prérogative DRH &bull; Saisie Officielle</span>
+    </div>
+  </div>
 
-        <!-- OPTION DÉLÉGATION DRH -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <mat-icon style="color: #64748b; font-size: 22px; width: 22px; height: 22px;">assignment_ind</mat-icon>
-            <div style="font-weight: 600; color: #1e293b; font-size: 13px;">Saisie par délégation DRH</div>
-          </div>
-          <mat-slide-toggle formControlName="saisieParDrh" color="primary"></mat-slide-toggle>
-        </div>
+  <!-- ======================================================== -->
+  <!-- BANNIÈRE D'INFORMATION DRH SUR LA DISTINCTION MÉTIER    -->
+  <!-- ======================================================== -->
+  <div class="admin-notice-banner">
+    <div class="notice-icon">
+      <mat-icon>info</mat-icon>
+    </div>
+    <div class="notice-content">
+      <strong>Régularisation administrative d'urgence (Incapacité de l'agent) :</strong>
+      <p>Ce formulaire est exclusivement réservé à la Direction des Ressources Humaines pour autoriser et régulariser l'absence d'un collaborateur empêché de se présenter à la banque (accident du travail ou de trajet, arrêt maladie subite, urgence médicale ou cas de force majeure). Pour les congés annuels ordinaires, la demande doit être obligatoirement initiée par l'agent depuis <em>Mon Espace</em>.</p>
+    </div>
+  </div>
 
-        <!-- 1. IDENTIFICATION AGENT -->
-        <p class="form-section-label">1. Agent concerné</p>
-        <div class="form-grid-2">
+  <!-- ======================================================== -->
+  <!-- DISPOSITION 2 COLONNES (FORMULAIRE + SYNTHÈSE)           -->
+  <!-- ======================================================== -->
+  <form [formGroup]="form" class="conges-form-layout">
 
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Sélectionner l'agent *</mat-label>
-            <mat-select formControlName="employeeId" (selectionChange)="onEmployeeSelect($event.value)">
-              <div style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; background: #fafafa;">
-                <mat-icon style="color: #94a3b8; margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
-                <input matInput placeholder="Rechercher par nom, prénom ou matricule..." 
-                       formControlName="employeSearch" 
-                       (keydown)="$event.stopPropagation()"
-                       style="width: 100%; border: none; outline: none; font-size: 13px; background: transparent;">
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- COLONNE GAUCHE (68%) : ÉTAPES DU FORMULAIRE              -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <div class="form-steps-column">
+
+      <!-- ==================================================== -->
+      <!-- 0. CARTE AGENT & SÉLECTEUR                           -->
+      <!-- ==================================================== -->
+      <section class="step-card agent-header-card">
+        @if (selectedEmployeeObj && !showAgentPicker) {
+          <!-- Profil agent sélectionné : compact & professionnel -->
+          <div class="agent-compact-row">
+            <div class="agent-avatar-compact">
+              {{ (selectedEmployeeObj.prenom ? selectedEmployeeObj.prenom.charAt(0) : '') + (selectedEmployeeObj.nom ? selectedEmployeeObj.nom.charAt(0) : '') }}
+            </div>
+            <div class="agent-compact-info">
+              <div class="agent-compact-title">
+                <span class="agent-name">{{ selectedEmployeeObj.prenom }} {{ selectedEmployeeObj.nom }}</span>
+                <span class="matricule-badge">{{ selectedEmployeeObj.matricule }}</span>
+                <span class="gender-badge" [class.femme]="(selectedEmployeeObj.sexe || '').toUpperCase().startsWith('F')">
+                  {{ (selectedEmployeeObj.sexe || '').toUpperCase().startsWith('F') ? '♀ Féminin' : '♂ Masculin' }}
+                </span>
               </div>
-              @for (emp of filteredEmployees$ | async; track emp.id) {
-                <mat-option [value]="emp.id">
-                  {{ emp.prenom }} {{ emp.nom }} — <strong>{{ emp.matricule }}</strong>
-                </mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+              <div class="agent-compact-sub">
+                <span>{{ selectedEmployeeObj.poste || selectedEmployeeObj.fonction || 'Collaborateur' }}</span>
+                <span class="dot">&bull;</span>
+                <span>{{ selectedEmployeeObj.direction || selectedEmployeeObj.departement || 'Direction Générale' }}</span>
+              </div>
+            </div>
 
-        </div>
-
-        <!-- APERÇU DU SOLDE EN TEMPS RÉEL SI EMPLOYÉ SÉLECTIONNÉ -->
-        @if (selectedEmployeeSolde) {
-          <div class="solde-preview-box">
-            <div class="sp-col">
-              <span class="sp-label">Droit annuel</span>
-              <span class="sp-val">{{ selectedEmployeeSolde.droitAnnuel }} jours</span>
-            </div>
-            <div class="sp-col">
-              <span class="sp-label">Jours acquis</span>
-              <span class="sp-val" style="color: #0284c7;">{{ selectedEmployeeSolde.joursAcquis }} j</span>
-            </div>
-            <div class="sp-col">
-              <span class="sp-label">Jours déjà pris</span>
-              <span class="sp-val" style="color: #dc2626;">{{ selectedEmployeeSolde.joursPris }} j</span>
-            </div>
-            <div class="sp-col highlight">
-              <span class="sp-label">Solde disponible</span>
-              <span class="sp-val bold" style="color: #0060B3;">{{ selectedEmployeeSolde.soldeRestant }} jours</span>
-            </div>
+            <button type="button" class="btn-change-agent-compact" (click)="toggleAgentPicker()" title="Sélectionner un autre collaborateur">
+              <mat-icon>sync</mat-icon>
+              <span>Changer d'agent</span>
+            </button>
           </div>
-        }
-
-        <!-- 2. TYPE & PÉRIODE DU CONGÉ -->
-        <p class="form-section-label" style="margin-top: 20px;">2. Type &amp; Période du congé</p>
-        <div class="form-grid-2">
-
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Type de congé / absence *</mat-label>
-            <mat-select formControlName="typeAbsenceCongeId">
-              @for (t of typesConge; track t.id) {
-                <mat-option [value]="t.id">{{ t.name }}</mat-option>
-              }
-              @if (typesConge.length === 0) {
-                <mat-option disabled value="">Aucun type de congé configuré</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <!-- DATE DE DÉPART -->
-          <mat-form-field appearance="outline">
-            <mat-label>Date de départ souhaitée *</mat-label>
-            <input matInput [matDatepicker]="startPicker" [matDatepickerFilter]="dateFilter" formControlName="dateDebut" placeholder="JJ/MM/AAAA">
-            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
-            <mat-datepicker #startPicker></mat-datepicker>
-          </mat-form-field>
-
-          <!-- NOMBRE DE JOURS DEMANDÉS -->
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre de jours ouvrables souhaités *</mat-label>
-            <input matInput type="number" min="1" max="90" formControlName="dureeDemandee" placeholder="Ex: 15">
-            <span matSuffix style="font-weight: 700; color: #64748b; margin-right: 8px;">jours</span>
-          </mat-form-field>
-
-          <!-- RACCOURCIS DE SÉLECTION RAPIDE DE DURÉE -->
-          <div class="span-2 quick-duration-box">
-            <span class="quick-title">Choix rapide de durée :</span>
-            <div class="quick-chips">
-              @for (d of dureesRapides; track d) {
-                <button type="button" class="btn-chip" [class.selected]="form.get('dureeDemandee')?.value === d" (click)="choisirDureeRapide(d)">
-                  {{ d }} jours
+        } @else {
+          <!-- Sélecteur d'agent direct & interactif -->
+          <div class="agent-picker-container">
+            <div class="picker-header">
+              <div class="picker-title-row">
+                <mat-icon class="picker-icon">person_search</mat-icon>
+                <div>
+                  <h3>Sélectionner le Collaborateur Empêché *</h3>
+                  <p>Choisissez l'agent concerné par l'accident, la maladie ou la force majeure</p>
+                </div>
+              </div>
+              @if (selectedEmployeeObj) {
+                <button type="button" class="btn-close-picker" (click)="showAgentPicker = false">
+                  <mat-icon>close</mat-icon>
+                  <span>Fermer</span>
                 </button>
               }
             </div>
-          </div>
 
-        </div>
-
-        <!-- CARTOUCHE DE SYNTHÈSE DU DÉPART ET DU RETOUR -->
-        <div class="planning-projection-card">
-          <div class="projection-header">
-            <mat-icon style="color: #0060B3; font-size: 20px; width: 20px; height: 20px;">calendar_month</mat-icon>
-            <span class="projection-title">Projection du calendrier</span>
-          </div>
-
-          <div class="projection-grid">
-            <div class="projection-item start">
-              <span class="proj-badge">Départ en congé</span>
-              <span class="proj-date">{{ form.get('dateDebut')?.value | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
+            <div class="picker-search-field">
+              <mat-icon>search</mat-icon>
+              <input type="text" 
+                     formControlName="employeSearch"
+                     placeholder="Rechercher par nom, prénom, matricule, poste, direction..."
+                     class="picker-input">
             </div>
 
-            <div class="projection-item end">
-              <span class="proj-badge">Dernier jour de congé</span>
-              <span class="proj-date">{{ form.get('dateFin')?.value | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
-            </div>
-
-            <div class="projection-item return">
-              <span class="proj-badge return-badge">Date de reprise</span>
-              <span class="proj-date return-date">{{ dateReprisePrevue | date:'EEEE d MMMM yyyy':'':'fr-FR' | titlecase }}</span>
-            </div>
-          </div>
-
-          <div class="projection-footer">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #0060B3;">check_circle</mat-icon>
-            <span>Durée retenue : <strong>{{ nbJours }} jour(s) ouvrable(s)</strong></span>
-          </div>
-        </div>
-
-        <!-- RECAPITULATIF SOLDE SI VALEUR -->
-        @if (nbJours > 0 && selectedEmployeeSolde) {
-          <div class="simulation-banner" 
-               [class.warning]="isSoldeInsuffisant">
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
-              <span>Nouveau solde après validation : <strong>{{ soldeApresPrise }} jour(s)</strong></span>
-              @if (isSoldeInsuffisant) {
-                <span style="color: #dc2626; font-weight: 700;">Attention : dépassement du solde disponible</span>
+            <div class="picker-employees-list">
+              @for (emp of filteredEmployees$ | async; track emp.id) {
+                <div class="employee-pick-item" 
+                     [class.is-current]="isCurrentEmployee(emp)"
+                     (click)="selectAgent(emp)">
+                  <div class="pick-avatar">
+                    {{ (emp.prenom ? emp.prenom.charAt(0) : '') + (emp.nom ? emp.nom.charAt(0) : '') }}
+                  </div>
+                  <div class="pick-meta">
+                    <div class="pick-name-line">
+                      <span class="pick-name">{{ emp.prenom }} {{ emp.nom }}</span>
+                      <span class="pick-mat">{{ emp.matricule }}</span>
+                      <span class="pick-gender">({{ emp.sexe || 'N/A' }})</span>
+                    </div>
+                    <div class="pick-sub">
+                      {{ emp.poste || emp.fonction || 'Agent' }} &bull; {{ emp.direction || emp.departement || 'Direction' }}
+                    </div>
+                  </div>
+                  <mat-icon class="pick-arrow">chevron_right</mat-icon>
+                </div>
+              } @empty {
+                <div class="empty-picker-list">
+                  <mat-icon>search_off</mat-icon>
+                  <span>Aucun collaborateur ne correspond à votre recherche.</span>
+                </div>
               }
             </div>
           </div>
         }
+      </section>
 
-        <!-- 3. ORGANISATION DE L'INTÉRIM -->
-        <p class="form-section-label" style="margin-top: 20px;">3. Organisation de l'intérim</p>
-        <div class="form-grid-2">
+      @if (selectedEmployeeObj) {
+        <!-- ==================================================== -->
+        <!-- ÉTAPE 1 : MOTIF MÉDICAL OU CIRCONSTANCE D'URGENCE   -->
+        <!-- ==================================================== -->
+        <section class="step-card">
+          <div class="step-header">
+            <div class="step-badge">1</div>
+            <div class="step-titles">
+              <h2>Motif Médical ou Circonstance d'Urgence</h2>
+              <p>Sélectionnez la cause légitime de l'empêchement (Accident de travail, Maladie subite, Force majeure...)</p>
+            </div>
+          </div>
 
-          <!-- Désignation du collègue intérimaire -->
-          <mat-form-field appearance="outline" class="span-2">
-            <mat-label>Désigner le collègue assurant l'intérim</mat-label>
-            <mat-select formControlName="interimaireId">
-              <mat-option [value]="null">— Aucun intérimaire requis —</mat-option>
-              @for (col of availableInterimaires; track col.id) {
-                <mat-option [value]="col.id">
-                  {{ col.prenom }} {{ col.nom }} ({{ col.matricule }}) — {{ col.poste || col.fonction || 'Collaborateur' }}
-                </mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <!-- FILTRES PAR CATÉGORIE D'URGENCE -->
+          <div class="category-pills-bar">
+            <button type="button" 
+                    class="cat-pill-btn" 
+                    [class.active]="categoryFilter === 'ACCIDENT_MALADIE'"
+                    (click)="setCategorieActive('ACCIDENT_MALADIE')">
+              <mat-icon>personal_injury</mat-icon>
+              <span>🚑 Accidents &amp; Arrêts Maladie</span>
+              <span class="pill-count">({{ accidentMaladieList.length }})</span>
+            </button>
 
-          <!-- Checkbox Poste Sensible -->
-          <div class="span-2" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-            <div style="font-weight: 600; color: #1e293b; font-size: 13px;">Poste sensible</div>
-            <mat-slide-toggle formControlName="posteSensibleBceao" color="primary"></mat-slide-toggle>
+            <button type="button" 
+                    class="cat-pill-btn" 
+                    [class.active]="categoryFilter === 'URGENCES'"
+                    (click)="setCategorieActive('URGENCES')">
+              <mat-icon>emergency</mat-icon>
+              <span>⚠️ Cas de Force Majeure &amp; Urgences</span>
+              <span class="pill-count">({{ urgencesList.length }})</span>
+            </button>
+
+            <button type="button" 
+                    class="cat-pill-btn" 
+                    [class.active]="categoryFilter === 'TOUS'"
+                    (click)="setCategorieActive('TOUS')">
+              <mat-icon>dashboard</mat-icon>
+              <span>Tous les motifs d'urgence</span>
+              <span class="pill-count">({{ filteredTypesConge.length }})</span>
+            </button>
+          </div>
+
+          <!-- GRILLE DE CARTES D'URGENCE -->
+          <div class="types-cards-grid">
+            @for (t of displayedTypes; track t.id) {
+              <div class="type-card-item"
+                   [class.selected]="isTypeSelected(t.id)"
+                   (click)="selectType(t)">
+                
+                <div class="card-top-header">
+                  <div class="type-card-icon" [class.is-selected]="isTypeSelected(t.id)">
+                    <mat-icon>{{ getTypeIcon(t) }}</mat-icon>
+                  </div>
+                  
+                  <div class="type-badge-container">
+                    @if (isDureeConnue(t)) {
+                      <span class="type-duration-pill fixed">
+                        {{ getDureeConnue(t) }} jours fixes
+                      </span>
+                    } @else {
+                      <span class="type-duration-pill variable">
+                        Selon prescription médicale / arrêt
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="card-main-info">
+                  <h3 class="type-card-name">{{ t.name }}</h3>
+                  <p class="type-card-desc">{{ getTypeDescription(t) }}</p>
+                </div>
+
+                <div class="card-footer-select">
+                  <span class="deduct-info" style="color: #059669; font-weight: 600;">
+                    <mat-icon class="deduct-icon" style="color: #059669;">verified</mat-icon>
+                    <span>Prise en charge CNSS &amp; Convention (Solde préservé)</span>
+                  </span>
+
+                  <div class="radio-indicator" [class.checked]="isTypeSelected(t.id)">
+                    @if (isTypeSelected(t.id)) {
+                      <mat-icon>check</mat-icon>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (displayedTypes.length === 0) {
+            <div class="empty-types-alert">
+              <mat-icon>info</mat-icon>
+              <span>Aucun motif d'urgence disponible pour ce profil.</span>
+            </div>
+          }
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- ÉTAPE 2 : PÉRIODE D'INDISPONIBILITÉ & CALENDRIER     -->
+        <!-- ==================================================== -->
+        <section class="step-card">
+          <div class="step-header">
+            <div class="step-badge">2</div>
+            <div class="step-titles">
+              <h2>Période d'Absence &amp; Décompte des Jours Ouvrés</h2>
+              <p>Indiquez la date de survenance de l'événement et la durée d'arrêt prescrite ou autorisée</p>
+            </div>
+          </div>
+
+          <div class="period-input-row">
+            <!-- DATE DE DÉBUT -->
+            <mat-form-field appearance="outline" class="period-field">
+              <mat-label>Date de début de l'absence *</mat-label>
+              <input matInput [matDatepicker]="startPicker" [matDatepickerFilter]="dateFilter" formControlName="dateDebut" placeholder="JJ/MM/AAAA">
+              <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+              <mat-hint>Date de survenance ou début d'arrêt</mat-hint>
+            </mat-form-field>
+
+            <!-- DURÉE D'ARRÊT -->
+            @if (!isDureeConnue(selectedTypeObj)) {
+              <div class="duration-control-block">
+                <mat-form-field appearance="outline" class="duration-input-field">
+                  <mat-label>Durée d'indisponibilité (Jours ouvrables) *</mat-label>
+                  <input matInput type="number" min="1" max="180" formControlName="dureeDemandee" placeholder="Ex: 3">
+                  <span matSuffix class="suffix-unit">jours</span>
+                </mat-form-field>
+
+                <!-- BOUTONS RAPIDES D'ARRÊT -->
+                <div class="quick-chips-wrapper">
+                  <span class="quick-chips-title">Raccourcis :</span>
+                  @for (j of dureesRapides; track j) {
+                    <button type="button" 
+                            class="quick-day-chip" 
+                            [class.active]="form.get('dureeDemandee')?.value === j"
+                            (click)="choisirDureeRapide(j)">
+                      {{ j }} j
+                    </button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <!-- DURÉE LÉGALE FIXE -->
+              <div class="fixed-duration-notice">
+                <div class="notice-icon">
+                  <mat-icon>lock</mat-icon>
+                </div>
+                <div class="notice-text">
+                  <strong>Durée légale fixe : {{ getDureeConnue(selectedTypeObj) }} jours ouvrables</strong>
+                  <p>Durée statutaire garantie par le Code du Travail burkinabè et la Convention Bancaire.</p>
+                </div>
+              </div>
+            }
+          </div>
+
+        </section>
+
+        <!-- ==================================================== -->
+        <!-- ÉTAPE 3 : INTÉRIM ÉVENTUEL & PIÈCE JOINTE             -->
+        <!-- ==================================================== -->
+        <section class="step-card">
+          <div class="step-header">
+            <div class="step-badge">3</div>
+            <div class="step-titles">
+              <h2>Continuité de Service &amp; Pièce Jointe Justificative</h2>
+              <p>Désignation éventuelle d'un intérimaire et ajout du document justificatif (certificat médical, déclaration d'accident...)</p>
+            </div>
+          </div>
+
+          <!-- INTÉRIMAIRE FACULTATIF -->
+          <div class="form-row-single" style="margin-bottom: 20px;">
+            <mat-form-field appearance="outline" class="full-field" style="width: 100%;">
+              <mat-label>Collaborateur assurant l'intérim (Facultatif)</mat-label>
+              <mat-select formControlName="interimaireId">
+                <mat-option [value]="null">— Aucun intérimaire requis pour cette absence —</mat-option>
+                @for (col of availableInterimaires; track col.id) {
+                  <mat-option [value]="col.id">
+                    {{ col.prenom }} {{ col.nom }} ({{ col.matricule }}) &bull; {{ col.poste || col.fonction || 'Collaborateur' }}
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>Sélectionnez un collègue si une passation de service ou de dossiers est convenue</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- PIÈCE JOINTE JUSTIFICATIVE (REMPLACE PHOTO 2) -->
+          <div class="attachment-upload-container">
+            <div class="attachment-label-row">
+              <div class="label-info">
+                <mat-icon class="label-icon">attach_file</mat-icon>
+                <span class="label-title">Document Justificatif / Fichier Joint</span>
+                <span class="label-badge">Optionnel</span>
+              </div>
+              <span class="label-format-hint">Formats : PDF, PNG, JPG, JPEG, DOC, DOCX (Max 10 Mo)</span>
+            </div>
+
+            <!-- INPUT FILE NATIF MASQUÉ -->
+            <input #fileInput type="file" 
+                   (change)="onFileSelected($event)" 
+                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
+                   style="display: none;">
+
+            @if (!selectedFileName) {
+              <!-- ZONE DE SÉLECTION CLICQUABLE -->
+              <div class="upload-dropzone" (click)="fileInput.click()">
+                <div class="dropzone-icon-circle">
+                  <mat-icon>cloud_upload</mat-icon>
+                </div>
+                <div class="dropzone-text">
+                  <h4>Cliquez ici pour joindre un fichier</h4>
+                  <p>Certificat médical d'arrêt de travail, déclaration d'accident ou justificatif d'absence</p>
+                </div>
+                <button type="button" class="btn-browse-file" (click)="$event.stopPropagation(); fileInput.click()">
+                  <mat-icon>folder_open</mat-icon>
+                  <span>Parcourir les fichiers</span>
+                </button>
+              </div>
+            } @else {
+              <!-- FICHIER SÉLECTIONNÉ -->
+              <div class="uploaded-file-card">
+                <div class="file-type-icon">
+                  <mat-icon>{{ getFileIcon(selectedFileName) }}</mat-icon>
+                </div>
+                <div class="file-meta">
+                  <div class="file-name" [title]="selectedFileName">{{ selectedFileName }}</div>
+                  <div class="file-details">
+                    <span class="file-size">{{ selectedFileSize }}</span>
+                    <span class="bullet">&bull;</span>
+                    <span class="status-ready"><mat-icon>check_circle</mat-icon> Document prêt à être enregistré</span>
+                  </div>
+                </div>
+                <div class="file-actions">
+                  <button type="button" class="btn-change-file" (click)="fileInput.click()" title="Changer le fichier">
+                    <mat-icon>sync</mat-icon>
+                    <span>Remplacer</span>
+                  </button>
+                  <button type="button" class="btn-remove-file" (click)="removeSelectedFile()" title="Supprimer la pièce jointe">
+                    <mat-icon>delete_outline</mat-icon>
+                    <span>Retirer</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- COLONNE DROITE (32% - STICKY) : SOLDES & SYNTHÈSE        -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <div class="sticky-summary-column">
+
+      <!-- CARTE 1 : SITUATION DE L'AGENT -->
+      @if (selectedEmployeeObj) {
+        <div class="summary-card balance-card">
+          <div class="summary-card-header">
+            <mat-icon class="header-icon">badge</mat-icon>
+            <div class="header-text">
+              <h3>Situation du Collaborateur</h3>
+              <span>Informations contractuelles</span>
+            </div>
+          </div>
+
+          <div class="balance-body">
+            <div class="solde-breakdown-row" style="margin-top: 0;">
+              <div class="breakdown-item">
+                <span class="b-lbl">Direction</span>
+                <span class="b-val" style="font-size: 13px;">{{ selectedEmployeeObj.direction || 'DG' }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="b-lbl">Poste</span>
+                <span class="b-val acquis" style="font-size: 13px;">{{ selectedEmployeeObj.poste || selectedEmployeeObj.fonction || 'Agent' }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="b-lbl">Solde Annuel</span>
+                <span class="b-val pris">{{ selectedEmployeeSolde?.soldeRestant ?? 30 }} j</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- CARTE 2 : SYNTHÈSE DE L'AUTORISATION DRH -->
+      <div class="summary-card projection-card">
+        <div class="summary-card-header">
+          <mat-icon class="header-icon">health_and_safety</mat-icon>
+          <div class="header-text">
+            <h3>Synthèse de l'Autorisation</h3>
+            <span>Régularisation administrative DRH</span>
+          </div>
+        </div>
+
+        <div class="summary-body">
+          <div class="summary-line">
+            <span class="s-label">Motif :</span>
+            <span class="s-val bold">{{ selectedTypeName }}</span>
+          </div>
+
+          <div class="summary-line">
+            <span class="s-label">Durée accordée :</span>
+            <span class="s-val bold duration-highlight">{{ nbJours }} jour(s) ouvré(s)</span>
+          </div>
+
+          <div class="summary-line">
+            <span class="s-label">Début d'arrêt :</span>
+            <span class="s-val">{{ (form.get('dateDebut')?.value | date:'dd/MM/yyyy') || '—' }}</span>
+          </div>
+
+          <div class="summary-line">
+            <span class="s-label">Dernier jour :</span>
+            <span class="s-val">{{ (form.get('dateFin')?.value | date:'dd/MM/yyyy') || '—' }}</span>
+          </div>
+
+          <div class="summary-line return-line">
+            <span class="s-label">Reprise prévisible :</span>
+            <span class="s-val return-val">{{ (dateReprisePrevue | date:'dd/MM/yyyy') || '—' }}</span>
+          </div>
+
+          <div class="summary-divider"></div>
+
+          <!-- Règle de prise en charge -->
+          <div class="summary-line">
+            <span class="s-label">Impact solde annuel :</span>
+            <span class="s-val badge-non-deduct" style="background: #ecfdf5; color: #047857; font-weight: 700;">
+              0 jour décompté (Régime Accident / Maladie)
+            </span>
+          </div>
+
+          <!-- Statut à l'enregistrement -->
+          <div class="projected-solde-banner" style="background: #f0fdf4; border-color: #bbf7d0;">
+            <div class="proj-top">
+              <span class="proj-title" style="color: #166534;">Statut de la décision :</span>
+              <span class="proj-val" style="color: #15803d; font-size: 15px;">
+                {{ form.get('interimaireId')?.value ? 'En attente intérim' : 'Approuvée d\'office (DRH)' }}
+              </span>
+            </div>
+            <div class="proj-sub">
+              <span class="proj-ok-text">
+                ✓ Régularisation officielle immédiate par la DRH
+              </span>
+            </div>
+          </div>
+
+          <!-- BOUTONS D'ACTION DIRECTS -->
+          <div class="summary-actions">
+            <button type="button" 
+                    mat-raised-button 
+                    class="btn-submit-main" 
+                    (click)="save()"
+                    [disabled]="saving || !selectedEmployeeObj">
+              <mat-icon [class.spin-icon]="saving">{{ saving ? 'sync' : 'verified' }}</mat-icon>
+              <span>{{ saving ? 'Enregistrement en cours...' : 'Délivrer &amp; Enregistrer l\'Autorisation' }}</span>
+            </button>
+
+            <button type="button" 
+                    mat-stroked-button 
+                    class="btn-cancel-main" 
+                    (click)="cancel()">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Annuler &amp; Retourner à l'Historique</span>
+            </button>
+          </div>
+
+          <div class="workflow-hint">
+            <mat-icon>info</mat-icon>
+            <span>Cette autorisation est directement intégrée à l'historique et au planning des absences</span>
           </div>
 
         </div>
+      </div>
 
-        <!-- 4. MOTIF & JUSTIFICATIF -->
-        <p class="form-section-label" style="margin-top: 20px;">4. Motif &amp; Justificatif</p>
-        <div class="form-grid-1">
+    </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Motif de la demande</mat-label>
-            <textarea matInput formControlName="motif" rows="2"
-                      placeholder="Ex: Congé annuel payé légal, Convenance personnelle, Repos..."></textarea>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Référence justificatif / Pièce jointe</mat-label>
-            <input matInput formControlName="justificatif"
-                   placeholder="Ex: Certificat médical N°124, Acte de mariage...">
-          </mat-form-field>
-
-        </div>
-
-      </form>
-    </mat-card-content>
-
-    <mat-card-actions style="padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
-      <button mat-stroked-button (click)="cancel()">Annuler</button>
-      <button mat-raised-button color="primary" (click)="save()"
-              [disabled]="saving"
-              style="background: #0060B3; color: white; font-weight: 700; padding: 0 28px; height: 42px; border-radius: 4px;">
-        @if (saving) {
-          <mat-icon class="spin-icon">sync</mat-icon>
-        } @else {
-          <mat-icon style="margin-right: 6px;">send</mat-icon>
-        }
-        <span>{{ saving ? 'Enregistrement en cours...' : 'Soumettre la Demande' }}</span>
-      </button>
-    </mat-card-actions>
-  </mat-card>
+  </form>
 
 </div>

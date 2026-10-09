@@ -13,7 +13,7 @@ import { TypeRetenue, TypeRetenueService } from '../services/type-retenue.servic
             Types de Retenues sur Salaire
           </h2>
           <p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">
-            Référentiel officiel connecté à la base PostgreSQL (Part Employeur, Part Agent, Prélèvements sociaux, fiscaux, assurances...)
+            Référentiel des types de retenue (Part Employeur, Part Agent, Prélèvements sociaux, fiscaux, assurances...)
           </p>
         </div>
         <button mat-raised-button (click)="ouvrirFormulaire()" style="background: #0060B3; color: #ffffff; border-radius: 8px; font-weight: 600; padding: 0 22px; height: 42px;">
@@ -49,7 +49,7 @@ import { TypeRetenue, TypeRetenueService } from '../services/type-retenue.servic
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%;">
         <div *ngIf="loading" style="padding: 40px; text-align: center; color: #0060B3;">
           <mat-spinner diameter="40" style="margin: 0 auto 12px;"></mat-spinner>
-          <div>Chargement des types de retenue depuis PostgreSQL...</div>
+          <div>Chargement des types de retenue...</div>
         </div>
 
         <div *ngIf="!loading" style="overflow-x: auto; width: 100%;">

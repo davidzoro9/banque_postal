@@ -361,11 +361,11 @@
                   <td class="text-right">-</td>
                 </tr>
 
-                <tr *ngIf="(resultat.autresIndemnites || 0) - (resultat.indemniteSujetion || 0) - (resultat.indemniteCashPoint || 0) > 0" class="row-gain">
+                <tr *ngIf="(resultat.autresIndemnites || 0) > 0" class="row-gain">
                   <td>Autres indemnités spécifiques</td>
                   <td>-</td>
                   <td>-</td>
-                  <td class="text-right gain">+ {{ formatFcfa((resultat.autresIndemnites || 0) - (resultat.indemniteSujetion || 0) - (resultat.indemniteCashPoint || 0)) }}</td>
+                  <td class="text-right gain">+ {{ formatFcfa(resultat.autresIndemnites) }}</td>
                   <td class="text-right">-</td>
                 </tr>
 

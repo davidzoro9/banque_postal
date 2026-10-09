@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { RetenueDto, RetenueService } from '../services/retenue.service';
 import { TypeRetenue, TypeRetenueService } from '../services/type-retenue.service';
 
@@ -26,7 +27,7 @@ export interface ParametragePaieRule {
             Paramétrage des Retenues sur Salaire
           </h2>
           <p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">
-            Référentiel officiel connecté à la base PostgreSQL (Part Agent / Part Employeur, type et taux %)
+            Référentiel officiel de l'établissement (Part Agent / Part Employeur, type et taux %)
           </p>
         </div>
         <button mat-raised-button (click)="ouvrirFormulaire()" style="background: #0060B3; color: #ffffff; border-radius: 8px; font-weight: 600; padding: 0 22px; height: 42px;">
@@ -48,7 +49,7 @@ export interface ParametragePaieRule {
       <mat-card style="border-radius: 12px; padding: 0; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 32px; width: 100%;">
         <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0060B3;">
-            Liste des Retenues sur Salaire (Données PostgreSQL en temps réel)
+            Liste des Retenues sur Salaire
           </h3>
           <span style="font-size: 12px; color: #64748b;">
             {{ rules.length }} règle(s) de retenue configurée(s)
@@ -57,7 +58,7 @@ export interface ParametragePaieRule {
 
         <div *ngIf="loading" style="padding: 40px; text-align: center; color: #0060B3;">
           <mat-spinner diameter="40" style="margin: 0 auto 12px;"></mat-spinner>
-          <div>Chargement des retenues depuis la base PostgreSQL...</div>
+          <div>Chargement des retenues en cours...</div>
         </div>
 
         <div *ngIf="!loading" style="overflow-x: auto; width: 100%;">
@@ -130,7 +131,7 @@ export interface ParametragePaieRule {
 
               <tr *ngIf="rules.length === 0">
                 <td colspan="7" style="padding: 32px; text-align: center; color: #94a3b8;">
-                  Aucune retenue trouvée dans la base PostgreSQL. Cliquer sur "Nouvelle Retenue" pour en créer une.
+                  Aucune règle de retenue configurée. Cliquer sur "Nouvelle Retenue" pour en créer une.
                 </td>
               </tr>
             </tbody>
@@ -185,17 +186,12 @@ export interface ParametragePaieRule {
               <div>
                 <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">Type de part / Nature *</label>
                 <select
-                  [(ngModel)]="formRule.type"
+                  [(ngModel)]="formRule.typeRetenueId"
+                  (ngModelChange)="onTypeChange($event)"
                   style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff;"
                 >
-                  <option *ngFor="let t of typesList" [value]="t.libelle">{{ t.libelle }}</option>
-                  <option value="Part Agent (Salariale)">Part Agent (Salariale)</option>
-                  <option value="Part Employeur (Patronale)">Part Employeur (Patronale)</option>
-                  <option value="Retenue Fiscale (Agent)">Retenue Fiscale (Agent)</option>
-                  <option value="Taxe Patronale (Employeur)">Taxe Patronale (Employeur)</option>
-                  <option value="Cotisation Mutuelle & Santé">Cotisation Mutuelle & Santé</option>
-                  <option value="Remboursement Prêt & Avance">Remboursement Prêt & Avance</option>
-                  <option value="Cotisation Syndicale">Cotisation Syndicale</option>
+                  <option [ngValue]="undefined">-- Sélectionner un type de retenue --</option>
+                  <option *ngFor="let t of typesList" [ngValue]="t.id">{{ t.libelle }}</option>
                 </select>
               </div>
 
@@ -258,7 +254,8 @@ export class ParametragePaieComponent implements OnInit {
 
   constructor(
     private retenueService: RetenueService,
-    private typeRetenueService: TypeRetenueService
+    private typeRetenueService: TypeRetenueService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -271,6 +268,13 @@ export class ParametragePaieComponent implements OnInit {
       next: (types) => this.typesList = types || [],
       error: (err) => console.error('Erreur chargement types retenue:', err)
     });
+  }
+
+  onTypeChange(id?: number): void {
+    const found = this.typesList.find(t => t.id === id);
+    if (found) {
+      this.formRule.type = found.libelle;
+    }
   }
 
   chargerRules(): void {
@@ -293,7 +297,7 @@ export class ParametragePaieComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur chargement retenues API:', err);
-        this.errorMsg = 'Impossible de charger les retenues depuis PostgreSQL.';
+        this.errorMsg = 'Impossible de charger les retenues depuis le serveur.';
         this.loading = false;
       }
     });
@@ -321,12 +325,22 @@ export class ParametragePaieComponent implements OnInit {
     this.formRule = this.getEmptyRule();
     const nextNum = this.rules.length + 1;
     this.formRule.code = `RET-${String(nextNum).padStart(3, '0')}`;
+    if (this.typesList.length > 0) {
+      this.formRule.typeRetenueId = this.typesList[0].id;
+      this.formRule.type = this.typesList[0].libelle;
+    }
     this.afficherFormulaire = true;
   }
 
   editerRule(item: ParametragePaieRule): void {
     this.modeEdition = true;
     this.formRule = { ...item };
+    if (!this.formRule.typeRetenueId && this.typesList.length > 0) {
+      const match = this.typesList.find(t => t.libelle.toLowerCase() === (item.type || '').toLowerCase());
+      if (match) {
+        this.formRule.typeRetenueId = match.id;
+      }
+    }
     this.afficherFormulaire = true;
   }
 
@@ -336,13 +350,12 @@ export class ParametragePaieComponent implements OnInit {
 
   sauvegarderRule(): void {
     if (!this.formRule.libelle || !this.formRule.libelle.trim()) {
-      alert('Veuillez renseigner le libellé de la retenue.');
+      this.notify('Veuillez renseigner le libellé de la retenue.', true);
       return;
     }
 
-    // Trouver le typeRetenueId correspondant au libellé sélectionné si possible
     let foundTypeId = this.formRule.typeRetenueId;
-    if (this.typesList && this.typesList.length > 0) {
+    if (!foundTypeId && this.typesList && this.typesList.length > 0) {
       const match = this.typesList.find(t => t.libelle.toLowerCase() === (this.formRule.type || '').toLowerCase());
       if (match && match.id) {
         foundTypeId = match.id;
@@ -368,19 +381,19 @@ export class ParametragePaieComponent implements OnInit {
         },
         error: (err) => {
           console.error('Erreur update retenue:', err);
-          alert('Erreur lors de la mise à jour.');
+          this.notify('Erreur lors de la mise à jour de la retenue.', true);
         }
       });
     } else {
       this.retenueService.create(payload).subscribe({
         next: () => {
-          this.notify('Nouvelle retenue enregistrée avec succès dans PostgreSQL');
+          this.notify('Nouvelle retenue enregistrée avec succès');
           this.chargerRules();
           this.fermerFormulaire();
         },
         error: (err) => {
           console.error('Erreur create retenue:', err);
-          alert('Erreur lors de la création de la retenue.');
+          this.notify('Erreur lors de la création de la retenue.', true);
         }
       });
     }
@@ -391,12 +404,12 @@ export class ParametragePaieComponent implements OnInit {
       if (item.id) {
         this.retenueService.delete(item.id).subscribe({
           next: () => {
-            this.notify('Retenue supprimée');
+            this.notify('Retenue supprimée avec succès');
             this.chargerRules();
           },
           error: (err) => {
             console.error('Erreur delete retenue:', err);
-            alert('Erreur lors de la suppression.');
+            this.notify('Erreur lors de la suppression de la retenue.', true);
           }
         });
       }
@@ -412,9 +425,18 @@ export class ParametragePaieComponent implements OnInit {
     });
   }
 
-  private notify(msg: string): void {
-    this.notificationMsg = msg;
-    setTimeout(() => this.notificationMsg = '', 4000);
+  private notify(msg: string, isError = false): void {
+    if (isError) {
+      this.errorMsg = msg;
+      setTimeout(() => this.errorMsg = '', 5000);
+    } else {
+      this.notificationMsg = msg;
+      setTimeout(() => this.notificationMsg = '', 4000);
+    }
+    this.snackBar.open(msg, 'Fermer', {
+      duration: isError ? 5000 : 3500,
+      panelClass: isError ? ['snackbar-error'] : ['snackbar-success']
+    });
   }
 
   private getEmptyRule(): ParametragePaieRule {

@@ -25,6 +25,11 @@ export interface MoisDisponible {
 export class MonEspaceComponent implements OnInit {
   currentUser: any;
   currentAgent: any = null;
+  activeTab: 'CONGES' | 'BULLETINS' | 'DEMANDES_RH' | 'PROFIL' = 'CONGES';
+
+  setActiveTab(tab: 'CONGES' | 'BULLETINS' | 'DEMANDES_RH' | 'PROFIL'): void {
+    this.activeTab = tab;
+  }
 
   // Tous les bulletins trouvés pour cet agent dans la base
   mesBulletinsTous: any[] = [];
@@ -36,6 +41,7 @@ export class MonEspaceComponent implements OnInit {
   selectedBulletin: any = null;
   isLoading = false;
   isDownloadingPdf = false;
+  isDownloadingZip = false;
 
   // Sélecteur dynamique de mois & année
   moisNoms = [
@@ -435,7 +441,7 @@ export class MonEspaceComponent implements OnInit {
       ).subscribe(solde => {
         if (solde) {
           this.monSoldeConge = {
-            droitAnnuel: solde.droitAnnuel || 30,
+            droitAnnuel: solde.droitAnnuel ?? 30,
             joursAcquis: solde.joursAcquis !== undefined ? solde.joursAcquis : 30,
             joursPris: solde.joursPris !== undefined ? solde.joursPris : 0,
             joursEnAttente: solde.joursEnAttente !== undefined ? solde.joursEnAttente : 0,
@@ -526,6 +532,56 @@ export class MonEspaceComponent implements OnInit {
     });
   }
 
+  /**
+   * Télécharge directement le bulletin lié à une demande RH acceptée/traitée
+   */
+  telechargerBulletinDemande(d: any): void {
+    if (!d) return;
+    this.isDownloadingPdf = true;
+
+    // 1. Si d.bulletinId est déjà présent
+    if (d.bulletinId) {
+      this.bulletinPdfService.getBulletinPdf(d.bulletinId).subscribe({
+        next: (blob) => {
+          this.bulletinPdfService.telechargerPdfDirect(blob, `Bulletin_${d.matricule || 'AGENT'}_${(d.periode || 'SESSION').replace(/\s+/g, '_')}.pdf`);
+          this.isDownloadingPdf = false;
+        },
+        error: () => {
+          window.open(`${environment.apiUrl}/demandes-bulletin/${d.id}/pdf`, '_blank');
+          this.isDownloadingPdf = false;
+        }
+      });
+      return;
+    }
+
+    // 2. Recherche dans mesBulletinsTous si le bulletin est déjà chargé
+    const pSearch = (d.periode || '').trim().toLowerCase();
+    const found = this.mesBulletinsTous.find(b => {
+      const bPer = (b.periode || b.mois || '').trim().toLowerCase();
+      return bPer.includes(pSearch) || pSearch.includes(bPer);
+    });
+    if (found && found.id) {
+      this.telechargerPdf(found);
+      return;
+    }
+
+    // 3. Téléchargement via endpoint dédié /api/demandes-bulletin/{id}/pdf
+    if (d.id) {
+      this.http.get(`${environment.apiUrl}/demandes-bulletin/${d.id}/pdf`, { responseType: 'blob' }).subscribe({
+        next: (blob) => {
+          this.bulletinPdfService.telechargerPdfDirect(blob, `Bulletin_${d.matricule || 'AGENT'}_${(d.periode || 'SESSION').replace(/\s+/g, '_')}.pdf`);
+          this.isDownloadingPdf = false;
+        },
+        error: () => {
+          window.open(`${environment.apiUrl}/demandes-bulletin/${d.id}/pdf`, '_blank');
+          this.isDownloadingPdf = false;
+        }
+      });
+    } else {
+      this.isDownloadingPdf = false;
+    }
+  }
+
   changerMois(delta: number): void {
     let newIndex = this.moisIndex + delta;
     if (newIndex < 0) {
@@ -593,12 +649,48 @@ export class MonEspaceComponent implements OnInit {
     window.print();
   }
 
+  /**
+   * Télécharge l'ensemble des bulletins de paie de l'agent pour l'année sélectionnée dans une archive ZIP
+   */
+  telechargerTousBulletinsZip(): void {
+    const empId = this.currentAgent?.id || this.currentUser?.id;
+    if (!empId) {
+      alert('Impossible d\'identifier votre profil collaborateur pour le téléchargement.');
+      return;
+    }
+
+    this.isDownloadingZip = true;
+    const annee = this.selectedYear || new Date().getFullYear();
+    const url = `${environment.apiUrl}/bulletins/employee/${empId}/zip?annee=${annee}`;
+
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: (blob: Blob) => {
+        this.isDownloadingZip = false;
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        const mat = this.currentAgent?.matricule || this.currentUser?.username || 'EMP';
+        a.download = `Bulletins_BPBF_${annee}_${mat}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+      },
+      error: (err) => {
+        this.isDownloadingZip = false;
+        console.error('Erreur lors du téléchargement de l\'archive ZIP des bulletins', err);
+        alert('Aucun bulletin trouvé ou erreur lors de la génération de l\'archive ZIP pour cette année.');
+      }
+    });
+  }
+
+
   formaterBulletinOfficiel(b: any, emp: any): any {
     const empRef = emp || {};
-    const sBase = b.salaireBase || empRef.salaireBase || 350000;
-    const brut = b.salaireBrut || 500000;
-    const totalRet = b.totalRetenues || 77500;
-    const net = b.salaireNet || (brut - totalRet);
+    const sBase = b.salaireBase ?? empRef.salaireBase ?? 0;
+    const brut = b.salaireBrut ?? 0;
+    const totalRet = b.totalRetenues ?? 0;
+    const net = b.salaireNet ?? Math.max(0, brut - totalRet);
 
     let lines = b.lines;
     if (lines && lines.length > 0) {
@@ -616,11 +708,8 @@ export class MonEspaceComponent implements OnInit {
 
         if (val === 0) {
           if (codeUp.includes('SAL_BASE') || nameUp.includes('SALAIRE DE BASE')) val = sBase;
-          else if (codeUp.includes('CNSS') || nameUp.includes('CNSS')) val = Math.round(brut * 0.055);
-          else if (codeUp.includes('IUTS') || nameUp.includes('IUTS')) val = Math.round(brut * 0.0675);
-          else if (codeUp.includes('CRRAE') || nameUp.includes('CRRAE')) val = Math.round(sBase * 0.03);
-          else if (nameUp.includes('LOGEMENT')) val = empRef.primeLogement || 35000;
-          else if (nameUp.includes('TRANSPORT')) val = empRef.primeTransport || 30000;
+          else if (nameUp.includes('LOGEMENT')) val = empRef.primeLogement || 0;
+          else if (nameUp.includes('TRANSPORT')) val = empRef.primeTransport || 0;
         }
 
         return {
@@ -653,34 +742,26 @@ export class MonEspaceComponent implements OnInit {
         return true;
       });
     } else {
-      lines = [
-        { name: 'SALAIRE DE BASE', category: 'ELEMENT', quantity: 1.0, rate: 100.0, regle: 'SALAIRE DE BASE INDICIAIRE', amount: sBase },
-        { name: 'INDEMNITÉS CONTRACTUELLES', category: 'INDEMNITES', quantity: 1.0, rate: 100.0, regle: 'INDEMNITÉS', amount: b.totalIndemnites || 0 },
-        { name: 'SALAIRE BRUT (TOTAL AVOIR)', category: 'ELEMENT', quantity: 1.0, rate: 100.0, regle: 'RÉMUNÉRATION TOTALE BRUTE', amount: brut },
-        { name: 'RETENUE CNSS (PART AGENT)', category: 'RETENUE', quantity: 1.0, rate: 5.5, regle: 'SÉCURITÉ SOCIALE (5.50%)', amount: b.cotisationCnss || Math.round(brut * 0.055) },
-        { name: 'IUTS DU MOIS', category: 'RETENUE', quantity: 1.0, rate: 100.0, regle: 'BARÈME IUTS', amount: b.impotIuts || Math.round(brut * 0.08) },
-        { name: 'TOTAL RETENUES AGENT', category: 'TOTAL_RETENUE', quantity: 1.0, rate: 100.0, regle: 'CUMUL DÉDUCTIONS SALARIALES', amount: totalRet },
-        { name: 'NET A PAYER (SALAIRE NET)', category: 'NET', quantity: 1.0, rate: 100.0, regle: 'NET À VIRER À L\'AGENT', amount: net }
-      ];
+      lines = [];
     }
 
-    const nomAfficher = (b.employeeName || `${empRef.nom || ''} ${empRef.prenom || ''}`.trim() || `${this.currentUser?.nom || ''} ${this.currentUser?.prenom || ''}`.trim() || 'AGENT BPBF').toUpperCase();
-    const matriculeAfficher = b.matricule || empRef.matricule || this.currentUser?.matricule || this.currentUser?.username || 'EMP-001';
+    const nomAfficher = (b.employeeName || `${empRef.nom || ''} ${empRef.prenom || ''}`.trim() || `${this.currentUser?.nom || ''} ${this.currentUser?.prenom || ''}`.trim()).toUpperCase();
+    const matriculeAfficher = b.matricule || empRef.matricule || this.currentUser?.matricule || this.currentUser?.username || '';
 
     return {
       id: b.id,
-      code: b.code || `BLT-${b.id || '001'}`,
+      code: b.code || (b.id ? `BLT-${b.id}` : ''),
       employeeName: nomAfficher,
       matricule: matriculeAfficher,
-      fonction: b.fonction || empRef.fonction || 'Agent Bancaire',
-      grade: b.gradeLibelle || empRef.grade || b.grade || 'GRADE III',
-      categorie: empRef.categoriePro || b.categorie || 'CLASSE VII',
-      modeReglement: `Virement bancaire / ${empRef.banque || 'Banque Postale du Burkina Faso (BPBF)'}`,
+      fonction: b.fonction || empRef.fonction || '',
+      grade: b.gradeLibelle || empRef.grade || b.grade || '',
+      categorie: empRef.categoriePro || b.categorie || '',
+      modeReglement: empRef.banque ? `Virement bancaire / ${empRef.banque}` : 'Virement bancaire',
       numeroCompteBancaire: empRef.iban || empRef.numeroCompte || '—',
       dateFrom: b.dateFrom || `${this.selectedYear}-${String(this.moisIndex + 1).padStart(2, '0')}-01`,
       dateTo: b.dateTo || `${this.selectedYear}-${String(this.moisIndex + 1).padStart(2, '0')}-30`,
-      workedDays: b.workedDays || 30,
-      scheduledWorkingDays: b.scheduledWorkingDays || 30,
+      workedDays: b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : (b.scheduledWorkingDays ?? 30),
+      scheduledWorkingDays: b.scheduledWorkingDays ?? 30,
       nombreCharges: b.nombreCharges !== undefined ? b.nombreCharges : (empRef.nombreCharges || 0),
       salaireBase: sBase,
       totalIndemnites: b.totalIndemnites || 0,
@@ -799,11 +880,11 @@ export class MonEspaceComponent implements OnInit {
 
   envoyerDemandeBulletin(): void {
     const emp = this.currentAgent || {};
-    const empId = emp.id || (this.currentUser?.nom?.toUpperCase().includes('ZOROM') ? 18 : this.currentUser?.id);
-    const empMat = emp.matricule || (this.currentUser?.nom?.toUpperCase().includes('ZOROM') ? 'EMP-004' : this.currentUser?.matricule || 'AGENT');
+    const empId = emp.id || this.currentUser?.id;
+    const empMat = emp.matricule || this.currentUser?.matricule || '';
     const empNom = (emp.prenom && emp.nom)
       ? `${emp.nom} ${emp.prenom}`.toUpperCase()
-      : `${this.currentUser?.nom || 'ZOROM'} ${this.currentUser?.prenom || 'David'}`.toUpperCase();
+      : `${this.currentUser?.nom || ''} ${this.currentUser?.prenom || ''}`.trim().toUpperCase();
 
     this.isSubmittingBulletin = true;
     const payload = {
@@ -832,20 +913,129 @@ export class MonEspaceComponent implements OnInit {
 
   // ─────────────────────────────────────────────────────────────
   // GESTION DEMANDE DE CONGÉ INTÉGRÉE DANS MON ESPACE
+  get filteredTypesConge(): TypeAbsenceConge[] {
+    const sexe = (this.currentAgent?.sexe || '').toUpperCase();
+    const isFemme = sexe.startsWith('F') || sexe.includes('FEM');
+    const isHomme = sexe.startsWith('M') || sexe.includes('HOM');
+
+    return this.typesConge.filter(t => {
+      const req = (t.sexeRequis || '').toUpperCase();
+      const code = (t.code || '').toUpperCase();
+      if (req === 'FEMININ' || code.includes('MATERNITE')) {
+        return !isHomme;
+      }
+      if (req === 'MASCULIN' || code.includes('PATERNITE')) {
+        return !isFemme;
+      }
+      return true;
+    });
+  }
+
+  get congesList(): TypeAbsenceConge[] {
+    return this.filteredTypesConge.filter(t => (t.categorie || '').toUpperCase() === 'CONGE' || (!t.categorie && (t.code || '').toUpperCase().startsWith('CONGE')));
+  }
+
+  get absencesList(): TypeAbsenceConge[] {
+    return this.filteredTypesConge.filter(t => (t.categorie || '').toUpperCase() === 'ABSENCE' || (!t.categorie && !(t.code || '').toUpperCase().startsWith('CONGE')));
+  }
+
+  categorieActive: 'CONGE' | 'ABSENCE' = 'CONGE';
+
+  get selectedCongeTypeObj(): TypeAbsenceConge | undefined {
+    const id = this.congeForm?.typeAbsenceCongeId;
+    if (!id) return undefined;
+    return this.typesConge.find(t => String(t.id) === String(id));
+  }
+
+  get isTypeDeductible(): boolean {
+    const t = this.selectedCongeTypeObj;
+    return !t || t.deductibleDuSolde !== false;
+  }
+
+  get nouveauSoldePrevisionnel(): number {
+    const soldeActuel = this.monSoldeConge?.soldeRestant ?? 30;
+    if (!this.isTypeDeductible) {
+      return soldeActuel;
+    }
+    const nbJours = Number(this.congeForm.dureeDemandee) || 0;
+    return Math.max(0, Math.round((soldeActuel - nbJours) * 10) / 10);
+  }
+
+  isDureeConnue(type: TypeAbsenceConge | undefined | null): boolean {
+    if (!type) return false;
+    const code = (type.code || '').toUpperCase();
+    const name = (type.name || '').toLowerCase();
+    if (code === 'CONGE_ANNUEL' || name.includes('annuel')) return false;
+    if (code === 'CONGE_MALADIE' || name.includes('maladie')) return false;
+    if (code === 'SANS_SOLDE' || name.includes('sans solde')) return false;
+
+    if (code.includes('MATERNITE') || name.includes('materni')) return true;
+    if (code.includes('PATERNITE') || name.includes('paterni')) return true;
+    if (code.includes('MARIAGE') || name.includes('mariage')) return true;
+    if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return true;
+    if (code.includes('NAISSANCE') || name.includes('naissance')) return true;
+
+    return !!(type.dureeMaxLegaleJours && type.dureeMaxLegaleJours > 0 && type.dureeMaxLegaleJours <= 10);
+  }
+
+  getDureeConnue(type: TypeAbsenceConge | undefined | null): number {
+    if (!type) return 1;
+    const code = (type.code || '').toUpperCase();
+    const name = (type.name || '').toLowerCase();
+    if (code.includes('MATERNITE') || name.includes('materni')) return 98;
+    if (code.includes('PATERNITE') || name.includes('paterni')) return 3;
+    if (code.includes('MARIAGE') || name.includes('mariage')) return type.dureeMaxLegaleJours || 3;
+    if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return type.dureeMaxLegaleJours || 5;
+    if (code.includes('NAISSANCE') || name.includes('naissance')) return type.dureeMaxLegaleJours || 3;
+    return type.dureeMaxLegaleJours || 1;
+  }
+
+  onCongeTypeChange(): void {
+    const t = this.selectedCongeTypeObj;
+    if (!t) return;
+    if (this.isDureeConnue(t)) {
+      const dureeFixe = this.getDureeConnue(t);
+      this.congeForm.dureeDemandee = dureeFixe;
+      this.calculerDateFinDepuisDuree(this.congeForm.dateDebut, dureeFixe);
+    } else {
+      this.recalculerNbJoursConge();
+    }
+  }
+
+  setCategorieActive(cat: 'CONGE' | 'ABSENCE'): void {
+    this.categorieActive = cat;
+    const list = cat === 'CONGE' ? this.congesList : this.absencesList;
+    if (list && list.length > 0) {
+      this.congeForm.typeAbsenceCongeId = list[0].id;
+      this.onCongeTypeChange();
+    }
+  }
+
+  get listeTypesPourCategorieActive(): TypeAbsenceConge[] {
+    return this.categorieActive === 'CONGE' ? this.congesList : this.absencesList;
+  }
+
   // ─────────────────────────────────────────────────────────────
 
   ouvrirModalDemandeConge(): void {
     const dateInitiale = this.getProchainJourOuvrable(new Date());
+    const defaultList = this.congesList.length > 0 ? this.congesList : this.filteredTypesConge;
+    const annuel = defaultList.find(tc => (tc.code || '').toUpperCase().includes('ANNUEL'));
+    const defId = annuel ? annuel.id : (defaultList.length > 0 ? defaultList[0].id : null);
+    const defType = this.typesConge.find(t => t.id === defId);
+    const dInit = this.isDureeConnue(defType) ? this.getDureeConnue(defType) : 15;
+
     this.congeForm = {
-      typeAbsenceCongeId: this.typesConge.length > 0 ? this.typesConge[0].id : null,
+      typeAbsenceCongeId: defId,
       dateDebut: dateInitiale,
-      dureeDemandee: 15,
+      dureeDemandee: dInit,
       dateFin: dateInitiale,
       motif: '',
       justificatif: '',
       interimaireId: null,
       posteSensibleBceao: false
     };
+    this.calculerDateFinDepuisDuree(dateInitiale, dInit);
     this.congeEnvoyeSuccess = false;
     this.isSubmittingConge = false;
 
@@ -855,10 +1045,11 @@ export class MonEspaceComponent implements OnInit {
         next: (t) => {
           this.typesConge = t || [];
           if (this.typesConge.length > 0 && !this.congeForm.typeAbsenceCongeId) {
-            const annuel = this.typesConge.find(tc => (tc.code || '').toUpperCase().includes('ANNUEL'));
-            this.congeForm.typeAbsenceCongeId = annuel ? annuel.id : this.typesConge[0].id;
+            const list = this.congesList.length > 0 ? this.congesList : this.filteredTypesConge;
+            const ann = list.find(tc => (tc.code || '').toUpperCase().includes('ANNUEL'));
+            this.congeForm.typeAbsenceCongeId = ann ? ann.id : (list.length > 0 ? list[0].id : this.typesConge[0].id);
           }
-          this.recalculerDatesConge();
+          this.recalculerNbJoursConge();
         }
       });
     }
@@ -868,12 +1059,12 @@ export class MonEspaceComponent implements OnInit {
       this.congeService.getJoursFeries().subscribe({
         next: (jf) => {
           this.joursFeries = jf || [];
-          this.recalculerDatesConge();
+          this.recalculerNbJoursConge();
         }
       });
     }
 
-    this.recalculerDatesConge();
+    this.recalculerNbJoursConge();
     this.showDemandeCongeModal = true;
   }
 
@@ -885,7 +1076,7 @@ export class MonEspaceComponent implements OnInit {
 
   choisirDureeRapide(jours: number): void {
     this.congeForm.dureeDemandee = jours;
-    this.recalculerDatesConge();
+    this.calculerDateFinDepuisDuree(this.congeForm.dateDebut, jours);
   }
 
   onDateDebutChange(nouvelleDate: any): void {
@@ -893,31 +1084,97 @@ export class MonEspaceComponent implements OnInit {
       const d = new Date(nouvelleDate);
       if (d.getDay() === 0) {
         d.setDate(d.getDate() + 1);
-        this.congeForm.dateDebut = d;
-      } else {
-        this.congeForm.dateDebut = d;
       }
-      this.recalculerDatesConge();
+      this.congeForm.dateDebut = d;
+
+      if (this.isDureeConnue(this.selectedCongeTypeObj)) {
+        const dureeFixe = this.getDureeConnue(this.selectedCongeTypeObj);
+        this.congeForm.dureeDemandee = dureeFixe;
+        this.calculerDateFinDepuisDuree(d, dureeFixe);
+      } else {
+        if (!this.congeForm.dateFin || new Date(this.congeForm.dateFin) < d) {
+          const nb = Number(this.congeForm.dureeDemandee) || 15;
+          this.calculerDateFinDepuisDuree(d, nb);
+        } else {
+          this.recalculerNbJoursConge();
+        }
+      }
     }
   }
 
-  recalculerDatesConge(): void {
-    const debutVal = this.congeForm.dateDebut;
-    const nbJours = Number(this.congeForm.dureeDemandee) || 15;
-    if (!debutVal || nbJours <= 0) return;
+  onDateFinChange(nouvelleDate: any): void {
+    if (nouvelleDate) {
+      const d = new Date(nouvelleDate);
+      if (d.getDay() === 0) {
+        d.setDate(d.getDate() - 1);
+      }
+      if (this.congeForm.dateDebut && d < new Date(this.congeForm.dateDebut)) {
+        this.congeForm.dateFin = new Date(this.congeForm.dateDebut);
+      } else {
+        this.congeForm.dateFin = d;
+      }
+      this.recalculerNbJoursConge();
+    }
+  }
 
-    let cur = new Date(debutVal);
-    if (cur.getDay() === 0) {
-      cur.setDate(cur.getDate() + 1);
-      this.congeForm.dateDebut = new Date(cur);
+  recalculerNbJoursConge(): void {
+    const debutVal = this.congeForm.dateDebut;
+    const finVal = this.congeForm.dateFin;
+    if (!debutVal || !finVal) {
+      this.congeForm.dureeDemandee = 0;
+      return;
     }
 
+    const start = new Date(debutVal);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(finVal);
+    end.setHours(0, 0, 0, 0);
+
+    if (end < start) {
+      this.congeForm.dateFin = new Date(start);
+      this.congeForm.dureeDemandee = 1;
+      return;
+    }
+
+    let joursComptes = 0;
+    const cur = new Date(start);
+
+    while (cur <= end) {
+      const dow = cur.getDay();
+      const isWeekend = (dow === 0 || dow === 6); // Samedi et Dimanche exclus en mode ouvrable bancaire
+      const isFerie = this.isJourFerie(cur);
+
+      if (!isWeekend && !isFerie) {
+        joursComptes++;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    this.congeForm.dureeDemandee = Math.max(1, joursComptes);
+
+    let reprise = new Date(end);
+    reprise.setDate(reprise.getDate() + 1);
+    while (reprise.getDay() === 0 || reprise.getDay() === 6 || this.isJourFerie(reprise)) {
+      reprise.setDate(reprise.getDate() + 1);
+    }
+    this.dateReprisePrevue = reprise;
+  }
+
+  recalculerDatesConge(): void {
+    this.recalculerNbJoursConge();
+  }
+
+  private calculerDateFinDepuisDuree(debut: Date, nbJours: number): void {
+    let cur = new Date(debut);
+    if (cur.getDay() === 0) {
+      cur.setDate(cur.getDate() + 1);
+    }
     let joursComptes = 0;
     let dernierJour = new Date(cur);
 
     while (joursComptes < nbJours) {
       const dow = cur.getDay();
-      const isWeekend = (dow === 0 || dow === 6); // Dimanche et Samedi
+      const isWeekend = (dow === 0 || dow === 6);
       const isFerie = this.isJourFerie(cur);
 
       if (!isWeekend && !isFerie) {
@@ -930,13 +1187,13 @@ export class MonEspaceComponent implements OnInit {
       }
     }
 
+    this.congeForm.dateFin = dernierJour;
+
     let reprise = new Date(dernierJour);
     reprise.setDate(reprise.getDate() + 1);
     while (reprise.getDay() === 0 || reprise.getDay() === 6 || this.isJourFerie(reprise)) {
       reprise.setDate(reprise.getDate() + 1);
     }
-
-    this.congeForm.dateFin = dernierJour;
     this.dateReprisePrevue = reprise;
   }
 
@@ -945,7 +1202,16 @@ export class MonEspaceComponent implements OnInit {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const iso = `${y}-${m}-${day}`;
-    return this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
+    const inDb = this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
+    if (inDb) return true;
+
+    // Fêtes légales chômées et payées au Burkina Faso (Loi 028-2008 / Code du Travail) :
+    // 01-01 (Jour de l'An), 01-03 (Soulèvement Populaire), 03-08 (Journée de la Femme),
+    // 05-01 (Fête du Travail), 08-05 (Indépendance), 08-15 (Assomption),
+    // 10-31 (Martyrs), 11-01 (Toussaint), 12-11 (Fête Nationale), 12-25 (Noël)
+    const md = `${m}-${day}`;
+    const feriesFixesBF = ['01-01', '01-03', '03-08', '05-01', '08-05', '08-15', '10-31', '11-01', '12-11', '12-25'];
+    return feriesFixesBF.includes(md);
   }
 
   private getProchainJourOuvrable(base: Date): Date {
@@ -978,11 +1244,11 @@ export class MonEspaceComponent implements OnInit {
 
   soumettreDemandeConge(): void {
     const emp = this.currentAgent || {};
-    const empId = emp.id || (this.currentUser?.nom?.toUpperCase().includes('ZOROM') ? 18 : this.currentUser?.id);
-    const empMat = emp.matricule || (this.currentUser?.nom?.toUpperCase().includes('ZOROM') ? 'EMP-004' : this.currentUser?.matricule || 'AGENT');
+    const empId = emp.id || this.currentUser?.id;
+    const empMat = emp.matricule || this.currentUser?.matricule || '';
     const empName = (emp.prenom && emp.nom)
       ? `${emp.prenom} ${emp.nom}`.toUpperCase()
-      : `${this.currentUser?.prenom || 'David'} ${this.currentUser?.nom || 'ZOROM'}`.toUpperCase();
+      : `${this.currentUser?.prenom || ''} ${this.currentUser?.nom || ''}`.trim().toUpperCase();
 
     this.isSubmittingConge = true;
     const typeSelected = this.typesConge.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));

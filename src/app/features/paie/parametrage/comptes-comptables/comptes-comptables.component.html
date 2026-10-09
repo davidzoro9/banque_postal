@@ -1,0 +1,375 @@
+<div class="comptes-comptables-page">
+  <!-- En-tête de la page -->
+  <div class="header-banner">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>account_tree</mat-icon>
+      </div>
+      <div>
+        <h1>Paramétrage des Comptes Comptables de Paie</h1>
+        <p>Configuration du plan de comptes SYSCOHADA et affectation des rubriques de paie (OD de paie, charges sociales, tiers et net à payer).</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalCreation()">
+        <mat-icon>add</mat-icon>
+        Nouveau compte
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Flash -->
+  @if (successMessage) {
+    <div class="alert alert-success">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="alert alert-danger">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <!-- Statistiques rapides SYSCOHADA -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon icon-blue">
+          <mat-icon>account_balance</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalComptes }}</span>
+          <span class="stat-label">Comptes configurés</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon icon-orange">
+          <mat-icon>trending_down</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalClasse6 }}</span>
+          <span class="stat-label">Charges de personnel (Classe 6)</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon icon-purple">
+          <mat-icon>credit_score</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalClasse4 }}</span>
+          <span class="stat-label">Dettes & Tiers (Classe 4)</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon icon-green">
+          <mat-icon>verified</mat-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalActifs }}</span>
+          <span class="stat-label">Comptes actifs en OD</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Barre de filtres et recherche -->
+  <div class="filters-card">
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        placeholder="Rechercher par numéro (ex: 641100), libellé ou rubrique..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+      />
+      @if (searchQuery) {
+        <button class="clear-btn" (click)="searchQuery = ''; onSearchChange()">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    <div class="filter-actions">
+      <!-- Filtre Classe -->
+      <div class="btn-group">
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedClasse === 'TOUS'"
+          (click)="onClasseChange('TOUS')"
+        >
+          Toutes classes
+        </button>
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedClasse === 'CLASSE_6'"
+          (click)="onClasseChange('CLASSE_6')"
+        >
+          Classe 6 (Charges)
+        </button>
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedClasse === 'CLASSE_4'"
+          (click)="onClasseChange('CLASSE_4')"
+        >
+          Classe 4 (Tiers / Dettes)
+        </button>
+      </div>
+
+      <!-- Filtre Statut -->
+      <div class="btn-group">
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedStatut === 'TOUS'"
+          (click)="onStatutChange('TOUS')"
+        >
+          Tous statuts
+        </button>
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedStatut === 'ACTIF'"
+          (click)="onStatutChange('ACTIF')"
+        >
+          Actifs
+        </button>
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="selectedStatut === 'INACTIF'"
+          (click)="onStatutChange('INACTIF')"
+        >
+          Inactifs
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des comptes -->
+  <div class="table-card">
+    @if (loading) {
+      <div class="loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Chargement des comptes comptables...</span>
+      </div>
+    } @else if (filteredComptes.length === 0) {
+      <div class="empty-state">
+        <mat-icon>search_off</mat-icon>
+        <h3>Aucun compte comptable trouvé</h3>
+        <p>Ajustez vos filtres ou ajoutez un nouveau compte au plan comptable.</p>
+        <button mat-stroked-button color="primary" (click)="ouvrirModalCreation()">
+          <mat-icon>add</mat-icon> Ajouter un compte
+        </button>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="comptes-table">
+          <thead>
+            <tr>
+              <th style="width: 130px;">N° Compte</th>
+              <th>Intitulé du compte (SYSCOHADA)</th>
+              <th style="width: 120px;">Classe</th>
+              <th style="width: 100px;">Sens OD</th>
+              <th>Rubrique de Paie associée</th>
+              <th style="width: 110px;">Journal</th>
+              <th style="width: 110px;">Statut</th>
+              <th style="width: 110px; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of filteredComptes; track c.numeroCompte) {
+              <tr [class.row-inactive]="!c.actif">
+                <td>
+                  <span class="account-badge" [class.badge-c6]="c.classeCompte === 'CLASSE_6'" [class.badge-c4]="c.classeCompte === 'CLASSE_4'">
+                    {{ c.numeroCompte }}
+                  </span>
+                </td>
+                <td>
+                  <div class="compte-libelle-cell">
+                    <strong>{{ c.libelle }}</strong>
+                    @if (c.description) {
+                      <span class="compte-desc">{{ c.description }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="pill-classe" [class.pill-c6]="c.classeCompte === 'CLASSE_6'" [class.pill-c4]="c.classeCompte === 'CLASSE_4'">
+                    {{ c.classeCompte === 'CLASSE_6' ? 'Classe 6' : (c.classeCompte === 'CLASSE_4' ? 'Classe 4' : c.classeCompte) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="pill-sens" [class.pill-debit]="c.sensParDefaut === 'DEBIT'" [class.pill-credit]="c.sensParDefaut === 'CREDIT'">
+                    {{ c.sensParDefaut }}
+                  </span>
+                </td>
+                <td>
+                  <span class="rubrique-tag">
+                    <mat-icon>bookmark_border</mat-icon>
+                    {{ getLibelleRubrique(c.typeRubriqueAssociee) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="journal-badge">{{ c.codeJournal || 'OD_PAIE' }}</span>
+                </td>
+                <td>
+                  <button
+                    class="status-toggle-btn"
+                    [class.status-active]="c.actif"
+                    [class.status-inactive]="!c.actif"
+                    (click)="toggleStatut(c, $event)"
+                    title="Cliquer pour changer le statut"
+                  >
+                    <mat-icon>{{ c.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span>{{ c.actif ? 'Actif' : 'Inactif' }}</span>
+                  </button>
+                </td>
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalEdition(c)" title="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerCompte(c, $event)" title="Supprimer">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Modal Création / Édition -->
+  @if (showModal) {
+    <div class="modal-overlay" (click)="fermerModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <mat-icon color="primary">{{ isEditing ? 'edit' : 'add_chart' }}</mat-icon>
+            <h2>{{ isEditing ? 'Modifier le compte comptable' : 'Nouveau compte comptable' }}</h2>
+          </div>
+          <button class="modal-close-btn" (click)="fermerModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="numCompte">Numéro de compte <span class="req">*</span></label>
+              <input
+                id="numCompte"
+                type="text"
+                class="form-input"
+                placeholder="Ex: 641100 ou 421100"
+                [(ngModel)]="currentCompte.numeroCompte"
+                (ngModelChange)="onNumeroCompteChange()"
+              />
+              <span class="field-hint">SYSCOHADA révisé (6 chiffres)</span>
+            </div>
+
+            <div class="form-group col-half">
+              <label for="libCompte">Intitulé du compte <span class="req">*</span></label>
+              <input
+                id="libCompte"
+                type="text"
+                class="form-input"
+                placeholder="Ex: Salaires de base du personnel"
+                [(ngModel)]="currentCompte.libelle"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="classeCompte">Classe comptable</label>
+              <select id="classeCompte" class="form-select" [(ngModel)]="currentCompte.classeCompte">
+                <option value="CLASSE_6">Classe 6 — Charges de personnel</option>
+                <option value="CLASSE_4">Classe 4 — Comptes de tiers / Dettes</option>
+                <option value="CLASSE_1">Classe 1 — Capitaux & Provisions</option>
+                <option value="CLASSE_5">Classe 5 — Trésorerie / Banques</option>
+              </select>
+            </div>
+
+            <div class="form-group col-half">
+              <label for="sensCompte">Sens par défaut dans l'OD</label>
+              <select id="sensCompte" class="form-select" [(ngModel)]="currentCompte.sensParDefaut">
+                <option value="DEBIT">DÉBIT (Charges / Diminution dettes)</option>
+                <option value="CREDIT">CRÉDIT (Net à payer / Retenues / Cotisations)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="typeRubrique">Rubrique de paie affectée</label>
+              <select
+                id="typeRubrique"
+                class="form-select"
+                [(ngModel)]="currentCompte.typeRubriqueAssociee"
+                (ngModelChange)="onRubriqueSelect()"
+              >
+                @for (opt of rubriqueOptions; track opt.code) {
+                  <option [value]="opt.code">{{ opt.libelle }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group col-half">
+              <label for="codeJournal">Code Journal OD</label>
+              <input
+                id="codeJournal"
+                type="text"
+                class="form-input"
+                placeholder="OD_PAIE"
+                [(ngModel)]="currentCompte.codeJournal"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descCompte">Description & Précisions d'imputation</label>
+            <textarea
+              id="descCompte"
+              class="form-textarea"
+              rows="3"
+              placeholder="Règles d'affectation automatique lors de la génération de l'OD de paie..."
+              [(ngModel)]="currentCompte.description"
+            ></textarea>
+          </div>
+
+          <div class="form-check-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="currentCompte.actif" />
+              <span>Compte actif (pris en compte dans les écritures comptables mensuelles)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="fermerModal()">Annuler</button>
+          <button type="button" class="btn-save" (click)="enregistrerCompte()">
+            <mat-icon>check</mat-icon>
+            {{ isEditing ? 'Enregistrer les modifications' : 'Créer le compte' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { EtatSyntheseService, EtatSyntheseWrapper, EtatSyntheseFilter, EtatSyntheseConfig, SignatairesEtat } from '../services/etat-synthese.service';
+import { EmployeeService } from '../../grh/employes/services/employee.service';
+import { Employee } from '../../grh/employes/models/employee.model';
 import { ModuleNavService } from '../../../core/services/module-nav.service';
 import { environment } from '../../../../environments/environment';
 
@@ -45,11 +47,27 @@ export class EtatsSyntheseComponent implements OnInit {
   signatairesError = '';
   signatairesSuccess = '';
   signatairesForm: SignatairesEtat = {
-    titreSignataire1: 'Le Comptable',
-    nomSignataire1: 'Ahadi Ismaël YONLI',
-    titreSignataire2: 'Le Directeur Financier et Comptable',
-    nomSignataire2: 'Inoussa SANOUIDI'
+    titreSignataire1: '',
+    nomSignataire1: '',
+    employeeId1: null,
+    titreSignataire2: '',
+    nomSignataire2: '',
+    employeeId2: null
   };
+
+  employeesList: Employee[] = [];
+  selectedAgent1: Employee | null = null;
+  selectedAgent2: Employee | null = null;
+  titresStandards: string[] = [
+    'Le Comptable',
+    'Le Directeur Financier et Comptable',
+    'Le Directeur Général',
+    'Le Responsable Paie & RH',
+    'Le Chef de Département Ressources Humaines',
+    'L\'Auditeur Interne',
+    'Le Contrôleur Général',
+    'Le Trésorier'
+  ];
 
   configForm: Partial<EtatSyntheseConfig> = {
     code: '',
@@ -77,6 +95,7 @@ export class EtatsSyntheseComponent implements OnInit {
 
   constructor(
     private etatService: EtatSyntheseService,
+    private employeeService: EmployeeService,
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
@@ -300,7 +319,7 @@ export class EtatsSyntheseComponent implements OnInit {
       this.etatService.updateConfig(this.configForm.id, this.configForm as EtatSyntheseConfig).subscribe({
         next: (saved) => {
           this.isSaving = false;
-          this.formSuccess = 'État mis à jour avec succès dans PostgreSQL !';
+          this.formSuccess = 'État mis à jour avec succès !';
           const idx = this.etatsConfigs.findIndex(c => c.id === saved.id);
           if (idx !== -1) {
             this.etatsConfigs[idx] = saved;
@@ -598,16 +617,106 @@ export class EtatsSyntheseComponent implements OnInit {
       next: (res) => {
         if (res) {
           this.signatairesForm = { ...res };
+          this.matchCurrentSignatairesWithEmployees();
         }
       },
       error: (err) => console.error('Erreur chargement des signataires officiels', err)
     });
   }
 
+  loadEmployees(): void {
+    if (this.employeesList.length === 0) {
+      this.employeeService.getAll().subscribe({
+        next: (emps) => {
+          this.employeesList = (emps || []).sort((a, b) =>
+            `${a.nom || ''} ${a.prenom || ''}`.localeCompare(`${b.nom || ''} ${b.prenom || ''}`)
+          );
+          this.matchCurrentSignatairesWithEmployees();
+        },
+        error: (err) => console.error('Erreur chargement employés pour signataires', err)
+      });
+    } else {
+      this.matchCurrentSignatairesWithEmployees();
+    }
+  }
+
+  matchCurrentSignatairesWithEmployees(): void {
+    if (!this.employeesList || this.employeesList.length === 0) return;
+
+    // 1. Signataire 1
+    if (this.signatairesForm.employeeId1) {
+      this.selectedAgent1 = this.employeesList.find(e => Number(e.id) === Number(this.signatairesForm.employeeId1)) || null;
+    }
+    if (!this.selectedAgent1 && this.signatairesForm.nomSignataire1) {
+      const nom1 = this.signatairesForm.nomSignataire1.toLowerCase().trim();
+      this.selectedAgent1 = this.employeesList.find(e => {
+        const full1 = `${e.prenom || ''} ${e.nom || ''}`.toLowerCase().trim();
+        const full2 = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase().trim();
+        return full1 === nom1 || full2 === nom1 || nom1.includes((e.nom || '').toLowerCase().trim());
+      }) || null;
+      if (this.selectedAgent1) {
+        this.signatairesForm.employeeId1 = Number(this.selectedAgent1.id);
+      }
+    }
+
+    // 2. Signataire 2
+    if (this.signatairesForm.employeeId2) {
+      this.selectedAgent2 = this.employeesList.find(e => Number(e.id) === Number(this.signatairesForm.employeeId2)) || null;
+    }
+    if (!this.selectedAgent2 && this.signatairesForm.nomSignataire2) {
+      const nom2 = this.signatairesForm.nomSignataire2.toLowerCase().trim();
+      this.selectedAgent2 = this.employeesList.find(e => {
+        const full1 = `${e.prenom || ''} ${e.nom || ''}`.toLowerCase().trim();
+        const full2 = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase().trim();
+        return full1 === nom2 || full2 === nom2 || nom2.includes((e.nom || '').toLowerCase().trim());
+      }) || null;
+      if (this.selectedAgent2) {
+        this.signatairesForm.employeeId2 = Number(this.selectedAgent2.id);
+      }
+    }
+  }
+
+  onSelectSignataire1(empId: any): void {
+    if (!empId) {
+      this.selectedAgent1 = null;
+      this.signatairesForm.employeeId1 = null;
+      this.signatairesForm.nomSignataire1 = '';
+      return;
+    }
+    const found = this.employeesList.find(e => Number(e.id) === Number(empId));
+    if (found) {
+      this.selectedAgent1 = found;
+      this.signatairesForm.employeeId1 = Number(found.id);
+      this.signatairesForm.nomSignataire1 = `${found.prenom} ${found.nom}`.trim();
+      if (found.poste || found.fonction) {
+        this.signatairesForm.titreSignataire1 = (found.poste || found.fonction || '');
+      }
+    }
+  }
+
+  onSelectSignataire2(empId: any): void {
+    if (!empId) {
+      this.selectedAgent2 = null;
+      this.signatairesForm.employeeId2 = null;
+      this.signatairesForm.nomSignataire2 = '';
+      return;
+    }
+    const found = this.employeesList.find(e => Number(e.id) === Number(empId));
+    if (found) {
+      this.selectedAgent2 = found;
+      this.signatairesForm.employeeId2 = Number(found.id);
+      this.signatairesForm.nomSignataire2 = `${found.prenom} ${found.nom}`.trim();
+      if (found.poste || found.fonction) {
+        this.signatairesForm.titreSignataire2 = (found.poste || found.fonction || '');
+      }
+    }
+  }
+
   openSignatairesModal(): void {
     this.signatairesError = '';
     this.signatairesSuccess = '';
     this.isSignatairesModalOpen = true;
+    this.loadEmployees();
     this.loadSignataires();
   }
 
@@ -618,12 +727,20 @@ export class EtatsSyntheseComponent implements OnInit {
   }
 
   saveSignataires(): void {
-    if (!this.signatairesForm.titreSignataire1?.trim() || !this.signatairesForm.nomSignataire1?.trim()) {
-      this.signatairesError = 'Le titre et le nom du Signataire 1 (Gauche) sont obligatoires.';
+    if (!this.signatairesForm.employeeId1 && !this.selectedAgent1) {
+      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 1 (Bas Gauche).';
       return;
     }
-    if (!this.signatairesForm.titreSignataire2?.trim() || !this.signatairesForm.nomSignataire2?.trim()) {
-      this.signatairesError = 'Le titre et le nom du Signataire 2 (Droite) sont obligatoires.';
+    if (!this.signatairesForm.titreSignataire1?.trim()) {
+      this.signatairesError = 'Le titre / fonction du Signataire 1 (Gauche) est obligatoire.';
+      return;
+    }
+    if (!this.signatairesForm.employeeId2 && !this.selectedAgent2) {
+      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 2 (Bas Droite).';
+      return;
+    }
+    if (!this.signatairesForm.titreSignataire2?.trim()) {
+      this.signatairesError = 'Le titre / fonction du Signataire 2 (Droite) est obligatoire.';
       return;
     }
 
@@ -640,8 +757,9 @@ export class EtatsSyntheseComponent implements OnInit {
           this.etatData.titreSignataire2 = res.titreSignataire2;
           this.etatData.nomSignataire2 = res.nomSignataire2;
         }
+        this.matchCurrentSignatairesWithEmployees();
         this.isSavingSignataires = false;
-        this.signatairesSuccess = 'Signataires officiels enregistrés avec succès dans PostgreSQL !';
+        this.signatairesSuccess = 'Signataires officiels enregistrés avec succès !';
         setTimeout(() => {
           this.closeSignatairesModal();
         }, 1200);

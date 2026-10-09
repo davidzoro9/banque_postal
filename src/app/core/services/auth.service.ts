@@ -100,6 +100,10 @@ export class AuthService {
       map(res => {
         const role = res.role || 'EMPLOYE';
         const permissions = this.getPermissionsForRole(role);
+        const token = res.token || '';
+        if (token) {
+          localStorage.setItem('auth_token', token);
+        }
         const user: User = {
           id: String(res.id),
           nom: res.nom,
@@ -111,7 +115,8 @@ export class AuthService {
           permissions: permissions,
           avatar: '',
           poste: role === 'ADMIN' ? 'Administrateur' : (this.isAgentRole(role) ? 'Collaborateur Salarié' : role),
-          department: ''
+          department: '',
+          token: token
         };
         
         localStorage.setItem('currentUser', JSON.stringify(user));
@@ -132,7 +137,12 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('auth_token');
     this.userSubject.next(null);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('auth_token') || this.currentUser?.token || null;
   }
 
   hasPermission(permission: string): boolean {

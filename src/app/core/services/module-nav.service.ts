@@ -71,7 +71,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Présence & Absences',
       icon: 'event_available',
       children: [
-        { id: 'conges', label: 'Congés', icon: 'beach_access', route: '/grh/conges', badge: 5 },
+        { id: 'conges', label: 'État & Historique des Congés & Absences', icon: 'beach_access', route: '/grh/conges', badge: 5 },
         { id: 'absences', label: 'Absences', icon: 'event_busy', route: '/grh/absences' }
       ]
     },
@@ -99,6 +99,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
         { id: 'simulateur-rh', label: 'Simulateur & Calculatrice RH', icon: 'calculate', route: '/paie/simulateur' },
+        { id: 'comptes-comptables', label: 'Comptes comptables', icon: 'account_tree', route: '/paie/comptes-comptables' },
         { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
         { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' },
         { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' }
@@ -140,8 +141,8 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Gestion des Congés & Absences',
       icon: 'beach_access',
       children: [
-        { id: 'liste-demandes', label: 'Demandes de Congés', icon: 'list_alt', route: '/grh/conges' },
-        { id: 'nouvelle-demande', label: 'Nouvelle Demande', icon: 'add_circle', route: '/grh/conges/nouveau' },
+        { id: 'liste-demandes', label: 'État & Historique des Congés & Absences', icon: 'history', route: '/grh/conges' },
+        { id: 'nouvelle-demande', label: 'Autorisation d\'Absence (Accident / Maladie)', icon: 'medical_services', route: '/grh/conges/nouveau' },
         { id: 'soldes-agents', label: 'Soldes des Agents', icon: 'account_balance_wallet', route: '/grh/conges/soldes' },
         { id: 'planning-departs', label: 'Planning des Départs', icon: 'calendar_month', route: '/grh/conges/planning' },
         { id: 'jours-feries', label: 'Jours Fériés Légaux', icon: 'event_available', route: '/grh/conges/feries' }

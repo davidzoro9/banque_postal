@@ -103,7 +103,7 @@
                 </span>
               </td>
               <td>
-                <span class="method-chip">{{ el.calculationMethod }}</span>
+                <span class="method-chip">{{ el.methodCalcul || el.calculationMethod }}</span>
               </td>
               <td>
                 <code class="formula-code">{{ el.formule || '—' }}</code>
@@ -203,7 +203,7 @@
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Méthode de Calcul *</mat-label>
-                <mat-select [(ngModel)]="formModel.calculationMethod">
+                <mat-select [(ngModel)]="formModel.calculationMethod" (selectionChange)="formModel.methodCalcul = $event.value">
                   <mat-option value="MONTANT_FIXE">Montant Fixe</mat-option>
                   <mat-option value="POURCENTAGE">Pourcentage</mat-option>
                   <mat-option value="FORMULE_COMPLEXE">Formule Complexe</mat-option>

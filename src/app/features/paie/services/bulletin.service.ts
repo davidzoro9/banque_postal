@@ -129,8 +129,8 @@ export class BulletinService {
     return this.http.post<BulletinDto[]>(`${this.apiUrl}/session/${sessionId}/recalculer`, {});
   }
 
-  recalculerBulletin(bulletinId: number): Observable<BulletinDto> {
-    return this.http.post<BulletinDto>(`${this.apiUrl}/${bulletinId}/recalculer`, {});
+  recalculerBulletin(bulletinId: number, options?: { workedDays?: number; scheduledWorkingDays?: number }): Observable<BulletinDto> {
+    return this.http.post<BulletinDto>(`${this.apiUrl}/${bulletinId}/recalculer`, options || {});
   }
 
   validateSession(sessionId: number): Observable<void> {

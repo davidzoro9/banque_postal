@@ -43,13 +43,19 @@ export class AvoirsComponent implements OnInit {
   selectedAvoir: AvoirModel | null = null;
   loadingDetail: boolean = false;
 
+  activeTabAvoir: 'TOUS' | 'ACTIFS' | 'HISTORIQUE' = 'TOUS';
+
   // Calculs KPI
   get totalEngage(): number {
     return this.filteredList.reduce((acc, a) => acc + (Number(a.amount) || 0), 0);
   }
 
   get countActifs(): number {
-    return this.filteredList.filter(a => a.statut === 'ACTIF').length;
+    return this.avoirsList.filter(a => a.statut === 'ACTIF').length;
+  }
+
+  get countSoldes(): number {
+    return this.avoirsList.filter(a => a.statut === 'SOLDE').length;
   }
 
   get countBeneficiaires(): number {
@@ -60,6 +66,11 @@ export class AvoirsComponent implements OnInit {
   get montantMoyen(): number {
     if (this.filteredList.length === 0) return 0;
     return Math.round(this.totalEngage / this.filteredList.length);
+  }
+
+  setAvoirTab(tab: 'TOUS' | 'ACTIFS' | 'HISTORIQUE'): void {
+    this.activeTabAvoir = tab;
+    this.applyFilter();
   }
 
   get filteredEmployeesForSelect(): Employee[] {
@@ -193,7 +204,7 @@ export class AvoirsComponent implements OnInit {
       this.loading = false;
     },
     error: (err) => {
-      this.errorMessage = 'Erreur lors du chargement des rappels depuis PostgreSQL.';
+      this.errorMessage = 'Erreur lors du chargement des rappels.';
       this.loading = false;
       this.avoirsList = [];
       this.applyFilter();
@@ -203,6 +214,14 @@ export class AvoirsComponent implements OnInit {
 
   applyFilter(): void {
     let list = [...this.avoirsList];
+
+    // Filtre par Onglet (Actifs vs Historique Soldés)
+    if (this.activeTabAvoir === 'ACTIFS') {
+      list = list.filter(a => a.statut === 'ACTIF');
+    } else if (this.activeTabAvoir === 'HISTORIQUE') {
+      list = list.filter(a => a.statut === 'SOLDE');
+    }
+
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
       list = list.filter(a =>
@@ -221,6 +240,7 @@ export class AvoirsComponent implements OnInit {
     }
     this.filteredList = list;
   }
+
 
   // --- SELECTION MULTIPLE ---
   toggleSelectAll(): void {
@@ -331,7 +351,7 @@ export class AvoirsComponent implements OnInit {
         }
       },
       error: () => {
-        this.formModel.reference = `AVR-${new Date().getFullYear()}-0001`;
+        this.formModel.reference = '';
       }
     });
 
@@ -461,7 +481,7 @@ export class AvoirsComponent implements OnInit {
     } else {
       this.avoirService.create(payload).subscribe({
         next: () => {
-          this.showFlash('Nouveau rappel enregistré dans PostgreSQL.');
+          this.showFlash('Nouveau rappel enregistré avec succès.');
           this.closeModal();
           this.loadAvoirs();
         },

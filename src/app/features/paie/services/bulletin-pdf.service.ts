@@ -29,18 +29,17 @@ export class BulletinPdfService {
   }
 
   /**
-   * Ouvre directement le PDF officiel dans un nouvel onglet via son endpoint URL REST
-   * Évite les avertissements Chrome "Insecure download blocked" causés par les URLs blob: sur HTTP
+   * Ouvre le PDF officiel de manière authentifiée (avec jeton Bearer HTTP)
    */
   ouvrirBulletinDirect(bulletinId: number): void {
-    window.open(`${environment.apiUrl}/bulletins/${bulletinId}/pdf`, '_blank');
-  }
-
-  /**
-   * Ouvre directement le Registre de Paie officiel dans un nouvel onglet via son endpoint URL REST
-   */
-  ouvrirRegistrePaieDirect(sessionPaieId: number): void {
-    window.open(`${environment.apiUrl}/bulletins/session/${sessionPaieId}/registre/pdf`, '_blank');
+    this.getBulletinPdf(bulletinId).subscribe({
+      next: (blob) => {
+        this.ouvrirEtTelechargerPdf(blob, `bulletin-${bulletinId}.pdf`);
+      },
+      error: (err) => {
+        console.error('Erreur lors du chargement du bulletin PDF authentifié', err);
+      }
+    });
   }
 
   /**
@@ -49,6 +48,20 @@ export class BulletinPdfService {
   getRegistrePaiePdf(sessionPaieId: number): Observable<Blob> {
     return this.http.get(`${environment.apiUrl}/bulletins/session/${sessionPaieId}/registre/pdf`, {
       responseType: 'blob'
+    });
+  }
+
+  /**
+   * Ouvre le Registre de Paie officiel de manière authentifiée
+   */
+  ouvrirRegistrePaieDirect(sessionPaieId: number): void {
+    this.getRegistrePaiePdf(sessionPaieId).subscribe({
+      next: (blob) => {
+        this.ouvrirEtTelechargerPdf(blob, `registre-paie-${sessionPaieId}.pdf`);
+      },
+      error: (err) => {
+        console.error('Erreur lors du chargement du registre PDF authentifié', err);
+      }
     });
   }
 
@@ -69,6 +82,7 @@ export class BulletinPdfService {
       a.click();
       document.body.removeChild(a);
     }
+    setTimeout(() => URL.revokeObjectURL(fileURL), 30000);
   }
 
   /**

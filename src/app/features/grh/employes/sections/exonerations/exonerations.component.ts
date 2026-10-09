@@ -41,5 +41,26 @@ export class ExonerationsComponent implements OnInit {
     return `${this.employee.prenom?.[0] || ''}${this.employee.nom?.[0] || ''}`.toUpperCase() || '??';
   }
 
+  isSyncing = false;
+
+  alignerExonerations(): void {
+    if (!this.empId) return;
+    this.isSyncing = true;
+    this.employeeService.recalculateSalaryInformation(this.empId).subscribe({
+      next: () => {
+        this.employeeService.getEmployeeExemptions(this.empId).subscribe({
+          next: rows => {
+            this.exonerations = rows || [];
+            this.isSyncing = false;
+          },
+          error: () => { this.isSyncing = false; }
+        });
+      },
+      error: () => {
+        this.isSyncing = false;
+      }
+    });
+  }
+
   goBack(): void { this.router.navigate(['/grh/employes', this.empId]); }
 }

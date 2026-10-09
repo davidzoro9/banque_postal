@@ -34,6 +34,10 @@ export interface PrecompteModel {
   dateDebut?: string | Date;
   dateEcheance?: string | Date;
   statut: string;
+  justificatif?: string;
+  motifSuspension?: string;
+  dateSuspension?: string | Date;
+  dateSolde?: string | Date;
   versements?: PrecompteVersementModel[];
 }
 
@@ -67,6 +71,18 @@ export class PrecompteService {
 
   update(id: number, payload: any): Observable<PrecompteModel> {
     return this.http.put<PrecompteModel>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  solder(id: number, justificatif?: string, motif?: string): Observable<PrecompteModel> {
+    return this.http.put<PrecompteModel>(`${this.apiUrl}/${id}/solder`, { justificatif, motif });
+  }
+
+  suspendre(id: number, motifSuspension: string): Observable<PrecompteModel> {
+    return this.http.put<PrecompteModel>(`${this.apiUrl}/${id}/suspendre`, { motifSuspension });
+  }
+
+  reprendre(id: number): Observable<PrecompteModel> {
+    return this.http.put<PrecompteModel>(`${this.apiUrl}/${id}/reprendre`, {});
   }
 
   delete(id: number): Observable<void> {

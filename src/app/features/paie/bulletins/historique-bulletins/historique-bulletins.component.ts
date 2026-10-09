@@ -16,7 +16,7 @@ import { of } from 'rxjs';
           </div>
           <div>
             <h2 style="color: var(--on-surface); margin: 0 0 4px 0; font-size: 20px; font-weight: 800;">Historique & Registre des Sessions de Paie</h2>
-            <p style="color: var(--on-surface-3); font-size: 13px; margin: 0;">Consultation, traçabilité et gestion des sessions de paie enregistrées en base PostgreSQL.</p>
+            <p style="color: var(--on-surface-3); font-size: 13px; margin: 0;">Consultation, traçabilité et gestion des sessions et registres de paie.</p>
           </div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">

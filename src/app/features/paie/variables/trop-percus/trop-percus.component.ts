@@ -176,7 +176,7 @@ export class TropPercusComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.errorMessage = 'Erreur lors du chargement des trop-perçus depuis PostgreSQL.';
+        this.errorMessage = 'Erreur lors du chargement des trop-perçus.';
         this.tropPercusList = [];
         this.applyFilter();
         this.loading = false;
@@ -269,7 +269,7 @@ export class TropPercusComponent implements OnInit {
     } else {
       this.tropPercuService.create(payload).subscribe({
         next: (created) => {
-          this.showFlash('Nouveau trop-perçu enregistré dans PostgreSQL.');
+          this.showFlash('Nouveau trop-perçu enregistré avec succès.');
           this.closeModal();
           this.loadTropPercus();
         },

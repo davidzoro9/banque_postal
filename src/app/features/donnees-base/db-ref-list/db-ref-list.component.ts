@@ -139,33 +139,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
   indemniteTab: 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE' = 'ORDINAIRE';
   rawIndemniteItems: RefItem[] = [];
 
-  fonctionsNominationBPBF = [
-    'DIRECTEUR DE DÉPARTEMENT',
-    'RESPONSABLE DE DÉPARTEMENT',
-    'CHEF DE SERVICE',
-    "CHEF D'AGENCE"
-  ];
-
-  fonctionsSpecifiquesBPBF = [
-    'CAISSIER PRINCIPAL',
-    'GESTIONNAIRE CASH POINT',
-    'CAISSIER AUXILIAIRE',
-    'CHAUFFEUR',
-    'ASSISTANTE DE DIRECTION',
-    'AGENT DE LIAISON'
-  ];
-
   getItemRegleType(item: RefItem): 'ORDINAIRE' | 'NOMINATION' | 'SPECIFIQUE' {
-    if (item.emploiId || item.emploi || item.emploiLibelle) return 'SPECIFIQUE';
+    // 1. Priorité absolue au type de règle configuré en base de données
     if (item.regleType === 'SPECIFIQUE') return 'SPECIFIQUE';
     if (item.regleType === 'NOMINATION') return 'NOMINATION';
     if (item.regleType === 'ORDINAIRE') return 'ORDINAIRE';
 
-    if (item.fonctionId || item.fonction || item.fonctionLibelle) {
-      const f = (item.fonction || item.fonctionLibelle || '').toUpperCase();
-      if (this.fonctionsSpecifiquesBPBF.some(fs => f.includes(fs))) return 'SPECIFIQUE';
-      return 'NOMINATION';
-    }
+    // 2. Déduction selon l'entité rattachée en base
+    if (item.emploiId || item.emploi || item.emploiLibelle) return 'SPECIFIQUE';
+    if (item.fonctionId || item.fonction || item.fonctionLibelle) return 'NOMINATION';
     if (item.gradeId || item.grade || item.categorieId || item.categorie) return 'ORDINAIRE';
     return 'ORDINAIRE';
   }

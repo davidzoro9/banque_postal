@@ -263,30 +263,50 @@ export class EmployeeService {
     return this.employees;
   }
 
-  refresh(): void {
+  private lastFetchTime = 0;
+  private isFetching = false;
+
+  refresh(force = false): void {
+    const now = Date.now();
+    if (!force && this.employees.length > 0 && (now - this.lastFetchTime < 30000)) {
+      return;
+    }
+    if (this.isFetching) return;
+    this.isFetching = true;
+
     this.http.get<any[]>(`${environment.apiUrl}/employes/all`).pipe(
       map(list => list.map(item => this.toFrontend(item)))
     ).subscribe({
       next: (list) => {
         this.employees = list;
+        this.lastFetchTime = Date.now();
+        this.isFetching = false;
         this.employeesSubject.next(this.employees);
       },
       error: (err) => {
+        this.isFetching = false;
         console.error('[EmployeeService] Erreur lors du chargement des employés:', err);
       }
     });
   }
 
-  getAll(): Observable<Employee[]> {
+  getAll(force = false): Observable<Employee[]> {
+    const now = Date.now();
+    if (!force && this.employees.length > 0 && (now - this.lastFetchTime < 30000)) {
+      return of(this.employees);
+    }
     return this.http.get<any[]>(`${environment.apiUrl}/employes/all`).pipe(
       map(list => list.map(item => this.toFrontend(item))),
       tap(list => {
         this.employees = list;
+        this.lastFetchTime = Date.now();
         this.employeesSubject.next(this.employees);
       }),
       catchError((err) => {
-        this.employees = [];
-        this.employeesSubject.next([]);
+        if (this.employees.length === 0) {
+          this.employees = [];
+          this.employeesSubject.next([]);
+        }
         return throwError(() => err);
       })
     );

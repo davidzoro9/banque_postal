@@ -645,20 +645,67 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 .page-header,
 .header-banner,
 .profile-header,
+.header-container {
+  background: var(--brand-blue, #0060B3) !important;
+  color: #ffffff !important;
+  border: 1px solid #004d8f !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+  padding: 10px 18px !important;
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 18px !important; // Espace net pour séparer le bandeau bleu des carreaux/blocs suivants
+}
+
+// Si immédiatement suivi d'une barre de filtres/actions liée (.filter-card)
+.page-header:has(+ .filter-card),
+.page-header:has(+ .table-toolbar),
+.page-header:has(+ .action-bar),
+.page-header:has(+ .control-bar),
+.header-banner:has(+ .filter-card),
+.header-banner:has(+ .table-toolbar) {
+  border-radius: 6px 6px 0 0 !important;
+  margin-bottom: 0 !important;
+}
+
+// En-tête des modales
 .modal-header,
 .modal-head {
   background: var(--brand-blue, #0060B3) !important;
   color: #ffffff !important;
   border: 1px solid #004d8f !important;
-  border-radius: 4px 4px 0 0 !important;
+  border-radius: 6px 6px 0 0 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
-  padding: 8px 16px !important;
+  padding: 10px 18px !important;
   min-height: 42px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   margin-bottom: 0 !important;
+}
 
+// Espace systématique pour les carreaux / grilles KPI pour éviter qu'ils ne soient collés au bandeau bleu
+.kpi-grid,
+.kpi-row,
+.stats-row,
+.kpi-cards,
+.stats-grid,
+.stat-cards {
+  margin-top: 18px !important;
+  margin-bottom: 20px !important;
+}
+
+.page-header + .kpi-grid,
+.page-header + .kpi-row,
+.header-banner + .kpi-grid,
+.header-banner + .kpi-row,
+.header-container + .kpi-grid {
+  margin-top: 18px !important;
+}
+
+.page-header {
   .ph-content, .header-content {
     display: flex;
     align-items: center;

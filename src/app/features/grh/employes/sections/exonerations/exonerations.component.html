@@ -58,10 +58,14 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <div class="sec-actions">
+      <div class="sec-actions" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; width: 100%;">
         <button mat-stroked-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>
           Retour au menu
+        </button>
+        <button mat-flat-button color="primary" (click)="alignerExonerations()" [disabled]="isSyncing">
+          <mat-icon>published_with_changes</mat-icon>
+          {{ isSyncing ? 'Alignement en cours...' : 'Aligner sur les règles du CGI' }}
         </button>
       </div>
     </mat-card-actions>

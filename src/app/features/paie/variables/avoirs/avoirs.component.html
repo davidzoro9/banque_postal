@@ -14,7 +14,7 @@
       <button mat-raised-button class="btn-create" (click)="openAddModal()">
         <mat-icon>add</mat-icon> Nouveau Rappel
       </button>
-      <button mat-stroked-button class="btn-refresh" (click)="loadAvoirs()" title="Rafraîchir les données PostgreSQL">
+      <button mat-stroked-button class="btn-refresh" (click)="loadAvoirs()" title="Actualiser les données">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
@@ -77,8 +77,28 @@
     </div>
   </div>
 
+  <!-- Barre d'Onglets : En attente vs Historique des avoirs -->
+  <div class="avoirs-tabs-bar">
+    <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'TOUS'" (click)="setAvoirTab('TOUS')">
+      <mat-icon>dashboard</mat-icon>
+      <span>Tous les Rappels</span>
+      <span class="tab-count">({{ avoirsList.length }})</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'ACTIFS'" (click)="setAvoirTab('ACTIFS')">
+      <mat-icon>hourglass_top</mat-icon>
+      <span>Rappels en attente de paie</span>
+      <span class="tab-count active-count">({{ countActifs }})</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'HISTORIQUE'" (click)="setAvoirTab('HISTORIQUE')">
+      <mat-icon>history</mat-icon>
+      <span>Historique des avoirs soldés</span>
+      <span class="tab-count done-count">({{ countSoldes }})</span>
+    </button>
+  </div>
+
   <!-- Barre de Recherche & Filtres -->
   <mat-card class="filter-card">
+
     <mat-card-content>
       <div class="filter-row">
         <div class="search-box">
@@ -139,7 +159,7 @@
     @if (loading) {
       <div class="loading-box">
         <mat-spinner diameter="36"></mat-spinner>
-        <span>Chargement des rappels depuis PostgreSQL...</span>
+        <span>Chargement des rappels...</span>
       </div>
     } @else if (filteredList.length === 0) {
       <div class="empty-state">
@@ -384,34 +404,26 @@
               </mat-form-field>
             </div>
 
-            <!-- Montant Total -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Montant Total *</mat-label>
-                <input matInput type="number" [(ngModel)]="formModel.amount" placeholder="Ex: 75000">
-              </mat-form-field>
-            </div>
-
-            <!-- Date de début d'application -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Date de début d'application *</mat-label>
-                <input matInput [matDatepicker]="pickerAvoirDebut" [(ngModel)]="formModel.dateDebut" placeholder="Choisir dans le calendrier">
-                <mat-datepicker-toggle matIconSuffix [for]="pickerAvoirDebut"></mat-datepicker-toggle>
-                <mat-datepicker #pickerAvoirDebut></mat-datepicker>
-              </mat-form-field>
-            </div>
-
-            <!-- Statut -->
+            <!-- Montant Total (Spontané en une seule fois) -->
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Statut</mat-label>
-                <mat-select [(ngModel)]="formModel.statut">
-                  <mat-option value="ACTIF">Actif</mat-option>
-                  <mat-option value="SOLDE">Soldé</mat-option>
-                  <mat-option value="SUSPENDU">Suspendu</mat-option>
-                </mat-select>
+                <mat-label>Montant du Rappel *</mat-label>
+                <input matInput type="number" [(ngModel)]="formModel.amount" placeholder="Ex: 75000">
+                <span matSuffix style="font-weight: 600; color: #64748b; margin-right: 8px;">FCFA</span>
+                <mat-hint>Rappel spontané : versé en totalité en une seule fois lors de la paie</mat-hint>
               </mat-form-field>
+            </div>
+
+            <!-- Statut (Non modifiable, affiché uniquement en lecture seule) -->
+            <div class="full-col">
+              <div class="readonly-status-container">
+                <span class="ro-label">Statut du rappel :</span>
+                <span class="status-pill" [ngClass]="formModel.statut ? formModel.statut.toLowerCase() : 'actif'">
+                  <span class="dot"></span>
+                  {{ formModel.statut === 'SOLDE' ? 'Soldé' : 'Actif / En attente de paie' }}
+                </span>
+                <span class="ro-note">Ce rappel est spontané et sans date d'échelonnement. Il sera pris en compte automatiquement sur le prochain bulletin de l'agent.</span>
+              </div>
             </div>
 
           </div>

@@ -12,4 +12,5 @@ export interface User {
   avatar?: string;
   poste?: string;
   department?: string;
+  token?: string;
 }

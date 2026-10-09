@@ -220,7 +220,7 @@
     <!-- État de chargement -->
     <div class="loading-state" *ngIf="isLoading">
       <div class="spinner"></div>
-      <p>Calcul et agrégation en temps réel depuis PostgreSQL...</p>
+      <p>Calcul et agrégation en temps réel...</p>
     </div>
 
     <!-- Aucun résultat -->
@@ -397,7 +397,7 @@
     <!-- ========================================== -->
     <!-- 2b. TABLEAU : COTISATIONS CRRAE (PAGES 4, 5, 6) -->
     <!-- ========================================== -->
-    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_CRRAE_RRPC' || selectedEtat === 'ETAT_CRRAE_RCPNC' || selectedEtat === 'ETAT_CRRAE_FAAM') && filteredRows.length > 0">
+    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_CRRAE_RRPC' || selectedEtat === 'ETAT_CRRAE_RCPNC' || selectedEtat === 'ETAT_CRRAE_FAAM' || selectedEtat === 'ETAT_CRRAE') && filteredRows.length > 0">
       <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">{{ getSelectedEtatObj().libelle | uppercase }}</span>
         <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Déclaration Mensuelle des Cotisations</span>
@@ -737,7 +737,7 @@
     <!-- ========================================== -->
     <!-- 11. TABLEAU : ÉTAT ÉLÉMENTS DE SALAIRE     -->
     <!-- ========================================== -->
-    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_ELEMENTS_SALAIRE' && filteredRows.length > 0">
+    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_ELEMENTS_SALAIRE' || selectedEtat === 'ETAT_ELEMENT_SALAIRE') && filteredRows.length > 0">
       <table class="bpbf-table">
         <thead>
           <tr>
@@ -879,7 +879,7 @@
           </div>
           <div>
             <h3 class="dialog-title">{{ isEditing ? 'Modifier l\'État de Synthèse' : 'Créer un Nouvel État de Synthèse' }}</h3>
-            <p class="dialog-subtitle">Configuration persistée directement dans la base de données PostgreSQL</p>
+            <p class="dialog-subtitle">Configuration des modèles et paramètres officiels d'état</p>
           </div>
         </div>
         <button type="button" class="close-btn" (click)="closeFormModal()">
@@ -1003,7 +1003,7 @@
         </button>
         <button type="button" class="btn-submit" (click)="saveConfig()" [disabled]="isSaving">
           <span *ngIf="isSaving" class="mini-spinner"></span>
-          <span>{{ isSaving ? 'Enregistrement...' : 'Enregistrer dans PostgreSQL' }}</span>
+          <span>{{ isSaving ? 'Enregistrement...' : 'Enregistrer la configuration' }}</span>
         </button>
       </div>
     </div>
@@ -1021,7 +1021,7 @@
           </div>
           <div>
             <h3 class="dialog-title">Paramétrage des Signataires Officiels</h3>
-            <p class="dialog-subtitle">Configuration des 2 signataires des bordereaux et exports PDF (Persistance PostgreSQL)</p>
+            <p class="dialog-subtitle">Configuration des 2 signataires des bordereaux et exports PDF</p>
           </div>
         </div>
         <button type="button" class="close-btn" (click)="closeSignatairesModal()">
@@ -1050,24 +1050,55 @@
           <div class="signataire-card">
             <div class="signataire-card-header">
               <span class="signataire-badge">Signataire 1 (Bas Gauche)</span>
+              @if (selectedAgent1) {
+                <span class="signataire-mat-badge">{{ selectedAgent1.matricule }}</span>
+              }
             </div>
+
+            <!-- Sélection obligatoire parmi les agents enregistrés -->
             <div class="form-group">
-              <label class="form-label">Titre / Fonction <span class="required">*</span></label>
+              <label class="form-label">Agent enregistré <span class="required">*</span></label>
+              <select
+                class="form-control"
+                [ngModel]="signatairesForm.employeeId1"
+                (ngModelChange)="onSelectSignataire1($event)">
+                <option [ngValue]="null" disabled>— Sélectionner un agent enregistré —</option>
+                @for (emp of employeesList; track emp.id) {
+                  <option [ngValue]="emp.id">
+                    {{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }}) — {{ emp.poste || emp.fonction || 'Collaborateur' }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Fiche récapitulative de l'agent sélectionné -->
+            @if (selectedAgent1) {
+              <div class="selected-agent-chip">
+                <div class="agent-avatar">{{ (selectedAgent1.prenom ? selectedAgent1.prenom.charAt(0) : '') + (selectedAgent1.nom ? selectedAgent1.nom.charAt(0) : '') }}</div>
+                <div class="agent-chip-info">
+                  <div class="agent-chip-name">{{ selectedAgent1.prenom }} {{ selectedAgent1.nom }}</div>
+                  <div class="agent-chip-sub">Matricule : <strong>{{ selectedAgent1.matricule }}</strong> &bull; {{ selectedAgent1.poste || selectedAgent1.fonction || 'Collaborateur BPBF' }}</div>
+                </div>
+              </div>
+            }
+
+            <div class="form-group" style="margin-top: 12px;">
+              <label class="form-label">Titre / Fonction officielle sur les états <span class="required">*</span></label>
               <input
                 type="text"
                 class="form-control"
                 [(ngModel)]="signatairesForm.titreSignataire1"
                 placeholder="Ex: Le Comptable"
+                list="titresStandards1"
               />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Nom & Prénom(s) <span class="required">*</span></label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="signatairesForm.nomSignataire1"
-                placeholder="Ex: Ahadi Ismaël YONLI"
-              />
+              <datalist id="titresStandards1">
+                @for (titre of titresStandards; track titre) {
+                  <option [value]="titre"></option>
+                }
+                @if (selectedAgent1?.poste) {
+                  <option [value]="selectedAgent1?.poste"></option>
+                }
+              </datalist>
             </div>
           </div>
 
@@ -1075,24 +1106,55 @@
           <div class="signataire-card">
             <div class="signataire-card-header">
               <span class="signataire-badge badge-primary">Signataire 2 (Bas Droite)</span>
+              @if (selectedAgent2) {
+                <span class="signataire-mat-badge">{{ selectedAgent2.matricule }}</span>
+              }
             </div>
+
+            <!-- Sélection obligatoire parmi les agents enregistrés -->
             <div class="form-group">
-              <label class="form-label">Titre / Fonction <span class="required">*</span></label>
+              <label class="form-label">Agent enregistré <span class="required">*</span></label>
+              <select
+                class="form-control"
+                [ngModel]="signatairesForm.employeeId2"
+                (ngModelChange)="onSelectSignataire2($event)">
+                <option [ngValue]="null" disabled>— Sélectionner un agent enregistré —</option>
+                @for (emp of employeesList; track emp.id) {
+                  <option [ngValue]="emp.id">
+                    {{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }}) — {{ emp.poste || emp.fonction || 'Collaborateur' }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Fiche récapitulative de l'agent sélectionné -->
+            @if (selectedAgent2) {
+              <div class="selected-agent-chip">
+                <div class="agent-avatar avatar-primary">{{ (selectedAgent2.prenom ? selectedAgent2.prenom.charAt(0) : '') + (selectedAgent2.nom ? selectedAgent2.nom.charAt(0) : '') }}</div>
+                <div class="agent-chip-info">
+                  <div class="agent-chip-name">{{ selectedAgent2.prenom }} {{ selectedAgent2.nom }}</div>
+                  <div class="agent-chip-sub">Matricule : <strong>{{ selectedAgent2.matricule }}</strong> &bull; {{ selectedAgent2.poste || selectedAgent2.fonction || 'Collaborateur BPBF' }}</div>
+                </div>
+              </div>
+            }
+
+            <div class="form-group" style="margin-top: 12px;">
+              <label class="form-label">Titre / Fonction officielle sur les états <span class="required">*</span></label>
               <input
                 type="text"
                 class="form-control"
                 [(ngModel)]="signatairesForm.titreSignataire2"
                 placeholder="Ex: Le Directeur Financier et Comptable"
+                list="titresStandards2"
               />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Nom & Prénom(s) <span class="required">*</span></label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="signatairesForm.nomSignataire2"
-                placeholder="Ex: Inoussa SANOUIDI"
-              />
+              <datalist id="titresStandards2">
+                @for (titre of titresStandards; track titre) {
+                  <option [value]="titre"></option>
+                }
+                @if (selectedAgent2?.poste) {
+                  <option [value]="selectedAgent2?.poste"></option>
+                }
+              </datalist>
             </div>
           </div>
         </div>

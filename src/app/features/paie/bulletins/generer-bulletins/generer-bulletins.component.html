@@ -317,21 +317,18 @@
       </div>
 
       <!-- Actions du Workflow (Générer, Valider, Clôturer) -->
-      <div style="display: flex; gap: 10px; align-items: center;">
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         @if (!sessionCloturee) {
           <button mat-stroked-button color="primary" (click)="clicBoutonGenerer()" style="font-weight: 700; border-radius: 8px;">
-            <mat-icon style="margin-right: 4px;">calculate</mat-icon> {{ sessionEstBrouillon ? 'Calculer & Générer la Paie' : 'Recalculer la Paie' }}
-          </button>
-
-          <button mat-stroked-button style="color: #0284c7; font-weight: 700; border-radius: 8px; border-color: #0284c7;"
-            (click)="recalculerBulletinsSession()" [disabled]="isCalculating || bulletins.length === 0"
-            title="Recalculer tous les bulletins de cette session selon les formules officielles du CGI">
-            <mat-icon style="margin-right: 4px;">published_with_changes</mat-icon> Recalculer la Session
+            <mat-icon style="margin-right: 4px;">{{ sessionEstBrouillon ? 'calculate' : 'published_with_changes' }}</mat-icon>
+            {{ sessionEstBrouillon ? 'Calculer & Générer la Paie' : 'Recalculer la Session' }}
           </button>
 
           @if (!sessionEstValidee) {
             <button mat-raised-button color="primary" (click)="validerSession()"
               [disabled]="bulletins.length === 0"
+              [style.opacity]="bulletins.length === 0 ? '0.45' : '1'"
+              [style.cursor]="bulletins.length === 0 ? 'not-allowed' : 'pointer'"
               style="font-weight: 700; border-radius: 8px; background: #059669; color: white;">
               <mat-icon style="margin-right: 4px;">check_circle</mat-icon> Valider la Session
             </button>
@@ -362,17 +359,41 @@
         <p style="font-size: 15px; color: #1E40AF; font-weight: 600;">Extraction et calcul des bulletins de paie pour {{ periode }}...</p>
       </div>
     } @else if (bulletins.length === 0) {
-      <mat-card style="border-radius: 14px; padding: 40px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.05); margin-top: 16px;">
-        <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #94a3b8;">post_add</mat-icon>
-        <h3 style="margin-top: 12px; color: #1e293b;">Session en Brouillon — Aucun bulletin généré</h3>
-        <p style="color: #64748b; font-size: 14px; max-width: 500px; margin: 8px auto 20px;">
-          Cliquez sur le bouton ci-dessous pour lancer le calcul automatique et générer les bulletins de paie.
-        </p>
-        <button mat-raised-button color="primary" (click)="clicBoutonGenerer()"
-          style="font-weight: 700; border-radius: 8px; background: #0060B3; color: white; padding: 0 24px; height: 42px;">
-          <mat-icon style="margin-right: 6px;">calculate</mat-icon> Lancer le Calcul & Générer les Bulletins
-        </button>
-      </mat-card>
+      @if (sessionEstGeneree || sessionEstValidee || sessionCloturee) {
+        <mat-card style="border-radius: 14px; padding: 40px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.05); margin-top: 16px;">
+          <mat-icon style="font-size: 54px; width: 54px; height: 54px; color: #0284c7;">{{ isSessionMaternite ? 'child_care' : 'info' }}</mat-icon>
+          @if (isSessionMaternite) {
+            <h3 style="margin-top: 14px; color: #1e293b; font-size: 18px; font-weight: 700;">Aucune collaboratrice éligible pour la Session Congé Maternité</h3>
+            <p style="color: #64748b; font-size: 14px; max-width: 620px; margin: 10px auto 22px; line-height: 1.6;">
+              Conformément à la convention collective bancaire et aux règles de la CNSS, la <strong>Session Congé Maternité</strong> prend en charge le complément employeur (excédant le plafond CNSS de 800&nbsp;000 FCFA) uniquement pour les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur <strong>{{ periode }}</strong>.
+              <br><br>
+              Actuellement, <strong>aucune salariée n'a de congé de maternité approuvé en cours sur ce mois</strong> dans le système. Le calcul a donc produit <strong>0 bulletin</strong>.
+            </p>
+          } @else {
+            <h3 style="margin-top: 14px; color: #1e293b; font-size: 18px; font-weight: 700;">Session Calculée — Aucun bulletin généré</h3>
+            <p style="color: #64748b; font-size: 14px; max-width: 550px; margin: 10px auto 22px; line-height: 1.6;">
+              Le calcul de la session a été exécuté pour <strong>{{ periode }}</strong>, mais aucun agent ne remplit les critères d'éligibilité définis pour cette session.
+            </p>
+          }
+          <div>
+            <button mat-stroked-button color="primary" (click)="clicBoutonGenerer()" style="font-weight: 700; border-radius: 8px;">
+              <mat-icon style="margin-right: 6px;">published_with_changes</mat-icon> Relancer le calcul ou cibler une sélection d'agents
+            </button>
+          </div>
+        </mat-card>
+      } @else {
+        <mat-card style="border-radius: 14px; padding: 40px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.05); margin-top: 16px;">
+          <mat-icon style="font-size: 54px; width: 54px; height: 54px; color: #94a3b8;">post_add</mat-icon>
+          <h3 style="margin-top: 14px; color: #1e293b; font-size: 18px; font-weight: 700;">Session en Brouillon — Calcul non encore lancé</h3>
+          <p style="color: #64748b; font-size: 14px; max-width: 500px; margin: 10px auto 22px;">
+            Cliquez sur le bouton ci-dessous pour lancer le calcul automatique et générer les bulletins de paie.
+          </p>
+          <button mat-raised-button color="primary" (click)="clicBoutonGenerer()"
+            style="font-weight: 700; border-radius: 8px; background: #0060B3; color: white; padding: 0 24px; height: 42px;">
+            <mat-icon style="margin-right: 6px;">calculate</mat-icon> Lancer le Calcul &amp; Générer les Bulletins
+          </button>
+        </mat-card>
+      }
     } @else {
       <!-- Synthèse Globale de la Masse Salariale de la Session -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; margin-bottom: 18px;">
@@ -1037,6 +1058,7 @@
               <option value="CONGE_PAYE">Congé Payé</option>
               <option value="STC">Solde de Tout Compte</option>
               <option value="INDEMNITE_RETRAITE">Indemnités de Départ à la Retraite</option>
+              <option value="DIFFERENTIEL_MATERNITE">Session Congé Maternité</option>
             </select>
           </div>
 
@@ -1060,6 +1082,24 @@
                  style="font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #0284c7; letter-spacing: 0.5px;">
         </div>
 
+        @if (isCreationSessionMaternite) {
+          <div style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; border-radius: 10px; padding: 12px 16px; margin-top: 14px; display: flex; align-items: center; gap: 12px;">
+            <mat-icon style="color: #0284c7; font-size: 24px; width: 24px; height: 24px;">child_care</mat-icon>
+            <div style="font-size: 13px; color: var(--on-surface);">
+              <strong>Session Congé Maternité :</strong> Seules les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur {{ newSessionForm.periode || 'cette période' }} sont éligibles.
+              <div style="font-size: 12px; color: #0284c7; font-weight: 800; margin-top: 2px;">
+                @if (isLoadingMaterniteEligibles) {
+                  Recherche des agentes en congé de maternité en cours...
+                } @else if (employesMaterniteEligibles.length > 0) {
+                  ✓ {{ employesMaterniteEligibles.length }} collaboratrice(s) identifiée(s) en congé maternité
+                } @else {
+                  ⚠ 0 collaboratrice en congé de maternité en cours sur cette période
+                }
+              </div>
+            </div>
+          </div>
+        }
+
         <!-- Ciblage des agents pour la session -->
         <div style="border-top: 1px solid var(--border); padding-top: 16px;">
           <label class="form-group-label" style="margin-bottom: 10px; font-size: 13px;">
@@ -1074,10 +1114,10 @@
               <div class="card-radio-circle">
                 <div class="inner-dot"></div>
               </div>
-              <mat-icon class="card-icon">groups</mat-icon>
+              <mat-icon class="card-icon">{{ isCreationSessionMaternite ? 'child_care' : 'groups' }}</mat-icon>
               <div class="card-texts">
-                <span class="card-main-title">Tous les agents actifs</span>
-                <span class="card-sub-title">Traitement complet : {{ tousLesEmployes.length }} agents</span>
+                <span class="card-main-title">{{ isCreationSessionMaternite ? 'Toutes les salariées en maternité' : 'Tous les agents actifs' }}</span>
+                <span class="card-sub-title">{{ isCreationSessionMaternite ? (employesMaterniteEligibles.length + ' collaboratrice(s) éligible(s)') : ('Traitement complet : ' + tousLesEmployes.length + ' agents') }}</span>
               </div>
             </div>
 
@@ -1118,7 +1158,7 @@
 
                   <span class="counter-badge">
                     <mat-icon style="font-size: 14px; width: 14px; height: 14px;">how_to_reg</mat-icon>
-                    {{ nbEmployesSelectionnesNouvelleSession }} / {{ tousLesEmployes.length }} sélectionné(s)
+                    {{ nbEmployesSelectionnesNouvelleSession }} / {{ poolEmployesNouvelleSession.length }} sélectionné(s)
                   </span>
                 </div>
               </div>
@@ -1141,7 +1181,7 @@
                     @if (employesFiltresPourNouvelleSession.length === 0) {
                       <tr>
                         <td colspan="7" class="empty-table-cell">
-                          Aucun agent ne correspond à la recherche
+                          {{ isCreationSessionMaternite ? "Aucune collaboratrice n'a de congé de maternité approuvé en cours pour cette période (" + newSessionForm.periode + ")" : "Aucun agent ne correspond à la recherche" }}
                         </td>
                       </tr>
                     }
@@ -1218,6 +1258,24 @@
         <button mat-icon-button class="close-btn" (click)="fermerModalSelectionEmployes()"><mat-icon>close</mat-icon></button>
       </div>
 
+      @if (isSessionMaternite) {
+        <div style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;">
+          <mat-icon style="color: #0284c7; font-size: 24px; width: 24px; height: 24px;">child_care</mat-icon>
+          <div style="font-size: 13px; color: var(--on-surface);">
+            <strong>Session Congé Maternité :</strong> Seules les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur {{ currentSession?.periode || periode }} sont ciblées.
+            <div style="font-size: 12px; color: #0284c7; font-weight: 800; margin-top: 2px;">
+              @if (isLoadingMaterniteEligibles) {
+                Recherche des agentes en congé de maternité en cours...
+              } @else if (employesMaterniteEligibles.length > 0) {
+                ✓ {{ employesMaterniteEligibles.length }} collaboratrice(s) identifiée(s) en congé maternité
+              } @else {
+                ⚠ 0 collaboratrice en congé de maternité en cours sur cette période
+              }
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Indicateur d'avancement de la session de paie -->
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 12px 18px; border-radius: 12px;">
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1225,7 +1283,7 @@
           <div>
             <div style="font-size: 13px; font-weight: 800; color: var(--on-surface);">Avancement du lot de paie</div>
             <div style="font-size: 12px; color: var(--on-surface-3);">
-              <strong>{{ nbAgentsCalculesDansSession }}</strong> calculé(s) sur <strong>{{ tousLesEmployes.length }}</strong> agents au total
+              <strong>{{ nbAgentsCalculesDansSession }}</strong> calculé(s) sur <strong>{{ poolEmployesRecalculSession.length }}</strong> agents ciblés
             </div>
           </div>
         </div>
@@ -1247,10 +1305,10 @@
           <div class="card-radio-circle">
             <div class="inner-dot"></div>
           </div>
-          <mat-icon class="card-icon">groups</mat-icon>
+          <mat-icon class="card-icon">{{ isSessionMaternite ? 'child_care' : 'groups' }}</mat-icon>
           <div class="card-texts">
-            <span class="card-main-title">Tous les agents actifs</span>
-            <span class="card-sub-title">Calcul global en lot complet ({{ tousLesEmployes.length }} agents)</span>
+            <span class="card-main-title">{{ isSessionMaternite ? 'Toutes les salariées en maternité' : 'Tous les agents actifs' }}</span>
+            <span class="card-sub-title">{{ isSessionMaternite ? (poolEmployesRecalculSession.length + ' collaboratrice(s) éligible(s)') : ('Calcul global en lot complet (' + tousLesEmployes.length + ' agents)') }}</span>
           </div>
         </div>
 
@@ -1276,7 +1334,7 @@
                     [style.background]="filtreStatutModal === 'TOUS' ? '#0060B3' : 'var(--surface-variant)'"
                     [style.color]="filtreStatutModal === 'TOUS' ? '#ffffff' : 'var(--on-surface)'"
                     style="border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.15s;">
-              Tous ({{ tousLesEmployes.length }})
+              Tous ({{ poolEmployesRecalculSession.length }})
             </button>
             <button type="button" (click)="filtreStatutModal = 'NON_CALCULE'"
                     [style.background]="filtreStatutModal === 'NON_CALCULE' ? '#d97706' : 'var(--surface-variant)'"
@@ -1314,7 +1372,7 @@
 
               <span class="counter-badge">
                 <mat-icon style="font-size: 14px; width: 14px; height: 14px;">how_to_reg</mat-icon>
-                {{ nbEmployesSelectionnes }} / {{ tousLesEmployes.length }} sélectionné(s)
+                {{ nbEmployesSelectionnes }} / {{ poolEmployesRecalculSession.length }} sélectionné(s)
               </span>
             </div>
           </div>
@@ -1338,7 +1396,7 @@
                 @if (employesFiltresPourSelection.length === 0) {
                   <tr>
                     <td colspan="8" class="empty-table-cell">
-                      Aucun agent ne correspond aux filtres actuels
+                      {{ isSessionMaternite ? "Aucune collaboratrice n'a de congé de maternité approuvé en cours pour cette période (" + (currentSession?.periode || periode) + ")" : "Aucun agent ne correspond aux filtres actuels" }}
                     </td>
                   </tr>
                 }

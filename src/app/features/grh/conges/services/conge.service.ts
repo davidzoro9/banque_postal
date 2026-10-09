@@ -14,6 +14,7 @@ export interface Conge {
   nbJours: number;
   motif?: string;
   justificatif?: string;
+  justificatifNom?: string;
   dateDemande?: string;
   dateValidation?: string;
   validePar?: string;
@@ -64,6 +65,15 @@ export interface TypeAbsenceConge {
   name: string;
   deductibleDuSolde?: boolean;
   dureeMaxLegaleJours?: number;
+  categorie?: 'CONGE' | 'ABSENCE' | 'PERMISSION' | string;
+  sexeRequis?: 'FEMININ' | 'MASCULIN' | 'TOUS' | string;
+  remunere?: boolean;
+  tauxRemuneration?: number;
+  justificatifRequis?: boolean;
+  typeJustificatif?: string;
+  actif?: boolean;
+  delaiJustificationJours?: number;
+  description?: string;
 }
 
 export interface JourFerie {
@@ -79,10 +89,11 @@ export interface ParametrageConge {
   id?: number;
   droitAnnuelDefaut: number; // ex: 30
   joursAcquisParMois: number; // ex: 2.5
-  modeDecompte: 'OUVRABLE_5J' | 'OUVRABLE_6J' | 'CALENDAIRE';
+  modeDecompte: 'OUVRABLE_5J' | 'OUVRABLE_6J' | 'CALENDAIRE' | string;
   deduireJoursFeries: boolean;
   plafondReportJours: number;
   bloquerSiSoldeInsuffisant: boolean;
+  preavisJoursMin?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -132,7 +143,7 @@ export class CongeService {
     return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/validation-drh`, {
       accord,
       motifRefus: motifRefus || '',
-      validePar: validePar || 'DRH'
+      validePar: validePar || undefined
     });
   }
 
@@ -140,7 +151,7 @@ export class CongeService {
   securiteSi(id: number | string, statutSi: string, operateurSi?: string): Observable<Conge> {
     return this.http.put<Conge>(`${environment.apiUrl}/conges/${id}/securite-si`, {
       statutSi,
-      operateurSi: operateurSi || 'Direction Informatique'
+      operateurSi: operateurSi || undefined
     });
   }
 
@@ -177,6 +188,23 @@ export class CongeService {
   getTypes(): Observable<TypeAbsenceConge[]> {
     return this.http.get<TypeAbsenceConge[]>(`${environment.apiUrl}/typeabsenceconge/all`);
   }
+
+  createType(type: TypeAbsenceConge): Observable<TypeAbsenceConge> {
+    return this.http.post<TypeAbsenceConge>(`${environment.apiUrl}/typeabsenceconge/create`, type);
+  }
+
+  updateType(id: number, type: TypeAbsenceConge): Observable<TypeAbsenceConge> {
+    return this.http.put<TypeAbsenceConge>(`${environment.apiUrl}/typeabsenceconge/${id}`, type);
+  }
+
+  deleteType(id: number): Observable<any> {
+    return this.http.delete<any>(`${environment.apiUrl}/typeabsenceconge/${id}`, { responseType: 'text' as 'json' });
+  }
+
+  batchUpdateTypes(types: TypeAbsenceConge[]): Observable<TypeAbsenceConge[]> {
+    return this.http.put<TypeAbsenceConge[]>(`${environment.apiUrl}/typeabsenceconge/batch`, types);
+  }
+
 
   // --- JOURS FÉRIÉS (11.3 des spécifications) ---
   getJoursFeries(): Observable<JourFerie[]> {

@@ -1,7 +1,8 @@
 import { NgModule, provideBrowserGlobalErrorListeners, LOCALE_ID } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
@@ -19,7 +20,7 @@ import { LayoutModule } from './layout/layout.module';
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([jwtInterceptor])),
     { provide: LOCALE_ID, useValue: 'fr' }
   ],
   bootstrap: [App]
