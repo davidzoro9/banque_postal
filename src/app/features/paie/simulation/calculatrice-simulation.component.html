@@ -77,27 +77,26 @@
           <div class="form-row">
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Catégorie / Classe Professionnelle</mat-label>
-              <mat-select [(ngModel)]="selectedCategorie" (selectionChange)="onClassificationChange()">
-                <mat-optgroup label="GROUPE I : Agents &amp; Employés">
-                  <ng-container *ngFor="let c of categories">
-                    <mat-option *ngIf="c.groupe === 'GROUPE I'" [value]="c.code">
-                      {{ c.libelle }}
-                    </mat-option>
-                  </ng-container>
+              <mat-select [(ngModel)]="selectedCategorie" [compareWith]="compareCategorie" (selectionChange)="onClassificationChange()">
+                <mat-optgroup label="GROUPE I : Agents &amp; Employés" *ngIf="getCategoriesByGroupe('GROUPE I').length > 0">
+                  <mat-option *ngFor="let c of getCategoriesByGroupe('GROUPE I')" [value]="c.code">
+                    {{ c.libelle }}
+                  </mat-option>
                 </mat-optgroup>
-                <mat-optgroup label="GROUPE II : Maîtrise &amp; Cadres Moyens">
-                  <ng-container *ngFor="let c of categories">
-                    <mat-option *ngIf="c.groupe === 'GROUPE II'" [value]="c.code">
-                      {{ c.libelle }}
-                    </mat-option>
-                  </ng-container>
+                <mat-optgroup label="GROUPE II : Maîtrise &amp; Cadres Moyens" *ngIf="getCategoriesByGroupe('GROUPE II').length > 0">
+                  <mat-option *ngFor="let c of getCategoriesByGroupe('GROUPE II')" [value]="c.code">
+                    {{ c.libelle }}
+                  </mat-option>
                 </mat-optgroup>
-                <mat-optgroup label="GROUPE III : Cadres &amp; Cadres Supérieurs">
-                  <ng-container *ngFor="let c of categories">
-                    <mat-option *ngIf="c.groupe === 'GROUPE III'" [value]="c.code">
-                      {{ c.libelle }}
-                    </mat-option>
-                  </ng-container>
+                <mat-optgroup label="GROUPE III : Cadres &amp; Cadres Supérieurs" *ngIf="getCategoriesByGroupe('GROUPE III').length > 0">
+                  <mat-option *ngFor="let c of getCategoriesByGroupe('GROUPE III')" [value]="c.code">
+                    {{ c.libelle }}
+                  </mat-option>
+                </mat-optgroup>
+                <mat-optgroup label="Autres catégories" *ngIf="getCategoriesByGroupe('AUTRES').length > 0">
+                  <mat-option *ngFor="let c of getCategoriesByGroupe('AUTRES')" [value]="c.code">
+                    {{ c.libelle }}
+                  </mat-option>
                 </mat-optgroup>
               </mat-select>
             </mat-form-field>
@@ -106,7 +105,7 @@
           <div class="form-row grid-2">
             <mat-form-field appearance="outline">
               <mat-label>Échelon</mat-label>
-              <mat-select [(ngModel)]="selectedEchelon" (selectionChange)="onClassificationChange()">
+              <mat-select [(ngModel)]="selectedEchelon" [compareWith]="compareEchelon" (selectionChange)="onClassificationChange()">
                 <mat-option *ngFor="let ech of echelons" [value]="ech">
                   Échelon {{ ech }}
                 </mat-option>

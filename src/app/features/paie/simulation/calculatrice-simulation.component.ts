@@ -68,8 +68,8 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   enChargement = false;
   messageErreur = '';
 
-  // Options de classification
-  categories: CategorieOption[] = [
+  // Options de classification conventionnelle officielle BPBF
+  readonly categoriesParDefaut: CategorieOption[] = [
     { code: '1', libelle: '1ère Catégorie (Agents d\'exécution)', groupe: 'GROUPE I' },
     { code: '2', libelle: '2ème Catégorie (Agents d\'exécution)', groupe: 'GROUPE I' },
     { code: '3', libelle: '3ème Catégorie (Employés)', groupe: 'GROUPE I' },
@@ -87,6 +87,8 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     { code: 'VIII', libelle: 'Classe VIII (Cadres Dirigeants)', groupe: 'GROUPE III' }
   ];
 
+  categories: CategorieOption[] = [...this.categoriesParDefaut];
+
   echelons = Array.from({ length: 15 }, (_, i) => i + 1);
 
   constructor(
@@ -102,6 +104,81 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
   }
+
+  determinerGroupe(code?: string, desc?: string, libelle?: string): 'GROUPE I' | 'GROUPE II' | 'GROUPE III' {
+    const combined = `${code || ''} ${desc || ''} ${libelle || ''}`.toUpperCase();
+    if (
+      combined.includes('GROUPE III') ||
+      ['V', 'VI', 'VII', 'VIII', 'CL5', 'CL6', 'CL7', 'CL8'].includes((code || '').toUpperCase().trim()) ||
+      combined.includes('CLASSE V') ||
+      combined.includes('CLASSE VI') ||
+      combined.includes('CLASSE VII') ||
+      combined.includes('CLASSE VIII')
+    ) {
+      return 'GROUPE III';
+    }
+    if (
+      combined.includes('GROUPE II') ||
+      ['I', 'II', 'III', 'IV', 'CL1', 'CL2', 'CL3', 'CL4'].includes((code || '').toUpperCase().trim()) ||
+      combined.includes('CLASSE I') ||
+      combined.includes('CLASSE II') ||
+      combined.includes('CLASSE III') ||
+      combined.includes('CLASSE IV') ||
+      combined.includes('MAÎTRISE') ||
+      combined.includes('MAITRISE')
+    ) {
+      return 'GROUPE II';
+    }
+    return 'GROUPE I';
+  }
+
+  normaliserCodeCategorie(code?: string, libelle?: string): string {
+    const raw = (code || '').toUpperCase().trim();
+    const lib = (libelle || '').toUpperCase().trim();
+    const mapRoman: Record<string, string> = {
+      'CL1': 'I', 'CLI': 'I', 'CLASSE I': 'I',
+      'CL2': 'II', 'CLII': 'II', 'CLASSE II': 'II',
+      'CL3': 'III', 'CLIII': 'III', 'CLASSE III': 'III',
+      'CL4': 'IV', 'CLIV': 'IV', 'CLASSE IV': 'IV',
+      'CL5': 'V', 'CLV': 'V', 'CLASSE V': 'V',
+      'CL6': 'VI', 'CLVI': 'VI', 'CLASSE VI': 'VI',
+      'CL7': 'VII', 'CLVII': 'VII', 'CLASSE VII': 'VII',
+      'CL8': 'VIII', 'CLVIII': 'VIII', 'CLASSE VIII': 'VIII'
+    };
+    if (mapRoman[raw]) return mapRoman[raw];
+    if (lib.includes('CLASSE I') && !lib.includes('CLASSE II') && !lib.includes('CLASSE III') && !lib.includes('CLASSE IV')) return 'I';
+    if (lib.includes('CLASSE II')) return 'II';
+    if (lib.includes('CLASSE III')) return 'III';
+    if (lib.includes('CLASSE IV')) return 'IV';
+    if (lib.includes('CLASSE V') && !lib.includes('CLASSE VI') && !lib.includes('CLASSE VII') && !lib.includes('CLASSE VIII')) return 'V';
+    if (lib.includes('CLASSE VI')) return 'VI';
+    if (lib.includes('CLASSE VII')) return 'VII';
+    if (lib.includes('CLASSE VIII')) return 'VIII';
+    for (let i = 1; i <= 7; i++) {
+      if (raw === String(i) || raw === `CAT-00${i}` || raw === `C${i}` || lib.includes(`${i}ÈRE CATEGORIE`) || lib.includes(`${i}ÈME CATEGORIE`) || lib.includes(`${i}ERE CATEGORIE`) || lib.includes(`${i}EME CATEGORIE`)) {
+        return String(i);
+      }
+    }
+    return raw;
+  }
+
+  getCategoriesByGroupe(groupe: string): CategorieOption[] {
+    if (groupe === 'AUTRES') {
+      return (this.categories || []).filter(c => !['GROUPE I', 'GROUPE II', 'GROUPE III'].includes(c.groupe));
+    }
+    return (this.categories || []).filter(c => c.groupe === groupe);
+  }
+
+  compareCategorie = (a: any, b: any): boolean => {
+    if (!a || !b) return a === b;
+    const aNorm = this.normaliserCodeCategorie(String(a));
+    const bNorm = this.normaliserCodeCategorie(String(b));
+    return aNorm === bNorm || String(a).toUpperCase().trim() === String(b).toUpperCase().trim();
+  };
+
+  compareEchelon = (a: any, b: any): boolean => {
+    return Number(a) === Number(b);
+  };
 
   chargerReferences(): void {
     this.chargementRefs = true;
@@ -152,11 +229,48 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     const subCat = this.dbRefService.getItems('categorie').subscribe({
       next: (items) => {
         if (items && items.length > 0) {
-          this.categories = items.map(c => ({
-            code: c.code,
-            libelle: c.libelle || c.name || `Catégorie ${c.code}`,
-            groupe: c.description || (['1', '2', '3', '4', '5', '6', '7'].includes(c.code) ? 'GROUPE I' : (['I', 'II', 'III', 'IV'].includes(c.code) ? 'GROUPE II' : 'GROUPE III'))
-          }));
+          const dbMap = new Map<string, RefItem>();
+          items.forEach(item => {
+            const codeNorm = this.normaliserCodeCategorie(item.code, item.libelle);
+            dbMap.set(codeNorm, item);
+            dbMap.set(item.code, item);
+          });
+
+          const listeComplete: CategorieOption[] = this.categoriesParDefaut.map(def => {
+            const dbItem = dbMap.get(def.code);
+            if (dbItem) {
+              return {
+                code: def.code,
+                libelle: dbItem.libelle || def.libelle,
+                groupe: this.determinerGroupe(def.code, dbItem.description, dbItem.libelle)
+              };
+            }
+            return def;
+          });
+
+          items.forEach(item => {
+            const codeNorm = this.normaliserCodeCategorie(item.code, item.libelle);
+            if (!listeComplete.some(c => c.code === codeNorm || c.code === item.code)) {
+              listeComplete.push({
+                code: item.code,
+                libelle: item.libelle || item.name || `Catégorie ${item.code}`,
+                groupe: this.determinerGroupe(item.code, item.description, item.libelle)
+              });
+            }
+          });
+
+          this.categories = listeComplete;
+
+          // S'assurer que selectedCategorie correspond bien à une option existante
+          const normSelected = this.normaliserCodeCategorie(this.selectedCategorie);
+          if (this.categories.some(c => c.code === this.selectedCategorie)) {
+            // Correspondance directe
+          } else if (this.categories.some(c => c.code === normSelected)) {
+            this.selectedCategorie = normSelected;
+          } else if (this.categories.length > 0) {
+            this.selectedCategorie = this.categories[0].code;
+          }
+          this.majSalaireBase();
         }
       },
       error: (e) => console.warn('Erreur chargement categories DB:', e)
