@@ -1226,6 +1226,14 @@ export class MonEspaceComponent implements OnInit {
 
   private formatDateToIso(rawDate: any): string {
     if (!rawDate) return '';
+    if (typeof rawDate === 'string') {
+      const clean = rawDate.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) {
+        const p = clean.split('/');
+        return `${p[2]}-${p[1]}-${p[0]}`;
+      }
+    }
     if (rawDate instanceof Date) {
       const y = rawDate.getFullYear();
       const m = String(rawDate.getMonth() + 1).padStart(2, '0');

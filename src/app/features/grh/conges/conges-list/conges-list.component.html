@@ -379,23 +379,63 @@
 
               @if (selectedSoldeType === 'AUTRES_CONGES') {
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                  <td colspan="8" style="padding: 8px 18px 12px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">
-                        Droits statutaires &amp; congés spécifiques pris :
-                      </span>
-                      @for (ld of getAgentLeavesDetail(s.employeeId); track ld.typeName) {
-                        @if (!ld.typeName.toLowerCase().includes('annuel')) {
-                          <span style="display: inline-flex; align-items: center; gap: 4px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-size: 11.5px;">
-                            <strong style="color: #1e293b;">{{ ld.typeName }} :</strong>
-                            <span [style.color]="ld.joursPris > 0 ? '#0284c7' : '#64748b'" style="font-weight: 700;">{{ ld.joursPris }} j pris</span>
-                            @if (ld.quotaMax) {
-                              <span style="color: #94a3b8;">/ {{ ld.quotaMax }} j max</span>
-                            }
+                  <td colspan="8" style="padding: 10px 18px 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                      <!-- Si l'agent a pris des congés spécifiques -->
+                      @if (hasSpecialLeavesTaken(s.employeeId)) {
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                          <span style="display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">event_busy</mat-icon>
+                            Absences exceptionnelles consommées :
                           </span>
-                        }
+                          @for (ld of getAgentTakenLeaves(s.employeeId); track ld.typeName) {
+                            <span style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid #f87171; border-radius: 6px; padding: 4px 10px; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                              <strong style="color: #0f172a;">{{ ld.typeName }} :</strong>
+                              <span style="color: #dc2626; font-weight: 800;">{{ ld.joursPris }} j consommés</span>
+                              @if (ld.quotaMax) {
+                                <span style="color: #64748b; font-size: 11px;">/ {{ ld.quotaMax }} j max</span>
+                              }
+                            </span>
+                          }
+                        </div>
+                      } @else {
+                        <!-- Si aucun congé exceptionnel n'a été consommé -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span style="display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700;">
+                            <mat-icon style="font-size: 15px; width: 15px; height: 15px; color: #10b981;">verified</mat-icon>
+                            Aucun congé exceptionnel consommé — Tous les quotas statutaires sont 100% intacts
+                          </span>
+                        </div>
                       }
+
+                      <!-- Bouton discret pour déplier/replier le détail complet des quotas -->
+                      <button type="button" (click)="toggleExpandAgent(s.employeeId)"
+                              style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; color: #0284c7; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ expandedAgentId === s.employeeId ? 'expand_less' : 'tune' }}</mat-icon>
+                        <span>{{ expandedAgentId === s.employeeId ? 'Masquer la grille des quotas' : 'Consulter les 9 quotas légaux' }}</span>
+                      </button>
                     </div>
+
+                    <!-- Grille dépliable des quotas légaux pour l'agent -->
+                    @if (expandedAgentId === s.employeeId) {
+                      <div style="margin-top: 12px; padding: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px;">
+                        @for (ld of getAgentLeavesDetail(s.employeeId); track ld.typeName) {
+                          @if (!ld.typeName.toLowerCase().includes('annuel')) {
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 6px; font-size: 12px; border: 1px solid #e2e8f0;">
+                              <span style="font-weight: 600; color: #334155;">{{ ld.typeName }}</span>
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <span [style.color]="ld.joursPris > 0 ? '#dc2626' : '#16a34a'" style="font-weight: 700;">
+                                  {{ ld.joursPris }} j pris
+                                </span>
+                                @if (ld.quotaMax) {
+                                  <span style="color: #94a3b8; font-size: 11px;">/ {{ ld.quotaMax }} j max</span>
+                                }
+                              </div>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
                   </td>
                 </tr>
               }
@@ -603,242 +643,270 @@
   <!-- ONGLET 5 : RÈGLES & PARAMÈTRES DE CONGÉS -->
   <!-- ========================================== -->
   @if (activeTab === 'PARAMETRAGE') {
-    <mat-card class="table-card" style="padding: 24px; max-width: 1100px; margin: 0 auto;">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 2px solid #0284c7; padding-bottom: 12px;">
-        <mat-icon style="color: #0284c7; font-size: 28px; width: 28px; height: 28px;">settings_suggest</mat-icon>
-        <div>
-          <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1e293b;">Paramétrage Général des Congés & Absences</h3>
-          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">
-            Définissez le quota annuel, les règles d'acquisition et les modes de calcul pour toute la banque.
-          </p>
+    <!-- SECTION 1 : RÈGLES GÉNÉRALES -->
+    <mat-card class="table-card" style="padding: 28px; max-width: 1440px; width: calc(100% - 48px); margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 12px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 2px solid #0060B3; padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 44px; height: 44px; background: rgba(0, 96, 179, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <mat-icon style="color: #0060B3; font-size: 26px; width: 26px; height: 26px;">settings_suggest</mat-icon>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 19px; font-weight: 700; color: #0f172a;">Paramétrage Général des Congés &amp; Absences</h3>
+            <p style="margin: 3px 0 0; font-size: 13px; color: #64748b;">
+              Cadre légal et conventionnel : quota annuel, acquisition mensuelle et mode de décompte des repos hebdomadaires.
+            </p>
+          </div>
         </div>
+        <button mat-raised-button color="primary" (click)="saveParametrage()" [disabled]="savingConfig"
+                style="background: #0060B3; color: white; padding: 10px 24px; font-weight: 700; border-radius: 8px; height: 42px;">
+          <mat-icon style="margin-right: 6px;">save</mat-icon>
+          {{ savingConfig ? 'Enregistrement...' : 'Enregistrer les règles générales' }}
+        </button>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
         <!-- 1. Droit annuel par défaut -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
             Droit annuel conventionnel (en jours)
           </label>
-          <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
             Nombre total de jours de congé annuel payé accordé par an (Standard BF : 30 jours).
           </p>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
             <input type="number" [(ngModel)]="configModel.droitAnnuelDefaut" min="1" max="90"
-                   style="width: 120px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #0284c7;">
-            <span style="font-weight: 600; color: #475569;">jours / an</span>
+                   style="width: 130px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #0060B3; background: #ffffff;">
+            <span style="font-weight: 600; color: #475569; font-size: 13px;">jours / an</span>
           </div>
         </div>
 
         <!-- 2. Acquisition mensuelle -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
             Taux d'acquisition mensuel (jours / mois)
           </label>
-          <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
-            Fraction de congé cumulée par mois complet de travail effectif (ex: 2.5 j/mois pour 30j/an).
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
+            Fraction de congé cumulée par mois complet de travail effectif (ex: 2.5 j/mois).
           </p>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
             <input type="number" [(ngModel)]="configModel.joursAcquisParMois" step="0.1" min="0.5" max="5.0"
-                   style="width: 120px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #16a34a;">
-            <span style="font-weight: 600; color: #475569;">jours / mois</span>
+                   style="width: 130px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #16a34a; background: #ffffff;">
+            <span style="font-weight: 600; color: #475569; font-size: 13px;">jours / mois</span>
           </div>
         </div>
 
         <!-- 3. Règle de décompte hebdomadaire (Week-ends) -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; grid-column: span 2;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; grid-column: 1 / -1;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
             Mode de décompte des congés (Prise en compte des week-ends)
           </label>
-          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 14px;">
             Choisissez comment les jours de repos hebdomadaires sont traités lors du calcul de la durée du congé :
           </p>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b;">
-              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="OUVRABLE_5J" style="width: 16px; height: 16px;">
-              <span><strong>Jours Ouvrables (5 jours / semaine)</strong> — Exclut les Samedis et Dimanches (Recommandé / Code du Travail)</span>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px;">
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px;">
+              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="OUVRABLE_5J" style="width: 18px; height: 18px; margin-top: 2px;">
+              <div>
+                <strong style="color: #0060B3;">Jours Ouvrables (5 jours / semaine)</strong>
+                <div style="font-size: 12px; color: #64748b; font-weight: 500; margin-top: 2px;">Exclut les Samedis et Dimanches (Recommandé banque &amp; Code du travail)</div>
+              </div>
             </label>
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b;">
-              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="OUVRABLE_6J" style="width: 16px; height: 16px;">
-              <span><strong>Jours Ouvrables (6 jours / semaine)</strong> — Compte les Samedis, exclut uniquement les Dimanches</span>
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px;">
+              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="OUVRABLE_6J" style="width: 18px; height: 18px; margin-top: 2px;">
+              <div>
+                <strong style="color: #334155;">Jours Ouvrables (6 jours / semaine)</strong>
+                <div style="font-size: 12px; color: #64748b; font-weight: 500; margin-top: 2px;">Compte les Samedis, exclut uniquement les Dimanches</div>
+              </div>
             </label>
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b;">
-              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="CALENDAIRE" style="width: 16px; height: 16px;">
-              <span><strong>Jours Calendaires (7 jours / semaine)</strong> — Tous les jours civils sont comptabilisés</span>
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px;">
+              <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="CALENDAIRE" style="width: 18px; height: 18px; margin-top: 2px;">
+              <div>
+                <strong style="color: #334155;">Jours Calendaires (7 jours / semaine)</strong>
+                <div style="font-size: 12px; color: #64748b; font-weight: 500; margin-top: 2px;">Tous les jours civils du calendrier sont comptabilisés</div>
+              </div>
             </label>
           </div>
         </div>
 
         <!-- 4. Déduction des jours fériés légaux -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
             Prise en compte des Jours Fériés Légaux
           </label>
-          <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
             Si un jour férié chômé payé tombe pendant les congés de l'agent :
           </p>
-          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b;">
-            <input type="checkbox" [(ngModel)]="configModel.deduireJoursFeries" style="width: 18px; height: 18px;">
-            <span>Déduire automatiquement les jours fériés (Ne sont PAS décomptés du solde)</span>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px;">
+            <input type="checkbox" [(ngModel)]="configModel.deduireJoursFeries" style="width: 18px; height: 18px; accent-color: #0060B3;">
+            <span>Déduire automatiquement les jours fériés (Non décomptés du solde)</span>
           </label>
         </div>
 
         <!-- 5. Plafond de report -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px;">
           <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
             Plafond de report annuel
           </label>
-          <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
             Nombre maximal de jours non pris reportables sur l'exercice N+1 :
           </p>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
             <input type="number" [(ngModel)]="configModel.plafondReportJours" min="0" max="60"
-                   style="width: 120px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #7c3aed;">
-            <span style="font-weight: 600; color: #475569;">jours max reportables</span>
+                   style="width: 130px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #7c3aed; background: #ffffff;">
+            <span style="font-weight: 600; color: #475569; font-size: 13px;">jours max reportables</span>
           </div>
         </div>
-      </div>
-
-      <!-- Bouton d'enregistrement -->
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
-        <button mat-raised-button color="primary" (click)="saveParametrage()" [disabled]="savingConfig"
-                style="background: #0284c7; color: white; padding: 8px 24px; font-weight: 700; border-radius: 8px;">
-          <mat-icon style="margin-right: 6px;">save</mat-icon>
-          {{ savingConfig ? 'Enregistrement...' : 'Enregistrer les règles' }}
-        </button>
       </div>
     </mat-card>
 
-    <!-- SECTION 2 DU PARAMÉTRAGE : CATALOGUE DES AUTRES CONGÉS ET ABSENCES -->
-    <mat-card class="table-card" style="padding: 24px; max-width: 1100px; margin: 24px auto 0;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #0284c7; padding-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <mat-icon style="color: #0284c7; font-size: 28px; width: 28px; height: 28px;">tune</mat-icon>
+    <!-- SECTION 2 : CATALOGUE ET PARAMÉTRAGE DES AUTRES TYPES DE CONGÉS & ABSENCES -->
+    <mat-card class="table-card" style="padding: 28px; max-width: 1440px; width: calc(100% - 48px); margin: 28px auto 0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 12px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; border-bottom: 2px solid #0060B3; padding-bottom: 14px; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 44px; height: 44px; background: rgba(0, 96, 179, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <mat-icon style="color: #0060B3; font-size: 26px; width: 26px; height: 26px;">tune</mat-icon>
+          </div>
           <div>
-            <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1e293b;">Paramétrage des Autres Types de Congés &amp; Absences</h3>
-            <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">
-              Modifiez directement les quotas, le maintien de salaire, les pièces justificatives et les conditions d'attribution pour chaque type.
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h3 style="margin: 0; font-size: 19px; font-weight: 700; color: #0f172a;">Paramétrage des Autres Types de Congés &amp; Absences</h3>
+              <span style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11.5px; padding: 2px 10px; border-radius: 20px;">
+                {{ typesAbsenceList.length }} types configurés
+              </span>
+            </div>
+            <p style="margin: 3px 0 0; font-size: 13px; color: #64748b;">
+              Ajustez les quotas légaux, le maintien de salaire, les pièces justificatives exigées et les règles de déductibilité sur les 30 jours annuels.
             </p>
           </div>
         </div>
-        <button mat-stroked-button (click)="addTypeRow()" style="color: #0284c7; border-color: #0284c7; font-weight: 600;">
-          <mat-icon style="margin-right: 4px;">add</mat-icon> Nouveau Type
-        </button>
+        <div style="display: flex; gap: 10px;">
+          <button mat-stroked-button (click)="addTypeRow()" style="color: #0060B3; border-color: #0060B3; font-weight: 700; border-radius: 8px; height: 40px;">
+            <mat-icon style="margin-right: 4px;">add</mat-icon> Ajouter un type
+          </button>
+          <button mat-raised-button color="primary" (click)="saveAllTypesAbsence()" [disabled]="savingAllTypes"
+                  style="background: #0060B3; color: white; padding: 8px 22px; font-weight: 700; border-radius: 8px; height: 40px;">
+            <mat-icon style="margin-right: 6px;">save</mat-icon>
+            {{ savingAllTypes ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+          </button>
+        </div>
       </div>
 
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; min-width: 950px;">
+      <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 1200px;">
           <thead>
-            <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 12px; font-weight: 700; color: #475569; text-align: left;">
-              <th style="padding: 10px 12px; width: 220px;">Libellé du Congé / Absence</th>
-              <th style="padding: 10px 10px; width: 130px;">Code</th>
-              <th style="padding: 10px 10px; width: 110px; text-align: center;">Catégorie</th>
-              <th style="padding: 10px 10px; width: 95px; text-align: center;">Quota (j)</th>
-              <th style="padding: 10px 10px; width: 130px; text-align: center;">Rémunéré</th>
-              <th style="padding: 10px 10px; width: 150px; text-align: center;">Justificatif</th>
-              <th style="padding: 10px 10px; width: 95px; text-align: center;">Déductible</th>
-              <th style="padding: 10px 10px; width: 95px; text-align: center;">Sexe</th>
-              <th style="padding: 10px 10px; width: 60px; text-align: center;">Actif</th>
-              <th style="padding: 10px 8px; width: 50px; text-align: right;"></th>
+            <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #334155; text-align: left; text-transform: uppercase; letter-spacing: 0.5px;">
+              <th style="padding: 14px 16px; width: 280px;">Libellé du Congé / Absence</th>
+              <th style="padding: 14px 12px; width: 140px;">Code Système</th>
+              <th style="padding: 14px 12px; width: 130px; text-align: center;">Catégorie</th>
+              <th style="padding: 14px 12px; width: 110px; text-align: center;">Quota Légal</th>
+              <th style="padding: 14px 12px; width: 140px; text-align: center;">Maintien Salaire</th>
+              <th style="padding: 14px 14px; width: 200px;">Pièce Justificative</th>
+              <th style="padding: 14px 12px; width: 120px; text-align: center;">Déductibilité Solde</th>
+              <th style="padding: 14px 12px; width: 110px; text-align: center;">Bénéficiaires</th>
+              <th style="padding: 14px 10px; width: 80px; text-align: center;">Statut</th>
+              <th style="padding: 14px 12px; width: 50px; text-align: center;"></th>
             </tr>
           </thead>
           <tbody>
             @for (t of typesAbsenceList; track t.id || t.code; let idx = $index) {
-              <tr style="border-bottom: 1px solid #f1f5f9; font-size: 13px;" [style.background]="t.actif ? 'transparent' : '#f8fafc'">
-                <!-- Libellé -->
-                <td style="padding: 8px 10px;">
-                  <input type="text" [(ngModel)]="t.name" placeholder="Libellé du congé"
-                         style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 13px; color: #0f172a; box-sizing: border-box;">
+              <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px; transition: background 0.15s ease;"
+                  [style.background]="t.actif ? (idx % 2 === 0 ? '#ffffff' : '#fcfdfe') : '#f8fafc'">
+                
+                <!-- 1. Libellé -->
+                <td style="padding: 10px 16px;">
+                  <input type="text" [(ngModel)]="t.name" placeholder="Libellé du congé ou de la permission"
+                         style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600; font-size: 13.5px; color: #0f172a; box-sizing: border-box; background: #ffffff;">
                 </td>
 
-                <!-- Code -->
-                <td style="padding: 8px 10px;">
+                <!-- 2. Code -->
+                <td style="padding: 10px 12px;">
                   <input type="text" [(ngModel)]="t.code" placeholder="CODE"
-                         style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; box-sizing: border-box;">
+                         style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; box-sizing: border-box; background: #f8fafc;">
                 </td>
 
-                <!-- Catégorie -->
-                <td style="padding: 8px 10px; text-align: center;">
+                <!-- 3. Catégorie -->
+                <td style="padding: 10px 12px; text-align: center;">
                   <select [(ngModel)]="t.categorie"
-                          style="padding: 6px 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0369a1; background: #f0f9ff;">
+                          style="padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0369a1; background: #f0f9ff; cursor: pointer; width: 100%;">
                     <option value="CONGE">Congé</option>
                     <option value="PERMISSION">Permission</option>
                     <option value="ABSENCE">Absence</option>
                   </select>
                 </td>
 
-                <!-- Quota / Durée légale -->
-                <td style="padding: 8px 10px; text-align: center;">
-                  <div style="display: inline-flex; align-items: center; gap: 4px;">
+                <!-- 4. Quota / Durée légale -->
+                <td style="padding: 10px 12px; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px;">
                     <input type="number" [(ngModel)]="t.dureeMaxLegaleJours" min="0" max="365"
-                           style="width: 55px; padding: 6px 4px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 700; color: #0284c7; font-size: 13px; text-align: center;">
+                           style="width: 50px; border: none; background: transparent; font-weight: 800; color: #0060B3; font-size: 14px; text-align: center;">
                     <span style="font-weight: 700; font-size: 12px; color: #64748b;">j</span>
                   </div>
                 </td>
 
-                <!-- Rémunéré (Avec Salaire) -->
-                <td style="padding: 8px 10px; text-align: center;">
-                  <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                    <input type="checkbox" [(ngModel)]="t.remunere" style="width: 16px; height: 16px; accent-color: #16a34a;">
-                    <span [style.color]="t.remunere ? '#16a34a' : '#dc2626'">
-                      {{ t.remunere ? 'Oui (100%)' : 'Sans solde' }}
-                    </span>
+                <!-- 5. Rémunéré (Maintien salaire) -->
+                <td style="padding: 10px 12px; text-align: center;">
+                  <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 20px; border: 1px solid;"
+                         [style.background]="t.remunere ? '#ecfdf5' : '#fef2f2'"
+                         [style.border-color]="t.remunere ? '#a7f3d0' : '#fecaca'"
+                         [style.color]="t.remunere ? '#065f46' : '#991b1b'">
+                    <input type="checkbox" [(ngModel)]="t.remunere" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;">
+                    <span>{{ t.remunere ? '100% Maintien' : 'Sans solde' }}</span>
                   </label>
                 </td>
 
-                <!-- Justificatif Requis -->
-                <td style="padding: 8px 10px; text-align: center;">
-                  <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                      <input type="checkbox" [(ngModel)]="t.justificatifRequis" style="width: 15px; height: 15px; accent-color: #0284c7;">
-                      <span [style.color]="t.justificatifRequis ? '#0284c7' : '#94a3b8'">
-                        {{ t.justificatifRequis ? 'Exigé' : 'Facultatif' }}
+                <!-- 6. Pièce Justificative -->
+                <td style="padding: 10px 14px;">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                      <input type="checkbox" [(ngModel)]="t.justificatifRequis" style="width: 16px; height: 16px; accent-color: #0060B3; cursor: pointer;">
+                      <span [style.color]="t.justificatifRequis ? '#0060B3' : '#64748b'">
+                        {{ t.justificatifRequis ? 'Exigé obligatoirement' : 'Facultatif' }}
                       </span>
                     </label>
                     @if (t.justificatifRequis) {
-                      <input type="text" [(ngModel)]="t.typeJustificatif" placeholder="Ex: Certificat médical"
-                             style="width: 125px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; color: #334155;">
+                      <input type="text" [(ngModel)]="t.typeJustificatif" placeholder="Ex: Certificat médical, Acte d'état civil..."
+                             style="width: 100%; padding: 5px 8px; font-size: 11.5px; border: 1px solid #93c5fd; border-radius: 5px; color: #1e293b; background: #eff6ff;">
                     }
                   </div>
                 </td>
 
-                <!-- Déductible du solde annuel -->
-                <td style="padding: 8px 10px; text-align: center;">
-                  <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                    <input type="checkbox" [(ngModel)]="t.deductibleDuSolde" style="width: 16px; height: 16px; accent-color: #d97706;">
-                    <span [style.color]="t.deductibleDuSolde ? '#d97706' : '#64748b'">
-                      {{ t.deductibleDuSolde ? 'Déduit' : 'Non' }}
-                    </span>
+                <!-- 7. Déductible du solde annuel -->
+                <td style="padding: 10px 12px; text-align: center;">
+                  <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 6px; border: 1px solid;"
+                         [style.background]="t.deductibleDuSolde ? '#fffbeb' : '#f0fdf4'"
+                         [style.border-color]="t.deductibleDuSolde ? '#fde68a' : '#bbf7d0'"
+                         [style.color]="t.deductibleDuSolde ? '#b45309' : '#15803d'">
+                    <input type="checkbox" [(ngModel)]="t.deductibleDuSolde" style="width: 15px; height: 15px; accent-color: #d97706; cursor: pointer;">
+                    <span>{{ t.deductibleDuSolde ? 'Déduit des 30j' : 'Non déductible' }}</span>
                   </label>
                 </td>
 
-                <!-- Sexe Requis -->
-                <td style="padding: 8px 10px; text-align: center;">
+                <!-- 8. Bénéficiaires / Sexe -->
+                <td style="padding: 10px 12px; text-align: center;">
                   <select [(ngModel)]="t.sexeRequis"
-                          style="padding: 6px 4px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-weight: 600; color: #475569;">
-                    <option value="TOUS">Tous</option>
-                    <option value="FEMININ">Femmes</option>
-                    <option value="MASCULIN">Hommes</option>
+                          style="padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; cursor: pointer; width: 100%;">
+                    <option value="TOUS">Tous agents</option>
+                    <option value="FEMININ">Femmes unq.</option>
+                    <option value="MASCULIN">Hommes unq.</option>
                   </select>
                 </td>
 
-                <!-- Actif -->
-                <td style="padding: 8px 10px; text-align: center;">
-                  <input type="checkbox" [(ngModel)]="t.actif" title="Actif / Inactif"
-                         style="width: 18px; height: 18px; accent-color: #16a34a; cursor: pointer;">
+                <!-- 9. Actif -->
+                <td style="padding: 10px 10px; text-align: center;">
+                  <input type="checkbox" [(ngModel)]="t.actif" title="Activer / Désactiver ce type"
+                         style="width: 20px; height: 20px; accent-color: #16a34a; cursor: pointer;">
                 </td>
 
-                <!-- Supprimer -->
-                <td style="padding: 8px 6px; text-align: right;">
-                  <button mat-icon-button (click)="deleteTypeRow(idx, t)" style="color: #dc2626;" title="Supprimer la règle">
-                    <mat-icon style="font-size: 20px;">delete</mat-icon>
+                <!-- 10. Supprimer -->
+                <td style="padding: 10px 12px; text-align: center;">
+                  <button mat-icon-button (click)="deleteTypeRow(idx, t)" style="color: #dc2626;" title="Supprimer ce type de congé">
+                    <mat-icon style="font-size: 20px;">delete_outline</mat-icon>
                   </button>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="10" style="text-align: center; padding: 24px; color: #64748b;">
-                  Aucun type de congé ou absence configuré. Cliquez sur « Nouveau Type » ci-dessus pour en ajouter.
+                <td colspan="10" style="text-align: center; padding: 36px; color: #64748b; font-size: 14px;">
+                  Aucun type configuré. Cliquez sur « Ajouter un type » pour configurer les permissions et congés spéciaux.
                 </td>
               </tr>
             }
@@ -846,15 +914,15 @@
         </table>
       </div>
 
-      <!-- Footer : Ajouter + Enregistrer les Autres Types -->
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-        <button mat-stroked-button (click)="addTypeRow()" style="color: #0284c7; border-color: #0284c7; font-weight: 600;">
+      <!-- Footer Actions -->
+      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <button mat-stroked-button (click)="addTypeRow()" style="color: #0060B3; border-color: #0060B3; font-weight: 700; border-radius: 8px; height: 40px;">
           <mat-icon style="margin-right: 4px;">add</mat-icon> Ajouter un type de congé
         </button>
         <button mat-raised-button color="primary" (click)="saveAllTypesAbsence()" [disabled]="savingAllTypes"
-                style="background: #0284c7; color: white; padding: 8px 24px; font-weight: 700; border-radius: 8px;">
+                style="background: #0060B3; color: white; padding: 10px 28px; font-weight: 700; border-radius: 8px; height: 42px; box-shadow: 0 2px 6px rgba(0, 96, 179, 0.3);">
           <mat-icon style="margin-right: 6px;">save</mat-icon>
-          {{ savingAllTypes ? 'Enregistrement...' : 'Enregistrer les Autres Types' }}
+          {{ savingAllTypes ? 'Enregistrement en cours...' : 'Enregistrer les Autres Types' }}
         </button>
       </div>
     </mat-card>

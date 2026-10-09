@@ -845,6 +845,12 @@ export class CongesListComponent implements OnInit, OnDestroy {
     this.deleteTypeRow(0, t);
   }
 
+  expandedAgentId: number | null = null;
+
+  toggleExpandAgent(empId: number): void {
+    this.expandedAgentId = this.expandedAgentId === empId ? null : empId;
+  }
+
   getAgentLeavesDetail(empId: number): Array<{ typeName: string; joursPris: number; quotaMax?: number; deductible: boolean }> {
     const agentConges = this.conges.filter(c => {
       const eId = c.employee?.id || (c as any).employeeId;
@@ -862,6 +868,14 @@ export class CongesListComponent implements OnInit, OnDestroy {
         deductible: !!t.deductibleDuSolde
       };
     });
+  }
+
+  getAgentTakenLeaves(empId: number): Array<{ typeName: string; joursPris: number; quotaMax?: number; deductible: boolean }> {
+    return this.getAgentLeavesDetail(empId).filter(l => l.joursPris > 0 && !l.typeName.toLowerCase().includes('annuel'));
+  }
+
+  hasSpecialLeavesTaken(empId: number): boolean {
+    return this.getAgentTakenLeaves(empId).length > 0;
   }
 
   isDataUrl(val?: string): boolean {
