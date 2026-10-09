@@ -61,4 +61,16 @@ public class Precompte {
 
     @Builder.Default
     private String statut = "EN_COURS"; // EN_COURS, SOLDE, SUSPENDU
+
+    @Column(columnDefinition = "TEXT")
+    private String justificatif; // Fichier ou référence justificative pour solde anticipé
+
+    @Column(name = "motif_suspension", columnDefinition = "TEXT")
+    private String motifSuspension; // Motif de suspension mensuelle
+
+    @Column(name = "date_suspension")
+    private LocalDate dateSuspension;
+
+    @Column(name = "date_solde")
+    private LocalDate dateSolde;
 }

@@ -5,8 +5,12 @@ import com.bpbf.sirh_backend.dtos.BulletinLineDto;
 import com.bpbf.sirh_backend.entities.*;
 import com.bpbf.sirh_backend.repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -16,12 +20,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class BulletinService {
 
+    private static final Logger log = LoggerFactory.getLogger(BulletinService.class);
     private static final BigDecimal CENT = new BigDecimal("100");
 
     private final BulletinRepository bulletinRepository;
@@ -41,6 +47,92 @@ public class BulletinService {
     private final ContratRepository contratRepository;
     private final EmployeeProcessService employeeProcessService;
     private final CongeWorkflowService congeWorkflowService;
+    private final TypeIndemniteRepository typeIndemniteRepository;
+
+    /**
+     * Garde-fou d'intégrité V3 : interdit toute modification sur un bulletin ou une session validée/clôturée.
+     */
+    public void assertModifiable(Bulletin b) {
+        if (b == null) return;
+        SessionPaie session = b.getSessionPaie();
+        String sessionStatut = session != null ? session.getStatut() : null;
+        String bulletinStatut = b.getStatut();
+        if ("VALIDE".equalsIgnoreCase(sessionStatut) || "CLOTURE".equalsIgnoreCase(sessionStatut)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Action refusée : la session de paie #" + (session != null ? session.getId() : "") + " est " + sessionStatut + " et verrouillée.");
+        }
+        if ("VALIDE".equalsIgnoreCase(bulletinStatut) || "CLOTURE".equalsIgnoreCase(bulletinStatut)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Action refusée : le bulletin #" + b.getId() + " est " + bulletinStatut + " et verrouillé.");
+        }
+    }
+
+    /**
+     * Garde-fou d'intégrité V3 : interdit toute modification sur une session validée ou clôturée.
+     */
+    public void assertSessionModifiable(SessionPaie session) {
+        if (session == null) return;
+        String statut = session.getStatut();
+        if ("VALIDE".equalsIgnoreCase(statut) || "CLOTURE".equalsIgnoreCase(statut)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Action refusée : la session de paie #" + session.getId() + " est " + statut + " et verrouillée.");
+        }
+    }
+
+    /**
+     * Détermine si un employé est actif et éligible au calcul de paie.
+     */
+    public boolean isEmployeeEligiblePaie(Employee emp) {
+        if (emp == null) return false;
+        String st = emp.getStatut();
+        if (st == null || st.isBlank()) return true;
+        st = st.trim().toLowerCase(Locale.ROOT);
+        return !st.contains("inactif")
+                && !st.contains("suspendu")
+                && !st.contains("détach")
+                && !st.contains("detach")
+                && !st.contains("sorti")
+                && !st.contains("licenci")
+                && !st.contains("demission");
+    }
+
+    /**
+     * Vérifie si un employé dispose d'un salaire de base défini.
+     */
+    public boolean hasSalaireBase(Employee emp) {
+        if (emp == null) return false;
+        SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
+        if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+            return true;
+        }
+        if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null
+                && situation.getGrilleSalariale().getBasicSalary().compareTo(BigDecimal.ZERO) > 0) {
+            return true;
+        }
+        if (emp.getGrilleSalariale() != null && emp.getGrilleSalariale().getBasicSalary() != null
+                && emp.getGrilleSalariale().getBasicSalary().compareTo(BigDecimal.ZERO) > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Valide et convertit la chaîne représentant le mois de session (1 à 12).
+     */
+    public static int parseMois(String moisStr) {
+        if (moisStr == null || moisStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le mois de la session de paie est obligatoire.");
+        }
+        try {
+            int mo = Integer.parseInt(moisStr.trim());
+            if (mo < 1 || mo > 12) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le mois doit être compris entre 1 et 12 (reçu: " + moisStr + ").");
+            }
+            return mo;
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Format de mois invalide: '" + moisStr + "'. Doit être un entier entre 1 et 12.");
+        }
+    }
 
     @Transactional
     public List<BulletinDto> generateBulletinsForSession(Long sessionPaieId) {
@@ -50,7 +142,10 @@ public class BulletinService {
     @Transactional
     public List<BulletinDto> generateBulletinsForSession(Long sessionPaieId, List<Long> employeeIds) {
         SessionPaie session = sessionPaieRepository.findById(sessionPaieId)
-                .orElseThrow(() -> new RuntimeException("Session de paie non trouvée: #" + sessionPaieId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session de paie non trouvée: #" + sessionPaieId));
+
+        // RÈGLE V3 : Verrouillage strict de session
+        assertSessionModifiable(session);
 
         List<Employee> employees;
         if (employeeIds != null && !employeeIds.isEmpty()) {
@@ -59,30 +154,115 @@ public class BulletinService {
             employees = employeeRepository.findAll();
         }
 
+        // 1. Filtrer les employés éligibles (actifs uniquement)
+        employees = employees.stream()
+                .filter(this::isEmployeeEligiblePaie)
+                .collect(Collectors.toList());
+
+        // Valider le mois de façon stricte (rejet d'erreur au lieu de forcer silencieusement à janvier)
+        int mo = parseMois(session.getMois());
+        int an = session.getAnnee() != null ? session.getAnnee() : LocalDate.now().getYear();
+
+        LocalDate debutPeriode = session.getDateFrom();
+        LocalDate finPeriode = session.getDateTo();
+        if (debutPeriode == null) {
+            debutPeriode = LocalDate.of(an, mo, 1);
+            finPeriode = debutPeriode.withDayOfMonth(debutPeriode.lengthOfMonth());
+        }
+
+        final LocalDate dP = debutPeriode;
+        final LocalDate fP = finPeriode;
+
+        boolean isDiffMat = isDifferentielMaternite(session);
+        boolean isOrdinaire = !isDiffMat && !is13Ou14emeMois(session) && !isCongePaye(session) && !isIndemniteRetraite(session) && !isStc(session) && !isExtraordinaire(session.getTypeSession());
+
+        if (isDiffMat) {
+            // Seules les salariées de sexe féminin avec un congé de maternité approuvé/actif durant la période
+            employees = employees.stream()
+                    .filter(congeWorkflowService::isFeminin)
+                    .filter(emp -> congeWorkflowService.isEmployeeOnApprovedMaternite(emp.getId(), dP, fP))
+                    .collect(Collectors.toList());
+        } else if (isOrdinaire) {
+            // RÈGLE CODE DU TRAVAIL & CONVENTION BANCAIRE BF :
+            // Les collaboratrices en congé de maternité durant la session ordinaire sont indemnisées par la CNSS
+            // et sont automatiquement exclues de la session de paie ordinaire.
+            employees = employees.stream()
+                    .filter(emp -> {
+                        boolean onMaternite = congeWorkflowService.isFeminin(emp) && congeWorkflowService.isEmployeeOnApprovedMaternite(emp.getId(), dP, fP);
+                        if (onMaternite) {
+                            List<Bulletin> prev = bulletinRepository.findBySessionPaieIdAndEmployeeId(session.getId(), emp.getId());
+                            if (!prev.isEmpty()) {
+                                prev.removeIf(b -> "VALIDE".equalsIgnoreCase(b.getStatut()) || "CLOTURE".equalsIgnoreCase(b.getStatut()));
+                                if (!prev.isEmpty()) {
+                                    bulletinRepository.deleteAll(prev);
+                                    bulletinRepository.flush();
+                                }
+                            }
+                            return false;
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+        }
+
         List<Bulletin> createdBulletins = new ArrayList<>();
 
         for (Employee emp : employees) {
+            // Pour une session ordinaire, vérifier que l'agent dispose d'un salaire de base valide
+            if (isOrdinaire && !hasSalaireBase(emp)) {
+                log.warn("L'agent {} (matricule: {}) n'a aucun salaire de base configuré. Bulletin ignoré pour la session ordinaire #{}",
+                        emp.getName(), emp.getMatricule(), session.getId());
+                if (employeeIds != null && employeeIds.contains(emp.getId())) {
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "L'agent " + emp.getName() + " (" + emp.getMatricule() + ") n'a aucun salaire de base configuré dans sa situation ou sa grille salariale.");
+                }
+                continue;
+            }
+
             List<Bulletin> existingList = bulletinRepository.findBySessionPaieIdAndEmployeeId(session.getId(), emp.getId());
             BigDecimal customWorkedDays = null;
             BigDecimal customScheduledDays = null;
+            Bulletin existingBulletin = null;
+
             if (!existingList.isEmpty()) {
-                for (Bulletin existing : existingList) {
-                    if (existing.getWorkedDays() != null) {
-                        customWorkedDays = existing.getWorkedDays();
-                    }
-                    if (existing.getScheduledWorkingDays() != null) {
-                        customScheduledDays = existing.getScheduledWorkingDays();
-                    }
-                    bulletinRepository.delete(existing);
+                existingBulletin = existingList.get(0);
+                // Si le bulletin existant est validé ou clôturé, ne pas le modifier
+                if ("VALIDE".equalsIgnoreCase(existingBulletin.getStatut()) || "CLOTURE".equalsIgnoreCase(existingBulletin.getStatut())) {
+                    createdBulletins.add(existingBulletin);
+                    continue;
                 }
-                bulletinRepository.flush();
+                if (existingBulletin.getWorkedDays() != null) {
+                    customWorkedDays = existingBulletin.getWorkedDays();
+                }
+                if (existingBulletin.getScheduledWorkingDays() != null) {
+                    customScheduledDays = existingBulletin.getScheduledWorkingDays();
+                }
+                // Si des doublons existent, supprimer les orphelins non validés
+                if (existingList.size() > 1) {
+                    for (int i = 1; i < existingList.size(); i++) {
+                        Bulletin extra = existingList.get(i);
+                        if (!"VALIDE".equalsIgnoreCase(extra.getStatut()) && !"CLOTURE".equalsIgnoreCase(extra.getStatut())) {
+                            bulletinRepository.delete(extra);
+                        }
+                    }
+                    bulletinRepository.flush();
+                }
             }
 
-            Bulletin bulletin = computeAndSaveBulletin(session, emp, customWorkedDays, customScheduledDays);
-            createdBulletins.add(bulletin);
+            // Stabilité des identifiants : réutilisation de l'entité existante sans changer l'ID
+            Bulletin bulletin = computeAndSaveBulletin(session, emp, customWorkedDays, customScheduledDays, existingBulletin);
+            if (bulletin != null) {
+                createdBulletins.add(bulletin);
+            }
         }
 
-        // Recalculer les totaux de la session pour TOUS les bulletins existants dans la session (gestion par tranches / petits groupes)
+        // Machine à états : BROUILLON -> GENERE
+        if ("BROUILLON".equalsIgnoreCase(session.getStatut())) {
+            session.setStatut("GENERE");
+            sessionPaieRepository.save(session);
+        }
+
+        // Recalculer les totaux de la session pour TOUS les bulletins existants dans la session
         recalculerTotauxSession(session);
         List<Bulletin> allSessionBulletins = bulletinRepository.findBySessionPaieId(session.getId());
         return allSessionBulletins.stream().map(this::toDto).collect(Collectors.toList());
@@ -115,27 +295,47 @@ public class BulletinService {
 
     @Transactional
     public BulletinDto recalculerBulletin(Long bulletinId) {
+        return recalculerBulletin(bulletinId, null, null);
+    }
+
+    private Bulletin prepareBulletinTarget(Bulletin existing, String fallbackCode) {
+        Bulletin b = (existing != null) ? existing : new Bulletin();
+        if (b.getLines() != null) {
+            b.getLines().clear();
+        } else {
+            b.setLines(new ArrayList<>());
+        }
+        if (b.getCode() == null || b.getCode().isBlank()) {
+            b.setCode(fallbackCode);
+        }
+        return b;
+    }
+
+    @Transactional
+    public BulletinDto recalculerBulletin(Long bulletinId, BigDecimal customWorkedDays, BigDecimal customScheduledDays) {
         Bulletin existing = bulletinRepository.findById(bulletinId)
-                .orElseThrow(() -> new RuntimeException("Bulletin introuvable #" + bulletinId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulletin introuvable #" + bulletinId));
+        assertModifiable(existing);
+
         Employee emp = existing.getEmployee();
         SessionPaie session = existing.getSessionPaie();
-        BigDecimal workedDays = existing.getWorkedDays();
-        BigDecimal scheduledDays = existing.getScheduledWorkingDays();
+        BigDecimal workedDays = customWorkedDays != null ? customWorkedDays : existing.getWorkedDays();
+        BigDecimal scheduledDays = customScheduledDays != null ? customScheduledDays : existing.getScheduledWorkingDays();
 
-        bulletinRepository.delete(existing);
-        bulletinRepository.flush();
-
-        Bulletin newBlt = computeAndSaveBulletin(session, emp, workedDays, scheduledDays);
+        // Réutilisation de l'entité sans suppression afin de préserver l'ID et tous les liens
+        Bulletin updatedBlt = computeAndSaveBulletin(session, emp, workedDays, scheduledDays, existing);
         if (session != null) {
             recalculerTotauxSession(session);
         }
-        return toDto(newBlt);
+        return toDto(updatedBlt);
     }
 
     @Transactional
     public List<BulletinDto> recalculerBulletinsSession(Long sessionPaieId) {
         SessionPaie session = sessionPaieRepository.findById(sessionPaieId)
-                .orElseThrow(() -> new RuntimeException("Session de paie non trouvée #" + sessionPaieId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session de paie non trouvée #" + sessionPaieId));
+        assertSessionModifiable(session);
+
         List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
         List<Long> empIds = bulletins.stream()
                 .map(b -> b.getEmployee().getId())
@@ -145,8 +345,30 @@ public class BulletinService {
     }
 
     @Transactional
+    public BulletinDto updateStatut(Long id, String statut) {
+        Bulletin b = bulletinRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulletin introuvable #" + id));
+        if ("CLOTURE".equalsIgnoreCase(b.getStatut()) || (b.getSessionPaie() != null && "CLOTURE".equalsIgnoreCase(b.getSessionPaie().getStatut()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Impossible de modifier le statut d'un bulletin ou d'une session clôturée.");
+        }
+        b.setStatut(statut);
+        if ("VALIDE".equalsIgnoreCase(statut)) {
+            b.setDateValidation(LocalDateTime.now());
+        } else if ("GENERE".equalsIgnoreCase(statut)) {
+            b.setDateValidation(null);
+        }
+        b = bulletinRepository.save(b);
+        return toDto(b);
+    }
+
+    @Transactional
     public List<BulletinDto> recalculerTousLesBulletins() {
-        List<SessionPaie> sessions = sessionPaieRepository.findAll();
+        // RÈGLE V3 : Seules les sessions non validées et non clôturées peuvent être recalculées.
+        // Interdiction absolue de réécrire l'historique des sessions VALIDE ou CLOTURE.
+        List<SessionPaie> sessions = sessionPaieRepository.findAll().stream()
+                .filter(s -> !"VALIDE".equalsIgnoreCase(s.getStatut()) && !"CLOTURE".equalsIgnoreCase(s.getStatut()))
+                .collect(Collectors.toList());
+
         for (SessionPaie s : sessions) {
             List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(s.getId());
             if (!bulletins.isEmpty()) {
@@ -159,7 +381,7 @@ public class BulletinService {
         }
         List<Bulletin> all = bulletinRepository.findAll();
         for (Bulletin b : all) {
-            if (b.getSessionPaie() == null) {
+            if (b.getSessionPaie() == null && !"VALIDE".equalsIgnoreCase(b.getStatut()) && !"CLOTURE".equalsIgnoreCase(b.getStatut())) {
                 try {
                     recalculerBulletin(b.getId());
                 } catch (Exception ignored) {}
@@ -170,11 +392,16 @@ public class BulletinService {
 
     @Transactional
     public Bulletin computeAndSaveBulletin(SessionPaie session, Employee emp) {
-        return computeAndSaveBulletin(session, emp, null, null);
+        return computeAndSaveBulletin(session, emp, null, null, null);
     }
 
     @Transactional
     public Bulletin computeAndSaveBulletin(SessionPaie session, Employee emp, BigDecimal customWorkedDays, BigDecimal customScheduledDays) {
+        return computeAndSaveBulletin(session, emp, customWorkedDays, customScheduledDays, null);
+    }
+
+    @Transactional
+    public Bulletin computeAndSaveBulletin(SessionPaie session, Employee emp, BigDecimal customWorkedDays, BigDecimal customScheduledDays, Bulletin existingBulletin) {
         SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
         BigDecimal salaireBase = BigDecimal.ZERO;
         if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
@@ -197,8 +424,9 @@ public class BulletinService {
         boolean isConge = isCongePaye(session);
         boolean isRetraite = isIndemniteRetraite(session);
         boolean isStc = isStc(session);
-        boolean isGratif = !is13 && !is14 && !isConge && !isRetraite && !isStc && isGratification(session != null ? session.getTypeSession() : null);
-        boolean isExtra = isExtraordinaire(session != null ? session.getTypeSession() : null) || is13 || is14 || isConge || isRetraite || isStc;
+        boolean isDiffMat = isDifferentielMaternite(session);
+        boolean isGratif = !is13 && !is14 && !isConge && !isRetraite && !isStc && !isDiffMat && isGratification(session != null ? session.getTypeSession() : null);
+        boolean isExtra = isExtraordinaire(session != null ? session.getTypeSession() : null) || is13 || is14 || isConge || isRetraite || isStc || isDiffMat;
         boolean is13Ou14eme = is13 || is14;
 
         // Calcul automatique du nombre de jours travaillés selon dateEmbauche (prorata temporis)
@@ -261,8 +489,7 @@ public class BulletinService {
             Grade grade = emp.getGradeObj();
             String finalCode = generateBulletinCode(session, emp);
 
-            Bulletin bulletin = new Bulletin();
-            bulletin.setCode(finalCode);
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
             bulletin.setEmployee(emp);
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
@@ -318,8 +545,7 @@ public class BulletinService {
             Grade grade = emp.getGradeObj();
             String finalCode = generateBulletinCode(session, emp);
 
-            Bulletin bulletin = new Bulletin();
-            bulletin.setCode(finalCode);
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
             bulletin.setEmployee(emp);
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
@@ -375,8 +601,8 @@ public class BulletinService {
             cpLine.setMontant(montantConge);
             cpLine.setOrdre(1);
 
-            // Cotisation CNSS (5.5% plafonné à 600 000 FCFA => max 33 000 FCFA)
-            BigDecimal baseCnss = montantConge.min(new BigDecimal("600000"));
+            // Cotisation CNSS (5.5% plafonné à 800 000 FCFA => max 44 000 FCFA)
+            BigDecimal baseCnss = montantConge.min(new BigDecimal("800000.00"));
             BigDecimal cnssEmploye = money(baseCnss.multiply(new BigDecimal("0.055")));
             BigDecimal cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
 
@@ -400,8 +626,7 @@ public class BulletinService {
             Grade grade = emp.getGradeObj();
             String finalCode = generateBulletinCode(session, emp);
 
-            Bulletin bulletin = new Bulletin();
-            bulletin.setCode(finalCode);
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
             bulletin.setEmployee(emp);
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
@@ -469,7 +694,9 @@ public class BulletinService {
         if (isRetraite) {
             try {
                 employeeProcessService.sync(emp, null);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
+            }
             List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
 
             BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
@@ -497,8 +724,7 @@ public class BulletinService {
             Grade grade = emp.getGradeObj();
             String finalCode = generateBulletinCode(session, emp);
 
-            Bulletin bulletin = new Bulletin();
-            bulletin.setCode(finalCode);
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
             bulletin.setEmployee(emp);
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
@@ -535,13 +761,140 @@ public class BulletinService {
         }
 
         // ====================================================================
+        // 4.bis SESSION EXTRAORDINAIRE : DIFFÉRENTIEL / COMPLÉMENT MATERNITÉ
+        // Prise en charge CNSS à 100% jusqu'à 800 000 F / mois.
+        // La banque verse le complément uniquement sur la part excédant 800 000 F.
+        // ====================================================================
+        if (isDiffMat) {
+            try {
+                employeeProcessService.sync(emp, null);
+            } catch (Exception e) {
+                log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
+            }
+            List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId()).stream()
+                    .filter(row -> !Boolean.FALSE.equals(row.getActif()))
+                    .filter(row -> {
+                        String code = (row.getTypeIndemnite() != null && row.getTypeIndemnite().getCode() != null)
+                                ? row.getTypeIndemnite().getCode().toUpperCase(Locale.ROOT) : "";
+                        String lib = row.getLibelle() != null ? row.getLibelle().toUpperCase(Locale.ROOT) : "";
+                        if (Boolean.TRUE.equals(emp.getVehiculeFourni()) && (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT"))) return false;
+                        if (Boolean.TRUE.equals(emp.getLogementFourni()) && (code.contains("LOG") || code.contains("MAISON") || lib.contains("LOGEMENT"))) return false;
+                        return true;
+                    })
+                    .toList();
+            BigDecimal totIndem = rawIndemnites.stream()
+                    .map(i -> i.getMontant() != null ? money(new BigDecimal(String.valueOf(i.getMontant()))) : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Prime ancienneté
+            BigDecimal txAnc = BigDecimal.ZERO;
+            int ansAnc = (emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
+            if (emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank()) {
+                try {
+                    LocalDate dateEmb = LocalDate.parse(emp.getDateEmbauche().trim());
+                    LocalDate dateRef = debutPeriode != null ? debutPeriode : LocalDate.now();
+                    ansAnc += Math.max(0, java.time.Period.between(dateEmb, dateRef).getYears());
+                } catch (Exception ignored) {}
+            }
+            if (ansAnc == 3) txAnc = new BigDecimal("5.00");
+            else if (ansAnc > 3) txAnc = new BigDecimal(5 + (ansAnc - 3)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal pAnc = money(calculatePercentage(salaireBase, txAnc));
+
+            BigDecimal remuBruteNormale = money(salaireBase.add(surSalaire).add(pAnc).add(totIndem));
+            BigDecimal plafondCnss = new BigDecimal("800000.00");
+
+            if (remuBruteNormale.compareTo(plafondCnss) <= 0) {
+                // Salaire entièrement couvert par la CNSS (0 FCFA de charge employeur banque)
+                return null;
+            }
+
+            BigDecimal complementBrut = money(remuBruteNormale.subtract(plafondCnss));
+
+            BulletinLine compLine = new BulletinLine();
+            compLine.setCode("COMPL_MATERNITE");
+            compLine.setLibelle("Complément Maternité (Dépassement Plafond CNSS 800 000 FCFA)");
+            compLine.setTypeLigne("GAIN");
+            compLine.setBaseCalcul(remuBruteNormale);
+            compLine.setTaux(new BigDecimal("100.00"));
+            compLine.setMontant(complementBrut);
+            compLine.setOrdre(1);
+
+            int nbCharges = 0;
+            try {
+                nbCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(emp.getId()));
+            } catch (Exception ignored) {}
+
+            BigDecimal abattementForfaitaire = money(calculatePercentage(complementBrut, new BigDecimal("20.00")).min(new BigDecimal("75000.00")));
+            BigDecimal baseImposable = money(complementBrut.subtract(abattementForfaitaire).max(BigDecimal.ZERO));
+            BigDecimal iutsSansCharge = calculateIuts(baseImposable);
+            BigDecimal tauxReduction = reductionRate(nbCharges);
+            BigDecimal reductionIuts = money(iutsSansCharge.multiply(tauxReduction).divide(CENT, 8, RoundingMode.HALF_UP));
+            BigDecimal impotIuts = money(iutsSansCharge.subtract(reductionIuts).max(BigDecimal.ZERO));
+
+            BigDecimal netPayer = money(complementBrut.subtract(impotIuts));
+
+            Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+            Grade grade = emp.getGradeObj();
+            String finalCode = generateBulletinCode(session, emp);
+
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
+            bulletin.setEmployee(emp);
+            bulletin.setSessionPaie(session);
+            bulletin.setGrade(grade);
+            bulletin.setContrat(contrat);
+            bulletin.setTypeSession("EXTRAORDINAIRE");
+            bulletin.setNatureSession("DIFFERENTIEL_MATERNITE");
+            bulletin.setDateFrom(debutPeriode);
+            bulletin.setDateTo(finPeriode);
+            bulletin.setScheduledWorkingDays(scheduledDays);
+            bulletin.setWorkedDays(workedDays);
+            bulletin.setSalaireBase(salaireBase);
+            bulletin.setSurSalaire(surSalaire);
+            bulletin.setTotalIndemnites(BigDecimal.ZERO);
+            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setSalaireBrut(complementBrut);
+            bulletin.setTotalExonerations(BigDecimal.ZERO);
+            bulletin.setAbattementForfaitaire(abattementForfaitaire);
+            bulletin.setBaseImposable(baseImposable);
+            bulletin.setCotisationCnss(BigDecimal.ZERO); // Plafond 800k déjà couvert par CNSS
+            bulletin.setImpotIutsSansCharge(iutsSansCharge);
+            bulletin.setReductionIutsCharge(reductionIuts);
+            bulletin.setImpotIuts(impotIuts);
+            bulletin.setTotalRetenuesSociales(BigDecimal.ZERO);
+            bulletin.setTotalPrecomptes(BigDecimal.ZERO);
+            bulletin.setTotalRetenues(impotIuts);
+            bulletin.setTotalCotisationsPatronales(BigDecimal.ZERO);
+            bulletin.setSalaireNet(netPayer);
+            bulletin.setStatut("GENERE");
+            bulletin.setDateCalcul(LocalDateTime.now());
+
+            bulletin.addLine(compLine);
+            if (impotIuts.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine iutsLine = new BulletinLine();
+                iutsLine.setCode("IUTS");
+                iutsLine.setLibelle("RETENUE IUTS");
+                iutsLine.setTypeLigne("IMPOT");
+                iutsLine.setBaseCalcul(baseImposable);
+                iutsLine.setTaux(BigDecimal.valueOf(nbCharges));
+                iutsLine.setMontant(impotIuts);
+                iutsLine.setOrdre(21);
+                bulletin.addLine(iutsLine);
+            }
+
+            bulletin = bulletinRepository.save(bulletin);
+            return bulletin;
+        }
+
+        // ====================================================================
         // 5. SESSION EXTRAORDINAIRE : SOLDE DE TOUT COMPTE (STC)
         // Licenciement + Préavis + Congés acquis + 13e & 14e prorata - Prêts/Trop-perçus
         // ====================================================================
         if (isStc) {
             try {
                 employeeProcessService.sync(emp, null);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
+            }
             List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
 
             BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
@@ -578,8 +931,24 @@ public class BulletinService {
 
             // 13ème et 14ème mois au prorata
             int moisDepart = 12;
-            if (session != null && session.getMois() != null) {
-                try { moisDepart = Integer.parseInt(session.getMois()); } catch (Exception ignored) {}
+            if (emp.getId() != null) {
+                try {
+                    List<Contrat> contrats = contratRepository.findByEmployeeId(emp.getId());
+                    if (contrats != null && !contrats.isEmpty()) {
+                        for (Contrat c : contrats) {
+                            if (c.getDateFin() != null && !c.getDateFin().trim().isEmpty()) {
+                                LocalDate df = LocalDate.parse(c.getDateFin().trim());
+                                moisDepart = df.getMonthValue();
+                                break;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (moisDepart == 12 && session != null && session.getDateTo() != null) {
+                moisDepart = session.getDateTo().getMonthValue();
+            } else if (moisDepart == 12 && session != null && session.getMois() != null) {
+                try { moisDepart = parseMois(session.getMois()); } catch (Exception ignored) { moisDepart = 12; }
             }
             BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
             BigDecimal prorata13eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
@@ -593,7 +962,7 @@ public class BulletinService {
 
             // Éléments imposables / assujettis (hors indemnité de licenciement exonérée)
             BigDecimal brutSoumis = indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme).add(prorata14eme);
-            BigDecimal baseCnss = brutSoumis.min(new BigDecimal("600000"));
+            BigDecimal baseCnss = brutSoumis.min(new BigDecimal("800000.00"));
             BigDecimal cnssEmploye = money(baseCnss.multiply(new BigDecimal("0.055")));
             BigDecimal cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
 
@@ -707,10 +1076,7 @@ public class BulletinService {
                 }
             }
 
-            List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "EN_COURS");
-            if (precomptesVariables.isEmpty()) {
-                precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
-            }
+            List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF"));
             for (Precompte prec : precomptesVariables) {
                 BigDecimal solde = prec.getMontantRestant() != null ? prec.getMontantRestant() : prec.getAmount();
                 if (solde != null && solde.compareTo(BigDecimal.ZERO) > 0) {
@@ -749,8 +1115,7 @@ public class BulletinService {
             Grade grade = emp.getGradeObj();
             String finalCode = generateBulletinCode(session, emp);
 
-            Bulletin bulletin = new Bulletin();
-            bulletin.setCode(finalCode);
+            Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
             bulletin.setEmployee(emp);
             bulletin.setSessionPaie(session);
             bulletin.setGrade(grade);
@@ -967,39 +1332,45 @@ public class BulletinService {
         // Salaire Brut fiscal (SB = Rémunération Brute - Cotisation CNSS) selon circulaire d'application du CGI BF
         BigDecimal brutApresCnss = money(remunerationBrute.subtract(cotisationCnss).max(BigDecimal.ZERO));
 
-        // Exonérations fiscales : prioritaires depuis la persistance PostgreSQL (exoneration_employe)
-        List<ExonerationEmploye> exosEmploye = exonerationRepository.findByEmployeeId(emp.getId());
+        // Exonérations fiscales : calcul dynamique légal permanent (CGI BF Art. 106) sans mémoire figée
         BigDecimal totalExonerations = BigDecimal.ZERO;
-        if (exosEmploye != null && !exosEmploye.isEmpty()) {
-            for (ExonerationEmploye exo : exosEmploye) {
-                if (exo.getMontant() != null && exo.getMontant() > 0) {
-                    BigDecimal mExo = money(BigDecimal.valueOf(exo.getMontant())).multiply(ratio);
-                    totalExonerations = totalExonerations.add(money(mExo));
+        for (IndemniteEmploye ind : indemnites) {
+            BigDecimal mIndem = money(ind.getMontant()).multiply(ratio);
+            if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            TypeIndemnite type = ind.getTypeIndemnite();
+            if (type == null) continue;
+
+            BigDecimal tauxExo = (type.getTauxExoneration() != null && type.getTauxExoneration() > 0)
+                    ? BigDecimal.valueOf(type.getTauxExoneration()) : BigDecimal.ZERO;
+            BigDecimal plafondExo = (type.getPlafondExoneration() != null && type.getPlafondExoneration() > 0)
+                    ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
+
+            if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                // Taux appliqué sur le Brut Fiscal (brut après CNSS), plafonné par le plafond et le montant de l'indemnité
+                BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
+                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        : mIndem;
+                if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                    limiteTheorique = limiteTheorique.min(plafondExo);
                 }
-            }
-        } else {
-            for (IndemniteEmploye ind : indemnites) {
-                BigDecimal mIndem = money(ind.getMontant()).multiply(ratio);
-                if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
+                BigDecimal exo = mIndem.min(limiteTheorique);
+                totalExonerations = totalExonerations.add(money(exo));
 
-                TypeIndemnite type = ind.getTypeIndemnite();
-                if (type == null) continue;
-
-                BigDecimal tauxExo = (type.getTauxExoneration() != null && type.getTauxExoneration() > 0)
-                        ? BigDecimal.valueOf(type.getTauxExoneration()) : BigDecimal.ZERO;
-                BigDecimal plafondExo = (type.getPlafondExoneration() != null && type.getPlafondExoneration() > 0)
-                        ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
-
-                if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal premiereLimite = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                            ? calculatePercentage(brutApresCnss, tauxExo)
-                            : mIndem;
-                    BigDecimal exo = mIndem.min(premiereLimite);
-                    if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                        exo = exo.min(plafondExo);
-                    }
-                    totalExonerations = totalExonerations.add(money(exo));
-                }
+                // Alignement automatique de la table de persistance exoneration_employe
+                try {
+                    ExonerationEmploye exoEntity = exonerationRepository.findByIndemniteEmployeId(ind.getId())
+                            .orElseGet(ExonerationEmploye::new);
+                    exoEntity.setEmployee(emp);
+                    exoEntity.setTypeIndemnite(type);
+                    exoEntity.setIndemniteEmploye(ind);
+                    exoEntity.setLibelle(type.getName());
+                    exoEntity.setTauxExonere(tauxExo.doubleValue());
+                    exoEntity.setPlafondExonere(plafondExo.doubleValue());
+                    exoEntity.setMontantAutorise(limiteTheorique.doubleValue());
+                    exoEntity.setMontant(exo.doubleValue());
+                    exonerationRepository.save(exoEntity);
+                } catch (Exception ignored) {}
             }
         }
         Categorie cat = situation != null ? situation.getCategorie() : null;
@@ -1110,19 +1481,19 @@ public class BulletinService {
                 indLine.setLibelle(indLib);
                 indLine.setTypeLigne("GAIN");
                 indLine.setBaseCalcul(money(mIndem));
-                BigDecimal tauxAffichage;
+                BigDecimal tauxAffichage = null;
                 String c = indCode != null ? indCode.toUpperCase(Locale.ROOT) : "";
                 String l = indLib != null ? indLib.toUpperCase(Locale.ROOT) : "";
                 if (c.contains("CP") || l.contains("CASH") || c.contains("SAL_BASE") || c.contains("SUR_SALAIRE")) {
                     tauxAffichage = workedDays != null ? workedDays : new BigDecimal("30.00");
-                } else if (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getTauxExoneration() != null && ind.getTypeIndemnite().getTauxExoneration() > 0) {
-                    tauxAffichage = money(BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()));
-                } else if (c.contains("LOG") || l.contains("LOGEMENT")) {
-                    tauxAffichage = new BigDecimal("20.00");
-                } else if (c.contains("TRP") || l.contains("TRANSPORT") || c.contains("CS") || l.contains("CAISSE") || c.contains("SUJ") || l.contains("SUJETION")) {
-                    tauxAffichage = new BigDecimal("5.00");
                 } else {
-                    tauxAffichage = new BigDecimal("100.00");
+                    TypeIndemnite ti = ind.getTypeIndemnite();
+                    if (ti == null && typeIndemniteRepository != null) {
+                        ti = findTypeIndemniteDynamic(indCode, indLib);
+                    }
+                    if (ti != null && ti.getTauxExoneration() != null && ti.getTauxExoneration() > 0) {
+                        tauxAffichage = money(BigDecimal.valueOf(ti.getTauxExoneration()));
+                    }
                 }
                 indLine.setTaux(tauxAffichage);
                 indLine.setMontant(money(mIndem));
@@ -1177,7 +1548,7 @@ public class BulletinService {
                 avLine.setLibelle(finalLibelle);
                 avLine.setTypeLigne("GAIN");
                 avLine.setBaseCalcul(av.getAmount());
-                avLine.setTaux(new BigDecimal("100.00"));
+                avLine.setTaux(null);
                 avLine.setMontant(m);
                 avLine.setOrdre(ordre++);
                 lines.add(avLine);
@@ -1333,10 +1704,7 @@ public class BulletinService {
             lines.add(precLine);
         }
 
-        List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "EN_COURS");
-        if (precomptesVariables.isEmpty()) {
-            precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
-        }
+        List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF"));
         for (Precompte prec : precomptesVariables) {
             if (prec.getAmount() != null && prec.getAmount().compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal m = prec.getAmount();
@@ -1409,8 +1777,7 @@ public class BulletinService {
             }
         }
 
-        Bulletin bulletin = new Bulletin();
-        bulletin.setCode(finalCode);
+        Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
         bulletin.setEmployee(emp);
         bulletin.setSessionPaie(session);
         bulletin.setGrade(grade);
@@ -1478,7 +1845,11 @@ public class BulletinService {
     @Transactional
     public void validateSession(Long sessionPaieId) {
         SessionPaie session = sessionPaieRepository.findById(sessionPaieId)
-                .orElseThrow(() -> new RuntimeException("Session non trouvée: #" + sessionPaieId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée: #" + sessionPaieId));
+
+        if ("VALIDE".equalsIgnoreCase(session.getStatut()) || "CLOTURE".equalsIgnoreCase(session.getStatut())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La session #" + sessionPaieId + " est déjà " + session.getStatut() + " et ne peut pas être revalidée.");
+        }
 
         List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
         for (Bulletin b : bulletins) {
@@ -1501,10 +1872,7 @@ public class BulletinService {
                 precompteRepository.save(p);
             }
 
-            List<Precompte> precomptesVar = precompteVariableRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "EN_COURS");
-            if (precomptesVar.isEmpty()) {
-                precomptesVar = precompteVariableRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
-            }
+            List<Precompte> precomptesVar = precompteVariableRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("EN_COURS", "ACTIF"));
             for (Precompte p : precomptesVar) {
                 BigDecimal m = p.getAmount();
                 if (p.getRetenueMensuelle() != null && p.getRetenueMensuelle().compareTo(BigDecimal.ZERO) > 0) {
@@ -1564,6 +1932,7 @@ public class BulletinService {
 
         session.setStatut("VALIDE");
         session.setDateValidation(LocalDateTime.now());
+        session.setNombreValide(bulletins.size());
         sessionPaieRepository.save(session);
     }
 
@@ -1648,6 +2017,9 @@ public class BulletinService {
         Bulletin b = null;
         if (dto.getId() != null) {
             b = bulletinRepository.findById(dto.getId()).orElse(null);
+            if (b != null) {
+                assertModifiable(b);
+            }
         }
 
         if (b == null) {
@@ -1814,72 +2186,26 @@ public class BulletinService {
     @Transactional
     public BulletinDto updateBulletin(Long id, BulletinDto dto) {
         Bulletin b = bulletinRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bulletin introuvable avec ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulletin introuvable avec ID: " + id));
 
-        if (dto.getWorkedDays() != null) b.setWorkedDays(dto.getWorkedDays());
-        if (dto.getScheduledWorkingDays() != null) b.setScheduledWorkingDays(dto.getScheduledWorkingDays());
-        if (dto.getSalaireBase() != null) b.setSalaireBase(dto.getSalaireBase());
-        if (dto.getSurSalaire() != null) b.setSurSalaire(dto.getSurSalaire());
-        if (dto.getJustificationEcart() != null) b.setJustificationEcart(dto.getJustificationEcart());
-        if (dto.getTotalIndemnites() != null) b.setTotalIndemnites(dto.getTotalIndemnites());
-        if (dto.getTotalAvoirs() != null) b.setTotalAvoirs(dto.getTotalAvoirs());
-        if (dto.getSalaireBrut() != null) b.setSalaireBrut(dto.getSalaireBrut());
-        if (dto.getBaseImposable() != null) b.setBaseImposable(dto.getBaseImposable());
-        if (dto.getCotisationCnss() != null) b.setCotisationCnss(dto.getCotisationCnss());
-        if (dto.getImpotIuts() != null) b.setImpotIuts(dto.getImpotIuts());
-        if (dto.getTotalRetenues() != null) b.setTotalRetenues(dto.getTotalRetenues());
-        if (dto.getTotalPrecomptes() != null) b.setTotalPrecomptes(dto.getTotalPrecomptes());
-        if (dto.getTotalCotisationsPatronales() != null) b.setTotalCotisationsPatronales(dto.getTotalCotisationsPatronales());
-        if (dto.getSalaireNet() != null) b.setSalaireNet(dto.getSalaireNet());
-        if (dto.getStatut() != null) {
-            b.setStatut(dto.getStatut());
-            if ("VALIDE".equalsIgnoreCase(dto.getStatut()) && b.getDateValidation() == null) {
-                b.setDateValidation(LocalDateTime.now());
-            }
+        // RÈGLE V3 : Verrouillage strict de bulletin
+        assertModifiable(b);
+
+        BigDecimal workedDays = dto.getWorkedDays() != null ? dto.getWorkedDays() : b.getWorkedDays();
+        BigDecimal scheduledDays = dto.getScheduledWorkingDays() != null ? dto.getScheduledWorkingDays() : b.getScheduledWorkingDays();
+
+        // Recalcul officiel côté serveur par le moteur de paie (interdiction d'écraser arbitrairement avec des montants non vérifiés)
+        Bulletin updated = computeAndSaveBulletin(b.getSessionPaie(), b.getEmployee(), workedDays, scheduledDays, b);
+
+        if (dto.getJustificationEcart() != null) {
+            updated.setJustificationEcart(dto.getJustificationEcart());
+            updated = bulletinRepository.save(updated);
         }
 
-        if (dto.getLines() != null && !dto.getLines().isEmpty()) {
-            if (b.getLines() == null) {
-                b.setLines(new ArrayList<>());
-            } else {
-                b.getLines().clear();
-            }
-
-            int ordre = 1;
-            for (BulletinLineDto l : dto.getLines()) {
-                String rawLib = l.getLibelle() != null ? l.getLibelle() : (l.getName() != null ? l.getName() : "Ligne Bulletin");
-                String libelle = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim();
-                String typeLigne = l.getTypeLigne() != null ? l.getTypeLigne() : (l.getCategory() != null ? l.getCategory() : "GAIN");
-                BigDecimal taux = l.getTaux() != null ? l.getTaux() : (l.getRate() != null ? BigDecimal.valueOf(l.getRate()) : null);
-                BigDecimal montant = l.getMontant() != null ? l.getMontant() : (l.getAmount() != null ? BigDecimal.valueOf(Math.abs(l.getAmount())) : BigDecimal.ZERO);
-                String lCode = l.getCode() != null ? l.getCode() : "LINE";
-
-                if (lCode.length() > 50) lCode = lCode.substring(0, 50);
-                if (libelle.length() > 150) libelle = libelle.substring(0, 150);
-                if (typeLigne.length() > 50) typeLigne = typeLigne.substring(0, 50);
-
-                if ((lCode.contains("CNSS") || libelle.contains("CNSS")) && !typeLigne.contains("PATRON") && !"EMPLOYEUR".equalsIgnoreCase(typeLigne)) {
-                    taux = new BigDecimal("5.50");
-                }
-
-                BulletinLine line = new BulletinLine();
-                line.setCode(lCode);
-                line.setLibelle(libelle);
-                line.setTypeLigne(typeLigne);
-                line.setBaseCalcul(l.getBaseCalcul());
-                line.setTaux(taux);
-                line.setMontant(montant);
-                line.setPartPatronale(l.getPartPatronale());
-                line.setOrdre(l.getOrdre() != null ? l.getOrdre() : ordre++);
-                b.addLine(line);
-            }
+        if (updated.getSessionPaie() != null && updated.getSessionPaie().getId() != null) {
+            refreshSessionTotals(updated.getSessionPaie().getId());
         }
-
-        Bulletin saved = bulletinRepository.save(b);
-        if (saved.getSessionPaie() != null && saved.getSessionPaie().getId() != null) {
-            refreshSessionTotals(saved.getSessionPaie().getId());
-        }
-        return toDto(saved);
+        return toDto(updated);
     }
 
     @Transactional
@@ -1911,7 +2237,14 @@ public class BulletinService {
 
     @Transactional
     public void deleteBulletin(Long id) {
-        bulletinRepository.deleteById(id);
+        Bulletin b = bulletinRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulletin introuvable avec ID: #" + id));
+        assertModifiable(b);
+        Long sessId = b.getSessionPaie() != null ? b.getSessionPaie().getId() : null;
+        bulletinRepository.delete(b);
+        if (sessId != null) {
+            refreshSessionTotals(sessId);
+        }
     }
 
     public BulletinDto toDto(Bulletin b) {
@@ -2530,6 +2863,22 @@ public class BulletinService {
         return t.contains("STC") || t.contains("SOLDE DE TOUT COMPTE");
     }
 
+    public static boolean isDifferentielMaternite(SessionPaie session) {
+        if (session == null) return false;
+        String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
+        if (nat.equals("DIFFERENTIEL_MATERNITE") || nat.equals("COMPLEMENT_MATERNITE") || nat.contains("MATERNITE") || nat.contains("MATERNITÉ")) return true;
+        String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
+        String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
+        String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
+        return n.contains("MATERNITE") || n.contains("MATERNITÉ") || c.contains("MATERNITE") || t.contains("MATERNITE");
+    }
+
+    public static boolean isDifferentielMaternite(String text) {
+        if (text == null) return false;
+        String t = text.trim().toUpperCase(Locale.ROOT);
+        return t.contains("MATERNITE") || t.contains("MATERNITÉ");
+    }
+
     private static boolean isGratification(String typeSession) {
         if (typeSession == null) return false;
         String t = typeSession.trim().toUpperCase(Locale.ROOT);
@@ -2539,7 +2888,7 @@ public class BulletinService {
     private static boolean isExtraordinaire(String typeSession) {
         if (typeSession == null) return false;
         String t = typeSession.trim().toUpperCase(Locale.ROOT);
-        return t.contains("EXTRA");
+        return t.contains("EXTRA") || t.contains("MATERNITE") || t.contains("MATERNITÉ");
     }
 
     private static int getIndemniteSortWeight(String libelle) {
@@ -2595,7 +2944,16 @@ public class BulletinService {
         if (past == null || past.isEmpty()) {
             return defaultMonthlyBrut != null ? defaultMonthlyBrut.multiply(new BigDecimal("12")) : BigDecimal.ZERO;
         }
+        // RÈGLE V3 : Seuls les bulletins réels validés ou clôturés de sessions ordinaires doivent composer les 12 derniers mois
         List<Bulletin> last12 = past.stream()
+                .filter(b -> ("VALIDE".equalsIgnoreCase(b.getStatut()) || "CLOTURE".equalsIgnoreCase(b.getStatut())))
+                .filter(b -> {
+                    String nature = b.getNatureSession() != null ? b.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                    String type = b.getTypeSession() != null ? b.getTypeSession().toUpperCase(Locale.ROOT) : "";
+                    boolean isExtra = "EXTRAORDINAIRE".equals(type) || nature.contains("13") || nature.contains("14")
+                            || nature.contains("STC") || nature.contains("CONGE") || nature.contains("RETRAITE");
+                    return !isExtra;
+                })
                 .filter(b -> b.getSalaireBrut() != null && b.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0)
                 .limit(12)
                 .toList();
@@ -2613,13 +2971,17 @@ public class BulletinService {
     }
 
     private BigDecimal getJoursCongeAcquis(Long employeeId) {
+        if (employeeId == null) return BigDecimal.ZERO;
         try {
             com.bpbf.sirh_backend.dtos.SoldeCongeDto solde = congeWorkflowService.getSoldeForEmployee(employeeId);
-            if (solde != null && solde.getSoldeRestant() != null && solde.getSoldeRestant() > 0) {
-                return new BigDecimal(solde.getSoldeRestant()).setScale(1, RoundingMode.HALF_UP);
+            if (solde != null && solde.getSoldeRestant() != null) {
+                double val = Math.max(0.0, solde.getSoldeRestant());
+                return BigDecimal.valueOf(val).setScale(1, RoundingMode.HALF_UP);
             }
-        } catch (Exception ignored) {}
-        return new BigDecimal("30.00");
+        } catch (Exception e) {
+            log.warn("Impossible de récupérer le solde de congé pour l'employé #{}: {}", employeeId, e.getMessage());
+        }
+        return BigDecimal.ZERO;
     }
 
     private double getAncienneteExacte(Employee emp, SessionPaie session) {
@@ -2709,5 +3071,23 @@ public class BulletinService {
         nf.setMinimumFractionDigits(0);
         nf.setMaximumFractionDigits(0);
         return nf.format(amount);
+    }
+
+    private TypeIndemnite findTypeIndemniteDynamic(String code, String libelle) {
+        if (typeIndemniteRepository == null) return null;
+        if (code != null && !code.isBlank()) {
+            for (TypeIndemnite ti : typeIndemniteRepository.findAll()) {
+                if (code.equalsIgnoreCase(ti.getCode())) return ti;
+            }
+        }
+        if (libelle != null && !libelle.isBlank()) {
+            String normLib = BulletinPdfService.normalizeText(libelle);
+            for (TypeIndemnite ti : typeIndemniteRepository.findAll()) {
+                if (ti.getName() != null && BulletinPdfService.normalizeText(ti.getName()).equalsIgnoreCase(normLib)) {
+                    return ti;
+                }
+            }
+        }
+        return null;
     }
 }

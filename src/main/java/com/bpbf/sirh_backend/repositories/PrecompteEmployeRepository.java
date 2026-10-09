@@ -12,6 +12,7 @@ public interface PrecompteEmployeRepository extends JpaRepository<PrecompteEmplo
     List<PrecompteEmploye> findByEmployeeId(Long employeeId);
 
     List<PrecompteEmploye> findByEmployeeIdAndStatut(Long employeeId, String statut);
+    List<PrecompteEmploye> findByEmployeeIdAndStatutIn(Long employeeId, java.util.Collection<String> statuts);
 
     List<PrecompteEmploye> findByStatut(String statut);
 }

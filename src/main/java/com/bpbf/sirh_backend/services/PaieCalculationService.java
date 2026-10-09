@@ -89,23 +89,28 @@ public class PaieCalculationService {
             String libelle = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
             indemnites.add(new PaieBulletinDto.IndemniteItemDto(code, libelle, m));
             totalIndemnites += m;
+        }
 
+        Double salaireBrut = salaireBase + totalIndemnites;
+        Double cotisationCNSS = Math.round(Math.min(salaireBrut, 800000.0) * 0.055 * 100.0) / 100.0;
+        Double brutFiscal = Math.max(0.0, salaireBrut - cotisationCNSS);
+
+        for (IndemniteEmploye ind : empIndemnites) {
+            if (Boolean.FALSE.equals(ind.getActif())) continue;
+            Double m = ind.getMontant() != null ? ind.getMontant().doubleValue() : 0.0;
             if (ind.getTypeIndemnite() != null) {
                 Double tauxExo = ind.getTypeIndemnite().getTauxExoneration();
                 Double plafondExo = ind.getTypeIndemnite().getPlafondExoneration();
-                if (tauxExo != null && tauxExo > 0) {
-                    double exoCalc = m * (tauxExo / 100.0);
-                    if (plafondExo != null && plafondExo > 0 && exoCalc > plafondExo) {
-                        exoCalc = plafondExo;
-                    }
+                if ((tauxExo != null && tauxExo > 0) || (plafondExo != null && plafondExo > 0)) {
+                    double limiteTaux = (tauxExo != null && tauxExo > 0) ? brutFiscal * (tauxExo / 100.0) : m;
+                    double limiteTheorique = (plafondExo != null && plafondExo > 0) ? Math.min(limiteTaux, plafondExo) : limiteTaux;
+                    double exoCalc = Math.min(m, limiteTheorique);
                     totalExonere += exoCalc;
                 }
             }
         }
 
-        Double salaireBrut = salaireBase + totalIndemnites;
-        Double salaireImposable = Math.max(0.0, salaireBrut - totalExonere);
-        Double cotisationCNSS = Math.round(Math.min(salaireBrut, 800000.0) * 0.055 * 100.0) / 100.0;
+        Double salaireImposable = Math.max(0.0, brutFiscal - totalExonere);
         Double impotIUTS = Math.round(salaireImposable * 0.10 * 100.0) / 100.0;
         Double totalRetenues = cotisationCNSS + impotIUTS;
         Double salaireNet = salaireBrut - totalRetenues;

@@ -36,6 +36,8 @@ public class SimulationRequestDto {
     private Double indemniteTransport;
     private Double indemniteFonction;
     private Double indemniteCaisse;
+    private Double indemniteSujetion;
+    private Double indemniteCashPoint;
     private Double autresIndemnites;
 
     // Poste (Emploi) & Fonction à assurer

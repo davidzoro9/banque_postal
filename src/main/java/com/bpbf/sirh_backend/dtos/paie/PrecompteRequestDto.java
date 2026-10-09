@@ -25,4 +25,6 @@ public class PrecompteRequestDto {
     private Integer echeance;
     private LocalDate dateEcheance;
     private String statut;
+    private String justificatif;
+    private String motifSuspension;
 }

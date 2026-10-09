@@ -51,8 +51,38 @@ public class PrecompteService {
                 .orElseThrow(() -> new RuntimeException("Précompte non trouvé: #" + id));
     }
 
+    private void validatePrecompteDto(PrecompteEmployeDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Les données du précompte sont requises");
+        }
+        if (dto.getEmployeeId() == null) {
+            throw new IllegalArgumentException("L'identifiant de l'employé est obligatoire");
+        }
+        if (dto.getMontantInitial() == null || dto.getMontantInitial().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant initial du précompte doit être strictement supérieur à zéro");
+        }
+        if (dto.getMontantMensuel() != null) {
+            if (dto.getMontantMensuel().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Le montant mensuel doit être strictement supérieur à zéro");
+            }
+            if (dto.getMontantMensuel().compareTo(dto.getMontantInitial()) > 0) {
+                throw new IllegalArgumentException("La retenue mensuelle ne peut excéder le montant initial total");
+            }
+        }
+        if (dto.getEcheancesTotal() != null && dto.getEcheancesTotal() <= 0) {
+            throw new IllegalArgumentException("Le nombre total d'échéances doit être supérieur à zéro");
+        }
+        if (dto.getMontantRestant() != null && dto.getMontantRestant().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le montant restant ne peut pas être négatif");
+        }
+        if (dto.getEcheancesRestantes() != null && dto.getEcheancesRestantes() < 0) {
+            throw new IllegalArgumentException("Le nombre d'échéances restantes ne peut pas être négatif");
+        }
+    }
+
     @Transactional
     public PrecompteEmployeDto create(PrecompteEmployeDto dto) {
+        validatePrecompteDto(dto);
         Employee emp = employeeRepository.findById(dto.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employé introuvable: #" + dto.getEmployeeId()));
 
@@ -84,6 +114,7 @@ public class PrecompteService {
 
     @Transactional
     public PrecompteEmployeDto update(Long id, PrecompteEmployeDto dto) {
+        validatePrecompteDto(dto);
         PrecompteEmploye entity = precompteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Précompte non trouvé: #" + id));
 
@@ -100,7 +131,45 @@ public class PrecompteService {
         entity.setDateFinPrevue(dto.getDateFinPrevue());
         entity.setStatut(dto.getStatut());
         entity.setMotif(dto.getMotif());
+        entity.setJustificatif(dto.getJustificatif());
+        entity.setMotifSuspension(dto.getMotifSuspension());
 
+        return toDto(precompteRepository.save(entity));
+    }
+
+    @Transactional
+    public PrecompteEmployeDto solder(Long id, String justificatif, String motif) {
+        PrecompteEmploye entity = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé avec ID: " + id));
+        entity.setStatut("SOLDE");
+        entity.setMontantRestant(java.math.BigDecimal.ZERO);
+        entity.setEcheancesRestantes(0);
+        if (justificatif != null && !justificatif.isBlank()) {
+            entity.setJustificatif(justificatif);
+        }
+        if (motif != null && !motif.isBlank()) {
+            entity.setMotif(motif);
+        }
+        entity.setDateSolde(java.time.LocalDate.now());
+        return toDto(precompteRepository.save(entity));
+    }
+
+    @Transactional
+    public PrecompteEmployeDto suspendre(Long id, String motifSuspension) {
+        PrecompteEmploye entity = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé avec ID: " + id));
+        entity.setStatut("SUSPENDU");
+        entity.setMotifSuspension(motifSuspension != null ? motifSuspension : "Suspension temporaire");
+        entity.setDateSuspension(java.time.LocalDate.now());
+        return toDto(precompteRepository.save(entity));
+    }
+
+    @Transactional
+    public PrecompteEmployeDto reprendre(Long id) {
+        PrecompteEmploye entity = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé avec ID: " + id));
+        entity.setStatut("ACTIF");
+        entity.setDateSuspension(null);
         return toDto(precompteRepository.save(entity));
     }
 
@@ -133,6 +202,10 @@ public class PrecompteService {
                 .dateFinPrevue(e.getDateFinPrevue())
                 .statut(e.getStatut())
                 .motif(e.getMotif())
+                .justificatif(e.getJustificatif())
+                .motifSuspension(e.getMotifSuspension())
+                .dateSuspension(e.getDateSuspension())
+                .dateSolde(e.getDateSolde())
                 .dateCreation(e.getDateCreation())
                 .build();
     }

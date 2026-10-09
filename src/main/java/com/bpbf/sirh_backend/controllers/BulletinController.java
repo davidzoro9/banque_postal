@@ -9,7 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bulletins")
@@ -51,8 +53,28 @@ public class BulletinController {
     }
 
     @PostMapping("/{id}/recalculer")
-    public ResponseEntity<BulletinDto> recalculerBulletin(@PathVariable Long id) {
-        return ResponseEntity.ok(bulletinService.recalculerBulletin(id));
+    public ResponseEntity<BulletinDto> recalculerBulletin(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        BigDecimal workedDays = null;
+        BigDecimal scheduledDays = null;
+        if (body != null) {
+            if (body.get("workedDays") != null) {
+                workedDays = new BigDecimal(body.get("workedDays").toString());
+            }
+            if (body.get("scheduledWorkingDays") != null) {
+                scheduledDays = new BigDecimal(body.get("scheduledWorkingDays").toString());
+            }
+        }
+        return ResponseEntity.ok(bulletinService.recalculerBulletin(id, workedDays, scheduledDays));
+    }
+
+    @PutMapping("/{id}/statut")
+    public ResponseEntity<BulletinDto> updateStatut(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String newStatut = body != null ? (String) body.get("statut") : null;
+        return ResponseEntity.ok(bulletinService.updateStatut(id, newStatut));
     }
 
     @PostMapping("/generer/session/{sessionPaieId}")
@@ -110,9 +132,22 @@ public class BulletinController {
                 .body(pdfBytes);
     }
 
+    @GetMapping("/employee/{employeeId}/zip")
+    public ResponseEntity<byte[]> getEmployeeBulletinsZip(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) Integer annee) {
+        byte[] zipBytes = bulletinPdfService.generateEmployeeBulletinsZip(employeeId, annee);
+        String filename = "Bulletins_BPBF_" + (annee != null ? annee : "Archives") + "_EMP" + employeeId + ".zip";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(zipBytes);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         bulletinService.deleteBulletin(id);
         return ResponseEntity.noContent().build();
     }
 }
+

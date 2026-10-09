@@ -36,7 +36,9 @@ public class Conge {
     @Column(length = 1000)
     private String motif;
     
+    @Column(columnDefinition = "TEXT")
     private String justificatif;
+    private String justificatifNom;
     private String dateDemande;
     private String dateValidation;
     private String validePar;

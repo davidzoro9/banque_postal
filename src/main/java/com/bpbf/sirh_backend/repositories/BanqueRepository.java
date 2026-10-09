@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BanqueRepository extends JpaRepository<Banque, Long> {
-
+    java.util.Optional<Banque> findByCodeIgnoreCase(String code);
 }

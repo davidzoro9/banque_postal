@@ -34,11 +34,16 @@ public interface ParametrageIndemniteRepository extends JpaRepository<Parametrag
 
     /**
      * Tableau 1 : Indemnités Statutaires liées au Grade / Catégorie (Logement, Transport, Sujétion).
+     * Si une catégorie est spécifiée, on sélectionne STRICTEMENT les indemnités de cette catégorie
+     * (ou les indemnités globales au grade qui n'ont aucune restriction de catégorie).
      */
     @Query("""
         select p from ParametrageIndemnite p
         where p.actif = true and p.typeIndemniteObj is not null
-          and (p.gradeObj.id = :gradeId or p.categorieObj.id = :categorieId)
+          and (
+            (:categorieId is not null and p.categorieObj.id = :categorieId)
+            or (:categorieId is null and :gradeId is not null and p.gradeObj.id = :gradeId and p.categorieObj is null)
+          )
         """)
     List<ParametrageIndemnite> findStatutairesByGradeAndCategorie(@Param("gradeId") Long gradeId,
                                                                 @Param("categorieId") Long categorieId);

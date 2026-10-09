@@ -34,6 +34,10 @@ public class PrecompteResponseDto {
     private LocalDate dateDebut;
     private LocalDate dateEcheance;
     private String statut;
+    private String justificatif;
+    private String motifSuspension;
+    private LocalDate dateSuspension;
+    private LocalDate dateSolde;
     @Builder.Default
     private List<PrecompteVersementDto> versements = new ArrayList<>();
 }

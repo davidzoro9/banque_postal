@@ -48,6 +48,24 @@ public class PrecompteController {
         return ResponseEntity.ok(variablesPaieService.updatePrecompte(id, dto));
     }
 
+    @PutMapping("/{id}/solder")
+    public ResponseEntity<PrecompteResponseDto> solder(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
+        String justificatif = body != null ? body.get("justificatif") : null;
+        String motif = body != null ? body.get("motif") : null;
+        return ResponseEntity.ok(variablesPaieService.solderPrecompte(id, justificatif, motif));
+    }
+
+    @PutMapping("/{id}/suspendre")
+    public ResponseEntity<PrecompteResponseDto> suspendre(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
+        String motifSuspension = body != null ? body.get("motifSuspension") : null;
+        return ResponseEntity.ok(variablesPaieService.suspendrePrecompte(id, motifSuspension));
+    }
+
+    @PutMapping("/{id}/reprendre")
+    public ResponseEntity<PrecompteResponseDto> reprendre(@PathVariable Long id) {
+        return ResponseEntity.ok(variablesPaieService.reprendrePrecompte(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         variablesPaieService.deletePrecompte(id);

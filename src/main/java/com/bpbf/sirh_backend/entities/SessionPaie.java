@@ -22,7 +22,7 @@ public class SessionPaie {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
     private String codeSession;
 
     @Column(nullable = false, length = 20)
@@ -31,16 +31,16 @@ public class SessionPaie {
     @Column(nullable = false)
     private Integer annee;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 255)
     private String periode;
 
-    @Column(length = 50)
+    @Column(length = 100)
     private String typeSession; // PAIE_NORMALE, RAPPEL, GRATIFICATION
 
-    @Column(length = 50)
+    @Column(length = 100)
     private String natureSession; // TREIZIEME_MOIS, QUATORZIEME_MOIS, CONGE_PAYE, STC, INDEMNITE_RETRAITE
 
-    @Column(length = 100)
+    @Column(length = 255)
     private String name; // Nom du lot / session
 
     private java.time.LocalDate dateFrom;

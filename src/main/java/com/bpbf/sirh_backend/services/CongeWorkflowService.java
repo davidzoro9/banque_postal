@@ -93,6 +93,15 @@ public class CongeWorkflowService {
             conge.setInterimaire(inter);
             conge.setStatutInterim("EN_ATTENTE_INTERIM");
             conge.setStatut("EN_ATTENTE_INTERIM");
+        } else if ("APPROUVE".equalsIgnoreCase(conge.getStatut()) || "VALIDE".equalsIgnoreCase(conge.getStatut())) {
+            conge.setStatutInterim("NON_REQUIS");
+            conge.setStatut("APPROUVE");
+            if (conge.getDateValidation() == null || conge.getDateValidation().isBlank()) {
+                conge.setDateValidation(LocalDate.now().format(ISO_FORMATTER));
+            }
+            if (conge.getValidePar() == null || conge.getValidePar().isBlank()) {
+                conge.setValidePar("Direction des Ressources Humaines (DRH)");
+            }
         } else {
             conge.setStatutInterim("NON_REQUIS");
             conge.setStatut("EN_ATTENTE_N1");
@@ -108,6 +117,22 @@ public class CongeWorkflowService {
                 type = typeAbsenceCongeRepository.findByCode(conge.getTypeAbsenceConge().getCode()).orElse(null);
             }
             conge.setTypeAbsenceConge(type);
+        }
+
+        // Contrôle d'éligibilité légale selon le sexe de l'employé (Code du travail BF)
+        if (conge.getTypeAbsenceConge() != null && emp != null) {
+            TypeAbsenceConge type = conge.getTypeAbsenceConge();
+            String req = type.getSexeRequis();
+            String code = type.getCode() != null ? type.getCode().toUpperCase() : "";
+            if ("FEMININ".equalsIgnoreCase(req) || code.contains("MATERNITE")) {
+                if (isMasculin(emp)) {
+                    throw new IllegalArgumentException("Conformément au Code du travail et à la réglementation bancaire, le congé de maternité est strictement réservé aux salariées de sexe féminin.");
+                }
+            } else if ("MASCULIN".equalsIgnoreCase(req) || code.contains("PATERNITE")) {
+                if (isFeminin(emp)) {
+                    throw new IllegalArgumentException("Conformément au Code du travail et à la réglementation bancaire, le congé de paternité est strictement réservé aux salariés de sexe masculin.");
+                }
+            }
         }
 
         // Calcul automatique des jours ouvrables
@@ -438,9 +463,11 @@ public class CongeWorkflowService {
             }
 
             String dateStr = current.format(ISO_FORMATTER);
-            boolean isFerie = checkFeries && jourFerieRepository.findByDate(dateStr)
+            boolean isFerieDb = checkFeries && jourFerieRepository.findByDate(dateStr)
                     .map(jf -> Boolean.TRUE.equals(jf.getChomePaye()))
                     .orElse(false);
+            boolean isFerieFixe = checkFeries && isBurkinaFasoFixedHoliday(current);
+            boolean isFerie = isFerieDb || isFerieFixe;
 
             if (!isExcludedDay && !isFerie) {
                 workingDays++;
@@ -448,5 +475,62 @@ public class CongeWorkflowService {
             current = current.plusDays(1);
         }
         return Math.max(1, workingDays);
+    }
+
+    public boolean isFeminin(Employee emp) {
+        if (emp == null || emp.getSexe() == null) return false;
+        String s = emp.getSexe().trim().toUpperCase();
+        return s.startsWith("F") || s.contains("FEM");
+    }
+
+    public boolean isMasculin(Employee emp) {
+        if (emp == null || emp.getSexe() == null) return false;
+        String s = emp.getSexe().trim().toUpperCase();
+        return s.startsWith("M") || s.contains("HOM");
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isEmployeeOnApprovedMaternite(Long employeeId, LocalDate debut, LocalDate fin) {
+        if (employeeId == null || debut == null || fin == null) return false;
+        List<Conge> conges = congeRepository.findByEmployeeId(employeeId);
+        for (Conge c : conges) {
+            String st = c.getStatut() != null ? c.getStatut().toUpperCase() : "";
+            if (st.equals("APPROUVE") || st.equals("VALIDE") || st.equals("ACCEPTE") || st.equals("EN_COURS")) {
+                TypeAbsenceConge tac = c.getTypeAbsenceConge();
+                String code = tac != null && tac.getCode() != null ? tac.getCode().toUpperCase() : "";
+                String name = (tac != null && tac.getName() != null ? tac.getName() : (c.getType() != null ? c.getType() : "")).toUpperCase();
+                if (code.contains("MATERNITE") || name.contains("MATERNITE") || name.contains("MATERNITÉ")) {
+                    if (c.getDateDebut() != null && c.getDateFin() != null) {
+                        try {
+                            LocalDate cDebut = LocalDate.parse(c.getDateDebut().trim());
+                            LocalDate cFin = LocalDate.parse(c.getDateFin().trim());
+                            if (!cDebut.isAfter(fin) && !cFin.isBefore(debut)) {
+                                return true;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static final java.util.Set<String> FERIES_FIXES_BF = java.util.Set.of(
+            "01-01", // Jour de l'An
+            "01-03", // Soulèvement Populaire
+            "03-08", // Journée de la Femme
+            "05-01", // Fête du Travail
+            "08-05", // Fête de l'Indépendance
+            "08-15", // Assomption
+            "10-31", // Journée des Martyrs
+            "11-01", // Toussaint
+            "12-11", // Fête Nationale
+            "12-25"  // Noël
+    );
+
+    private boolean isBurkinaFasoFixedHoliday(LocalDate date) {
+        if (date == null) return false;
+        String mmDd = String.format("%02d-%02d", date.getMonthValue(), date.getDayOfMonth());
+        return FERIES_FIXES_BF.contains(mmDd);
     }
 }

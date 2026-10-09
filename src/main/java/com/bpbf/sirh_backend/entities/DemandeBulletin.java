@@ -46,6 +46,12 @@ public class DemandeBulletin {
     @Column(name = "traite_par")
     private String traitePar;
 
+    @Column(name = "bulletin_id")
+    private Long bulletinId;
+
+    @Column(name = "session_id")
+    private Long sessionId;
+
     @PrePersist
     public void prePersist() {
         if (dateDemande == null) {

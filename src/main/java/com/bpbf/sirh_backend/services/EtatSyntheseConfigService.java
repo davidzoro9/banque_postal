@@ -197,7 +197,11 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("ETAT_BULLETIN", "État Bulletin", "Audit & Contrôle", 
                 "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 16, true, true));
 
+        defaults.add(createEntity("ETAT_OD_COMPTABLE", "Ordre de Débit Comptable (OD de Paie)", "Comptabilité & Paie", 
+                "Écritures comptables équilibrées SYSCOHADA (Débit 64x / Crédit 42x, 43x, 44x) pour import DAF.", "receipt", 17, true, true));
+
         for (EtatSyntheseConfig def : defaults) {
+
             EtatSyntheseConfig existing = repository.findByCode(def.getCode()).orElse(null);
             if (existing == null) {
                 repository.save(def);

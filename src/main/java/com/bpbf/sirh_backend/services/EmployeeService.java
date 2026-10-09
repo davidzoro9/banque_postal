@@ -35,7 +35,7 @@ public class EmployeeService {
     private final UtilisateurRepository utilisateurRepository;
 
     public List<EmployeeDto> getAllEmployees() {
-        List<Employee> employees = employeeRepository.findAll();
+        List<Employee> employees = employeeRepository.findAllWithRelations();
         List<EmployeeDto> dtos = employeeMapper.toDtos(employees);
         for (int i = 0; i < employees.size(); i++) {
             updateDtoFromEntity(employees.get(i), dtos.get(i));
@@ -44,7 +44,8 @@ public class EmployeeService {
     }
 
     public EmployeeDto getEmployeeById(Long id) {
-        Employee employee = employeeRepository.findById(id)
+        Employee employee = employeeRepository.findByIdWithRelations(id)
+                .or(() -> employeeRepository.findById(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'id: " + id));
         EmployeeDto dto = employeeMapper.toDto(employee);
         updateDtoFromEntity(employee, dto);
@@ -52,7 +53,8 @@ public class EmployeeService {
     }
 
     public EmployeeDto getEmployeeByMatricule(String matricule) {
-        Employee employee = employeeRepository.findByMatricule(matricule)
+        Employee employee = employeeRepository.findByMatriculeWithRelations(matricule)
+                .or(() -> employeeRepository.findByMatricule(matricule))
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec le matricule: " + matricule));
         EmployeeDto dto = employeeMapper.toDto(employee);
         updateDtoFromEntity(employee, dto);

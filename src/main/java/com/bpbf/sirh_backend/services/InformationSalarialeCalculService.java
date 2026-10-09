@@ -104,38 +104,45 @@ public class InformationSalarialeCalculService {
         BigDecimal cotisCnssAgent = money(calculatePercentage(baseCnss, new BigDecimal("5.50")));
         BigDecimal brutApresCnss = money(remunerationBrute.subtract(cotisCnssAgent).max(BigDecimal.ZERO));
 
-        // Exonérations fiscales : prioritaires depuis la persistance PostgreSQL (exoneration_employe)
-        List<ExonerationEmploye> exosEmploye = exonerationRepository.findByEmployeeId(employee.getId());
+        // Exonérations fiscales : calcul dynamique légal permanent (CGI BF Art. 106) sans mémoire figée
         BigDecimal totalExonerations = BigDecimal.ZERO;
-        if (exosEmploye != null && !exosEmploye.isEmpty()) {
-            for (ExonerationEmploye exo : exosEmploye) {
-                if (exo.getMontant() != null && exo.getMontant() > 0) {
-                    totalExonerations = totalExonerations.add(money(BigDecimal.valueOf(exo.getMontant())));
+        for (IndemniteEmploye ind : indemnites) {
+            BigDecimal mIndem = money(ind.getMontant());
+            if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            TypeIndemnite type = ind.getTypeIndemnite();
+            if (type == null) continue;
+
+            BigDecimal tauxExo = (type.getTauxExoneration() != null && type.getTauxExoneration() > 0)
+                    ? BigDecimal.valueOf(type.getTauxExoneration()) : BigDecimal.ZERO;
+            BigDecimal plafondExo = (type.getPlafondExoneration() != null && type.getPlafondExoneration() > 0)
+                    ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
+
+            if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                // Taux appliqué sur le Brut Fiscal (brut après CNSS), plafonné par le plafond et le montant de l'indemnité
+                BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
+                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        : mIndem;
+                if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                    limiteTheorique = limiteTheorique.min(plafondExo);
                 }
-            }
-        } else {
-            for (IndemniteEmploye ind : indemnites) {
-                BigDecimal mIndem = money(ind.getMontant());
-                if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
+                BigDecimal exo = mIndem.min(limiteTheorique);
+                totalExonerations = totalExonerations.add(money(exo));
 
-                TypeIndemnite type = ind.getTypeIndemnite();
-                if (type == null) continue;
-
-                BigDecimal tauxExo = (type.getTauxExoneration() != null && type.getTauxExoneration() > 0)
-                        ? BigDecimal.valueOf(type.getTauxExoneration()) : BigDecimal.ZERO;
-                BigDecimal plafondExo = (type.getPlafondExoneration() != null && type.getPlafondExoneration() > 0)
-                        ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
-
-                if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal premiereLimite = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                            ? calculatePercentage(brutApresCnss, tauxExo)
-                            : mIndem;
-                    BigDecimal exo = mIndem.min(premiereLimite);
-                    if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                        exo = exo.min(plafondExo);
-                    }
-                    totalExonerations = totalExonerations.add(money(exo));
-                }
+                // Alignement automatique de la table de persistance exoneration_employe
+                try {
+                    ExonerationEmploye exoEntity = exonerationRepository.findByIndemniteEmployeId(ind.getId())
+                            .orElseGet(ExonerationEmploye::new);
+                    exoEntity.setEmployee(employee);
+                    exoEntity.setTypeIndemnite(type);
+                    exoEntity.setIndemniteEmploye(ind);
+                    exoEntity.setLibelle(type.getName());
+                    exoEntity.setTauxExonere(tauxExo.doubleValue());
+                    exoEntity.setPlafondExonere(plafondExo.doubleValue());
+                    exoEntity.setMontantAutorise(limiteTheorique.doubleValue());
+                    exoEntity.setMontant(exo.doubleValue());
+                    exonerationRepository.save(exoEntity);
+                } catch (Exception ignored) {}
             }
         }
 
@@ -364,38 +371,29 @@ public class InformationSalarialeCalculService {
         BigDecimal cotisCnssAgent = money(calculatePercentage(baseCnss, new BigDecimal("5.50")));
         BigDecimal brutApresCnss = money(remunerationBrute.subtract(cotisCnssAgent).max(BigDecimal.ZERO));
 
-        // Exonérations fiscales : prioritaires depuis la persistance PostgreSQL (exoneration_employe)
-        List<ExonerationEmploye> simExosEmploye = exonerationRepository.findByEmployeeId(employee.getId());
+        // Exonérations fiscales : calcul dynamique légal permanent (CGI BF Art. 106) sans mémoire figée
         BigDecimal totalExonerations = BigDecimal.ZERO;
-        if (simExosEmploye != null && !simExosEmploye.isEmpty()) {
-            for (ExonerationEmploye exo : simExosEmploye) {
-                if (exo.getMontant() != null && exo.getMontant() > 0) {
-                    totalExonerations = totalExonerations.add(money(BigDecimal.valueOf(exo.getMontant())));
+        for (IndemniteEmploye ind : simulateIndemnites) {
+            BigDecimal mIndem = money(ind.getMontant());
+            if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            TypeIndemnite simType = ind.getTypeIndemnite();
+            if (simType == null) continue;
+
+            BigDecimal tauxExo = (simType.getTauxExoneration() != null && simType.getTauxExoneration() > 0)
+                    ? BigDecimal.valueOf(simType.getTauxExoneration()) : BigDecimal.ZERO;
+            BigDecimal plafondExo = (simType.getPlafondExoneration() != null && simType.getPlafondExoneration() > 0)
+                    ? BigDecimal.valueOf(simType.getPlafondExoneration()) : BigDecimal.ZERO;
+
+            if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
+                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        : mIndem;
+                if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
+                    limiteTheorique = limiteTheorique.min(plafondExo);
                 }
-            }
-        } else {
-            for (IndemniteEmploye ind : simulateIndemnites) {
-                BigDecimal mIndem = money(ind.getMontant());
-                if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-                TypeIndemnite simType = ind.getTypeIndemnite();
-                if (simType == null) continue;
-
-                BigDecimal tauxExo = (simType.getTauxExoneration() != null && simType.getTauxExoneration() > 0)
-                        ? BigDecimal.valueOf(simType.getTauxExoneration()) : BigDecimal.ZERO;
-                BigDecimal plafondExo = (simType.getPlafondExoneration() != null && simType.getPlafondExoneration() > 0)
-                        ? BigDecimal.valueOf(simType.getPlafondExoneration()) : BigDecimal.ZERO;
-
-                if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal premiereLimite = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                            ? calculatePercentage(brutApresCnss, tauxExo)
-                            : mIndem;
-                    BigDecimal exo = mIndem.min(premiereLimite);
-                    if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                        exo = exo.min(plafondExo);
-                    }
-                    totalExonerations = totalExonerations.add(money(exo));
-                }
+                BigDecimal exo = mIndem.min(limiteTheorique);
+                totalExonerations = totalExonerations.add(money(exo));
             }
         }
 
@@ -503,7 +501,7 @@ public class InformationSalarialeCalculService {
         return dto;
     }
 
-    static BigDecimal calculateIuts(BigDecimal rawBase) {
+    public static BigDecimal calculateIuts(BigDecimal rawBase) {
         if (rawBase == null || rawBase.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
         // Troncature à la centaine inférieure légale (CGI Burkina Faso)
         BigDecimal base = rawBase.divideToIntegralValue(new BigDecimal("100")).multiply(new BigDecimal("100"));
@@ -526,7 +524,7 @@ public class InformationSalarialeCalculService {
         return money(result);
     }
 
-    static BigDecimal reductionRate(int charges) {
+    public static BigDecimal reductionRate(int charges) {
         if (charges == 1) return new BigDecimal("8.00");
         if (charges == 2) return new BigDecimal("10.00");
         if (charges == 3) return new BigDecimal("12.00");
@@ -534,7 +532,7 @@ public class InformationSalarialeCalculService {
         return zero();
     }
 
-    static BigDecimal calculatePercentage(BigDecimal base, BigDecimal rate) {
+    public static BigDecimal calculatePercentage(BigDecimal base, BigDecimal rate) {
         // Arrondi HALF_UP à 2 décimales pour les calculs de taux (CNSS, exonérations, retenues)
         return percent(base.multiply(rate).divide(CENT, 8, RoundingMode.HALF_UP));
     }

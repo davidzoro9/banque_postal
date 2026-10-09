@@ -27,11 +27,17 @@ public class SignataireConfig {
     @Column(nullable = false, length = 150)
     private String nomSignataire1; // Ex: Ahadi Ismaël YONLI
 
+    @Column(name = "employee_id_1")
+    private Long employeeId1;
+
     @Column(nullable = false, length = 150)
     private String titreSignataire2; // Ex: Le Directeur Financier et Comptable
 
     @Column(nullable = false, length = 150)
     private String nomSignataire2; // Ex: Inoussa SANOUIDI
+
+    @Column(name = "employee_id_2")
+    private Long employeeId2;
 
     @Column(nullable = false)
     @Builder.Default

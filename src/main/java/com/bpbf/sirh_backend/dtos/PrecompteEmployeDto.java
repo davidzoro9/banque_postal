@@ -30,6 +30,10 @@ public class PrecompteEmployeDto {
     private LocalDate dateFinPrevue;
     private String statut;
     private String motif;
+    private String justificatif;
+    private String motifSuspension;
+    private LocalDate dateSuspension;
+    private LocalDate dateSolde;
     private LocalDateTime dateCreation;
 
     public Long getId() { return id; }

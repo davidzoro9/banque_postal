@@ -30,6 +30,11 @@ public class TypeAbsenceCongeController {
         return typeAbsenceCongeService.updateTypeAbsenceConge(id, typeAbsenceCongeDto);
     }
 
+    @PutMapping("/batch")
+    public List<TypeAbsenceCongeDto> batchUpdate(@RequestBody List<TypeAbsenceCongeDto> dtos){
+        return typeAbsenceCongeService.batchUpdate(dtos);
+    }
+
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Long id){
         typeAbsenceCongeService.delete(id);

@@ -76,6 +76,47 @@ public class BulletinPdfService {
         return buildRegistrePaieDocument(bulletins);
     }
 
+    @Transactional(readOnly = true)
+    public byte[] generateEmployeeBulletinsZip(Long employeeId, Integer annee) {
+        List<Bulletin> bulletins = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId);
+        if (annee != null) {
+            bulletins = bulletins.stream().filter(b -> {
+                if (b.getSessionPaie() != null && b.getSessionPaie().getAnnee() != null) {
+                    return b.getSessionPaie().getAnnee().equals(annee);
+                }
+                if (b.getDateTo() != null) {
+                    return b.getDateTo().getYear() == annee;
+                }
+                return true;
+            }).toList();
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
+            for (Bulletin b : bulletins) {
+                Bulletin full = bulletinRepository.findByIdWithLines(b.getId()).orElse(b);
+                byte[] pdfBytes = buildBulletinPdfDocument(full);
+
+                String periode = b.getSessionPaie() != null && b.getSessionPaie().getPeriode() != null
+                        ? b.getSessionPaie().getPeriode().replaceAll("[^a-zA-Z0-9_-]", "_")
+                        : (b.getDateTo() != null ? b.getDateTo().toString() : "Bulletin_" + b.getId());
+                String mat = b.getEmployee() != null && b.getEmployee().getMatricule() != null
+                        ? b.getEmployee().getMatricule().replaceAll("[^a-zA-Z0-9_-]", "_")
+                        : "EMP";
+                String entryName = "Bulletin_BPBF_" + periode + "_" + mat + ".pdf";
+
+                java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
+                zos.putNextEntry(entry);
+                zos.write(pdfBytes);
+                zos.closeEntry();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la génération de l'archive ZIP des bulletins", e);
+        }
+        return baos.toByteArray();
+    }
+
+
     private byte[] buildBulletinPdfDocument(Bulletin b) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 25, 25, 25, 25);
@@ -117,18 +158,15 @@ public class BulletinPdfService {
 
             // 4. Bloc Règlements & Net à payer
             BigDecimal net = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
-            String banqueNom = emp != null && emp.getBanque() != null && !emp.getBanque().isEmpty() 
+            String banqueNom = emp != null && emp.getBanque() != null && !emp.getBanque().isBlank() 
                     ? emp.getBanque().toUpperCase(Locale.ROOT) 
-                    : "BANQUE POSTALE";
-            if (banqueNom.contains("BURKINA") || banqueNom.contains("BPBF")) {
-                banqueNom = "BANQUE POSTALE";
-            }
+                    : "—";
             boolean isDummyCompte = iban == null || iban.isBlank() || iban.equals("—") 
                     || iban.contains("0000000000") || iban.contains("000000000000") 
                     || iban.contains("BF01 01001 000000000000 00");
             String compteBancaire = !isDummyCompte
                     ? iban
-                    : (emp != null && emp.getMatricule() != null ? ("Compte BPBF — " + emp.getMatricule()) : "—");
+                    : "RIB non renseigné";
             addPaymentAndNetSection(document, banqueNom, compteBancaire, net);
 
             // 5. Tableau Récapitulatif Mois & Exercice
@@ -192,19 +230,16 @@ public class BulletinPdfService {
             addPayrollElementsTableFromDto(document, dto, empObj);
 
             BigDecimal net = dto.getSalaireNet() != null ? dto.getSalaireNet() : BigDecimal.ZERO;
-            String banqueNom = empObj != null && empObj.getBanque() != null && !empObj.getBanque().isEmpty() 
+            String banqueNom = empObj != null && empObj.getBanque() != null && !empObj.getBanque().isBlank() 
                     ? empObj.getBanque().toUpperCase(Locale.ROOT) 
-                    : (dto.getBanque() != null && !dto.getBanque().isBlank() ? dto.getBanque().toUpperCase(Locale.ROOT) : "BANQUE POSTALE");
-            if (banqueNom.contains("BURKINA") || banqueNom.contains("BPBF")) {
-                banqueNom = "BANQUE POSTALE";
-            }
+                    : (dto.getBanque() != null && !dto.getBanque().isBlank() ? dto.getBanque().toUpperCase(Locale.ROOT) : "—");
             String rawIban = empObj != null && empObj.getIban() != null ? empObj.getIban() : dto.getNumeroCompteBancaire();
             boolean isDummyIban = rawIban == null || rawIban.isBlank() || rawIban.equals("—")
                     || rawIban.contains("0000000000") || rawIban.contains("000000000000")
                     || rawIban.contains("BF01 01001 000000000000 00");
             String compteIban = !isDummyIban
                     ? rawIban
-                    : (matricule != null && !matricule.equals("—") ? ("Compte BPBF — " + matricule) : "—");
+                    : "RIB non renseigné";
             addPaymentAndNetSection(document, banqueNom, compteIban, net);
 
             addSummaryTableMoisExerciceFromDto(document, dto);
@@ -460,7 +495,7 @@ public class BulletinPdfService {
         return s;
     }
 
-    private static String normalizeText(String s) {
+    public static String normalizeText(String s) {
         if (s == null) return "";
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
@@ -624,7 +659,11 @@ public class BulletinPdfService {
 
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
                 if (mnt.compareTo(BigDecimal.ZERO) > 0) {
-                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                    String dynTauxStr = "";
+                    if (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getTauxExoneration() != null && ind.getTypeIndemnite().getTauxExoneration() > 0) {
+                        dynTauxStr = BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()).stripTrailingZeros().toPlainString() + " %";
+                    }
+                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), dynTauxStr, mnt, null, 10));
                 }
             }
         }
@@ -821,7 +860,11 @@ public class BulletinPdfService {
 
                 BigDecimal mnt = ind.getMontant() != null ? BigDecimal.valueOf(ind.getMontant()) : BigDecimal.ZERO;
                 if (mnt.compareTo(BigDecimal.ZERO) > 0) {
-                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), "100 %", mnt, null, 10));
+                    String dynTauxStr = "";
+                    if (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getTauxExoneration() != null && ind.getTypeIndemnite().getTauxExoneration() > 0) {
+                        dynTauxStr = BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()).stripTrailingZeros().toPlainString() + " %";
+                    }
+                    displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), dynTauxStr, mnt, null, 10));
                 }
             }
         }

@@ -16,13 +16,22 @@ public class SessionPaieController {
     private final SessionPaieRepository sessionPaieRepository;
     private final com.bpbf.sirh_backend.services.BulletinService bulletinService;
     private final com.bpbf.sirh_backend.repositories.BulletinRepository bulletinRepository;
+    private final com.bpbf.sirh_backend.repositories.EmployeeRepository employeeRepository;
+    private final com.bpbf.sirh_backend.services.CongeWorkflowService congeWorkflowService;
+    private final com.bpbf.sirh_backend.mappers.EmployeeMapper employeeMapper;
 
     public SessionPaieController(SessionPaieRepository sessionPaieRepository,
                                  com.bpbf.sirh_backend.services.BulletinService bulletinService,
-                                 com.bpbf.sirh_backend.repositories.BulletinRepository bulletinRepository) {
+                                 com.bpbf.sirh_backend.repositories.BulletinRepository bulletinRepository,
+                                 com.bpbf.sirh_backend.repositories.EmployeeRepository employeeRepository,
+                                 com.bpbf.sirh_backend.services.CongeWorkflowService congeWorkflowService,
+                                 com.bpbf.sirh_backend.mappers.EmployeeMapper employeeMapper) {
         this.sessionPaieRepository = sessionPaieRepository;
         this.bulletinService = bulletinService;
         this.bulletinRepository = bulletinRepository;
+        this.employeeRepository = employeeRepository;
+        this.congeWorkflowService = congeWorkflowService;
+        this.employeeMapper = employeeMapper;
     }
 
     private void enrichSessionMetrics(SessionPaie s) {
@@ -46,6 +55,25 @@ public class SessionPaieController {
             enrichSessionMetrics(s);
         }
         return list;
+    }
+
+    @GetMapping("/maternite-eligibles")
+    public ResponseEntity<List<com.bpbf.sirh_backend.dtos.EmployeeDto>> getFemmesEnCongeMaternite(
+            @RequestParam(required = false) String mois,
+            @RequestParam(required = false) Integer annee) {
+        int m = (mois != null && !mois.isBlank()) ? com.bpbf.sirh_backend.services.BulletinService.parseMois(mois) : java.time.LocalDate.now().getMonthValue();
+        int a = (annee != null && annee > 0) ? annee : java.time.LocalDate.now().getYear();
+
+        java.time.LocalDate debut = java.time.LocalDate.of(a, m, 1);
+        java.time.LocalDate fin = debut.withDayOfMonth(debut.lengthOfMonth());
+
+        List<com.bpbf.sirh_backend.entities.Employee> eligibles = employeeRepository.findAll().stream()
+                .filter(bulletinService::isEmployeeEligiblePaie)
+                .filter(congeWorkflowService::isFeminin)
+                .filter(emp -> congeWorkflowService.isEmployeeOnApprovedMaternite(emp.getId(), debut, fin))
+                .toList();
+
+        return ResponseEntity.ok(employeeMapper.toDtos(eligibles));
     }
 
     @GetMapping("/{id}")
@@ -106,38 +134,47 @@ public class SessionPaieController {
                         session.setNatureSession("INDEMNITE_RETRAITE");
                     } else if (n.contains("STC") || n.contains("SOLDE")) {
                         session.setNatureSession("STC");
+                    } else if (n.contains("MATERNITE") || n.contains("MATERNITÉ")) {
+                        session.setNatureSession("DIFFERENTIEL_MATERNITE");
                     } else {
                         session.setNatureSession("TREIZIEME_MOIS");
                     }
                 }
             }
 
-            if (session.getPeriode() == null || session.getPeriode().isBlank()) {
-                String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
-                int mIdx = 0;
-                try {
-                    mIdx = Integer.parseInt(session.getMois()) - 1;
-                } catch (Exception ignored) {}
-                String nomMois = (mIdx >= 0 && mIdx < 12) ? moisNoms[mIdx] : "Mois " + session.getMois();
-                if ("EXTRAORDINAIRE".equals(type)) {
-                    session.setPeriode(session.getName() != null ? session.getName() : "Session Extraordinaire " + nomMois + " " + session.getAnnee());
-                } else {
-                    session.setPeriode(nomMois + " " + session.getAnnee());
-                }
+            String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+            int mIdx = 0;
+            try {
+                mIdx = Integer.parseInt(session.getMois()) - 1;
+            } catch (Exception ignored) {}
+            String nomMois = (mIdx >= 0 && mIdx < 12) ? moisNoms[mIdx] : "Mois " + session.getMois();
+            String periodeDefaut = nomMois + " " + session.getAnnee();
+
+            if (session.getPeriode() == null || session.getPeriode().isBlank() || session.getPeriode().length() > 50) {
+                session.setPeriode(periodeDefaut);
             }
 
             if (session.getName() == null || session.getName().isBlank()) {
                 session.setName(session.getPeriode());
+            } else if (session.getName().length() > 50) {
+                session.setName(session.getName().substring(0, 50));
             }
 
             String baseCode = session.getCodeSession() != null && !session.getCodeSession().isBlank()
                     ? session.getCodeSession()
                     : String.format("SESS-%d-%s%s", session.getAnnee(), session.getMois(), "EXTRAORDINAIRE".equals(type) ? "-EXT" : "");
 
+            if (baseCode.length() > 45) {
+                baseCode = baseCode.substring(0, 45);
+            }
+
             String candidateCode = baseCode;
             int suffix = 1;
             while (sessionPaieRepository.findByCodeSession(candidateCode).isPresent()) {
                 candidateCode = String.format("%s-%d", baseCode, suffix++);
+            }
+            if (candidateCode.length() > 50) {
+                candidateCode = candidateCode.substring(0, 50);
             }
             session.setCodeSession(candidateCode);
             if (session.getStatut() == null) {
@@ -170,12 +207,25 @@ public class SessionPaieController {
     }
 
     @PutMapping("/{id}/cloturer")
-    public ResponseEntity<SessionPaie> cloturerSession(@PathVariable Long id, @RequestParam(required = false) String user) {
+    public ResponseEntity<SessionPaie> cloturerSession(@PathVariable Long id, 
+                                                       @RequestParam(required = false) String user,
+                                                       java.security.Principal principal) {
         return sessionPaieRepository.findById(id).map(session -> {
+            if ("CLOTURE".equalsIgnoreCase(session.getStatut())) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT, "La session #" + id + " est déjà clôturée.");
+            }
+            if (!"VALIDE".equalsIgnoreCase(session.getStatut())) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT, "Action refusée : la session #" + id + " doit être validée avant d'être clôturée (statut actuel : " + session.getStatut() + ").");
+            }
             session.setStatut("CLOTURE");
             session.setDateCloture(LocalDateTime.now());
-            if (user != null) {
-                session.setCloturePar(user);
+            String auteur = (principal != null && principal.getName() != null && !principal.getName().isBlank())
+                    ? principal.getName()
+                    : user;
+            if (auteur != null && !auteur.isBlank()) {
+                session.setCloturePar(auteur);
             }
             return ResponseEntity.ok(sessionPaieRepository.save(session));
         }).orElse(ResponseEntity.notFound().build());

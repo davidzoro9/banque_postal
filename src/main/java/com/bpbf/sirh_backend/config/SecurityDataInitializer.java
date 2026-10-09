@@ -25,6 +25,8 @@ public class SecurityDataInitializer implements CommandLineRunner {
 
     private final RoleProfilRepository roleProfilRepository;
     private final ActionPermissionRepository actionPermissionRepository;
+    private final com.bpbf.sirh_backend.repositories.UtilisateurRepository utilisateurRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -33,8 +35,24 @@ public class SecurityDataInitializer implements CommandLineRunner {
         try {
             seedRoles();
             seedActionPermissions();
+            seedDefaultAdmin();
         } catch (Exception e) {
             log.warn("Erreur mineure initialisation sécurité: {}", e.getMessage());
+        }
+    }
+
+    private void seedDefaultAdmin() {
+        if (utilisateurRepository.count() == 0) {
+            com.bpbf.sirh_backend.entities.Utilisateur admin = new com.bpbf.sirh_backend.entities.Utilisateur();
+            admin.setUsername("admin");
+            admin.setNom("Administrateur");
+            admin.setPrenom("Système");
+            admin.setEmail("admin@bpbf.bf");
+            admin.setPassword(passwordEncoder.encode("admin"));
+            admin.setRole("ADMIN");
+            admin.setActif(true);
+            utilisateurRepository.save(admin);
+            log.info("Compte administrateur par défaut initialisé (identifiant: admin / admin).");
         }
     }
 

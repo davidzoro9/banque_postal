@@ -27,11 +27,10 @@ public class PayrollDataInitializer implements CommandLineRunner {
     private final com.bpbf.sirh_backend.repositories.TypeAbsenceCongeRepository typeAbsenceCongeRepository;
     private final com.bpbf.sirh_backend.repositories.JourFerieRepository jourFerieRepository;
     private final com.bpbf.sirh_backend.repositories.EmployeeRepository employeeRepository;
-    private final com.bpbf.sirh_backend.services.EmployeeService employeeService;
-    private final com.bpbf.sirh_backend.services.EmployeeProcessService employeeProcessService;
     private final com.bpbf.sirh_backend.repositories.BaremeIUTSRepository baremeIutsRepository;
     private final com.bpbf.sirh_backend.repositories.TypeRetenueRepository typeRetenueRepository;
     private final com.bpbf.sirh_backend.repositories.RetenueRepository retenueRepository;
+    private final com.bpbf.sirh_backend.repositories.CompteComptableRepository compteComptableRepository;
     private final com.bpbf.sirh_backend.services.BulletinService bulletinService;
     private final com.bpbf.sirh_backend.services.InformationSalarialeCalculService informationSalarialeCalculService;
     private final JdbcTemplate jdbcTemplate;
@@ -39,6 +38,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Initialisation sécurisée des données de référence (Paie, Congés, Fériés, Retenues, IUTS)...");
+        initComptesComptables();
 
         // Réparation automatique des séquences ID PostgreSQL
         String[] tables = {"type_absence_conge", "conge", "absence", "jour_ferie", "parametrage_conge", "bareme_iuts", "type_retenue", "retenue", "role_profil", "action_permission", "element_salary_category", "salary_element"};
@@ -137,8 +137,11 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS numero_cnss VARCHAR(50)");
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS vehicule_fourni BOOLEAN DEFAULT FALSE");
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS logement_fourni BOOLEAN DEFAULT FALSE");
+                // Colonnes type_absence_conge (Catégorie CONGE/ABSENCE et Sexe requis)
+                jdbcTemplate.execute("ALTER TABLE type_absence_conge ADD COLUMN IF NOT EXISTS categorie VARCHAR(50) DEFAULT 'CONGE'");
+                jdbcTemplate.execute("ALTER TABLE type_absence_conge ADD COLUMN IF NOT EXISTS sexe_requis VARCHAR(20) DEFAULT 'TOUS'");
             } catch (Exception ex) {
-                log.debug("Auto-migration colonnes employee (non bloquant): {}", ex.getMessage());
+                log.debug("Auto-migration colonnes employee/type_absence (non bloquant): {}", ex.getMessage());
             }
         } catch (Exception e) {
             log.debug("Auto-migration schema paie (non bloquant): {}", e.getMessage());
@@ -152,6 +155,8 @@ public class PayrollDataInitializer implements CommandLineRunner {
     }
 
     private void seedPayrollAndConges() {
+        seedTypesAbsenceConges();
+
         // 1. Les Catégories officielles (Genres) avec types persistés
         SalaryCategory catRemuDue = getOrCreateCategory("CAT_REMU_DUE", "Rémunération due", "GAIN");
         SalaryCategory catSalBase = getOrCreateCategory("CAT_SAL_BASE", "Salaire de base", "GAIN");
@@ -244,18 +249,6 @@ public class PayrollDataInitializer implements CommandLineRunner {
         seedJoursFeries("2026");
         seedJoursFeries("2025");
         seedJoursFeries("2027");
-
-        // 5. Synchronisation des comptes utilisateurs si absents (ne modifie pas les indemnités ni les données RH)
-        try {
-            if (employeeRepository != null && employeeService != null) {
-                employeeRepository.findAll().forEach(emp -> {
-                    employeeService.syncUserAccountForEmployee(emp);
-                });
-                log.info("Comptes utilisateurs des employés synchronisés avec succès.");
-            }
-        } catch (Exception e) {
-            log.warn("Erreur mineure synchronisation comptes: {}", e.getMessage());
-        }
 
         // 6. Barème progressif officiel IUTS Burkina Faso (uniquement si absent)
         seedBaremesIuts();
@@ -395,7 +388,22 @@ public class PayrollDataInitializer implements CommandLineRunner {
         });
     }
 
+    private void seedTypesAbsenceConges() {
+        getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé", true, 30, "CONGE", "TOUS");
+        getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité", false, 98, "CONGE", "FEMININ");
+        getOrCreateTypeAbsence("CONGE_PATERNITE", "Congé de paternité", false, 3, "CONGE", "MASCULIN");
+        getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie", false, 180, "CONGE", "TOUS");
+        getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage", false, 3, "ABSENCE", "TOUS");
+        getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès", false, 5, "ABSENCE", "TOUS");
+        getOrCreateTypeAbsence("EVT_NAISSANCE", "Événement familial - Naissance", false, 3, "ABSENCE", "TOUS");
+        getOrCreateTypeAbsence("ABS_AUTORISEE", "Absence autorisée", false, 2, "ABSENCE", "TOUS");
+    }
+
     private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours) {
+        return getOrCreateTypeAbsence(code, name, deductible, maxJours, null, null);
+    }
+
+    private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours, String categorie, String sexeRequis) {
         return typeAbsenceCongeRepository.findByCode(code).map(existing -> {
             boolean changed = false;
             if (existing.getDeductibleDuSolde() == null || !existing.getDeductibleDuSolde().equals(deductible)) {
@@ -404,6 +412,14 @@ public class PayrollDataInitializer implements CommandLineRunner {
             }
             if (existing.getDureeMaxLegaleJours() == null || !existing.getDureeMaxLegaleJours().equals(maxJours)) {
                 existing.setDureeMaxLegaleJours(maxJours);
+                changed = true;
+            }
+            if (existing.getCategorie() == null || !existing.getCategorie().equals(categorie)) {
+                existing.setCategorie(categorie);
+                changed = true;
+            }
+            if (existing.getSexeRequis() == null || !existing.getSexeRequis().equals(sexeRequis)) {
+                existing.setSexeRequis(sexeRequis);
                 changed = true;
             }
             if (changed) {
@@ -417,11 +433,13 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 t.setName(name);
                 t.setDeductibleDuSolde(deductible);
                 t.setDureeMaxLegaleJours(maxJours);
+                t.setCategorie(categorie);
+                t.setSexeRequis(sexeRequis);
                 return typeAbsenceCongeRepository.save(t);
             } catch (Exception e) {
                 try {
                     Long nextId = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) + 1 FROM type_absence_conge", Long.class);
-                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name, deductible_du_solde, duree_max_legale_jours) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name, deductible, maxJours);
+                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name, deductible_du_solde, duree_max_legale_jours, categorie, sexe_requis) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name, deductible, maxJours, categorie, sexeRequis);
                     return typeAbsenceCongeRepository.findByCode(code).orElse(null);
                 } catch (Exception ex) {
                     log.debug("Notice insert type absence: {}", ex.getMessage());
@@ -465,4 +483,42 @@ public class PayrollDataInitializer implements CommandLineRunner {
             return elementRepository.save(newEl);
         });
     }
+
+    private void initComptesComptables() {
+        try {
+            log.info("Vérification et initialisation des comptes comptables SYSCOHADA de paie...");
+            createCompteIfAbsent("641100", "Salaires de base du personnel national", "CLASSE_6", "DEBIT", "SALAIRE_BASE", "OD_PAIE", "Traitements et salaires fixes");
+            createCompteIfAbsent("641200", "Primes et gratifications", "CLASSE_6", "DEBIT", "PRIMES", "OD_PAIE", "Primes d'ancienneté, de rendement et gratifications");
+            createCompteIfAbsent("641300", "Indemnités et avantages divers", "CLASSE_6", "DEBIT", "INDEMNITES", "OD_PAIE", "Indemnités de logement, transport, fonction, caisse, etc.");
+            createCompteIfAbsent("641400", "Rémunérations des heures supplémentaires", "CLASSE_6", "DEBIT", "HEURES_SUPP", "OD_PAIE", "Heures supplémentaires majorées");
+            createCompteIfAbsent("646100", "Cotisations sociales patronales (CNSS)", "CLASSE_6", "DEBIT", "COTISATIONS_PATRONALES", "OD_PAIE", "Charges patronales CNSS (Prestations familiales, Risques pro, Retraite)");
+            createCompteIfAbsent("421100", "Personnel - Rémunérations dues (Net à payer)", "CLASSE_4", "CREDIT", "NET_A_PAYER", "OD_PAIE", "Salaires nets à verser aux employés de la banque");
+            createCompteIfAbsent("422100", "Personnel - Avances et acomptes", "CLASSE_4", "CREDIT", "ACOMPTES", "OD_PAIE", "Acomptes consentis sur salaires");
+            createCompteIfAbsent("431100", "Sécurité Sociale (CNSS)", "CLASSE_4", "CREDIT", "CNSS", "OD_PAIE", "Cotisations CNSS part salariale (5.5%) et part patronale");
+            createCompteIfAbsent("442100", "État - Impôt sur les Traitements et Salaires (IUTS)", "CLASSE_4", "CREDIT", "IUTS", "OD_PAIE", "Retenues à la source IUTS selon barème progressif");
+            createCompteIfAbsent("442800", "État - Fonds de Soutien Patriotique (FSP)", "CLASSE_4", "CREDIT", "FSP", "OD_PAIE", "Prélèvement légal FSP sur rémunérations");
+            createCompteIfAbsent("428100", "Personnel - Dettes provisionnées pour congés à payer", "CLASSE_4", "CREDIT", "PROVISION_CONGES", "OD_PAIE", "Provisions congés payés de fin d'exercice");
+            createCompteIfAbsent("641800", "Indemnités de congés payés", "CLASSE_6", "DEBIT", "CONGES_PAYES", "OD_PAIE", "Charges sur indemnités de congés");
+            log.info("Comptes comptables de paie initialisés avec succès.");
+        } catch (Exception e) {
+            log.warn("Erreur lors de l'initialisation des comptes comptables: {}", e.getMessage());
+        }
+    }
+
+    private void createCompteIfAbsent(String numero, String libelle, String classe, String sens, String typeRubrique, String journal, String description) {
+        if (compteComptableRepository.findByNumeroCompte(numero).isEmpty()) {
+            com.bpbf.sirh_backend.entities.CompteComptable c = com.bpbf.sirh_backend.entities.CompteComptable.builder()
+                    .numeroCompte(numero)
+                    .libelle(libelle)
+                    .classeCompte(classe)
+                    .sensParDefaut(sens)
+                    .typeRubriqueAssociee(typeRubrique)
+                    .codeJournal(journal)
+                    .description(description)
+                    .actif(true)
+                    .build();
+            compteComptableRepository.save(c);
+        }
+    }
 }
+

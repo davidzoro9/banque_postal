@@ -61,10 +61,51 @@ public class TypeAbsenceCongeService {
         if (typeAbsenceCongeDto.getDureeMaxLegaleJours() != null) {
             typeAbsenceConge.setDureeMaxLegaleJours(typeAbsenceCongeDto.getDureeMaxLegaleJours());
         }
+        if (typeAbsenceCongeDto.getCategorie() != null && !typeAbsenceCongeDto.getCategorie().isBlank()) {
+            typeAbsenceConge.setCategorie(typeAbsenceCongeDto.getCategorie());
+        }
+        if (typeAbsenceCongeDto.getSexeRequis() != null && !typeAbsenceCongeDto.getSexeRequis().isBlank()) {
+            typeAbsenceConge.setSexeRequis(typeAbsenceCongeDto.getSexeRequis());
+        }
+        if (typeAbsenceCongeDto.getRemunere() != null) {
+            typeAbsenceConge.setRemunere(typeAbsenceCongeDto.getRemunere());
+        }
+        if (typeAbsenceCongeDto.getTauxRemuneration() != null) {
+            typeAbsenceConge.setTauxRemuneration(typeAbsenceCongeDto.getTauxRemuneration());
+        }
+        if (typeAbsenceCongeDto.getJustificatifRequis() != null) {
+            typeAbsenceConge.setJustificatifRequis(typeAbsenceCongeDto.getJustificatifRequis());
+        }
+        if (typeAbsenceCongeDto.getTypeJustificatif() != null) {
+            typeAbsenceConge.setTypeJustificatif(typeAbsenceCongeDto.getTypeJustificatif());
+        }
+        if (typeAbsenceCongeDto.getActif() != null) {
+            typeAbsenceConge.setActif(typeAbsenceCongeDto.getActif());
+        }
+        if (typeAbsenceCongeDto.getDelaiJustificationJours() != null) {
+            typeAbsenceConge.setDelaiJustificationJours(typeAbsenceCongeDto.getDelaiJustificationJours());
+        }
+        if (typeAbsenceCongeDto.getDescription() != null) {
+            typeAbsenceConge.setDescription(typeAbsenceCongeDto.getDescription());
+        }
 
         TypeAbsenceConge saved = typeAbsenceCongeRepository.save(typeAbsenceConge);
 
         return typeAbsenceCongeMapper.toDto(saved);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public List<TypeAbsenceCongeDto> batchUpdate(List<TypeAbsenceCongeDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) return java.util.Collections.emptyList();
+        List<TypeAbsenceCongeDto> result = new java.util.ArrayList<>();
+        for (TypeAbsenceCongeDto dto : dtos) {
+            if (dto.getId() != null) {
+                result.add(updateTypeAbsenceConge(dto.getId(), dto));
+            } else {
+                result.add(createTypeAbsenceConge(dto));
+            }
+        }
+        return result;
     }
 
     public void delete(Long id){

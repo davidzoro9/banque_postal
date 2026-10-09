@@ -54,6 +54,16 @@ public class PrecompteEmploye {
 
     private String motif;
 
+    @Column(columnDefinition = "TEXT")
+    private String justificatif; // Fichier ou référence justificative lors du solde
+
+    @Column(columnDefinition = "TEXT")
+    private String motifSuspension; // Motif obligatoire si suspendu pour le mois
+
+    private LocalDate dateSuspension;
+
+    private LocalDate dateSolde;
+
     private LocalDateTime dateCreation;
 
     @PrePersist

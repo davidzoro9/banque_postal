@@ -88,12 +88,15 @@ public class SignataireConfigService {
 
         config.setTitreSignataire1(t1);
         config.setNomSignataire1(n1);
+        config.setEmployeeId1(dto.getEmployeeId1());
         config.setTitreSignataire2(t2);
         config.setNomSignataire2(n2);
+        config.setEmployeeId2(dto.getEmployeeId2());
         config.setUpdatedAt(LocalDateTime.now());
 
         SignataireConfig saved = repository.save(config);
-        log.info("Signataires officiels mis à jour avec succès : [{}] {} / [{}] {}", t1, n1, t2, n2);
+        log.info("Signataires officiels mis à jour avec succès : [{}] {} (ID: {}) / [{}] {} (ID: {})",
+                t1, n1, dto.getEmployeeId1(), t2, n2, dto.getEmployeeId2());
         return toDto(saved);
     }
 
@@ -101,8 +104,10 @@ public class SignataireConfigService {
         return SignatairesEtatDto.builder()
                 .titreSignataire1(entity.getTitreSignataire1())
                 .nomSignataire1(entity.getNomSignataire1())
+                .employeeId1(entity.getEmployeeId1())
                 .titreSignataire2(entity.getTitreSignataire2())
                 .nomSignataire2(entity.getNomSignataire2())
+                .employeeId2(entity.getEmployeeId2())
                 .build();
     }
 }

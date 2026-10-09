@@ -94,13 +94,15 @@ public class SimulationRemunerationService {
         }
 
         // 3. Normalisation Catégorie et Grade
-        String catCode = request.getCategorieCode() != null ? request.getCategorieCode().trim().toUpperCase() : "1";
-        catCode = catCode.replace("CATEGORIE", "").replace("CLASSE", "").replace("C", "").trim();
+        String rawCat = request.getCategorieCode() != null ? request.getCategorieCode().trim().toUpperCase() : "1";
+        String catCode = rawCat.replace("CATEGORIE", "").replace("CLASSE", "").replace("C", "").trim();
 
         Long catId = request.getCategorieId();
         if (catId == null) {
             for (var c : categorieRepository.findAll()) {
-                if (c.getCode() != null && c.getCode().equalsIgnoreCase(catCode)) {
+                String cCode = c.getCode() != null ? c.getCode().trim().toUpperCase() : "";
+                String cLib = c.getLibelle() != null ? c.getLibelle().trim().toUpperCase() : "";
+                if (cCode.equals(catCode) || cCode.equals(rawCat) || cLib.equals(rawCat) || cLib.contains("CLASSE " + catCode) || cLib.contains(catCode + "ÈRE") || cLib.contains(catCode + "ÈME")) {
                     catId = c.getId();
                     break;
                 }
@@ -156,10 +158,10 @@ public class SimulationRemunerationService {
             }
 
             // B. Statutaires (Tableau 1 - si pas de nomination)
-            if (!hasDbNomination && (grdId != null || catId != null)) {
+            if (!hasDbNomination && (catId != null || grdId != null)) {
                 List<ParametrageIndemnite> statutaires = parametrageIndemniteRepository.findStatutairesByGradeAndCategorie(
-                        grdId != null ? grdId : -1L,
-                        catId != null ? catId : -1L
+                        grdId,
+                        catId
                 );
                 for (ParametrageIndemnite p : statutaires) {
                     if (p.getTypeIndemniteObj() == null || p.getTaux() == null || p.getTaux() <= 0) continue;
@@ -167,16 +169,22 @@ public class SimulationRemunerationService {
                     String tCode = p.getTypeIndemniteObj().getCode() != null ? p.getTypeIndemniteObj().getCode().toUpperCase() : "";
                     String tLib = p.getTypeIndemniteObj().getName() != null ? p.getTypeIndemniteObj().getName() : "Indemnité";
 
-                    if (isLogement(tCode, tLib) && log.compareTo(BigDecimal.ZERO) == 0) {
-                        log = BigDecimal.valueOf(t);
-                        details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
-                    } else if (isTransport(tCode, tLib) && trp.compareTo(BigDecimal.ZERO) == 0) {
-                        trp = BigDecimal.valueOf(t);
-                        details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
-                    } else if (isSujetion(tCode, tLib) && suj.compareTo(BigDecimal.ZERO) == 0) {
-                        suj = BigDecimal.valueOf(t);
-                        details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
-                    } else {
+                    if (isLogement(tCode, tLib)) {
+                        if (log.compareTo(BigDecimal.ZERO) == 0) {
+                            log = BigDecimal.valueOf(t);
+                            details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
+                        }
+                    } else if (isTransport(tCode, tLib)) {
+                        if (trp.compareTo(BigDecimal.ZERO) == 0) {
+                            trp = BigDecimal.valueOf(t);
+                            details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
+                        }
+                    } else if (isSujetion(tCode, tLib)) {
+                        if (suj.compareTo(BigDecimal.ZERO) == 0) {
+                            suj = BigDecimal.valueOf(t);
+                            details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
+                        }
+                    } else if (!isFonction(tCode, tLib) && !isCaisse(tCode, tLib) && !isCashPoint(tCode, tLib)) {
                         autres = autres.add(BigDecimal.valueOf(t));
                         details.add(new SimulationIndemnitesAutoDto.IndemniteDetailDto(tCode, tLib, t, "STATUTAIRE"));
                     }
@@ -316,8 +324,7 @@ public class SimulationRemunerationService {
         if (Boolean.TRUE.equals(request.getVehiculeFourni())) trp = BigDecimal.ZERO;
         if (Boolean.TRUE.equals(request.getLogementFourni())) log = BigDecimal.ZERO;
 
-        BigDecimal totalAutres = autres.add(suj).add(cashPoint);
-        BigDecimal total = log.add(trp).add(fnc).add(cai).add(totalAutres);
+        BigDecimal total = log.add(trp).add(fnc).add(cai).add(suj).add(cashPoint).add(autres);
 
         // Reconstituer la liste propre des détails pour l'UI
         details.clear();
@@ -350,7 +357,7 @@ public class SimulationRemunerationService {
                 .indemniteCaisse(cai.doubleValue())
                 .indemniteSujetion(suj.doubleValue())
                 .indemniteCashPoint(cashPoint.doubleValue())
-                .autresIndemnites(totalAutres.doubleValue())
+                .autresIndemnites(autres.doubleValue())
                 .totalIndemnites(total.doubleValue())
                 .details(details)
                 .build();
@@ -442,8 +449,13 @@ public class SimulationRemunerationService {
         if (Boolean.TRUE.equals(request.getVehiculeFourni())) indemTransport = BigDecimal.ZERO;
         if (Boolean.TRUE.equals(request.getLogementFourni())) indemLogement = BigDecimal.ZERO;
 
-        BigDecimal sujVal = BigDecimal.valueOf(auto.getIndemniteSujetion() != null ? auto.getIndemniteSujetion() : 0.0);
-        BigDecimal cashVal = BigDecimal.valueOf(auto.getIndemniteCashPoint() != null ? auto.getIndemniteCashPoint() : 0.0);
+        BigDecimal sujVal = (request.getIndemniteSujetion() != null && request.getIndemniteSujetion() > 0)
+                ? BigDecimal.valueOf(request.getIndemniteSujetion())
+                : BigDecimal.valueOf(auto.getIndemniteSujetion() != null ? auto.getIndemniteSujetion() : 0.0);
+
+        BigDecimal cashVal = (request.getIndemniteCashPoint() != null && request.getIndemniteCashPoint() > 0)
+                ? BigDecimal.valueOf(request.getIndemniteCashPoint())
+                : BigDecimal.valueOf(auto.getIndemniteCashPoint() != null ? auto.getIndemniteCashPoint() : 0.0);
 
         String mode = request.getMode() != null ? request.getMode().trim().toUpperCase() : "SURSALAIRE_VERS_NET";
 
@@ -586,7 +598,10 @@ public class SimulationRemunerationService {
             BigDecimal suj, BigDecimal cashPoint, List<SimulationIndemnitesAutoDto.IndemniteDetailDto> details,
             Long emploiId, String nomEmploi, Long fonctionId, String nomFonction) {
 
-        BigDecimal totalIndem = log.add(trp).add(fnc).add(cai).add(aut);
+        BigDecimal sVal = suj != null ? suj : BigDecimal.ZERO;
+        BigDecimal cpVal = cashPoint != null ? cashPoint : BigDecimal.ZERO;
+        BigDecimal aVal = aut != null ? aut : BigDecimal.ZERO;
+        BigDecimal totalIndem = log.add(trp).add(fnc).add(cai).add(sVal).add(cpVal).add(aVal);
         BigDecimal remunerationBrute = salaireBase.add(surSalaire).add(totalIndem);
 
         // 1. Cotisation CNSS Salarié (5.5% plafonné à 800 000 FCFA)
@@ -595,12 +610,12 @@ public class SimulationRemunerationService {
         BigDecimal brutApresCnss = remunerationBrute.subtract(cotisCnss).max(BigDecimal.ZERO);
 
         // 2. Exonérations fiscales légales (CGI Burkina Faso)
-        // Logement : max 20% du brut après CNSS, plafond 50 000 FCFA
-        BigDecimal limiteLogement = brutApresCnss.multiply(new BigDecimal("0.20")).min(new BigDecimal("50000.00"));
+        // Logement : max 20% du brut après CNSS, plafond 75 000 FCFA (CGI BF Art. 106)
+        BigDecimal limiteLogement = brutApresCnss.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00"));
         BigDecimal exoLogement = log.min(limiteLogement);
 
-        // Transport : max 5% du brut après CNSS, plafond 20 000 FCFA
-        BigDecimal limiteTransport = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("20000.00"));
+        // Transport : max 5% du brut après CNSS, plafond 30 000 FCFA (CGI BF Art. 106)
+        BigDecimal limiteTransport = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
         BigDecimal exoTransport = trp.min(limiteTransport);
 
         // Fonction / Caisse : 5% du brut après CNSS, plafond 50 000 FCFA
@@ -651,8 +666,8 @@ public class SimulationRemunerationService {
         if (trp.compareTo(BigDecimal.ZERO) > 0) {
             lignes.add(new LigneSimulationDto("IND_TRP", "Indemnité de transport", "GAIN", trp.doubleValue(), null, trp.doubleValue(), 0.0));
         }
-        if (suj != null && suj.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_SUJ", "Indemnité de sujétion (Statutaire)", "GAIN", suj.doubleValue(), null, suj.doubleValue(), 0.0));
+        if (sVal.compareTo(BigDecimal.ZERO) > 0) {
+            lignes.add(new LigneSimulationDto("IND_SUJ", "Indemnité de sujétion (Statutaire)", "GAIN", sVal.doubleValue(), null, sVal.doubleValue(), 0.0));
         }
         if (fnc.compareTo(BigDecimal.ZERO) > 0) {
             String labelFnc = (nomFonction != null && !nomFonction.isBlank())
@@ -666,19 +681,11 @@ public class SimulationRemunerationService {
                     : "Indemnité de caisse";
             lignes.add(new LigneSimulationDto("IND_CAI", labelCai, "GAIN", cai.doubleValue(), null, cai.doubleValue(), 0.0));
         }
-        if (cashPoint != null && cashPoint.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_CASH", "Prime Cash Point", "GAIN", cashPoint.doubleValue(), null, cashPoint.doubleValue(), 0.0));
+        if (cpVal.compareTo(BigDecimal.ZERO) > 0) {
+            lignes.add(new LigneSimulationDto("IND_CASH", "Prime Cash Point", "GAIN", cpVal.doubleValue(), null, cpVal.doubleValue(), 0.0));
         }
-        // Autres indemnités résiduelles (hors sujétion et cashPoint si déjà détaillées)
-        BigDecimal autResiduel = aut;
-        if (suj != null && suj.compareTo(BigDecimal.ZERO) > 0) {
-            autResiduel = autResiduel.subtract(suj);
-        }
-        if (cashPoint != null && cashPoint.compareTo(BigDecimal.ZERO) > 0) {
-            autResiduel = autResiduel.subtract(cashPoint);
-        }
-        if (autResiduel.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_AUT", "Autres indemnités spécifiques", "GAIN", autResiduel.doubleValue(), null, autResiduel.doubleValue(), 0.0));
+        if (aVal.compareTo(BigDecimal.ZERO) > 0) {
+            lignes.add(new LigneSimulationDto("IND_AUT", "Autres indemnités spécifiques", "GAIN", aVal.doubleValue(), null, aVal.doubleValue(), 0.0));
         }
 
         // Retenues salariales
@@ -700,9 +707,9 @@ public class SimulationRemunerationService {
                 .indemniteTransport(trp.doubleValue())
                 .indemniteFonction(fnc.doubleValue())
                 .indemniteCaisse(cai.doubleValue())
-                .indemniteSujetion(suj != null ? suj.doubleValue() : 0.0)
-                .indemniteCashPoint(cashPoint != null ? cashPoint.doubleValue() : 0.0)
-                .autresIndemnites(aut.doubleValue())
+                .indemniteSujetion(sVal.doubleValue())
+                .indemniteCashPoint(cpVal.doubleValue())
+                .autresIndemnites(aVal.doubleValue())
                 .detailsIndemnites(details)
                 .remunerationBrute(remunerationBrute.doubleValue())
                 .baseCnss(baseCnss.doubleValue())

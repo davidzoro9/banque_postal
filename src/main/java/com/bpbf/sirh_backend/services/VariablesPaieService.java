@@ -67,8 +67,21 @@ public class VariablesPaieService {
         return ref;
     }
 
+    private void validateAvoirDto(AvoirRequestDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Les données de l'avoir sont obligatoires");
+        }
+        if (dto.getEmployeeId() == null) {
+            throw new IllegalArgumentException("L'identifiant de l'employé est obligatoire");
+        }
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant de l'avoir doit être strictement supérieur à zéro");
+        }
+    }
+
     @Transactional
     public AvoirResponseDto createAvoir(AvoirRequestDto dto) {
+        validateAvoirDto(dto);
         SalaryElement element = null;
         if (dto.getSalaryElementId() != null) {
             element = salaryElementRepository.findById(dto.getSalaryElementId()).orElse(null);
@@ -107,6 +120,7 @@ public class VariablesPaieService {
 
     @Transactional
     public AvoirResponseDto updateAvoir(Long id, AvoirRequestDto dto) {
+        validateAvoirDto(dto);
         Avoir avoir = avoirRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Avoir non trouvé: " + id));
 
@@ -178,8 +192,35 @@ public class VariablesPaieService {
         return ref;
     }
 
+    private void validatePrecompteVariableDto(PrecompteRequestDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Les données du précompte sont obligatoires");
+        }
+        if (dto.getEmployeeId() == null) {
+            throw new IllegalArgumentException("L'identifiant de l'employé est obligatoire");
+        }
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant du précompte doit être strictement supérieur à zéro");
+        }
+        if (dto.getRetenueMensuelle() != null) {
+            if (dto.getRetenueMensuelle().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("La retenue mensuelle doit être strictement supérieure à zéro");
+            }
+            if (dto.getAmount() != null && dto.getRetenueMensuelle().compareTo(dto.getAmount()) > 0) {
+                throw new IllegalArgumentException("La retenue mensuelle ne peut excéder le montant total");
+            }
+        }
+        if (dto.getEcheance() != null && dto.getEcheance() <= 0) {
+            throw new IllegalArgumentException("Le nombre d'échéances doit être supérieur à zéro");
+        }
+        if (dto.getMontantRestant() != null && dto.getMontantRestant().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le montant restant ne peut pas être négatif");
+        }
+    }
+
     @Transactional
     public PrecompteResponseDto createPrecompte(PrecompteRequestDto dto) {
+        validatePrecompteVariableDto(dto);
         SalaryElement element = null;
         if (dto.getSalaryElementId() != null) {
             element = salaryElementRepository.findById(dto.getSalaryElementId()).orElse(null);
@@ -239,6 +280,7 @@ public class VariablesPaieService {
 
     @Transactional
     public PrecompteResponseDto updatePrecompte(Long id, PrecompteRequestDto dto) {
+        validatePrecompteVariableDto(dto);
         Precompte precompte = precompteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Précompte non trouvé: " + id));
 
@@ -294,7 +336,48 @@ public class VariablesPaieService {
         if (dto.getStatut() != null) {
             precompte.setStatut(dto.getStatut());
         }
+        if (dto.getJustificatif() != null) {
+            precompte.setJustificatif(dto.getJustificatif());
+        }
+        if (dto.getMotifSuspension() != null) {
+            precompte.setMotifSuspension(dto.getMotifSuspension());
+        }
 
+        return mapPrecompteToDto(precompteRepository.save(precompte));
+    }
+
+    @Transactional
+    public PrecompteResponseDto solderPrecompte(Long id, String justificatif, String motif) {
+        Precompte precompte = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé: " + id));
+        precompte.setStatut("SOLDE");
+        precompte.setMontantRestant(BigDecimal.ZERO);
+        if (justificatif != null && !justificatif.isBlank()) {
+            precompte.setJustificatif(justificatif);
+        }
+        if (motif != null && !motif.isBlank()) {
+            precompte.setMotif(motif);
+        }
+        precompte.setDateSolde(LocalDate.now());
+        return mapPrecompteToDto(precompteRepository.save(precompte));
+    }
+
+    @Transactional
+    public PrecompteResponseDto suspendrePrecompte(Long id, String motifSuspension) {
+        Precompte precompte = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé: " + id));
+        precompte.setStatut("SUSPENDU");
+        precompte.setMotifSuspension(motifSuspension != null && !motifSuspension.isBlank() ? motifSuspension : "Suspension mensuelle demandée");
+        precompte.setDateSuspension(LocalDate.now());
+        return mapPrecompteToDto(precompteRepository.save(precompte));
+    }
+
+    @Transactional
+    public PrecompteResponseDto reprendrePrecompte(Long id) {
+        Precompte precompte = precompteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Précompte non trouvé: " + id));
+        precompte.setStatut("EN_COURS");
+        precompte.setDateSuspension(null);
         return mapPrecompteToDto(precompteRepository.save(precompte));
     }
 
@@ -434,7 +517,7 @@ public class VariablesPaieService {
 
         String ref = p.getReference() != null && !p.getReference().trim().isEmpty() && !"/".equals(p.getReference().trim()) 
                 ? p.getReference().trim() 
-                : String.format("PREC-2026-%04d", p.getId() != null ? p.getId() : 1);
+                : String.format("PREC-%d-%04d", LocalDate.now().getYear(), p.getId() != null ? p.getId() : 1);
 
         // 1. Chercher les versements réels enregistrés sur les bulletins
         List<PrecompteVersementDto> versements = buildVersements(p, empName, retMensuelle, null);
@@ -485,6 +568,10 @@ public class VariablesPaieService {
         dto.setEcheance(echeance);
         dto.setDateEcheance(p.getDateEcheance());
         dto.setStatut(p.getStatut() != null ? p.getStatut() : "EN_COURS");
+        dto.setJustificatif(p.getJustificatif());
+        dto.setMotifSuspension(p.getMotifSuspension());
+        dto.setDateSuspension(p.getDateSuspension());
+        dto.setDateSolde(p.getDateSolde());
         dto.setVersements(versements);
         return dto;
     }
