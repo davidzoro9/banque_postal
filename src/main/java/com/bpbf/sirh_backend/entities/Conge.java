@@ -16,7 +16,7 @@ public class Conge {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "superviseur", "fonction", "emploi", "department", "direction", "service", "agence", "regimeSecuriteSocial", "grilleSalariale", "categorieObj", "echelonObj", "gradeObj"})
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -63,7 +63,7 @@ public class Conge {
     // ── ÉTAPE 2 : AVIS INTÉRIMAIRE (COLLÈGUE PRESSENTI) ──
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "interimaire_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "superviseur", "fonction", "emploi", "department", "direction", "service", "agence", "regimeSecuriteSocial", "grilleSalariale", "categorieObj", "echelonObj", "gradeObj"})
     private Employee interimaire;
 
     @Column(name = "statut_interim")

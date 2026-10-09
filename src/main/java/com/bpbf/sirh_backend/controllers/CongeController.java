@@ -4,6 +4,7 @@ import com.bpbf.sirh_backend.dtos.SoldeCongeDto;
 import com.bpbf.sirh_backend.entities.Conge;
 import com.bpbf.sirh_backend.services.CongeWorkflowService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/conges")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class CongeController {
 
     private final CongeWorkflowService congeService;
@@ -40,9 +42,17 @@ public class CongeController {
 
     // ── ÉTAPE 1 : CRÉATION / SOUMISSION ──
     @PostMapping(value = {"", "/create"})
-    public ResponseEntity<Conge> create(@RequestBody Conge conge) {
-        Conge saved = congeService.createConge(conge);
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<?> create(@RequestBody Conge conge) {
+        try {
+            Conge saved = congeService.createConge(conge);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation congé refusée : {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage(), "status", "ERROR"));
+        } catch (Exception e) {
+            log.error("Erreur serveur création congé : {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Erreur interne", "status", "ERROR"));
+        }
     }
 
     // ── ÉTAPE 2 : AVIS INTÉRIMAIRE (COLLÈGUE PRESSENTI) ──

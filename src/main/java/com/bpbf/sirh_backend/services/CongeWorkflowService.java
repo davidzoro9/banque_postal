@@ -135,14 +135,21 @@ public class CongeWorkflowService {
             }
         }
 
-        // Calcul automatique des jours ouvrables
+        // Calcul automatique des jours ouvrables avec parsing robuste (gère YYYY-MM-DD et DD/MM/YYYY)
         if (conge.getDateDebut() != null && conge.getDateFin() != null) {
             try {
-                LocalDate start = LocalDate.parse(conge.getDateDebut());
-                LocalDate end = LocalDate.parse(conge.getDateFin());
-                int calculatedDays = calculateJoursOuvrables(start, end);
-                if (conge.getNbJours() == null || conge.getNbJours() <= 0) {
-                    conge.setNbJours(calculatedDays);
+                LocalDate start = parseDateRobust(conge.getDateDebut());
+                LocalDate end = parseDateRobust(conge.getDateFin());
+                if (start != null) conge.setDateDebut(start.format(ISO_FORMATTER));
+                if (end != null) conge.setDateFin(end.format(ISO_FORMATTER));
+
+                if (start != null && end != null) {
+                    int calculatedDays = calculateJoursOuvrables(start, end);
+                    if (conge.getNbJours() == null || conge.getNbJours() <= 0) {
+                        conge.setNbJours(calculatedDays);
+                    }
+                } else if (conge.getNbJours() == null || conge.getNbJours() <= 0) {
+                    conge.setNbJours(1);
                 }
             } catch (Exception e) {
                 log.warn("Impossible de parser les dates : {} / {}", conge.getDateDebut(), conge.getDateFin());
@@ -267,9 +274,9 @@ public class CongeWorkflowService {
             // Mise à jour de l'employé si déjà en période
             try {
                 LocalDate now = LocalDate.now();
-                LocalDate start = LocalDate.parse(conge.getDateDebut());
-                LocalDate end = LocalDate.parse(conge.getDateFin());
-                if (!now.isBefore(start) && !now.isAfter(end) && conge.getEmployee() != null) {
+                LocalDate start = parseDateRobust(conge.getDateDebut());
+                LocalDate end = parseDateRobust(conge.getDateFin());
+                if (start != null && end != null && !now.isBefore(start) && !now.isAfter(end) && conge.getEmployee() != null) {
                     conge.getEmployee().setStatut("EN_CONGE");
                     employeeRepository.save(conge.getEmployee());
                 }
@@ -502,9 +509,9 @@ public class CongeWorkflowService {
                 if (code.contains("MATERNITE") || name.contains("MATERNITE") || name.contains("MATERNITÉ")) {
                     if (c.getDateDebut() != null && c.getDateFin() != null) {
                         try {
-                            LocalDate cDebut = LocalDate.parse(c.getDateDebut().trim());
-                            LocalDate cFin = LocalDate.parse(c.getDateFin().trim());
-                            if (!cDebut.isAfter(fin) && !cFin.isBefore(debut)) {
+                            LocalDate cDebut = parseDateRobust(c.getDateDebut());
+                            LocalDate cFin = parseDateRobust(c.getDateFin());
+                            if (cDebut != null && cFin != null && !cDebut.isAfter(fin) && !cFin.isBefore(debut)) {
                                 return true;
                             }
                         } catch (Exception ignored) {}
@@ -532,5 +539,28 @@ public class CongeWorkflowService {
         if (date == null) return false;
         String mmDd = String.format("%02d-%02d", date.getMonthValue(), date.getDayOfMonth());
         return FERIES_FIXES_BF.contains(mmDd);
+    }
+
+    public static LocalDate parseDateRobust(String dStr) {
+        if (dStr == null || dStr.isBlank()) return null;
+        String clean = dStr.trim();
+        try {
+            if (clean.contains("T")) {
+                clean = clean.substring(0, clean.indexOf("T"));
+            }
+            if (clean.contains("/")) {
+                String[] parts = clean.split("/");
+                if (parts.length == 3) {
+                    if (parts[2].length() == 4) { // DD/MM/YYYY
+                        return LocalDate.of(Integer.parseInt(parts[2]), Integer.parseInt(parts[1]), Integer.parseInt(parts[0]));
+                    } else if (parts[0].length() == 4) { // YYYY/MM/DD
+                        return LocalDate.of(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                    }
+                }
+            }
+            return LocalDate.parse(clean);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
