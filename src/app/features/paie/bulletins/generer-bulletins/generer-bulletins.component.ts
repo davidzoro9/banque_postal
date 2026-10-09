@@ -1445,21 +1445,28 @@ export class GenererBulletinsComponent implements OnInit {
             ? l.taux
             : (b.workedDays !== undefined && b.workedDays !== null ? b.workedDays : 30);
           tauxStr = String(days);
+        } else if (cd.includes('CNSS') || nm.includes('CNSS')) {
+          tauxStr = '5.5 %';
+        } else if (cd.includes('CRRAE') || nm.includes('CRRAE')) {
+          tauxStr = '6 %';
+        } else if (cd.includes('SOLIDAR') || cd.includes('FSP') || nm.includes('SOLIDARITE') || nm.includes('SOLIDARITÉ')) {
+          tauxStr = '1 %';
+        } else if (cd.includes('IUTS') || nm.includes('IUTS')) {
+          const nbChg = b.nombreCharges != null ? b.nombreCharges : (b.partsFiscales != null ? b.partsFiscales : (l.taux != null ? Math.round(Number(l.taux)) : 0));
+          tauxStr = nbChg > 0 ? `${nbChg} chg` : '—';
         } else if (cd.includes('ICCP') || nm.includes('CONGÉS') || nm.includes('CONGES')) {
           tauxStr = l.taux !== undefined && l.taux !== null ? String(l.taux) : '';
-        } else if (cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT')) {
-          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31) ? String(l.taux) : (l.taux !== undefined ? `${l.taux} %` : '');
+        } else if (cd.startsWith('IND') || cd.includes('LOG') || cd.includes('TRP') || cd.includes('SUJ') || cd.includes('CS') || cd.includes('CAISSE') || cd.includes('CP') || cd.includes('CASH') || nm.includes('INDEMNIT') || nm.includes('CAISSE') || nm.includes('SUJÉTION') || nm.includes('SUJETION') || nm.includes('LOGEMENT') || nm.includes('TRANSPORT') || nm.includes('CASH POINT')) {
+          // Indemnités forfaitaires mensuelles : pas de taux trompeur
+          tauxStr = '';
         } else if (cd.includes('TROP') || cd.includes('PREC') || nm.includes('TROP') || nm.includes('PRECOMPTE')) {
           tauxStr = '';
+        } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && l.taux !== '') ? `${l.taux} %` : '';
         } else if (l.tauxFormatted) {
           tauxStr = l.tauxFormatted.replace(/[()]/g, '').trim();
         } else if (l.taux !== undefined && l.taux !== null && l.taux !== '' && Number(l.taux) > 0) {
-          if (cd.includes('IUTS') || nm.includes('IUTS')) {
-            const tVal = Number(l.taux);
-            tauxStr = String(Math.round(tVal));
-          } else {
-            tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
-          }
+          tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
         }
 
         const baseVal = l.baseCalcul !== undefined ? l.baseCalcul : (isGain ? montant : undefined);
@@ -1548,8 +1555,29 @@ export class GenererBulletinsComponent implements OnInit {
 
     // Mode de règlement et compte
     const emp = copy.employee || this.tousLesEmployes.find(e => String(e.id) === String(copy.employeeId));
-    copy.nom = copy.nom || emp?.nom || (copy.employeeName ? copy.employeeName.split(' ')[0] : '—');
-    copy.prenom = copy.prenom || emp?.prenom || (copy.employeeName && copy.employeeName.includes(' ') ? copy.employeeName.substring(copy.employeeName.indexOf(' ') + 1) : '—');
+    let nomResolved = copy.nom || copy.employeeNom || emp?.nom;
+    let prenomResolved = copy.prenom || copy.employeePrenom || emp?.prenom;
+    if ((!nomResolved || !prenomResolved || nomResolved === '—' || prenomResolved === '—') && copy.employeeName) {
+      const parts = copy.employeeName.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        // En convention Afrique / Burkina, le NOM de famille est en MAJUSCULES (ex: Mariam OUEDRAOGO)
+        if (parts[1] === parts[1].toUpperCase() && parts[0] !== parts[0].toUpperCase()) {
+          nomResolved = parts.slice(1).join(' ');
+          prenomResolved = parts[0];
+        } else if (parts[0] === parts[0].toUpperCase() && parts[1] !== parts[1].toUpperCase()) {
+          nomResolved = parts[0];
+          prenomResolved = parts.slice(1).join(' ');
+        } else {
+          nomResolved = parts.slice(1).join(' ');
+          prenomResolved = parts[0];
+        }
+      } else {
+        nomResolved = copy.employeeName;
+        prenomResolved = '—';
+      }
+    }
+    copy.nom = nomResolved || '—';
+    copy.prenom = prenomResolved || '—';
     copy.emploi = copy.emploi && copy.emploi !== '—' ? copy.emploi : (emp?.fonction || emp?.poste || copy.fonction || '—');
     copy.dateEmbauche = copy.dateEmbauche && copy.dateEmbauche !== '—' ? copy.dateEmbauche : (emp?.dateEmbauche || '—');
     copy.service = copy.service && copy.service !== '—' ? copy.service : (emp?.service || emp?.departement || emp?.direction || '—');

@@ -163,6 +163,112 @@ html.dark-theme {
     border: 1px solid #1f293d !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
   }
+
+  // ─── EXCLUSION FORMELLE DES BULLETINS OFFICIELS DE PAIE (DOCUMENT PHYSIQUE BPBF) ───
+  // Un bulletin officiel de paie est une reproduction fidèle du document papier / PDF.
+  // Il DOIT rester sur fond blanc immaculé avec bordures et textes noirs pour conformité bancaire.
+  .bpbf-payslip-sheet,
+  .payslip-official-card,
+  .bpbf-paper-document {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+    color-scheme: light !important;
+
+    * {
+      color-scheme: light !important;
+    }
+
+    div, p, span, strong, label, header, footer {
+      background-color: transparent !important;
+      color: #000000 !important;
+      border-color: #000000 !important;
+    }
+
+    .bpbf-brand {
+      .bpbf-bank-name { color: #000000 !important; font-weight: 800 !important; }
+      .bpbf-bank-bp { color: #333333 !important; }
+    }
+
+    .bpbf-session-box {
+      background-color: #ffffff !important;
+      border: 1.5px solid #000000 !important;
+      .session-title { color: #000000 !important; font-weight: 900 !important; }
+      .session-line, .s-lbl, .s-val { color: #000000 !important; }
+    }
+
+    .bpbf-employee-grid {
+      background-color: #ffffff !important;
+      border: 1.5px solid #000000 !important;
+      .item-label, .item-sep, .item-value { color: #000000 !important; }
+    }
+
+    table, .bpbf-main-table, .bpbf-summary-table {
+      background-color: #ffffff !important;
+      border: 1.5px solid #000000 !important;
+      border-color: #000000 !important;
+
+      thead tr {
+        background-color: #f1f5f9 !important;
+        th {
+          background-color: #f1f5f9 !important;
+          color: #000000 !important;
+          border: 1px solid #000000 !important;
+          font-weight: 800 !important;
+        }
+      }
+
+      tbody tr {
+        background-color: #ffffff !important;
+        td {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border-left: 1px solid #000000 !important;
+          border-right: 1px solid #000000 !important;
+          border-top: none !important;
+          border-bottom: none !important;
+        }
+      }
+
+      tfoot tr {
+        background-color: #f8fafc !important;
+        td {
+          background-color: #f8fafc !important;
+          color: #000000 !important;
+          border: 1px solid #000000 !important;
+          font-weight: 800 !important;
+        }
+      }
+    }
+
+    .bpbf-payment-net-section {
+      background-color: #ffffff !important;
+      .reg-line, .r-lbl, .r-sep, .r-val { color: #000000 !important; }
+      .net-box {
+        border: 2px solid #000000 !important;
+        background-color: #f8fafc !important;
+        .net-title, .net-val { color: #000000 !important; font-weight: 900 !important; }
+      }
+    }
+
+    .bpbf-summary-table {
+      thead tr th {
+        background-color: #f1f5f9 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+      }
+      tbody tr td {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+      }
+    }
+
+    .bpbf-official-footer {
+      color: #334155 !important;
+    }
+  }
 }
 
 .data-row {
