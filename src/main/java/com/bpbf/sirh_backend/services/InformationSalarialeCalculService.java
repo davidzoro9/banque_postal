@@ -119,9 +119,9 @@ public class InformationSalarialeCalculService {
                     ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
 
             if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                // Taux appliqué sur le Brut Fiscal (brut après CNSS), plafonné par le plafond et le montant de l'indemnité
+                // Taux appliqué sur la Rémunération Brute totale (Base + Sursalaire + Indemnités), plafonné par le plafond et le montant de l'indemnité
                 BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        ? calculatePercentage(remunerationBrute, tauxExo)
                         : mIndem;
                 if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                     limiteTheorique = limiteTheorique.min(plafondExo);
@@ -387,7 +387,7 @@ public class InformationSalarialeCalculService {
 
             if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        ? calculatePercentage(remunerationBrute, tauxExo)
                         : mIndem;
                 if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                     limiteTheorique = limiteTheorique.min(plafondExo);
