@@ -2277,20 +2277,19 @@ public class BulletinService {
                 BigDecimal taux = l.getTaux();
                 String lCode = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
                 String libUpper = cleanLib.toUpperCase(Locale.ROOT);
-                if (lCode.contains("SAL_BASE") || lCode.contains("SUR_SALAIRE") || libUpper.contains("SALAIRE DE BASE") || libUpper.contains("SUR-SALAIRE") || libUpper.contains("SURSALAIRE") || lCode.contains("CASH") || libUpper.contains("CASH POINT")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) {
-                        taux = b.getWorkedDays() != null ? b.getWorkedDays() : new BigDecimal("30.00");
-                    }
-                } else if (lCode.contains("LOG") || libUpper.contains("LOGEMENT")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) taux = new BigDecimal("20.00");
-                } else if (lCode.contains("TRP") || libUpper.contains("TRANSPORT") || lCode.contains("CS") || libUpper.contains("CAISSE") || lCode.contains("SUJ") || libUpper.contains("SUJETION")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) taux = new BigDecimal("5.00");
+                if (lCode.contains("SAL_BASE") || lCode.contains("SUR_SALAIRE") || libUpper.contains("SALAIRE DE BASE") || libUpper.contains("SUR-SALAIRE") || libUpper.contains("SURSALAIRE")) {
+                    taux = b.getWorkedDays() != null ? b.getWorkedDays() : new BigDecimal("30.00");
                 } else if (lCode.contains("CNSS") || libUpper.contains("CNSS")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) taux = new BigDecimal("5.50");
+                    taux = new BigDecimal("5.50");
                 } else if (lCode.contains("CRRAE") || libUpper.contains("CRRAE")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) taux = new BigDecimal("6.00");
+                    taux = new BigDecimal("6.00");
                 } else if (lCode.contains("SOLIDAR") || libUpper.contains("SOLIDAR") || lCode.contains("FSP")) {
-                    if (taux == null || taux.compareTo(new BigDecimal("100.00")) == 0) taux = new BigDecimal("1.00");
+                    taux = new BigDecimal("1.00");
+                } else if (lCode.contains("ANC") || libUpper.contains("ANCIENNET")) {
+                    // Conserver le taux réel d'ancienneté
+                } else {
+                    // Indemnités forfaitaires (Caisse, Sujétion, Transport, Logement, Cash Point) et impôt IUTS barème
+                    taux = null;
                 }
                 ld.setTaux(taux);
                 ld.setMontant(l.getMontant());
@@ -2325,6 +2324,32 @@ public class BulletinService {
         dto.setCode(b.getCode());
         dto.setEmployeeId(b.getEmployee() != null ? b.getEmployee().getId() : null);
         dto.setEmployeeName(empName);
+
+        String nomVal = (b.getEmployee() != null && b.getEmployee().getNom() != null && !b.getEmployee().getNom().isBlank()) ? b.getEmployee().getNom().trim() : null;
+        String prenomVal = (b.getEmployee() != null && b.getEmployee().getPrenom() != null && !b.getEmployee().getPrenom().isBlank()) ? b.getEmployee().getPrenom().trim() : null;
+        if ((nomVal == null || prenomVal == null) && empName != null && !empName.isBlank()) {
+            String[] parts = empName.trim().split("\\s+");
+            if (parts.length >= 2) {
+                if (parts[1].equals(parts[1].toUpperCase(Locale.ROOT)) && !parts[0].equals(parts[0].toUpperCase(Locale.ROOT))) {
+                    nomVal = parts[1];
+                    prenomVal = parts[0];
+                } else if (parts[0].equals(parts[0].toUpperCase(Locale.ROOT)) && !parts[1].equals(parts[1].toUpperCase(Locale.ROOT))) {
+                    nomVal = parts[0];
+                    prenomVal = parts[1];
+                } else {
+                    nomVal = parts[parts.length - 1];
+                    prenomVal = parts[0];
+                }
+            } else {
+                nomVal = empName;
+                prenomVal = "—";
+            }
+        }
+        dto.setEmployeeNom(nomVal);
+        dto.setEmployeePrenom(prenomVal);
+        dto.setNom(nomVal);
+        dto.setPrenom(prenomVal);
+
         dto.setMatricule(matricule);
         dto.setFonction(fonctionStr);
         dto.setSessionPaieId(b.getSessionPaie() != null ? b.getSessionPaie().getId() : null);

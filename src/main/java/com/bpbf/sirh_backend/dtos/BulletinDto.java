@@ -60,6 +60,8 @@ public class BulletinDto {
 
     private String employeeNom;
     private String employeePrenom;
+    private String nom;
+    private String prenom;
     private String dateEmbauche;
     private String departement;
     private String numeroCnss;
@@ -265,5 +267,11 @@ public class BulletinDto {
 
     public String getMontantEnLettres() { return montantEnLettres; }
     public void setMontantEnLettres(String montantEnLettres) { this.montantEnLettres = montantEnLettres; }
+
+    public String getNom() { return nom != null ? nom : employeeNom; }
+    public void setNom(String nom) { this.nom = nom; if (this.employeeNom == null) this.employeeNom = nom; }
+
+    public String getPrenom() { return prenom != null ? prenom : employeePrenom; }
+    public void setPrenom(String prenom) { this.prenom = prenom; if (this.employeePrenom == null) this.employeePrenom = prenom; }
 }
 

@@ -350,16 +350,35 @@ public class BulletinPdfService {
         } else if (dto != null) {
             if (dto.getEmployeeNom() != null && !dto.getEmployeeNom().isBlank()) nom = dto.getEmployeeNom().toUpperCase(Locale.ROOT);
             if (dto.getEmployeePrenom() != null && !dto.getEmployeePrenom().isBlank()) prenom = dto.getEmployeePrenom().toUpperCase(Locale.ROOT);
-            if (nom.equals("—") && dto.getEmployeeName() != null && !dto.getEmployeeName().isBlank()) {
-                String[] p = dto.getEmployeeName().trim().split(" ");
-                nom = p[0].toUpperCase(Locale.ROOT);
-                prenom = p.length > 1 ? dto.getEmployeeName().trim().substring(p[0].length()).trim().toUpperCase(Locale.ROOT) : "—";
+        }
+        if ((nom.equals("—") || prenom.equals("—")) && dto != null && dto.getEmployeeName() != null && !dto.getEmployeeName().isBlank()) {
+            String[] p = dto.getEmployeeName().trim().split("\\s+");
+            if (p.length >= 2) {
+                if (p[1].equals(p[1].toUpperCase(Locale.ROOT)) && !p[0].equals(p[0].toUpperCase(Locale.ROOT))) {
+                    if (nom.equals("—")) nom = p[1].toUpperCase(Locale.ROOT);
+                    if (prenom.equals("—")) prenom = p[0].toUpperCase(Locale.ROOT);
+                } else if (p[0].equals(p[0].toUpperCase(Locale.ROOT)) && !p[1].equals(p[1].toUpperCase(Locale.ROOT))) {
+                    if (nom.equals("—")) nom = p[0].toUpperCase(Locale.ROOT);
+                    if (prenom.equals("—")) prenom = p[1].toUpperCase(Locale.ROOT);
+                } else {
+                    if (nom.equals("—")) nom = p[p.length - 1].toUpperCase(Locale.ROOT);
+                    if (prenom.equals("—")) prenom = p[0].toUpperCase(Locale.ROOT);
+                }
+            } else if (nom.equals("—")) {
+                nom = dto.getEmployeeName().trim().toUpperCase(Locale.ROOT);
             }
         }
-        if (nom.equals("—") && name != null && !name.isBlank() && !name.equals("—")) {
-            String[] p = name.trim().split(" ");
-            nom = p[0].toUpperCase(Locale.ROOT);
-            prenom = p.length > 1 ? name.trim().substring(p[0].length()).trim().toUpperCase(Locale.ROOT) : "—";
+        if ((nom.equals("—") || prenom.equals("—")) && name != null && !name.isBlank() && !name.equals("—")) {
+            String[] p = name.trim().split("\\s+");
+            if (p.length >= 2) {
+                if (p[1].equals(p[1].toUpperCase(Locale.ROOT)) && !p[0].equals(p[0].toUpperCase(Locale.ROOT))) {
+                    if (nom.equals("—")) nom = p[1].toUpperCase(Locale.ROOT);
+                    if (prenom.equals("—")) prenom = p[0].toUpperCase(Locale.ROOT);
+                } else {
+                    if (nom.equals("—")) nom = p[p.length - 1].toUpperCase(Locale.ROOT);
+                    if (prenom.equals("—")) prenom = p[0].toUpperCase(Locale.ROOT);
+                }
+            }
         }
 
         String emploi = "—";
@@ -571,6 +590,13 @@ public class BulletinPdfService {
         boolean hasIndividualIndemnites = false;
         boolean hasCrraeLine = false;
 
+        int empCharges = 0;
+        if (b.getEmployee() != null) {
+            try {
+                empCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(b.getEmployee().getId()));
+            } catch (Exception ignored) {}
+        }
+
         for (BulletinLine l : existingLines) {
             String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
             String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
@@ -603,11 +629,13 @@ public class BulletinPdfService {
             String tauxStr = "";
             if (code.contains("IUTS") || lib.contains("IUTS")) {
                 lib = "RETENUE IUTS";
-                if (l.getTaux() != null) {
-                    tauxStr = String.valueOf(l.getTaux().intValue());
-                } else {
-                    tauxStr = "0";
+                int nbChg = 0;
+                if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
+                    nbChg = l.getTaux().intValue();
+                } else if (empCharges > 0) {
+                    nbChg = empCharges;
                 }
+                tauxStr = nbChg > 0 ? (nbChg + " chg") : "—";
             } else if (code.contains("CNSS") || lib.contains("CNSS")) {
                 lib = "COTISATION CNSS";
                 tauxStr = "5,5 %";
@@ -617,12 +645,10 @@ public class BulletinPdfService {
             } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
                 lib = "RETENUE FONDS DE SOLIDARITE";
                 tauxStr = "1 %";
-            } else if (code.contains("CASH") || lib.contains("CASH POINT") || code.contains("CP")) {
-                tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0)
-                        ? l.getTaux().stripTrailingZeros().toPlainString()
-                        : daysStr;
             } else if (code.contains("ANC")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+            } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {
+                tauxStr = "";
             } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                 tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
             }
@@ -768,6 +794,17 @@ public class BulletinPdfService {
         boolean hasIndividualIndemnites = false;
         boolean hasCrraeLine = false;
 
+        int dtoCharges = 0;
+        if (emp != null) {
+            try {
+                dtoCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(emp.getId()));
+            } catch (Exception ignored) {}
+        } else if (dto.getNombreCharges() != null) {
+            dtoCharges = dto.getNombreCharges();
+        } else if (dto.getPartsFiscales() != null) {
+            dtoCharges = dto.getPartsFiscales();
+        }
+
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             for (com.bpbf.sirh_backend.dtos.BulletinLineDto l : dto.getLines()) {
                 String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
@@ -801,13 +838,17 @@ public class BulletinPdfService {
                 String tauxStr = "";
                 if (code.contains("IUTS") || lib.contains("IUTS")) {
                     lib = "RETENUE IUTS";
+                    int nbChg = 0;
                     if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
-                        tauxStr = String.valueOf(l.getTaux().intValue());
-                    } else if (dto.getNombreCharges() != null) {
-                        tauxStr = String.valueOf(dto.getNombreCharges());
-                    } else {
-                        tauxStr = "2";
+                        nbChg = l.getTaux().intValue();
+                    } else if (dto.getNombreCharges() != null && dto.getNombreCharges() > 0) {
+                        nbChg = dto.getNombreCharges();
+                    } else if (dto.getPartsFiscales() != null && dto.getPartsFiscales() > 0) {
+                        nbChg = dto.getPartsFiscales();
+                    } else if (dtoCharges > 0) {
+                        nbChg = dtoCharges;
                     }
+                    tauxStr = nbChg > 0 ? (nbChg + " chg") : "—";
                 } else if (code.contains("CNSS") || lib.contains("CNSS")) {
                     lib = "COTISATION CNSS";
                     tauxStr = "5,5 %";
@@ -817,12 +858,10 @@ public class BulletinPdfService {
                 } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
                     lib = "RETENUE FONDS DE SOLIDARITE";
                     tauxStr = "1 %";
-                } else if (code.contains("CASH") || lib.contains("CASH POINT") || code.contains("CP")) {
-                    tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0)
-                            ? l.getTaux().stripTrailingZeros().toPlainString()
-                            : daysStr;
                 } else if (code.contains("ANC")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+                } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {
+                    tauxStr = "";
                 } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                     tauxStr = l.getTaux().stripTrailingZeros().toPlainString() + " %";
                 }
