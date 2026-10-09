@@ -201,10 +201,10 @@ public class EmployeeProcessService {
             exoneration.setLibelle(type.getName());
             exoneration.setTauxExonere(taux);
             exoneration.setPlafondExonere(plafond);
-            // Guide ResHum / CGI BF (Art. 106) : Exo = MIN(Montant servi, Taux% × Salaire brut total, Plafond)
-            // Le taux est appliqué sur le SALAIRE BRUT TOTAL (Base + Sursalaire + Indemnités)
+            // Guide ResHum / CGI BF (Art. 106) : Exo = MIN(Montant servi, Taux% × Brut fiscal, Plafond)
+            // Le taux est appliqué sur le BRUT FISCAL (brut global - CNSS), pas sur le montant de l'indemnité
             // Alignement automatique légal permanent sans mémoire figée obsolète
-            double exoAutorisee = calculateExonerationAutorisee(brutTotal, taux, plafond);
+            double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
             double exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
             exoneration.setMontantAutorise(exoAutorisee); // limite théorique affichée dans le tableau
             exoneration.setMontant(exoReelle);            // exonération réellement accordée
@@ -888,7 +888,7 @@ public class EmployeeProcessService {
                     double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
                     double brutFiscal = brutTotal - cnssAgent;
 
-                    double exoAutorisee = calculateExonerationAutorisee(brutTotal, taux, plafond);
+                    double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
                     double exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
                     exoneration.setMontantAutorise(exoAutorisee);
                     exoneration.setMontant(exoReelle);

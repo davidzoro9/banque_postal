@@ -231,10 +231,10 @@ public class BulletinService {
                     createdBulletins.add(existingBulletin);
                     continue;
                 }
-                if (existingBulletin.getWorkedDays() != null) {
+                if (existingBulletin.getWorkedDays() != null && existingBulletin.getWorkedDays().compareTo(BigDecimal.ZERO) > 0) {
                     customWorkedDays = existingBulletin.getWorkedDays();
                 }
-                if (existingBulletin.getScheduledWorkingDays() != null) {
+                if (existingBulletin.getScheduledWorkingDays() != null && existingBulletin.getScheduledWorkingDays().compareTo(BigDecimal.ZERO) > 0) {
                     customScheduledDays = existingBulletin.getScheduledWorkingDays();
                 }
                 // Si des doublons existent, supprimer les orphelins non validés
@@ -319,8 +319,12 @@ public class BulletinService {
 
         Employee emp = existing.getEmployee();
         SessionPaie session = existing.getSessionPaie();
-        BigDecimal workedDays = customWorkedDays != null ? customWorkedDays : existing.getWorkedDays();
-        BigDecimal scheduledDays = customScheduledDays != null ? customScheduledDays : existing.getScheduledWorkingDays();
+        BigDecimal workedDays = (customWorkedDays != null && customWorkedDays.compareTo(BigDecimal.ZERO) > 0)
+                ? customWorkedDays
+                : ((existing.getWorkedDays() != null && existing.getWorkedDays().compareTo(BigDecimal.ZERO) > 0) ? existing.getWorkedDays() : null);
+        BigDecimal scheduledDays = (customScheduledDays != null && customScheduledDays.compareTo(BigDecimal.ZERO) > 0)
+                ? customScheduledDays
+                : ((existing.getScheduledWorkingDays() != null && existing.getScheduledWorkingDays().compareTo(BigDecimal.ZERO) > 0) ? existing.getScheduledWorkingDays() : null);
 
         // Réutilisation de l'entité sans suppression afin de préserver l'ID et tous les liens
         Bulletin updatedBlt = computeAndSaveBulletin(session, emp, workedDays, scheduledDays, existing);
@@ -430,8 +434,10 @@ public class BulletinService {
         boolean is13Ou14eme = is13 || is14;
 
         // Calcul automatique du nombre de jours travaillés selon dateEmbauche (prorata temporis)
-        BigDecimal scheduledDays = customScheduledDays != null ? customScheduledDays : new BigDecimal("30.00");
-        BigDecimal workedDays = customWorkedDays != null ? customWorkedDays : new BigDecimal("30.00");
+        BigDecimal scheduledDays = (customScheduledDays != null && customScheduledDays.compareTo(BigDecimal.ZERO) > 0)
+                ? customScheduledDays : new BigDecimal("30.00");
+        BigDecimal workedDays = (customWorkedDays != null && customWorkedDays.compareTo(BigDecimal.ZERO) > 0)
+                ? customWorkedDays : new BigDecimal("30.00");
 
         LocalDate debutPeriode = session != null ? session.getDateFrom() : null;
         LocalDate finPeriode = session != null ? session.getDateTo() : null;
@@ -443,17 +449,14 @@ public class BulletinService {
             finPeriode = debutPeriode.withDayOfMonth(debutPeriode.lengthOfMonth());
         }
 
-        if (customWorkedDays == null && emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank() && debutPeriode != null) {
+        if ((customWorkedDays == null || customWorkedDays.compareTo(BigDecimal.ZERO) <= 0)
+                && emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank() && debutPeriode != null && finPeriode != null) {
             try {
                 LocalDate dEmbauche = LocalDate.parse(emp.getDateEmbauche().trim());
-                if (dEmbauche.isAfter(debutPeriode)) {
-                    if (finPeriode != null && dEmbauche.isAfter(finPeriode)) {
-                        workedDays = BigDecimal.ZERO;
-                    } else {
-                        int jourArrivee = dEmbauche.getDayOfMonth();
-                        int joursPresents = Math.max(1, Math.min(30, 30 - jourArrivee + 1));
-                        workedDays = new BigDecimal(joursPresents).setScale(2, RoundingMode.HALF_UP);
-                    }
+                if (!dEmbauche.isBefore(debutPeriode) && !dEmbauche.isAfter(finPeriode)) {
+                    int jourArrivee = dEmbauche.getDayOfMonth();
+                    int joursPresents = Math.max(1, Math.min(30, 30 - jourArrivee + 1));
+                    workedDays = new BigDecimal(joursPresents).setScale(2, RoundingMode.HALF_UP);
                 }
             } catch (Exception ignored) {}
         }

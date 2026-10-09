@@ -102,7 +102,7 @@ public class PaieCalculationService {
                 Double tauxExo = ind.getTypeIndemnite().getTauxExoneration();
                 Double plafondExo = ind.getTypeIndemnite().getPlafondExoneration();
                 if ((tauxExo != null && tauxExo > 0) || (plafondExo != null && plafondExo > 0)) {
-                    double limiteTaux = (tauxExo != null && tauxExo > 0) ? salaireBrut * (tauxExo / 100.0) : m;
+                    double limiteTaux = (tauxExo != null && tauxExo > 0) ? brutFiscal * (tauxExo / 100.0) : m;
                     double limiteTheorique = (plafondExo != null && plafondExo > 0) ? Math.min(limiteTaux, plafondExo) : limiteTaux;
                     double exoCalc = Math.min(m, limiteTheorique);
                     totalExonere += exoCalc;

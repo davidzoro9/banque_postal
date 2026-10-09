@@ -610,17 +610,17 @@ public class SimulationRemunerationService {
         BigDecimal brutApresCnss = remunerationBrute.subtract(cotisCnss).max(BigDecimal.ZERO);
 
         // 2. Exonérations fiscales légales (CGI Burkina Faso)
-        // Logement : max 20% du salaire brut total (Base + Sursalaire + Indemnités), plafond 75 000 FCFA
-        BigDecimal limiteLogement = remunerationBrute.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00"));
+        // Logement : max 20% du brut après CNSS, plafond 75 000 FCFA (CGI BF Art. 106)
+        BigDecimal limiteLogement = brutApresCnss.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00"));
         BigDecimal exoLogement = log.min(limiteLogement);
 
-        // Transport : max 5% du salaire brut total (Base + Sursalaire + Indemnités), plafond 30 000 FCFA
-        BigDecimal limiteTransport = remunerationBrute.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
+        // Transport : max 5% du brut après CNSS, plafond 30 000 FCFA (CGI BF Art. 106)
+        BigDecimal limiteTransport = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
         BigDecimal exoTransport = trp.min(limiteTransport);
 
-        // Fonction / Caisse : 5% du salaire brut total, plafond 50 000 FCFA
+        // Fonction / Caisse : 5% du brut après CNSS, plafond 50 000 FCFA
         BigDecimal totalFonctionnel = fnc.add(cai);
-        BigDecimal limiteFonction = remunerationBrute.multiply(new BigDecimal("0.05")).min(new BigDecimal("50000.00"));
+        BigDecimal limiteFonction = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("50000.00"));
         BigDecimal exoFonction = totalFonctionnel.min(limiteFonction);
 
         BigDecimal totalExonerations = exoLogement.add(exoTransport).add(exoFonction);
