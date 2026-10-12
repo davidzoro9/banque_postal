@@ -27,6 +27,7 @@ public class SimulationRemunerationService {
     private final ParametrageIndemniteRepository parametrageIndemniteRepository;
     private final GradeRepository gradeRepository;
     private final CategorieRepository categorieRepository;
+    private final MoteurCalculPaie moteurCalculPaie;
 
     private static final BigDecimal CENT = new BigDecimal("100");
     private static final BigDecimal PLAFOND_CNSS = new BigDecimal("800000.00");
@@ -44,7 +45,8 @@ public class SimulationRemunerationService {
             Map.entry("6", new int[]{0, 157940, 162678, 167559, 172585, 177763, 183096, 188589, 194246, 200074, 206076, 212258, 218626, 225185, 231940, 238898}),
             Map.entry("7", new int[]{0, 176441, 181734, 187186, 192802, 198586, 204543, 210680, 217000, 223510, 230215, 237122, 244236, 251563, 259110, 266883}),
             Map.entry("I", new int[]{0, 173090, 178283, 183631, 189140, 194814, 200659, 206679, 212879, 219265, 225843, 232618, 239597, 246785, 254189, 261814}),
-            Map.entry("II", new int[]{0, 203834, 209949, 216247, 222735, 229417, 236299, 243388, 250690, 258211, 265957, 273936, 282154, 290619, 299337, 308317}),
+            Map.entry("II", new int[]{0, 203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059}),
+            Map.entry("CL2", new int[]{0, 203834, 224217, 246639, 271303, 298433, 328277, 361104, 397215, 436936, 480630, 528693, 581562, 639718, 703690, 774059}),
             Map.entry("III", new int[]{0, 278697, 287058, 295670, 304540, 313676, 323086, 332779, 342762, 353045, 363636, 374545, 385782, 397355, 409276, 421554}),
             Map.entry("IV", new int[]{0, 405758, 417931, 430469, 443383, 456684, 470385, 484496, 499031, 514002, 529422, 545305, 561664, 578514, 595869, 613745}),
             Map.entry("V", new int[]{0, 581390, 598832, 616797, 635301, 654360, 673990, 694210, 715036, 736487, 758582, 781340, 804780, 828923, 853791, 879405}),
@@ -590,7 +592,7 @@ public class SimulationRemunerationService {
     }
 
     /**
-     * Moteur de calcul direct de simulation (fidèle à InformationSalarialeCalculService et au CGI Burkina Faso)
+     * Moteur de calcul direct de simulation (délègue à MoteurCalculPaie unifié)
      */
     public SimulationResultDto calculerSimulationDirecte(
             BigDecimal surSalaire, BigDecimal salaireBase, int charges,
@@ -601,153 +603,105 @@ public class SimulationRemunerationService {
         BigDecimal sVal = suj != null ? suj : BigDecimal.ZERO;
         BigDecimal cpVal = cashPoint != null ? cashPoint : BigDecimal.ZERO;
         BigDecimal aVal = aut != null ? aut : BigDecimal.ZERO;
-        BigDecimal totalIndem = log.add(trp).add(fnc).add(cai).add(sVal).add(cpVal).add(aVal);
-        BigDecimal remunerationBrute = salaireBase.add(surSalaire).add(totalIndem);
 
-        // 1. Cotisation CNSS Salarié (5.5% plafonné à 800 000 FCFA)
-        BigDecimal baseCnss = remunerationBrute.min(PLAFOND_CNSS);
-        BigDecimal cotisCnss = baseCnss.multiply(TAUX_CNSS_SALARIE).divide(CENT, 2, RoundingMode.HALF_UP);
-        BigDecimal brutApresCnss = remunerationBrute.subtract(cotisCnss).max(BigDecimal.ZERO);
+        MoteurCalculPaie.EntreePaie entree = MoteurCalculPaie.EntreePaie.builder()
+                .salaireBase(salaireBase)
+                .surSalaire(surSalaire)
+                .primeAnciennete(BigDecimal.ZERO)
+                .indemniteLogement(log)
+                .indemniteTransport(trp)
+                .indemniteFonction(fnc)
+                .indemniteCaisse(cai)
+                .indemniteSujetion(sVal)
+                .indemniteCashPoint(cpVal)
+                .autresIndemnites(aVal)
+                .nombreCharges(charges)
+                .build();
 
-        // 2. Exonérations fiscales légales (CGI Burkina Faso)
-        // Logement : max 20% du brut après CNSS, plafond 75 000 FCFA (CGI BF Art. 106)
-        BigDecimal limiteLogement = brutApresCnss.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00"));
-        BigDecimal exoLogement = log.min(limiteLogement);
+        MoteurCalculPaie.ResultatPaie res = moteurCalculPaie.calculer(entree);
 
-        // Transport : max 5% du brut après CNSS, plafond 30 000 FCFA (CGI BF Art. 106)
-        BigDecimal limiteTransport = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
-        BigDecimal exoTransport = trp.min(limiteTransport);
-
-        // Fonction / Caisse : 5% du brut après CNSS, plafond 50 000 FCFA
-        BigDecimal totalFonctionnel = fnc.add(cai);
-        BigDecimal limiteFonction = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("50000.00"));
-        BigDecimal exoFonction = totalFonctionnel.min(limiteFonction);
-
-        BigDecimal totalExonerations = exoLogement.add(exoTransport).add(exoFonction);
-
-        // 3. Abattement forfaitaire légal (20% du brut après CNSS plafonné à 75 000 FCFA)
-        BigDecimal abattementForfaitaire = brutApresCnss.multiply(new BigDecimal("0.20"))
-                .min(PLAFOND_ABATTEMENT);
-
-        // 4. Base imposable IUTS
-        BigDecimal baseImposableReelle = brutApresCnss.subtract(totalExonerations)
-                .subtract(abattementForfaitaire).max(BigDecimal.ZERO);
-
-        // Troncature à la centaine inférieure
-        BigDecimal baseIutsTronquee = baseImposableReelle.divideToIntegralValue(CENT).multiply(CENT);
-
-        // 5. Calcul IUTS progressif
-        BigDecimal iutsBrut = calculerIutsProgressif(baseIutsTronquee);
-
-        // 6. Réduction pour charges de famille
-        BigDecimal tauxReduction = reductionRate(charges);
-        BigDecimal reductionCharges = iutsBrut.multiply(tauxReduction).divide(CENT, 0, RoundingMode.HALF_UP);
-        BigDecimal iutsNet = iutsBrut.subtract(reductionCharges).max(BigDecimal.ZERO);
-
-        // Arrondis finaux FCFA
-        BigDecimal cotisCnssArrondi = cotisCnss.setScale(0, RoundingMode.CEILING);
-        BigDecimal iutsNetArrondi = iutsNet.setScale(0, RoundingMode.CEILING);
-        BigDecimal totalRetenues = cotisCnssArrondi.add(iutsNetArrondi);
-        BigDecimal salaireNet = remunerationBrute.setScale(0, RoundingMode.CEILING).subtract(totalRetenues);
-
-        // 7. Charges patronales estimées (CNSS 16% plafonnée)
-        BigDecimal cotisPatronale = baseCnss.multiply(TAUX_CNSS_PATRONAL).divide(CENT, 0, RoundingMode.HALF_UP);
-        BigDecimal coutTotal = remunerationBrute.setScale(0, RoundingMode.CEILING).add(cotisPatronale);
-
-        // 8. Génération des lignes de ventilation pour la fiche récapitulative
         List<LigneSimulationDto> lignes = new ArrayList<>();
-        lignes.add(new LigneSimulationDto("SB", "Salaire de base (Grille)", "GAIN", salaireBase.doubleValue(), null, salaireBase.doubleValue(), 0.0));
-        if (surSalaire.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("SS", "Sursalaire proposé", "GAIN", surSalaire.doubleValue(), null, surSalaire.doubleValue(), 0.0));
+        if (res.getLignes() != null) {
+            for (MoteurCalculPaie.LigneDetail ld : res.getLignes()) {
+                String lib = ld.getLibelle();
+                if ("IND_FNC".equals(ld.getCode()) && nomFonction != null && !nomFonction.isBlank()) {
+                    lib = "Indemnité de fonction (" + nomFonction + ")";
+                } else if ("IND_CAI".equals(ld.getCode()) && nomEmploi != null && !nomEmploi.isBlank()) {
+                    lib = "Indemnité de caisse (" + nomEmploi + ")";
+                }
+                lignes.add(new LigneSimulationDto(
+                        ld.getCode(),
+                        lib,
+                        ld.getType(),
+                        ld.getBase(),
+                        ld.getTaux(),
+                        ld.getMontantGain(),
+                        ld.getMontantRetenue()
+                ));
+            }
         }
-        if (log.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_LOG", "Indemnité de logement", "GAIN", log.doubleValue(), null, log.doubleValue(), 0.0));
-        }
-        if (trp.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_TRP", "Indemnité de transport", "GAIN", trp.doubleValue(), null, trp.doubleValue(), 0.0));
-        }
-        if (sVal.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_SUJ", "Indemnité de sujétion (Statutaire)", "GAIN", sVal.doubleValue(), null, sVal.doubleValue(), 0.0));
-        }
-        if (fnc.compareTo(BigDecimal.ZERO) > 0) {
-            String labelFnc = (nomFonction != null && !nomFonction.isBlank())
-                    ? "Indemnité de fonction (" + nomFonction + ")"
-                    : "Indemnité de fonction";
-            lignes.add(new LigneSimulationDto("IND_FNC", labelFnc, "GAIN", fnc.doubleValue(), null, fnc.doubleValue(), 0.0));
-        }
-        if (cai.compareTo(BigDecimal.ZERO) > 0) {
-            String labelCai = (nomEmploi != null && !nomEmploi.isBlank())
-                    ? "Indemnité de caisse (" + nomEmploi + ")"
-                    : "Indemnité de caisse";
-            lignes.add(new LigneSimulationDto("IND_CAI", labelCai, "GAIN", cai.doubleValue(), null, cai.doubleValue(), 0.0));
-        }
-        if (cpVal.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_CASH", "Prime Cash Point", "GAIN", cpVal.doubleValue(), null, cpVal.doubleValue(), 0.0));
-        }
-        if (aVal.compareTo(BigDecimal.ZERO) > 0) {
-            lignes.add(new LigneSimulationDto("IND_AUT", "Autres indemnités spécifiques", "GAIN", aVal.doubleValue(), null, aVal.doubleValue(), 0.0));
-        }
-
-        // Retenues salariales
-        lignes.add(new LigneSimulationDto("CNSS_SAL", "Cotisation CNSS (Salariale 5.5%)", "RETENUE_SALARIALE", baseCnss.doubleValue(), 5.5, 0.0, cotisCnssArrondi.doubleValue()));
-        lignes.add(new LigneSimulationDto("IUTS_NET", "Impôt IUTS (après " + charges + " chg / -" + tauxReduction + "%)", "RETENUE_SALARIALE", baseIutsTronquee.doubleValue(), null, 0.0, iutsNetArrondi.doubleValue()));
-
-        // Charge patronale
-        lignes.add(new LigneSimulationDto("CNSS_PAT", "Cotisation CNSS Patronale (16%)", "RETENUE_PATRONALE", baseCnss.doubleValue(), 16.0, 0.0, cotisPatronale.doubleValue()));
 
         return SimulationResultDto.builder()
                 .emploiId(emploiId)
                 .emploiNom(nomEmploi)
                 .fonctionId(fonctionId)
                 .fonctionNom(nomFonction)
-                .salaireBase(salaireBase.doubleValue())
-                .surSalaire(surSalaire.doubleValue())
-                .totalIndemnites(totalIndem.doubleValue())
-                .indemniteLogement(log.doubleValue())
-                .indemniteTransport(trp.doubleValue())
-                .indemniteFonction(fnc.doubleValue())
-                .indemniteCaisse(cai.doubleValue())
-                .indemniteSujetion(sVal.doubleValue())
-                .indemniteCashPoint(cpVal.doubleValue())
-                .autresIndemnites(aVal.doubleValue())
+                .salaireBase((double) res.getSalaireBase())
+                .surSalaire((double) res.getSurSalaire())
+                .totalIndemnites((double) res.getTotalIndemnites())
+                .indemniteLogement((double) res.getIndemniteLogement())
+                .indemniteTransport((double) res.getIndemniteTransport())
+                .indemniteFonction((double) res.getIndemniteFonction())
+                .indemniteCaisse((double) res.getIndemniteCaisse())
+                .indemniteSujetion((double) res.getIndemniteSujetion())
+                .indemniteCashPoint((double) res.getIndemniteCashPoint())
+                .autresIndemnites((double) res.getAutresIndemnites())
                 .detailsIndemnites(details)
-                .remunerationBrute(remunerationBrute.doubleValue())
-                .baseCnss(baseCnss.doubleValue())
-                .tauxCnssSalarial(5.5)
-                .cotisationCnss(cotisCnssArrondi.doubleValue())
-                .brutApresCnss(brutApresCnss.doubleValue())
-                .totalExonerations(totalExonerations.doubleValue())
-                .abattementForfaitaire(abattementForfaitaire.doubleValue())
-                .baseImposableIuts(baseIutsTronquee.doubleValue())
-                .iutsBrut(iutsBrut.setScale(0, RoundingMode.CEILING).doubleValue())
-                .nombrePersonnesCharge(charges)
-                .tauxReductionCharges(tauxReduction.doubleValue())
-                .reductionIutsCharges(reductionCharges.doubleValue())
-                .iutsNet(iutsNetArrondi.doubleValue())
-                .totalRetenuesSalariales(totalRetenues.doubleValue())
-                .salaireNet(salaireNet.doubleValue())
-                .cotisationCnssPatronale(cotisPatronale.doubleValue())
-                .totalChargesPatronales(cotisPatronale.doubleValue())
-                .coutTotalEmployeur(coutTotal.doubleValue())
+                .remunerationBrute((double) res.getRemunerationBrute())
+                .baseCnss((double) res.getBaseCnss())
+                .tauxCnssSalarial(res.getTauxCnssSalarial())
+                .cotisationCnss((double) res.getCotisationCnss())
+                .brutApresCnss(res.getBrutApresCnss())
+                .totalExonerations(res.getTotalExonerations())
+                .abattementForfaitaire(res.getAbattementForfaitaire())
+                .baseImposableIuts(res.getBaseImposableIuts())
+                .iutsBrut((double) res.getIutsBrut())
+                .nombrePersonnesCharge(res.getNombreCharges())
+                .tauxReductionCharges(res.getTauxReductionCharges())
+                .reductionIutsCharges((double) res.getReductionIutsCharges())
+                .iutsNet((double) res.getIutsNet())
+                .baseCrrae((double) res.getBaseCrrae())
+                .tauxCrrae(res.getTauxCrrae())
+                .cotisationCrrae((double) res.getCotisationCrrae())
+                .netCedulaire((double) res.getNetCedulaire())
+                .baseFsp((double) res.getNetCedulaire())
+                .tauxFsp(res.getTauxFsp())
+                .cotisationFsp((double) res.getCotisationFsp())
+                .totalRetenuesSalariales((double) res.getTotalRetenuesSalariales())
+                .salaireNet((double) res.getSalaireNet())
+                .cotisationCnssPatronale((double) res.getCotisationCnssPatronale())
+                .totalChargesPatronales((double) res.getTotalChargesPatronales())
+                .coutTotalEmployeur((double) res.getCoutTotalEmployeur())
                 .lignesDetails(lignes)
                 .build();
     }
 
     private BigDecimal determinerSalaireBase(SimulationRequestDto req) {
-        if (req.getSalaireBaseManuel() != null && req.getSalaireBaseManuel() > 0) {
-            return BigDecimal.valueOf(req.getSalaireBaseManuel());
-        }
-
-        // Recherche en base via GrilleSalarialeService
+        // 1. Recherche prioritaire dans PostgreSQL via GrilleSalarialeService
         try {
             GrilleSalarialeDto grille = grilleSalarialeService.findGrille(
-                    req.getGradeId(), req.getCategorieId(), req.getEchelonId(),
+                    null, req.getCategorieId(), req.getEchelonId(),
                     req.getGradeCode(), req.getCategorieCode(), req.getEchelonCode()
             );
             if (grille != null && grille.getBasicSalary() != null && grille.getBasicSalary().compareTo(BigDecimal.ZERO) > 0) {
                 return grille.getBasicSalary();
             }
         } catch (Exception ignored) {}
+
+        // 2. Si non trouvé en base et qu'un salaire de base manuel a été explicitement saisi
+        if (req.getSalaireBaseManuel() != null && req.getSalaireBaseManuel() > 0) {
+            return BigDecimal.valueOf(req.getSalaireBaseManuel());
+        }
 
         // Fallback sécurisé : Grille officielle BPBF
         String rawCat = req.getCategorieCode() != null ? req.getCategorieCode().trim().toUpperCase() : "1";

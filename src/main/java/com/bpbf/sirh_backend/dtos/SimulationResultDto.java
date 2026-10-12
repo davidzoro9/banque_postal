@@ -44,6 +44,17 @@ public class SimulationResultDto {
     private Double reductionIutsCharges;
     private Double iutsNet;
 
+    // Retraite Complémentaire (CRRAE / RCPNC)
+    private Double baseCrrae;
+    private Double tauxCrrae;
+    private Double cotisationCrrae;
+
+    // Fonds de Soutien Patriotique (FSP)
+    private Double netCedulaire;
+    private Double baseFsp;
+    private Double tauxFsp;
+    private Double cotisationFsp;
+
     // Synthèse Salarié
     private Double totalRetenuesSalariales;
     private Double salaireNet;

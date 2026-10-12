@@ -90,6 +90,50 @@ public class NotificationBackendService {
             log.debug("Comptage demandes bulletins ignoré : {}", e.getMessage());
         }
 
+        // 1.d Bulletins RH traités prêts au téléchargement (Portail Collaborateur)
+        try {
+            Long bullPrets = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM demande_bulletin WHERE UPPER(statut) IN ('TRAITEE', 'DISPONIBLE', 'VALIDE', 'ACCEPTEE')",
+                Long.class
+            );
+            if (bullPrets != null && bullPrets > 0) {
+                list.add(NotificationItemDto.builder()
+                    .id("notif-bull-prets-" + bullPrets)
+                    .title("Bulletins RH disponibles au téléchargement")
+                    .message(bullPrets + " demande(s) de bulletin traitée(s) et disponible(s) au téléchargement")
+                    .type("success")
+                    .read(false)
+                    .date(today)
+                    .icon("download")
+                    .route("/mon-espace")
+                    .build());
+            }
+        } catch (Exception e) {
+            log.debug("Comptage bulletins prêts ignoré : {}", e.getMessage());
+        }
+
+        // 1.e Titres de Congé officiels validés par la DRH
+        try {
+            Long congesApprouves = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM conge WHERE UPPER(statut) = 'APPROUVE'",
+                Long.class
+            );
+            if (congesApprouves != null && congesApprouves > 0) {
+                list.add(NotificationItemDto.builder()
+                    .id("notif-conges-approuves-" + congesApprouves)
+                    .title("Titres de Congé délivrés par la DRH")
+                    .message(congesApprouves + " autorisation(s) de congé validée(s) et téléchargeable(s) en PDF")
+                    .type("info")
+                    .read(false)
+                    .date(today)
+                    .icon("picture_as_pdf")
+                    .route("/mon-espace")
+                    .build());
+            }
+        } catch (Exception e) {
+            log.debug("Comptage congés approuvés ignoré : {}", e.getMessage());
+        }
+
         // 2. Contrats arrivant à échéance sous 30 jours
         try {
             Long contratsCount = jdbcTemplate.queryForObject(

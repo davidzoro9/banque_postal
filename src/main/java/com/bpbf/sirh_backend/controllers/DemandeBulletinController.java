@@ -156,21 +156,22 @@ public class DemandeBulletinController {
     }
 
     private void genererEtAssocierBulletin(DemandeBulletin demande) {
-        associerBulletinExistant(demande);
-    }
-
-    private void associerBulletinExistant(DemandeBulletin demande) {
         try {
             Long empId = demande.getEmployeeId();
-            if (empId == null && demande.getMatricule() != null && !demande.getMatricule().isBlank()) {
+            Employee emp = null;
+            if (empId != null) {
+                emp = employeeRepository.findById(empId).orElse(null);
+            }
+            if (emp == null && demande.getMatricule() != null && !demande.getMatricule().isBlank()) {
                 Optional<Employee> empOpt = employeeRepository.findByMatriculeIgnoreCase(demande.getMatricule().trim());
                 if (empOpt.isPresent()) {
-                    empId = empOpt.get().getId();
+                    emp = empOpt.get();
+                    empId = emp.getId();
                     demande.setEmployeeId(empId);
                 }
             }
-            if (empId == null) {
-                log.warn("Impossible d'associer un bulletin sans identifiant employé pour la demande #{}", demande.getId());
+            if (emp == null) {
+                log.warn("Impossible de générer ou d'associer un bulletin sans employé valide pour la demande #{}", demande.getId());
                 return;
             }
 
@@ -179,23 +180,75 @@ public class DemandeBulletinController {
             int annee = ma[1];
             String moisStr = String.format("%02d", mois);
 
-            // RÈGLE V3 : Chercher parmi les vrais bulletins officiels existants de l'agent
+            // Détermination précise du type et de la nature de bulletin
+            String rawType = demande.getTypeBulletin() != null ? demande.getTypeBulletin().trim().toUpperCase(Locale.ROOT) : "";
+            String rawMotif = (demande.getMotif() != null ? demande.getMotif() : "").toUpperCase(Locale.ROOT);
+            String rawPeriode = (demande.getPeriode() != null ? demande.getPeriode() : "").toUpperCase(Locale.ROOT);
+            String rawAll = rawType + " " + rawMotif + " " + rawPeriode;
+
+            boolean isExtra = false;
+            String natureSession = null;
+
+            if (rawAll.contains("14") || rawAll.contains("QUATORZ")) {
+                isExtra = true;
+                natureSession = "QUATORZIEME_MOIS";
+                demande.setTypeBulletin("14EME_MOIS");
+            } else if (rawAll.contains("13") || rawAll.contains("TREIZ") || rawAll.contains("GRATIF")) {
+                isExtra = true;
+                natureSession = "13EME_MOIS";
+                demande.setTypeBulletin("13EME_MOIS");
+            } else if (rawAll.contains("STC") || rawAll.contains("SOLDE")) {
+                isExtra = true;
+                natureSession = "STC";
+                demande.setTypeBulletin("STC");
+            } else if (rawAll.contains("CONGE") || rawAll.contains("CONGÉ")) {
+                isExtra = true;
+                natureSession = "CONGE_PAYE";
+                demande.setTypeBulletin("CONGE_PAYE");
+            } else if (rawAll.contains("RETRAITE")) {
+                isExtra = true;
+                natureSession = "INDEMNITE_RETRAITE";
+                demande.setTypeBulletin("INDEMNITE_RETRAITE");
+            } else if (rawAll.contains("MATERNITE") || rawAll.contains("MATERNITÉ")) {
+                isExtra = true;
+                natureSession = "DIFFERENTIEL_MATERNITE";
+                demande.setTypeBulletin("DIFFERENTIEL_MATERNITE");
+            } else if (rawAll.contains("RAPPEL")) {
+                isExtra = true;
+                natureSession = "RAPPEL";
+                demande.setTypeBulletin("RAPPEL");
+            } else {
+                demande.setTypeBulletin("ORDINAIRE");
+            }
+
+            // 1. Recherche parmi les bulletins existants de l'agent
             List<Bulletin> bulletinsEmp = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(empId);
             Bulletin bulletinTrouve = null;
 
-            // 1. Recherche par session associée
             for (Bulletin b : bulletinsEmp) {
                 SessionPaie s = b.getSessionPaie();
                 if (s != null && s.getAnnee() != null && s.getAnnee() == annee) {
                     if (s.getMois() != null && (s.getMois().equals(moisStr) || s.getMois().equals(String.valueOf(mois)))) {
-                        bulletinTrouve = b;
-                        break;
+                        if (isExtra) {
+                            String sNat = s.getNatureSession() != null ? s.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                            String bNat = b.getNatureSession() != null ? b.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                            if (sNat.contains(natureSession) || bNat.contains(natureSession) ||
+                                (natureSession.equals("13EME_MOIS") && (sNat.contains("TREIZ") || bNat.contains("TREIZ")))) {
+                                bulletinTrouve = b;
+                                break;
+                            }
+                        } else {
+                            if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
+                                bulletinTrouve = b;
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
-            // 2. Recherche par date de début du bulletin si la session n'est pas explicite
-            if (bulletinTrouve == null) {
+            // Fallback par date
+            if (bulletinTrouve == null && !isExtra) {
                 for (Bulletin b : bulletinsEmp) {
                     if (b.getDateFrom() != null && b.getDateFrom().getYear() == annee && b.getDateFrom().getMonthValue() == mois) {
                         bulletinTrouve = b;
@@ -209,14 +262,90 @@ public class DemandeBulletinController {
                 if (bulletinTrouve.getSessionPaie() != null) {
                     demande.setSessionId(bulletinTrouve.getSessionPaie().getId());
                 }
-                log.info("Bulletin réel #{} associé à la demande #{} pour l'agent #{} (période {}/{})",
-                        bulletinTrouve.getId(), demande.getId(), empId, moisStr, annee);
-            } else {
-                log.info("Aucun bulletin officiel trouvé pour l'employé #{} pour la période {} ({}/{})",
-                        empId, demande.getPeriode(), moisStr, annee);
+                log.info("Bulletin réel #{} associé à la demande #{} pour l'agent #{} ({})",
+                        bulletinTrouve.getId(), demande.getId(), empId, demande.getTypeBulletin());
+                return;
             }
+
+            // 2. Aucun bulletin trouvé : Création ou rattachement à la session de paie correspondante
+            String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+            String nomMois = (mois >= 1 && mois <= 12) ? moisNoms[mois - 1] : ("Mois " + moisStr);
+            String periodeStr = nomMois + " " + annee;
+
+            SessionPaie targetSession = null;
+            List<SessionPaie> sessionsMois = sessionPaieRepository.findByMoisAndAnnee(moisStr, annee);
+            if (sessionsMois.isEmpty()) {
+                sessionsMois = sessionPaieRepository.findByMoisAndAnnee(String.valueOf(mois), annee);
+            }
+
+            if (isExtra) {
+                for (SessionPaie s : sessionsMois) {
+                    if ("EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
+                        String sNat = s.getNatureSession() != null ? s.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                        if (sNat.contains(natureSession) || (natureSession.equals("13EME_MOIS") && sNat.contains("TREIZ"))) {
+                            targetSession = s;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                for (SessionPaie s : sessionsMois) {
+                    if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
+                        targetSession = s;
+                        break;
+                    }
+                }
+            }
+
+            // Si aucune session appropriée n'existe, la créer
+            if (targetSession == null) {
+                targetSession = new SessionPaie();
+                targetSession.setMois(moisStr);
+                targetSession.setAnnee(annee);
+                targetSession.setTypeSession(isExtra ? "EXTRAORDINAIRE" : "ORDINAIRE");
+                targetSession.setNatureSession(isExtra ? natureSession : null);
+                targetSession.setStatut("GENERE");
+                targetSession.setCreePar("SERVICE_PAIE");
+                targetSession.setDateCreation(LocalDateTime.now());
+                targetSession.setPeriode(periodeStr);
+
+                LocalDate deb = LocalDate.of(annee, mois, 1);
+                LocalDate fin = deb.withDayOfMonth(deb.lengthOfMonth());
+                targetSession.setDateFrom(deb);
+                targetSession.setDateTo(fin);
+
+                String baseCode = isExtra
+                        ? String.format("SESS-%s-%d-%s", natureSession.replace("_MOIS", ""), annee, moisStr)
+                        : String.format("SESS-%d-%s", annee, moisStr);
+
+                String finalCode = baseCode;
+                int suffix = 1;
+                while (sessionPaieRepository.findByCodeSession(finalCode).isPresent()) {
+                    finalCode = baseCode + "-" + suffix++;
+                }
+                targetSession.setCodeSession(finalCode);
+                targetSession.setName(isExtra
+                        ? ("Session Extraordinaire " + natureSession + " — " + periodeStr)
+                        : ("Session Ordinaire — " + periodeStr));
+
+                targetSession = sessionPaieRepository.save(targetSession);
+                log.info("Nouvelle session de paie #{} ({}) créée automatiquement pour la demande #{}",
+                        targetSession.getId(), targetSession.getCodeSession(), demande.getId());
+            }
+
+            // 3. Calculer et enregistrer le bulletin officiel de l'employé dans cette session
+            Bulletin nouveauBulletin = bulletinService.computeAndSaveBulletin(targetSession, emp);
+            bulletinService.recalculerTotauxSession(targetSession);
+
+            demande.setBulletinId(nouveauBulletin.getId());
+            demande.setSessionId(targetSession.getId());
+
+            log.info("Bulletin officiel #{} généré avec succès dans la session #{} ({}) pour la demande #{}",
+                    nouveauBulletin.getId(), targetSession.getId(), targetSession.getCodeSession(), demande.getId());
+
         } catch (Exception e) {
-            log.error("Erreur lors de la recherche du bulletin pour la demande #{}: {}", demande.getId(), e.getMessage(), e);
+            log.error("Erreur lors de la génération/association du bulletin pour la demande #{}: {}",
+                    demande.getId(), e.getMessage(), e);
         }
     }
 

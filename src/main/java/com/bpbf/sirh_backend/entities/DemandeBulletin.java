@@ -30,6 +30,9 @@ public class DemandeBulletin {
 
     private String motif;
 
+    @Column(name = "type_bulletin", length = 100)
+    private String typeBulletin; // ORDINAIRE, 13EME_MOIS, 14EME_MOIS, STC, CONGE_PAYE, RAPPEL, DIFFERENTIEL_MATERNITE
+
     private String urgence;
 
     @Column(columnDefinition = "TEXT")

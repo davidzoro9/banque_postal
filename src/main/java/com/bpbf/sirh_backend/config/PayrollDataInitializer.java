@@ -488,17 +488,26 @@ public class PayrollDataInitializer implements CommandLineRunner {
         try {
             log.info("Vérification et initialisation des comptes comptables SYSCOHADA de paie...");
             createCompteIfAbsent("641100", "Salaires de base du personnel national", "CLASSE_6", "DEBIT", "SALAIRE_BASE", "OD_PAIE", "Traitements et salaires fixes");
+            createCompteIfAbsent("642200", "Sur-salaires du personnel", "CLASSE_6", "DEBIT", "SUR_SALAIRE", "OD_PAIE", "Sur-salaire contractuel et majorations");
             createCompteIfAbsent("641200", "Primes et gratifications", "CLASSE_6", "DEBIT", "PRIMES", "OD_PAIE", "Primes d'ancienneté, de rendement et gratifications");
             createCompteIfAbsent("641300", "Indemnités et avantages divers", "CLASSE_6", "DEBIT", "INDEMNITES", "OD_PAIE", "Indemnités de logement, transport, fonction, caisse, etc.");
+            createCompteIfAbsent("642500", "Rappels sur salaires antérieurs (Avoirs accordés)", "CLASSE_6", "DEBIT", "RAPPELS", "OD_PAIE", "Rappels sur salaires et avoirs");
             createCompteIfAbsent("641400", "Rémunérations des heures supplémentaires", "CLASSE_6", "DEBIT", "HEURES_SUPP", "OD_PAIE", "Heures supplémentaires majorées");
             createCompteIfAbsent("646100", "Cotisations sociales patronales (CNSS)", "CLASSE_6", "DEBIT", "COTISATIONS_PATRONALES", "OD_PAIE", "Charges patronales CNSS (Prestations familiales, Risques pro, Retraite)");
+            createCompteIfAbsent("646200", "Cotisations patronales régimes complémentaires (CRRAE)", "CLASSE_6", "DEBIT", "CRRAE_PATRONALE", "OD_PAIE", "Charges patronales de retraite complémentaire CRRAE");
+            createCompteIfAbsent("647100", "Taxe Patronale d'Apprentissage (TPA - Charge)", "CLASSE_6", "DEBIT", "TPA", "OD_PAIE", "Taxe Patronale d'Apprentissage (TPA)");
             createCompteIfAbsent("421100", "Personnel - Rémunérations dues (Net à payer)", "CLASSE_4", "CREDIT", "NET_A_PAYER", "OD_PAIE", "Salaires nets à verser aux employés de la banque");
             createCompteIfAbsent("422100", "Personnel - Avances et acomptes", "CLASSE_4", "CREDIT", "ACOMPTES", "OD_PAIE", "Acomptes consentis sur salaires");
+            createCompteIfAbsent("422000", "Personnel - Prêts, avances et précomptes récupérés", "CLASSE_4", "CREDIT", "PRECOMPTES", "OD_PAIE", "Précomptes et retenues sur prêts");
+            createCompteIfAbsent("428700", "Personnel - Trop-perçus régularisés sur salaires antérieurs", "CLASSE_4", "CREDIT", "TROP_PERCUS", "OD_PAIE", "Régularisations de trop-perçus");
             createCompteIfAbsent("431100", "Sécurité Sociale (CNSS)", "CLASSE_4", "CREDIT", "CNSS", "OD_PAIE", "Cotisations CNSS part salariale (5.5%) et part patronale");
+            createCompteIfAbsent("431200", "Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)", "CLASSE_4", "CREDIT", "CRRAE", "OD_PAIE", "Cotisations prévoyance CRRAE salariale et patronale");
             createCompteIfAbsent("442100", "État - Impôt sur les Traitements et Salaires (IUTS)", "CLASSE_4", "CREDIT", "IUTS", "OD_PAIE", "Retenues à la source IUTS selon barème progressif");
             createCompteIfAbsent("442800", "État - Fonds de Soutien Patriotique (FSP)", "CLASSE_4", "CREDIT", "FSP", "OD_PAIE", "Prélèvement légal FSP sur rémunérations");
+            createCompteIfAbsent("447300", "État - Taxe Patronale d'Apprentissage à reverser (TPA)", "CLASSE_4", "CREDIT", "TPA_DETTE", "OD_PAIE", "Taxe patronale TPA à reverser");
             createCompteIfAbsent("428100", "Personnel - Dettes provisionnées pour congés à payer", "CLASSE_4", "CREDIT", "PROVISION_CONGES", "OD_PAIE", "Provisions congés payés de fin d'exercice");
             createCompteIfAbsent("641800", "Indemnités de congés payés", "CLASSE_6", "DEBIT", "CONGES_PAYES", "OD_PAIE", "Charges sur indemnités de congés");
+            createCompteIfAbsent("428200", "Personnel - Autres régularisations et arrondis", "CLASSE_4", "CREDIT", "ARRONDI_CREDIT", "OD_PAIE", "Arrondis et régularisations diverses");
             log.info("Comptes comptables de paie initialisés avec succès.");
         } catch (Exception e) {
             log.warn("Erreur lors de l'initialisation des comptes comptables: {}", e.getMessage());

@@ -25,6 +25,7 @@ public class UtilisateurController {
     private final UtilisateurRepository utilisateurRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final com.bpbf.sirh_backend.services.CongeWorkflowService congeWorkflowService;
 
     @GetMapping("/all")
     public ResponseEntity<List<Utilisateur>> getAll() {
@@ -50,7 +51,26 @@ public class UtilisateurController {
 
         if (existing.isPresent()) {
             Utilisateur u = existing.get();
+
+            // Vérification / réactivation automatique liée aux congés
+            if (congeWorkflowService != null) {
+                try {
+                    congeWorkflowService.verifierStatutCompteConge(u);
+                } catch (Exception e) {
+                    log.warn("Notice vérification statut congé pour '{}': {}", u.getUsername(), e.getMessage());
+                }
+            }
+
             if (!u.isActif()) {
+                String motifConge = null;
+                if (congeWorkflowService != null) {
+                    try {
+                        motifConge = congeWorkflowService.getMotifSuspensionCongeSiActif(u);
+                    } catch (Exception ignored) {}
+                }
+                if (motifConge != null) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, motifConge);
+                }
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Ce compte utilisateur est désactivé.");
             }
 

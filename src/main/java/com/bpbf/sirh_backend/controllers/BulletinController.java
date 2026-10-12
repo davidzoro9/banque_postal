@@ -58,6 +58,8 @@ public class BulletinController {
             @RequestBody(required = false) Map<String, Object> body) {
         BigDecimal workedDays = null;
         BigDecimal scheduledDays = null;
+        String motifRupture = null;
+        String statutPreavis = null;
         if (body != null) {
             if (body.get("workedDays") != null) {
                 workedDays = new BigDecimal(body.get("workedDays").toString());
@@ -65,8 +67,14 @@ public class BulletinController {
             if (body.get("scheduledWorkingDays") != null) {
                 scheduledDays = new BigDecimal(body.get("scheduledWorkingDays").toString());
             }
+            if (body.get("motifRupture") != null) {
+                motifRupture = body.get("motifRupture").toString();
+            }
+            if (body.get("statutPreavis") != null) {
+                statutPreavis = body.get("statutPreavis").toString();
+            }
         }
-        return ResponseEntity.ok(bulletinService.recalculerBulletin(id, workedDays, scheduledDays));
+        return ResponseEntity.ok(bulletinService.recalculerBulletin(id, workedDays, scheduledDays, motifRupture, statutPreavis));
     }
 
     @PutMapping("/{id}/statut")

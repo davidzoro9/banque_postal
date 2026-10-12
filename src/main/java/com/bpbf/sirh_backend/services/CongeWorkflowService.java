@@ -30,6 +30,8 @@ public class CongeWorkflowService {
     private final TypeAbsenceCongeRepository typeAbsenceCongeRepository;
     private final com.bpbf.sirh_backend.repositories.JourFerieRepository jourFerieRepository;
     private final com.bpbf.sirh_backend.repositories.ParametrageCongeRepository parametrageCongeRepository;
+    private final com.bpbf.sirh_backend.repositories.SessionPaieRepository sessionPaieRepository;
+    private final com.bpbf.sirh_backend.repositories.UtilisateurRepository utilisateurRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -53,6 +55,30 @@ public class CongeWorkflowService {
     @Transactional(readOnly = true)
     public List<Conge> getCongesByInterimaire(Long interimaireId) {
         return congeRepository.findByInterimaireId(interimaireId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Conge> getCongesBySuperviseur(Long superviseurId) {
+        if (superviseurId == null) return List.of();
+        Long targetEmpId = superviseurId;
+        java.util.Optional<com.bpbf.sirh_backend.entities.Utilisateur> userOpt = utilisateurRepository.findById(superviseurId);
+        if (userOpt.isPresent()) {
+            com.bpbf.sirh_backend.entities.Utilisateur u = userOpt.get();
+            java.util.Optional<Employee> empOpt = employeeRepository.findAll().stream()
+                    .filter(e -> (e.getMatricule() != null && e.getMatricule().equalsIgnoreCase(u.getUsername()))
+                              || (e.getEmail() != null && e.getEmail().equalsIgnoreCase(u.getEmail())))
+                    .findFirst();
+            if (empOpt.isPresent()) {
+                targetEmpId = empOpt.get().getId();
+            }
+        }
+
+        final Long finalSupId = targetEmpId;
+        return congeRepository.findAll().stream()
+                .filter(c -> c.getEmployee() != null && c.getEmployee().getSuperviseur() != null
+                        && (finalSupId.equals(c.getEmployee().getSuperviseur().getId())
+                            || superviseurId.equals(c.getEmployee().getSuperviseur().getId())))
+                .toList();
     }
 
     // ── ÉTAPE 1 : CRÉATION / SOUMISSION DE LA DEMANDE ──
@@ -281,6 +307,26 @@ public class CongeWorkflowService {
                     employeeRepository.save(conge.getEmployee());
                 }
             } catch (Exception ignored) {}
+
+            // ÉTAPE 5 AUTOMATISÉE : SUSPENSION SÉCURISÉE DU COMPTE UTILISATEUR JUSQU'À LA FIN DU CONGÉ
+            try {
+                desactiverCompteUtilisateurPendantConge(conge);
+                conge.setStatutSi("COMPTE_DESACTIVE_AUTO");
+            } catch (Exception e) {
+                log.warn("Notice désactivation automatique compte utilisateur pour congé #{}: {}", conge.getId(), e.getMessage());
+            }
+
+            // DÉCLENCHEMENT AUTOMATIQUE DES SESSIONS DIFFÉRENTIEL MATERNITÉ (STATUT: NON_TRAITE)
+            try {
+                TypeAbsenceConge tac = conge.getTypeAbsenceConge();
+                String cCode = tac != null && tac.getCode() != null ? tac.getCode().toUpperCase() : "";
+                String cNom = (tac != null && tac.getName() != null ? tac.getName() : (conge.getType() != null ? conge.getType() : "")).toUpperCase();
+                if (cCode.contains("MATERNITE") || cNom.contains("MATERNITE") || cNom.contains("MATERNITÉ")) {
+                    autoCreateMaterniteSessions(conge);
+                }
+            } catch (Exception e) {
+                log.warn("Notice création automatique session maternité pour congé #{}: {}", conge.getId(), e.getMessage());
+            }
         } else {
             conge.setStatut("REJETE");
             conge.setMotifRefus(motifRefus != null && !motifRefus.isBlank() ? motifRefus : "Refus DRH non conforme au cadre légal/conventionnel");
@@ -562,5 +608,224 @@ public class CongeWorkflowService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Ouvre automatiquement les sessions "Différentiel Maternité" au statut NON_TRAITE
+     * pour chacun des mois couverts par le congé de maternité approuvé.
+     */
+    @Transactional
+    public void autoCreateMaterniteSessions(Conge conge) {
+        if (conge == null) return;
+        try {
+            LocalDate start = parseDateRobust(conge.getDateDebut());
+            LocalDate end = parseDateRobust(conge.getDateFin());
+            if (start == null || end == null || start.isAfter(end)) return;
+
+            LocalDate current = start.withDayOfMonth(1);
+            LocalDate endMonth = end.withDayOfMonth(1);
+
+            String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+
+            while (!current.isAfter(endMonth)) {
+                int annee = current.getYear();
+                int moisNum = current.getMonthValue();
+                String moisStr = String.format("%02d", moisNum);
+                String nomMois = (moisNum >= 1 && moisNum <= 12) ? moisNoms[moisNum - 1] : "Mois " + moisNum;
+
+                // Vérifier si une session Différentiel Maternité existe déjà pour ce mois et cette année
+                boolean exists = sessionPaieRepository.findAll().stream().anyMatch(s -> {
+                    if (s.getAnnee() == null || !s.getAnnee().equals(annee)) return false;
+                    int sMois = 0;
+                    try { sMois = Integer.parseInt(s.getMois().trim()); } catch (Exception ignored) {}
+                    if (sMois != moisNum) return false;
+                    String nature = s.getNatureSession() != null ? s.getNatureSession().toUpperCase() : "";
+                    String sNom = s.getName() != null ? s.getName().toUpperCase() : "";
+                    String sCode = s.getCodeSession() != null ? s.getCodeSession().toUpperCase() : "";
+                    return nature.contains("MATERNITE") || sNom.contains("MATERNITE") || sCode.contains("MATERNITE");
+                });
+
+                if (!exists) {
+                    com.bpbf.sirh_backend.entities.SessionPaie session = new com.bpbf.sirh_backend.entities.SessionPaie();
+                    session.setAnnee(annee);
+                    session.setMois(moisStr);
+                    session.setTypeSession("EXTRAORDINAIRE");
+                    session.setNatureSession("DIFFERENTIEL_MATERNITE");
+                    session.setStatut("NON_TRAITE");
+                    session.setName("Différentiel Maternité - " + nomMois + " " + annee);
+                    session.setPeriode(nomMois + " " + annee);
+
+                    LocalDate dFrom = current;
+                    LocalDate dTo = current.withDayOfMonth(current.lengthOfMonth());
+                    session.setDateFrom(dFrom);
+                    session.setDateTo(dTo);
+
+                    String baseCode = String.format("SESS-%d-%s-MATERNITE", annee, moisStr);
+                    String candidateCode = baseCode;
+                    int suffix = 1;
+                    while (sessionPaieRepository.findByCodeSession(candidateCode).isPresent()) {
+                        candidateCode = String.format("%s-%d", baseCode, suffix++);
+                    }
+                    session.setCodeSession(candidateCode);
+                    session.setNombreEmployes(0);
+                    session.setTotalBrut(java.math.BigDecimal.ZERO);
+                    session.setTotalNet(java.math.BigDecimal.ZERO);
+                    session.setTotalCotisationsPatronales(java.math.BigDecimal.ZERO);
+                    session.setTotalMasseSalariale(java.math.BigDecimal.ZERO);
+
+                    sessionPaieRepository.save(session);
+                    log.info("Session Différentiel Maternité créée automatiquement : {} (statut: NON_TRAITE) suite au congé #{}",
+                            candidateCode, conge.getId());
+                }
+
+                current = current.plusMonths(1);
+            }
+        } catch (Exception e) {
+            log.error("Erreur lors de la création automatique des sessions de maternité : {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Synchronise et crée les sessions NON_TRAITE pour tous les congés maternité déjà approuvés en base.
+     */
+    @Transactional
+    public void synchroniserSessionsMaterniteEnAttente() {
+        try {
+            List<Conge> conges = congeRepository.findAll();
+            for (Conge c : conges) {
+                if (c == null) continue;
+                String st = c.getStatut() != null ? c.getStatut().toUpperCase() : "";
+                if (st.equals("APPROUVE") || st.equals("VALIDE") || st.equals("ACCEPTE") || st.equals("EN_COURS")) {
+                    TypeAbsenceConge tac = c.getTypeAbsenceConge();
+                    String cCode = tac != null && tac.getCode() != null ? tac.getCode().toUpperCase() : "";
+                    String cNom = (tac != null && tac.getName() != null ? tac.getName() : (c.getType() != null ? c.getType() : "")).toUpperCase();
+                    if (cCode.contains("MATERNITE") || cNom.contains("MATERNITE") || cNom.contains("MATERNITÉ")) {
+                        autoCreateMaterniteSessions(c);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erreur lors de la synchronisation des sessions maternité en attente : {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Désactive automatiquement le compte utilisateur d'un employé lors de la validation DRH de son congé.
+     */
+    @Transactional
+    public void desactiverCompteUtilisateurPendantConge(Conge conge) {
+        if (conge == null) return;
+        Employee emp = conge.getEmployee();
+        if (emp == null && conge.getId() != null) {
+            Conge fresh = congeRepository.findById(conge.getId()).orElse(null);
+            if (fresh != null) emp = fresh.getEmployee();
+        }
+        if (emp == null) return;
+
+        final String matricule = emp.getMatricule() != null ? emp.getMatricule().trim() : "";
+        final String email = emp.getEmail() != null ? emp.getEmail().trim().toLowerCase() : "";
+
+        utilisateurRepository.findAll().stream()
+                .filter(u -> (!matricule.isEmpty() && u.getUsername() != null && u.getUsername().equalsIgnoreCase(matricule))
+                          || (!email.isEmpty() && u.getEmail() != null && u.getEmail().equalsIgnoreCase(email)))
+                .findFirst()
+                .ifPresent(u -> {
+                    u.setActif(false);
+                    utilisateurRepository.save(u);
+                    log.info("Sécurité congé : Compte utilisateur '{}' automatiquement désactivé suite à validation DRH (congé #{} jusqu'au {})",
+                            u.getUsername(), conge.getId(), conge.getDateFin());
+                });
+    }
+
+    /**
+     * Vérifie si un compte utilisateur doit être réactivé (congé terminé) ou maintenu désactivé (congé en cours).
+     */
+    @Transactional
+    public void verifierStatutCompteConge(com.bpbf.sirh_backend.entities.Utilisateur u) {
+        if (u == null) return;
+        final String login = u.getUsername() != null ? u.getUsername().trim() : "";
+        final String email = u.getEmail() != null ? u.getEmail().trim() : "";
+
+        Employee emp = employeeRepository.findAll().stream()
+                .filter(e -> (!login.isEmpty() && e.getMatricule() != null && e.getMatricule().equalsIgnoreCase(login))
+                          || (!email.isEmpty() && e.getEmail() != null && e.getEmail().equalsIgnoreCase(email)))
+                .findFirst()
+                .orElse(null);
+
+        if (emp == null || emp.getId() == null) return;
+
+        LocalDate today = LocalDate.now();
+        List<Conge> conges = congeRepository.findByEmployeeId(emp.getId());
+
+        boolean enCongeActuellement = false;
+
+        for (Conge c : conges) {
+            String st = c.getStatut() != null ? c.getStatut().toUpperCase() : "";
+            if (st.equals("APPROUVE") || st.equals("VALIDE") || st.equals("EN_COURS")) {
+                LocalDate start = parseDateRobust(c.getDateDebut());
+                LocalDate end = parseDateRobust(c.getDateFin());
+                if (start != null && end != null) {
+                    if (!today.isBefore(start) && !today.isAfter(end)) {
+                        enCongeActuellement = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (enCongeActuellement) {
+            if (u.isActif()) {
+                u.setActif(false);
+                utilisateurRepository.save(u);
+            }
+            if (!"EN_CONGE".equalsIgnoreCase(emp.getStatut())) {
+                emp.setStatut("EN_CONGE");
+                employeeRepository.save(emp);
+            }
+        } else {
+            // Si l'employé n'est plus en congé et que son compte était inactif
+            if (!u.isActif() && !"Inactif".equalsIgnoreCase(emp.getStatut()) && !"Suspendu".equalsIgnoreCase(emp.getStatut())) {
+                u.setActif(true);
+                utilisateurRepository.save(u);
+                if ("EN_CONGE".equalsIgnoreCase(emp.getStatut())) {
+                    emp.setStatut("ACTIF");
+                    employeeRepository.save(emp);
+                }
+                log.info("Réactivation automatique du compte utilisateur '{}' : la période de congé est achevée.", u.getUsername());
+            }
+        }
+    }
+
+    /**
+     * Retourne le motif de suspension si l'utilisateur est actuellement sous congé approuvé.
+     */
+    @Transactional(readOnly = true)
+    public String getMotifSuspensionCongeSiActif(com.bpbf.sirh_backend.entities.Utilisateur u) {
+        if (u == null) return null;
+        final String login = u.getUsername() != null ? u.getUsername().trim() : "";
+        final String email = u.getEmail() != null ? u.getEmail().trim() : "";
+
+        Employee emp = employeeRepository.findAll().stream()
+                .filter(e -> (!login.isEmpty() && e.getMatricule() != null && e.getMatricule().equalsIgnoreCase(login))
+                          || (!email.isEmpty() && e.getEmail() != null && e.getEmail().equalsIgnoreCase(email)))
+                .findFirst()
+                .orElse(null);
+
+        if (emp == null || emp.getId() == null) return null;
+
+        LocalDate today = LocalDate.now();
+        List<Conge> conges = congeRepository.findByEmployeeId(emp.getId());
+
+        for (Conge c : conges) {
+            String st = c.getStatut() != null ? c.getStatut().toUpperCase() : "";
+            if (st.equals("APPROUVE") || st.equals("VALIDE") || st.equals("EN_COURS")) {
+                LocalDate start = parseDateRobust(c.getDateDebut());
+                LocalDate end = parseDateRobust(c.getDateFin());
+                if (start != null && end != null && !today.isBefore(start) && !today.isAfter(end)) {
+                    return "Compte utilisateur temporairement suspendu pour cause de congé en cours jusqu'au " + c.getDateFin() + ".";
+                }
+            }
+        }
+        return null;
     }
 }

@@ -61,6 +61,7 @@ public class EtatSynthesePaieService {
     private final PrecompteRepository precompteRepository;
     private final AvoirRepository avoirRepository;
     private final TropPercuRepository tropPercuRepository;
+    private final CompteComptableRepository compteComptableRepository;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -749,6 +750,40 @@ public class EtatSynthesePaieService {
         return rows;
     }
 
+    private Map<String, CompteComptable> loadComptesComptablesMap() {
+        Map<String, CompteComptable> map = new HashMap<>();
+        try {
+            if (compteComptableRepository != null) {
+                for (CompteComptable cp : compteComptableRepository.findAll()) {
+                    if (cp.getTypeRubriqueAssociee() != null && !cp.getTypeRubriqueAssociee().isBlank()) {
+                        String key = cp.getTypeRubriqueAssociee().trim().toUpperCase(Locale.ROOT);
+                        if (!map.containsKey(key) || Boolean.TRUE.equals(cp.getActif())) {
+                            map.put(key, cp);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Impossible de charger les comptes comptables paramétrés: {}", e.getMessage());
+        }
+        return map;
+    }
+
+    private CompteComptable resolveCompte(Map<String, CompteComptable> map, String rubrique, String defaultNum, String defaultLibelle, String defaultSens, String defaultJournal) {
+        if (rubrique != null && map != null) {
+            CompteComptable cp = map.get(rubrique.trim().toUpperCase(Locale.ROOT));
+            if (cp != null && Boolean.TRUE.equals(cp.getActif()) && cp.getNumeroCompte() != null && !cp.getNumeroCompte().isBlank()) {
+                return cp;
+            }
+        }
+        return CompteComptable.builder()
+                .numeroCompte(defaultNum)
+                .libelle(defaultLibelle)
+                .sensParDefaut(defaultSens)
+                .codeJournal(defaultJournal)
+                .build();
+    }
+
     private List<RecapitulatifGlobalRowDto> buildRecapitulatifGlobalRows(List<Bulletin> bulletins) {
         BigDecimal totalSalBase = BigDecimal.ZERO;
         BigDecimal totalSurSal = BigDecimal.ZERO;
@@ -812,10 +847,13 @@ public class EtatSynthesePaieService {
         BigDecimal totalCrraeGlobal = totalCrraeSal.add(totalCrraePatronale);
 
         List<RecapitulatifGlobalRowDto> rows = new ArrayList<>();
+        Map<String, CompteComptable> mapRubriques = loadComptesComptablesMap();
+
         // Débit : Charges de personnel (Comptes 64)
+        CompteComptable cpSalBase = resolveCompte(mapRubriques, "SALAIRE_BASE", "642100", "Salaires de base du personnel", "DEBIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte("642100")
-                .intituleCompte("Salaires de base du personnel")
+                .numeroCompte(cpSalBase.getNumeroCompte())
+                .intituleCompte(cpSalBase.getLibelle())
                 .sens("DEBIT")
                 .montantDebit(totalSalBase)
                 .montantCredit(BigDecimal.ZERO)
@@ -823,9 +861,10 @@ public class EtatSynthesePaieService {
                 .build());
 
         if (totalSurSal.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpSurSal = resolveCompte(mapRubriques, "SUR_SALAIRE", "642200", "Sur-salaires du personnel", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("642200")
-                    .intituleCompte("Sur-salaires du personnel")
+                    .numeroCompte(cpSurSal.getNumeroCompte())
+                    .intituleCompte(cpSurSal.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalSurSal)
                     .montantCredit(BigDecimal.ZERO)
@@ -834,9 +873,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalIndemnites.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpIndem = resolveCompte(mapRubriques, "INDEMNITES", "642300", "Indemnités, primes et gratifications diverses", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("642300")
-                    .intituleCompte("Indemnités, primes et gratifications diverses")
+                    .numeroCompte(cpIndem.getNumeroCompte())
+                    .intituleCompte(cpIndem.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalIndemnites)
                     .montantCredit(BigDecimal.ZERO)
@@ -845,9 +885,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalRappels.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpRappels = resolveCompte(mapRubriques, "RAPPELS", "642500", "Rappels sur salaires antérieurs (Avoirs accordés)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("642500")
-                    .intituleCompte("Rappels sur salaires antérieurs (Avoirs accordés)")
+                    .numeroCompte(cpRappels.getNumeroCompte())
+                    .intituleCompte(cpRappels.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalRappels)
                     .montantCredit(BigDecimal.ZERO)
@@ -856,9 +897,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalCnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpCnssPat = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "641100", "Cotisations patronales de sécurité sociale (CNSS)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("641100")
-                    .intituleCompte("Cotisations patronales de sécurité sociale (CNSS)")
+                    .numeroCompte(cpCnssPat.getNumeroCompte())
+                    .intituleCompte(cpCnssPat.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalCnssPatronale)
                     .montantCredit(BigDecimal.ZERO)
@@ -867,9 +909,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalCrraePatronale.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpCrraePat = resolveCompte(mapRubriques, "CRRAE_PATRONALE", "641200", "Cotisations patronales régimes complémentaires (CRRAE)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("641200")
-                    .intituleCompte("Cotisations patronales régimes complémentaires (CRRAE)")
+                    .numeroCompte(cpCrraePat.getNumeroCompte())
+                    .intituleCompte(cpCrraePat.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalCrraePatronale)
                     .montantCredit(BigDecimal.ZERO)
@@ -878,9 +921,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpTpa = resolveCompte(mapRubriques, "TPA", "641300", "Taxe Patronale d'Apprentissage (TPA)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("641300")
-                    .intituleCompte("Taxe Patronale d'Apprentissage (TPA)")
+                    .numeroCompte(cpTpa.getNumeroCompte())
+                    .intituleCompte(cpTpa.getLibelle())
                     .sens("DEBIT")
                     .montantDebit(totalTpa)
                     .montantCredit(BigDecimal.ZERO)
@@ -889,9 +933,10 @@ public class EtatSynthesePaieService {
         }
 
         // Crédit : Rémunérations nettes, Organismes et État
+        CompteComptable cpNet = resolveCompte(mapRubriques, "NET_A_PAYER", "352200", "Personnel - Rémunérations nettes à payer (Virements)", "CREDIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte("352200")
-                .intituleCompte("Personnel - Rémunérations nettes à payer (Virements)")
+                .numeroCompte(cpNet.getNumeroCompte())
+                .intituleCompte(cpNet.getLibelle())
                 .sens("CREDIT")
                 .montantDebit(BigDecimal.ZERO)
                 .montantCredit(totalNet)
@@ -899,9 +944,10 @@ public class EtatSynthesePaieService {
                 .build());
 
         if (totalCnssGlobal.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpCnss = resolveCompte(mapRubriques, "CNSS", "431100", "Sécurité Sociale (CNSS Part Salariale + Patronale)", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("431100")
-                    .intituleCompte("Sécurité Sociale (CNSS Part Salariale + Patronale)")
+                    .numeroCompte(cpCnss.getNumeroCompte())
+                    .intituleCompte(cpCnss.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalCnssGlobal)
@@ -910,9 +956,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalCrraeGlobal.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpCrrae = resolveCompte(mapRubriques, "CRRAE", "431200", "Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("431200")
-                    .intituleCompte("Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)")
+                    .numeroCompte(cpCrrae.getNumeroCompte())
+                    .intituleCompte(cpCrrae.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalCrraeGlobal)
@@ -921,9 +968,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalIuts.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpIuts = resolveCompte(mapRubriques, "IUTS", "447100", "État - Impôt Unique sur Traitements & Salaires (IUTS)", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("447100")
-                    .intituleCompte("État - Impôt Unique sur Traitements & Salaires (IUTS)")
+                    .numeroCompte(cpIuts.getNumeroCompte())
+                    .intituleCompte(cpIuts.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalIuts)
@@ -932,9 +980,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalFsp.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpFsp = resolveCompte(mapRubriques, "FSP", "447200", "État - Fonds de Soutien Patriotique (FSP)", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("447200")
-                    .intituleCompte("État - Fonds de Soutien Patriotique (FSP)")
+                    .numeroCompte(cpFsp.getNumeroCompte())
+                    .intituleCompte(cpFsp.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalFsp)
@@ -943,9 +992,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpTpaDette = resolveCompte(mapRubriques, "TPA_DETTE", "447300", "État - Taxe Patronale d'Apprentissage à reverser (TPA)", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("447300")
-                    .intituleCompte("État - Taxe Patronale d'Apprentissage à reverser (TPA)")
+                    .numeroCompte(cpTpaDette.getNumeroCompte())
+                    .intituleCompte(cpTpaDette.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalTpa)
@@ -954,9 +1004,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalPrecomptes.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpPrecomptes = resolveCompte(mapRubriques, "PRECOMPTES", "422000", "Personnel - Prêts, avances et précomptes récupérés", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("422000")
-                    .intituleCompte("Personnel - Prêts, avances et précomptes récupérés")
+                    .numeroCompte(cpPrecomptes.getNumeroCompte())
+                    .intituleCompte(cpPrecomptes.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalPrecomptes)
@@ -965,9 +1016,10 @@ public class EtatSynthesePaieService {
         }
 
         if (totalTropPercus.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpTropPercus = resolveCompte(mapRubriques, "TROP_PERCUS", "428700", "Personnel - Trop-perçus régularisés sur salaires antérieurs", "CREDIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte("428700")
-                    .intituleCompte("Personnel - Trop-perçus régularisés sur salaires antérieurs")
+                    .numeroCompte(cpTropPercus.getNumeroCompte())
+                    .intituleCompte(cpTropPercus.getLibelle())
                     .sens("CREDIT")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totalTropPercus)
@@ -1234,11 +1286,14 @@ public class EtatSynthesePaieService {
         }
 
 
+        Map<String, CompteComptable> mapRubriques = loadComptesComptablesMap();
+
         // Écritures de Débit (Comptes 64x - Charges de Personnel SYSCOHADA)
+        CompteComptable cSalBaseOd = resolveCompte(mapRubriques, "SALAIRE_BASE", "641100", "Salaires de base du personnel permanent", "D", "OD_PAIE");
         rows.add(EtatOdComptableRowDto.builder()
-                .codeJournal("OD_PAIE")
-                .numeroCompte("641100")
-                .libelleCompte("Salaires de base du personnel permanent")
+                .codeJournal(cSalBaseOd.getCodeJournal() != null ? cSalBaseOd.getCodeJournal() : "OD_PAIE")
+                .numeroCompte(cSalBaseOd.getNumeroCompte())
+                .libelleCompte(cSalBaseOd.getLibelle())
                 .sens("D")
                 .montantDebit(totBase)
                 .montantCredit(BigDecimal.ZERO)
@@ -1247,10 +1302,11 @@ public class EtatSynthesePaieService {
                 .build());
 
         if (totIndem.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cIndemOd = resolveCompte(mapRubriques, "INDEMNITES", "641200", "Primes et indemnités du personnel", "D", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("641200")
-                    .libelleCompte("Primes et indemnités du personnel")
+                    .codeJournal(cIndemOd.getCodeJournal() != null ? cIndemOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cIndemOd.getNumeroCompte())
+                    .libelleCompte(cIndemOd.getLibelle())
                     .sens("D")
                     .montantDebit(totIndem)
                     .montantCredit(BigDecimal.ZERO)
@@ -1260,10 +1316,11 @@ public class EtatSynthesePaieService {
         }
 
         if (totCnssPat.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cCnssPatOd = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "646100", "Charges patronales de sécurité sociale (CNSS 16%)", "D", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("646100")
-                    .libelleCompte("Charges patronales de sécurité sociale (CNSS 16%)")
+                    .codeJournal(cCnssPatOd.getCodeJournal() != null ? cCnssPatOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cCnssPatOd.getNumeroCompte())
+                    .libelleCompte(cCnssPatOd.getLibelle())
                     .sens("D")
                     .montantDebit(totCnssPat)
                     .montantCredit(BigDecimal.ZERO)
@@ -1273,10 +1330,11 @@ public class EtatSynthesePaieService {
         }
 
         // Écritures de Crédit (Comptes 42x, 43x, 44x - Dettes et Rémunérations SYSCOHADA)
+        CompteComptable cNetOd = resolveCompte(mapRubriques, "NET_A_PAYER", "421100", "Personnel - Rémunérations nettes dues (Virements)", "C", "OD_PAIE");
         rows.add(EtatOdComptableRowDto.builder()
-                .codeJournal("OD_PAIE")
-                .numeroCompte("421100")
-                .libelleCompte("Personnel - Rémunérations nettes dues (Virements)")
+                .codeJournal(cNetOd.getCodeJournal() != null ? cNetOd.getCodeJournal() : "OD_PAIE")
+                .numeroCompte(cNetOd.getNumeroCompte())
+                .libelleCompte(cNetOd.getLibelle())
                 .sens("C")
                 .montantDebit(BigDecimal.ZERO)
                 .montantCredit(totNet)
@@ -1286,10 +1344,11 @@ public class EtatSynthesePaieService {
 
         BigDecimal totCnssReverser = totCnssSal.add(totCnssPat);
         if (totCnssReverser.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cCnssOd = resolveCompte(mapRubriques, "CNSS", "431100", "Sécurité Sociale (CNSS salariale 5.5% + patronale 16%)", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("431100")
-                    .libelleCompte("Sécurité Sociale (CNSS salariale 5.5% + patronale 16%)")
+                    .codeJournal(cCnssOd.getCodeJournal() != null ? cCnssOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cCnssOd.getNumeroCompte())
+                    .libelleCompte(cCnssOd.getLibelle())
                     .sens("C")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totCnssReverser)
@@ -1299,10 +1358,11 @@ public class EtatSynthesePaieService {
         }
 
         if (totIuts.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cIutsOd = resolveCompte(mapRubriques, "IUTS", "442100", "État - Impôts retenus à la source (IUTS DGI)", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("442100")
-                    .libelleCompte("État - Impôts retenus à la source (IUTS DGI)")
+                    .codeJournal(cIutsOd.getCodeJournal() != null ? cIutsOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cIutsOd.getNumeroCompte())
+                    .libelleCompte(cIutsOd.getLibelle())
                     .sens("C")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totIuts)
@@ -1312,10 +1372,11 @@ public class EtatSynthesePaieService {
         }
 
         if (totFsp.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cFspOd = resolveCompte(mapRubriques, "FSP", "442800", "État - Fonds de Soutien Patriotique (FSP 1%)", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("442800")
-                    .libelleCompte("État - Fonds de Soutien Patriotique (FSP 1%)")
+                    .codeJournal(cFspOd.getCodeJournal() != null ? cFspOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cFspOd.getNumeroCompte())
+                    .libelleCompte(cFspOd.getLibelle())
                     .sens("C")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totFsp)
@@ -1325,10 +1386,11 @@ public class EtatSynthesePaieService {
         }
 
         if (totPrecompte.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cPrecompteOd = resolveCompte(mapRubriques, "PRECOMPTES", "428100", "Personnel - Prêts et avances apurés sur paie", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
-                    .codeJournal("OD_PAIE")
-                    .numeroCompte("428100")
-                    .libelleCompte("Personnel - Prêts et avances apurés sur paie")
+                    .codeJournal(cPrecompteOd.getCodeJournal() != null ? cPrecompteOd.getCodeJournal() : "OD_PAIE")
+                    .numeroCompte(cPrecompteOd.getNumeroCompte())
+                    .libelleCompte(cPrecompteOd.getLibelle())
                     .sens("C")
                     .montantDebit(BigDecimal.ZERO)
                     .montantCredit(totPrecompte)
@@ -1344,10 +1406,11 @@ public class EtatSynthesePaieService {
 
         if (ecart.compareTo(BigDecimal.ZERO) != 0 && ecart.abs().compareTo(BigDecimal.valueOf(100)) <= 0) {
             if (ecart.compareTo(BigDecimal.ZERO) > 0) {
+                CompteComptable cArrondiCred = resolveCompte(mapRubriques, "ARRONDI_CREDIT", "428200", "Personnel - Autres régularisations et arrondis", "C", "OD_PAIE");
                 rows.add(EtatOdComptableRowDto.builder()
-                        .codeJournal("OD_PAIE")
-                        .numeroCompte("428200")
-                        .libelleCompte("Personnel - Autres régularisations et arrondis")
+                        .codeJournal(cArrondiCred.getCodeJournal() != null ? cArrondiCred.getCodeJournal() : "OD_PAIE")
+                        .numeroCompte(cArrondiCred.getNumeroCompte())
+                        .libelleCompte(cArrondiCred.getLibelle())
                         .sens("C")
                         .montantDebit(BigDecimal.ZERO)
                         .montantCredit(ecart)
@@ -1355,10 +1418,11 @@ public class EtatSynthesePaieService {
                         .libelleEcriture("Régularisation centimes/arrondis")
                         .build());
             } else {
+                CompteComptable cArrondiDeb = resolveCompte(mapRubriques, "ARRONDI_DEBIT", "641800", "Charges de personnel - Ajustement d'arrondis", "D", "OD_PAIE");
                 rows.add(EtatOdComptableRowDto.builder()
-                        .codeJournal("OD_PAIE")
-                        .numeroCompte("641800")
-                        .libelleCompte("Charges de personnel - Ajustement d'arrondis")
+                        .codeJournal(cArrondiDeb.getCodeJournal() != null ? cArrondiDeb.getCodeJournal() : "OD_PAIE")
+                        .numeroCompte(cArrondiDeb.getNumeroCompte())
+                        .libelleCompte(cArrondiDeb.getLibelle())
                         .sens("D")
                         .montantDebit(ecart.negate())
                         .montantCredit(BigDecimal.ZERO)

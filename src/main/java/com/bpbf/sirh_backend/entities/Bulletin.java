@@ -61,6 +61,21 @@ public class Bulletin {
 
     private LocalDate dateTo;
 
+    @Column(length = 100)
+    private String motifRupture; // LICENCIEMENT_SIMPLE, LICENCIEMENT_FAUTE_LOURDE, DEMISSION, FIN_CDD, RETRAITE, LICENCIEMENT_ECONOMIQUE
+
+    @Column(length = 50)
+    private String statutPreavis; // DISPENSE_PAYE, EFFECTUE, NON_EFFECTUE_SALARIE, NON_APPLICABLE
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal montantIndemniteLicenciement;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal montantIndemnitePreavis;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal montantIndemniteConges;
+
     @Column(precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal scheduledWorkingDays = new BigDecimal("30.00");

@@ -50,6 +50,11 @@ public class SessionPaieController {
 
     @GetMapping
     public List<SessionPaie> getAllSessions() {
+        try {
+            congeWorkflowService.synchroniserSessionsMaterniteEnAttente();
+        } catch (Exception e) {
+            // continuer
+        }
         List<SessionPaie> list = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
         for (SessionPaie s : list) {
             enrichSessionMetrics(s);

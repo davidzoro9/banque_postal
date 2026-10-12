@@ -18,6 +18,9 @@ public interface CongeRepository extends JpaRepository<Conge, Long> {
     @Query("SELECT c FROM Conge c LEFT JOIN FETCH c.employee LEFT JOIN FETCH c.typeAbsenceConge LEFT JOIN FETCH c.interimaire WHERE c.interimaire.id = :interimaireId ORDER BY c.id DESC")
     List<Conge> findByInterimaireId(@Param("interimaireId") Long interimaireId);
 
+    @Query("SELECT c FROM Conge c LEFT JOIN FETCH c.employee LEFT JOIN FETCH c.typeAbsenceConge LEFT JOIN FETCH c.interimaire WHERE c.id = :id")
+    java.util.Optional<Conge> findByIdWithDetails(@Param("id") Long id);
+
     List<Conge> findByStatut(String statut);
 
     long countByStatutIgnoreCase(String statut);

@@ -2,9 +2,12 @@ package com.bpbf.sirh_backend.controllers;
 
 import com.bpbf.sirh_backend.dtos.SoldeCongeDto;
 import com.bpbf.sirh_backend.entities.Conge;
+import com.bpbf.sirh_backend.services.CongePdfService;
 import com.bpbf.sirh_backend.services.CongeWorkflowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,7 @@ import java.util.Map;
 public class CongeController {
 
     private final CongeWorkflowService congeService;
+    private final CongePdfService congePdfService;
 
     @GetMapping("/all")
     public ResponseEntity<List<Conge>> getAll() {
@@ -38,6 +42,11 @@ public class CongeController {
     @GetMapping("/interimaire/{interimaireId}")
     public ResponseEntity<List<Conge>> getByInterimaire(@PathVariable Long interimaireId) {
         return ResponseEntity.ok(congeService.getCongesByInterimaire(interimaireId));
+    }
+
+    @GetMapping("/superviseur/{superviseurId}")
+    public ResponseEntity<List<Conge>> getBySuperviseur(@PathVariable Long superviseurId) {
+        return ResponseEntity.ok(congeService.getCongesBySuperviseur(superviseurId));
     }
 
     // ── ÉTAPE 1 : CRÉATION / SOUMISSION ──
@@ -129,5 +138,20 @@ public class CongeController {
     @GetMapping("/soldes/{employeeId}")
     public ResponseEntity<SoldeCongeDto> getSoldeByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(congeService.getSoldeForEmployee(employeeId));
+    }
+
+    @GetMapping({"/{id}/titre-conge/pdf", "/{id}/autorisation-pdf", "/{id}/pdf"})
+    public ResponseEntity<byte[]> telechargerTitreCongePdf(@PathVariable Long id) {
+        Conge conge = congeService.getCongeById(id);
+        byte[] pdfBytes = congePdfService.generateTitreCongePdf(id);
+
+        String num = conge.getNumeroTitreConge() != null ? conge.getNumeroTitreConge().replace("/", "-") : ("TC-" + id);
+        String mat = conge.getEmployee() != null && conge.getEmployee().getMatricule() != null ? conge.getEmployee().getMatricule() : "AGENT";
+        String filename = String.format("Titre_Conge_BPBF_%s_%s.pdf", num, mat);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 }

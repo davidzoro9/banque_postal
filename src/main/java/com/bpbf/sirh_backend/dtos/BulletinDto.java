@@ -56,6 +56,11 @@ public class BulletinDto {
     private String justificationEcart;
     private BigDecimal salaireNetPrecedent;
     private BigDecimal ecartNet;
+    private String motifRupture;
+    private String statutPreavis;
+    private BigDecimal montantIndemniteLicenciement;
+    private BigDecimal montantIndemnitePreavis;
+    private BigDecimal montantIndemniteConges;
     private List<BulletinLineDto> lines;
 
     private String employeeNom;

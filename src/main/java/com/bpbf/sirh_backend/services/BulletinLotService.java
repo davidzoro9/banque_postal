@@ -29,6 +29,7 @@ public class BulletinLotService {
     private final SessionPaieRepository sessionPaieRepository;
     private final BulletinService bulletinService;
     private final AuditLogService auditLogService;
+    private final ContratRepository contratRepository;
 
 
     // --- LOTS ---
@@ -95,16 +96,20 @@ public class BulletinLotService {
         BulletinLot lot = bulletinLotRepository.findById(req.getBulletinLotId())
                 .orElseThrow(() -> new RuntimeException("Lot introuvable: " + req.getBulletinLotId()));
 
-        List<Employee> employees;
-        if (req.getEmployeeIds() != null && !req.getEmployeeIds().isEmpty()) {
-            employees = employeeRepository.findAllById(req.getEmployeeIds());
-        } else {
-            employees = employeeRepository.findAll();
-        }
-
         LocalDate dateRef = lot.getDateFrom() != null ? lot.getDateFrom() : LocalDate.now();
         String mois = String.format("%02d", dateRef.getMonthValue());
         int annee = dateRef.getYear();
+
+        LocalDate debutLot = lot.getDateFrom();
+        LocalDate finLot = lot.getDateTo();
+        if (debutLot == null) {
+            debutLot = LocalDate.of(annee, dateRef.getMonthValue(), 1);
+            finLot = debutLot.withDayOfMonth(debutLot.lengthOfMonth());
+        } else if (finLot == null) {
+            finLot = debutLot.withDayOfMonth(debutLot.lengthOfMonth());
+        }
+        final LocalDate dL = debutLot;
+        final LocalDate fL = finLot;
 
         SessionPaie sessionLot = sessionPaieRepository.findFirstByMoisAndAnneeOrderByIdDesc(mois, annee).orElse(null);
         if (sessionLot == null) {
@@ -118,7 +123,7 @@ public class BulletinLotService {
                     .periode(nomMois + " " + annee)
                     .typeSession(lot.getTypeSession() != null ? lot.getTypeSession() : "PAIE_NORMALE")
                     .statut("GENERE")
-                    .nombreEmployes(employees.size())
+                    .nombreEmployes(0)
                     .nombreValide(0)
                     .build();
 
@@ -129,6 +134,37 @@ public class BulletinLotService {
             }
             sessionLot = sessionPaieRepository.save(newSession);
         }
+
+        List<Employee> employees;
+        if (req.getEmployeeIds() != null && !req.getEmployeeIds().isEmpty()) {
+            employees = employeeRepository.findAllById(req.getEmployeeIds());
+            for (Employee emp : employees) {
+                bulletinService.assertEmployeeEligibleForSession(emp, sessionLot, dL, fL, false);
+            }
+        } else {
+            employees = employeeRepository.findAll().stream()
+                    .filter(bulletinService::isEmployeeEligiblePaie)
+                    .filter(emp -> {
+                        LocalDate dEmb = BulletinService.parseLocalDateSafe(emp.getDateEmbauche());
+                        if (dEmb != null && fL != null && dEmb.isAfter(fL)) {
+                            return false;
+                        }
+                        if (dL != null) {
+                            Contrat c = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
+                            if (c != null && c.getDateFin() != null && !c.getDateFin().isBlank()) {
+                                LocalDate dFin = BulletinService.parseLocalDateSafe(c.getDateFin());
+                                if (dFin != null && dFin.isBefore(dL)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        sessionLot.setNombreEmployes(employees.size());
+        sessionPaieRepository.save(sessionLot);
 
         List<Bulletin> generatedBulletins = new ArrayList<>();
 

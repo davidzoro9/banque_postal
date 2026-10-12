@@ -52,24 +52,34 @@ public class GrilleSalarialeService {
 
         return all.stream()
                 .filter(g -> {
-                    // Match Catégorie
+                    // Match Catégorie : si targetCat est spécifié, il fait foi
                     String catLib = g.getCategorieObj() != null ? g.getCategorieObj().getLibelle() : null;
-                    boolean catMatch = (categorieId != null && g.getCategorieObj() != null && categorieId.equals(g.getCategorieObj().getId()))
-                            || (targetCat != null && !targetCat.trim().isEmpty() && matchCat(targetCat, g.getCategory(), catLib));
-                    if (!catMatch && targetCat != null && !targetCat.trim().isEmpty()) {
-                        return false;
+                    if (targetCat != null && !targetCat.trim().isEmpty()) {
+                        if (!matchCat(targetCat, g.getCategory(), catLib)) {
+                            return false;
+                        }
+                    } else if (categorieId != null) {
+                        if (g.getCategorieObj() == null || !categorieId.equals(g.getCategorieObj().getId())) {
+                            return false;
+                        }
                     }
 
-                    // Match Échelon
-                    boolean echMatch = (echelonId != null && g.getEchelonObj() != null && echelonId.equals(g.getEchelonObj().getId()))
-                            || (targetEch != null && !targetEch.trim().isEmpty() && matchEch(targetEch, g.getEchellon()));
-                    if (!echMatch && targetEch != null && !targetEch.trim().isEmpty()) {
-                        return false;
+                    // Match Échelon : si targetEch est spécifié, il fait foi
+                    if (targetEch != null && !targetEch.trim().isEmpty()) {
+                        if (!matchEch(targetEch, g.getEchellon())) {
+                            return false;
+                        }
+                    } else if (echelonId != null) {
+                        if (g.getEchelonObj() == null || !echelonId.equals(g.getEchelonObj().getId())) {
+                            return false;
+                        }
                     }
 
-                    // Match Grade si spécifié et pertinent
-                    if (gradeId != null && g.getGradeObj() != null && !gradeId.equals(g.getGradeObj().getId())) {
-                        return false;
+                    // Match Grade uniquement si catégorie ou échelon non spécifiés
+                    if ((targetCat == null || targetCat.trim().isEmpty()) && (targetEch == null || targetEch.trim().isEmpty())) {
+                        if (gradeId != null && g.getGradeObj() != null && !gradeId.equals(g.getGradeObj().getId())) {
+                            return false;
+                        }
                     }
 
                     return true;

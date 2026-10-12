@@ -15,7 +15,7 @@ public class CategorieController {
 
     private final CategorieRepository repository;
 
-    @GetMapping
+    @GetMapping({"", "/all"})
     public List<Categorie> getAll() {
         return repository.findAll();
     }
