@@ -348,6 +348,64 @@
     margin-bottom: 16px;
   }
 
+  .empty-state-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 48px 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+
+    .empty-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #eff6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+
+      mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: #003366;
+      }
+    }
+
+    h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    p {
+      font-size: 13px;
+      color: #64748b;
+      max-width: 440px;
+      line-height: 1.5;
+      margin: 0 0 8px;
+    }
+
+    .btn-empty-calc {
+      background: #003366;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 0 20px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 6px;
+    }
+  }
+
   .resultat-profil-bar {
     background: #f8fafc;
     border: 1px solid #e2e8f0;

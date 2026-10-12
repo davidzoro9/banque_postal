@@ -65,7 +65,7 @@
                 <span class="agent-name">{{ selectedEmployeeObj.prenom }} {{ selectedEmployeeObj.nom }}</span>
                 <span class="matricule-badge">{{ selectedEmployeeObj.matricule }}</span>
                 <span class="gender-badge" [class.femme]="(selectedEmployeeObj.sexe || '').toUpperCase().startsWith('F')">
-                  {{ (selectedEmployeeObj.sexe || '').toUpperCase().startsWith('F') ? '♀ Féminin' : '♂ Masculin' }}
+                  {{ (selectedEmployeeObj.sexe || '').toUpperCase().startsWith('F') ? 'Féminin' : 'Masculin' }}
                 </span>
               </div>
               <div class="agent-compact-sub">
@@ -158,7 +158,7 @@
                     [class.active]="categoryFilter === 'ACCIDENT_MALADIE'"
                     (click)="setCategorieActive('ACCIDENT_MALADIE')">
               <mat-icon>personal_injury</mat-icon>
-              <span>🚑 Accidents &amp; Arrêts Maladie</span>
+              <span>Accidents &amp; Arrêts Maladie</span>
               <span class="pill-count">({{ accidentMaladieList.length }})</span>
             </button>
 
@@ -167,7 +167,7 @@
                     [class.active]="categoryFilter === 'URGENCES'"
                     (click)="setCategorieActive('URGENCES')">
               <mat-icon>emergency</mat-icon>
-              <span>⚠️ Cas de Force Majeure &amp; Urgences</span>
+              <span>Cas de Force Majeure &amp; Urgences</span>
               <span class="pill-count">({{ urgencesList.length }})</span>
             </button>
 
@@ -478,7 +478,7 @@
             </div>
             <div class="proj-sub">
               <span class="proj-ok-text">
-                ✓ Régularisation officielle immédiate par la DRH
+                Régularisation officielle immédiate par la DRH
               </span>
             </div>
           </div>

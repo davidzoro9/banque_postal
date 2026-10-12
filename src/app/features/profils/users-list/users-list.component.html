@@ -2,14 +2,13 @@
   <!-- En-tête -->
   <div class="page-header">
     <div class="ph-content">
-      <div class="ph-icon"><mat-icon>manage_accounts</mat-icon></div>
       <div>
         <h1>Gestion des Comptes Utilisateurs</h1>
         <p>{{ usersList.length }} compte(s) utilisateur(s) enregistrés dans le système</p>
       </div>
     </div>
     <button mat-raised-button class="btn-new" (click)="openAddModal()">
-      <mat-icon>person_add</mat-icon> Nouvel Utilisateur
+      Nouvel Utilisateur
     </button>
   </div>
 
@@ -19,11 +18,7 @@
       <div class="filter-row">
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Rechercher un utilisateur...</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
           <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Nom, email, identifiant...">
-          @if (searchQuery) {
-            <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
-          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -60,7 +55,7 @@
             <th>Rôle / Profil</th>
             <th style="text-align: center;">Dernier Accès</th>
             <th style="text-align: center;">Statut</th>
-            <th style="text-align: center; min-width: 140px;">Actions</th>
+            <th style="text-align: center; min-width: 180px;">Actions</th>
           </tr>
         </thead>
       <tbody>
@@ -68,11 +63,11 @@
           <tr>
             <td>
               <div class="user-cell">
-                <div class="avatar" [style.background]="u.avatarColor">
+                <div class="avatar">
                   {{ u.prenom[0] }}{{ u.nom[0] }}
                 </div>
                 <div>
-                  <strong style="color: #1e293b; font-size: 14px;">{{ u.prenom }} {{ u.nom }}</strong>
+                  <strong style="color: #0f172a; font-size: 14px;">{{ u.prenom }} {{ u.nom }}</strong>
                   <div style="font-size: 11px; color: #64748b;">Créé le {{ u.dateCreation }}</div>
                 </div>
               </div>
@@ -80,39 +75,20 @@
             <td><code>{{ u.username }}</code></td>
             <td><a [href]="'mailto:' + u.email" style="color: #0060B3; text-decoration: none;">{{ u.email }}</a></td>
             <td>
-              <span class="role-chip" 
-                    [class.admin]="u.role === 'ADMIN'" 
-                    [class.drh]="u.role === 'DRH'" 
-                    [class.rh]="u.role === 'RESPONSABLE_RH'"
-                    [class.paie]="u.role === 'GESTIONNAIRE_PAIE'"
-                    [class.compta]="u.role === 'COMPTABLE_PAIE'"
-                    [class.validateur]="u.role === 'VALIDATEUR'"
-                    [class.employe]="u.role === 'EMPLOYE'">
+              <span class="role-chip">
                 {{ getRoleLabel(u.role) }}
               </span>
             </td>
             <td style="text-align: center; color: #475569; font-size: 12px;">{{ u.dernierAcces || '-' }}</td>
             <td style="text-align: center;">
-              @if (u.actif) {
-                <span class="status-chip active">Actif</span>
-              } @else {
-                <span class="status-chip inactive">Suspendu</span>
-              }
+              <span class="status-chip">{{ u.actif ? 'Actif' : 'Suspendu' }}</span>
             </td>
             <td style="text-align: center;">
               <div class="action-btns">
-                <button mat-icon-button color="primary" title="Modifier l'utilisateur" (click)="openEditModal(u)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button style="color: #eab308;" title="Réinitialiser le mot de passe" (click)="resetPassword(u)">
-                  <mat-icon>key</mat-icon>
-                </button>
-                <button mat-icon-button [title]="u.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(u)">
-                  <mat-icon>{{ u.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" title="Supprimer" (click)="deleteUser(u)">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                <button class="tbl-action-btn" (click)="openEditModal(u)">Modifier</button>
+                <button class="tbl-action-btn" (click)="resetPassword(u)">Réinit. MDP</button>
+                <button class="tbl-action-btn" (click)="toggleStatus(u)">{{ u.actif ? 'Désactiver' : 'Activer' }}</button>
+                <button class="tbl-action-btn danger-link" (click)="deleteUser(u)">Supprimer</button>
               </div>
             </td>
           </tr>

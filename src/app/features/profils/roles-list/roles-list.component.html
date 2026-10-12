@@ -2,14 +2,13 @@
   <!-- En-tête -->
   <div class="page-header">
     <div class="ph-content">
-      <div class="ph-icon"><mat-icon>badge</mat-icon></div>
       <div>
-        <h1>Profils & Rôles Applicatifs</h1>
+        <h1>Profils &amp; Rôles Applicatifs</h1>
         <p>{{ rolesList.length }} profils et rôles configurés dans le système</p>
       </div>
     </div>
     <button mat-raised-button class="btn-new" (click)="openAddModal()">
-      <mat-icon>add</mat-icon> Nouveau Profil
+      Nouveau Profil
     </button>
   </div>
 
@@ -21,22 +20,22 @@
           <tr>
             <th>Code Profil</th>
             <th>Libellé du Rôle</th>
-            <th>Description & Étendue</th>
+            <th>Description &amp; Étendue</th>
             <th style="text-align: center;">Utilisateurs</th>
             <th style="text-align: center;">Statut</th>
-            <th style="text-align: center; min-width: 120px;">Actions</th>
+            <th style="text-align: center; min-width: 140px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (r of rolesList; track r.id) {
             <tr>
               <td>
-                <span class="role-chip" [style.background]="r.badgeColor + '18'" [style.color]="r.badgeColor" [style.border-color]="r.badgeColor + '40'">
+                <span class="role-chip">
                   {{ r.code }}
                 </span>
               </td>
               <td>
-                <strong style="color: #1e293b; font-size: 14px;">{{ r.libelle }}</strong>
+                <strong style="color: #0f172a; font-size: 14px;">{{ r.libelle }}</strong>
               </td>
               <td style="color: #475569; max-width: 380px;">
                 {{ r.description }}
@@ -48,28 +47,17 @@
               </td>
               <td style="text-align: center;">
                 <span class="users-count-chip">
-                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
                   {{ r.nbUsers }} utilisateur(s)
                 </span>
               </td>
               <td style="text-align: center;">
-                @if (r.actif) {
-                  <span class="status-chip active">Actif</span>
-                } @else {
-                  <span class="status-chip inactive">Inactif</span>
-                }
+                <span class="status-chip">{{ r.actif ? 'Actif' : 'Inactif' }}</span>
               </td>
               <td style="text-align: center;">
                 <div class="action-btns">
-                  <button mat-icon-button color="primary" title="Modifier le profil" (click)="openEditModal(r)">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button [title]="r.actif ? 'Désactiver' : 'Activer'" (click)="toggleStatus(r)">
-                    <mat-icon>{{ r.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" title="Supprimer" (click)="deleteRole(r)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
+                  <button class="tbl-action-btn" (click)="openEditModal(r)">Modifier</button>
+                  <button class="tbl-action-btn" (click)="toggleStatus(r)">{{ r.actif ? 'Désactiver' : 'Activer' }}</button>
+                  <button class="tbl-action-btn danger-link" (click)="deleteRole(r)">Supprimer</button>
                 </div>
               </td>
             </tr>

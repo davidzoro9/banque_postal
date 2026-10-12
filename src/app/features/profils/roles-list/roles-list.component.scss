@@ -114,7 +114,10 @@
     font-size: 11px;
     padding: 4px 10px;
     border-radius: 6px;
-    border: 1px solid transparent;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    letter-spacing: 0.3px;
   }
 
   .perm-tags {
@@ -125,54 +128,69 @@
 
     .tag {
       font-size: 10px;
-      background: #f1f5f9;
+      background: #f8fafc;
       color: #475569;
       padding: 1px 6px;
       border-radius: 4px;
       font-family: monospace;
+      border: 1px solid #e2e8f0;
     }
   }
 
   .users-count-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
     font-size: 11px;
-    color: #475569;
+    color: #334155;
     font-weight: 600;
   }
 
   .status-chip {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     padding: 3px 10px;
     border-radius: 12px;
-
-    &.active { background: #dcfce7; color: #15803d; }
-    &.inactive { background: #fee2e2; color: #b91c1c; }
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
   }
 
   .action-btns {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 6px;
     white-space: nowrap;
 
-    button {
-      width: 32px !important;
-      height: 32px !important;
-      line-height: 32px !important;
-      padding: 0 !important;
+    .tbl-action-btn {
+      background: #ffffff;
+      color: #0060B3;
+      border: 1px solid #cbd5e1;
+      padding: 4px 9px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
 
-      mat-icon {
-        font-size: 18px !important;
-        width: 18px !important;
-        height: 18px !important;
+      &:hover {
+        background: #0060B3;
+        color: #ffffff;
+        border-color: #0060B3;
+      }
+
+      &.danger-link {
+        color: #475569;
+
+        &:hover {
+          background: #334155;
+          color: #ffffff;
+          border-color: #334155;
+        }
       }
     }
   }

@@ -87,6 +87,17 @@ export interface SimulationResult {
   reductionIutsCharges: number;
   iutsNet: number;
 
+  // Retraite Complémentaire (CRRAE / RCPNC)
+  baseCrrae?: number;
+  tauxCrrae?: number;
+  cotisationCrrae?: number;
+
+  // Fonds de Soutien Patriotique (FSP)
+  netCedulaire?: number;
+  baseFsp?: number;
+  tauxFsp?: number;
+  cotisationFsp?: number;
+
   totalRetenuesSalariales: number;
   salaireNet: number;
   netCibleSouhaite?: number;

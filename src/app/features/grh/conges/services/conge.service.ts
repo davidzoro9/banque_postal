@@ -116,6 +116,10 @@ export class CongeService {
     return this.http.get<Conge[]>(`${environment.apiUrl}/conges/interimaire/${interimaireId}`);
   }
 
+  getBySuperviseur(superviseurId: number | string): Observable<Conge[]> {
+    return this.http.get<Conge[]>(`${environment.apiUrl}/conges/superviseur/${superviseurId}`);
+  }
+
   create(conge: any): Observable<Conge> {
     return this.http.post<Conge>(`${environment.apiUrl}/conges/create`, conge);
   }
@@ -230,5 +234,21 @@ export class CongeService {
 
   saveParametrage(config: ParametrageConge): Observable<ParametrageConge> {
     return this.http.put<ParametrageConge>(`${environment.apiUrl}/conges/parametrage`, config);
+  }
+
+  // --- TÉLÉCHARGEMENT OFFICIEL DU TITRE DE CONGÉ / AUTORISATION PDF ---
+  telechargerTitreCongePdf(id: number | string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/conges/${id}/titre-conge/pdf`, { responseType: 'blob' });
+  }
+
+  telechargerPdfDirect(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 }

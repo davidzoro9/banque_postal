@@ -41,6 +41,7 @@ export class ToolbarComponent {
     if (!n) return;
     this.notifService.markAsRead(n.id);
     if (n.route) {
+      this.moduleNav.syncActiveModuleWithUrl(n.route);
       this.router.navigateByUrl(n.route);
     }
   }

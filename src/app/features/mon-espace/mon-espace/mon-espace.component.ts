@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { BulletinPdfService } from '../../paie/services/bulletin-pdf.service';
 import { CongeService, TypeAbsenceConge, JourFerie } from '../../grh/conges/services/conge.service';
 import { environment } from '../../../../environments/environment';
@@ -99,10 +100,22 @@ export class MonEspaceComponent implements OnInit {
   periodesDemandeDisponibles: string[] = [];
   demandeBulletinForm = {
     periode: '',
+    typeBulletin: 'ORDINAIRE' as 'ORDINAIRE' | '13EME_MOIS' | '14EME_MOIS' | 'STC' | 'CONGE_PAYE' | 'RAPPEL',
     motif: 'Justificatif personnel / Démarches administratives',
     urgence: 'NORMALE',
     commentaire: ''
   };
+
+  typesBulletinDisponibles = [
+    { value: 'ORDINAIRE', label: 'Bulletin Ordinaire Mensuel', desc: 'Paie standard du mois civil' },
+    { value: '13EME_MOIS', label: '13ème Mois (Gratification Annuelle)', desc: 'Session extraordinaire BPBF (Brut = Net)' },
+    { value: '14EME_MOIS', label: '14ème Mois (Gratification Spéciale)', desc: 'Session extraordinaire BPBF' },
+    { value: 'STC', label: 'Solde de Tout Compte (STC)', desc: 'Départ, fin de contrat ou indemnité' },
+    { value: 'CONGE_PAYE', label: 'Session Congé Payé', desc: 'Indemnité de congés annuels' },
+    { value: 'RAPPEL', label: 'Rappel / Régularisation', desc: 'Régularisation salariale / avancement' }
+  ];
+
+  isDownloadingTitreConge: number | string | null = null;
 
   // Changement de mot de passe
   showChangerMdp = false;
@@ -115,8 +128,27 @@ export class MonEspaceComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthService,
     private bulletinPdfService: BulletinPdfService,
-    private congeService: CongeService
+    private congeService: CongeService,
+    private notifService: NotificationService
   ) {}
+
+  get bulletinExistantPourDemande(): any {
+    const p = (this.demandeBulletinForm.periode || '').trim().toLowerCase();
+    const type = this.demandeBulletinForm.typeBulletin;
+    return this.mesBulletinsTous.find(b => {
+      const bNat = (b.natureSession || '').toUpperCase();
+      const bType = (b.typeSession || '').toUpperCase();
+      const bPer = (b.sessionPeriode || b.mois || '').toLowerCase();
+      if (type === '13EME_MOIS' && (bNat.includes('13') || bNat.includes('TREIZ'))) return true;
+      if (type === '14EME_MOIS' && (bNat.includes('14') || bNat.includes('QUATORZ'))) return true;
+      if (type === 'STC' && bNat.includes('STC')) return true;
+      if (type === 'CONGE_PAYE' && bNat.includes('CONGE')) return true;
+      if (type === 'ORDINAIRE' && bType !== 'EXTRAORDINAIRE') {
+        return bPer.includes(p) || p.includes(bPer);
+      }
+      return false;
+    });
+  }
 
   ngOnInit(): void {
     this.currentUser = this.authService.currentUser;
@@ -226,12 +258,31 @@ export class MonEspaceComponent implements OnInit {
     for (const b of this.mesBulletinsTous) {
       const per = this.extrairePeriodeBulletin(b);
       if (per) {
-        const key = `${per.annee}-${String(per.moisIndex + 1).padStart(2, '0')}`;
+        const nat = (b.natureSession || '').toUpperCase();
+        const type = (b.typeSession || '').toUpperCase();
+        let extraTag = '';
+        if (nat.includes('13') || nat.includes('TREIZ')) extraTag = '13ème Mois';
+        else if (nat.includes('14') || nat.includes('QUATORZ')) extraTag = '14ème Mois';
+        else if (nat.includes('STC')) extraTag = 'STC';
+        else if (nat.includes('CONGE')) extraTag = 'Congé Payé';
+        else if (nat.includes('RETRAITE')) extraTag = 'Retraite';
+        else if (nat.includes('MATERNITE')) extraTag = 'Diff. Maternité';
+        else if (nat.includes('RAPPEL')) extraTag = 'Rappel';
+
+        const isExtra = type === 'EXTRAORDINAIRE' || !!extraTag;
+        const key = isExtra && extraTag
+          ? `${per.annee}-${String(per.moisIndex + 1).padStart(2, '0')}-${extraTag}-${b.id || ''}`
+          : `${per.annee}-${String(per.moisIndex + 1).padStart(2, '0')}`;
+
+        const label = isExtra && extraTag
+          ? `${extraTag} (${this.moisNoms[per.moisIndex]} ${per.annee})`
+          : `${this.moisNoms[per.moisIndex]} ${per.annee}`;
+
         if (!mapMois.has(key)) {
           mapMois.set(key, {
             moisIndex: per.moisIndex,
             annee: per.annee,
-            label: `${this.moisNoms[per.moisIndex]} ${per.annee}`,
+            label,
             bulletinId: b.id,
             bulletinCode: b.code,
             net: b.salaireNet
@@ -598,7 +649,35 @@ export class MonEspaceComponent implements OnInit {
   selectionnerMoisDisponible(item: MoisDisponible): void {
     this.moisIndex = item.moisIndex;
     this.selectedYear = item.annee;
+    if (item.bulletinId) {
+      const found = this.mesBulletinsTous.find(b => b.id === item.bulletinId);
+      if (found) {
+        this.bulletins = [this.formaterBulletinOfficiel(found, this.currentAgent)];
+        return;
+      }
+    }
     this.afficherBulletinPourMoisCourant();
+  }
+
+  /**
+   * Télécharge l'autorisation de congé / titre de congé officiel BPBF au format PDF
+   */
+  telechargerTitreConge(conge: any): void {
+    if (!conge || !conge.id) return;
+    this.isDownloadingTitreConge = conge.id;
+    this.congeService.telechargerTitreCongePdf(conge.id).subscribe({
+      next: (blob) => {
+        const num = conge.numeroTitreConge ? String(conge.numeroTitreConge).replace(/[\/\\]/g, '_') : `TC_${conge.id}`;
+        const mat = conge.employee?.matricule || this.currentAgent?.matricule || 'AGENT';
+        this.congeService.telechargerPdfDirect(blob, `Titre_Conge_BPBF_${num}_${mat}.pdf`);
+        this.isDownloadingTitreConge = null;
+      },
+      error: (err) => {
+        console.error('Erreur téléchargement Titre de Congé PDF:', err);
+        window.open(`${environment.apiUrl}/conges/${conge.id}/titre-conge/pdf`, '_blank');
+        this.isDownloadingTitreConge = null;
+      }
+    });
   }
 
   /**
@@ -878,6 +957,14 @@ export class MonEspaceComponent implements OnInit {
     this.demandeEnvoyeeSuccess = false;
   }
 
+  telechargerDirectementDepuisModal(): void {
+    const found = this.bulletinExistantPourDemande;
+    if (found) {
+      this.telechargerPdf(found);
+      this.fermerModalDemandeBulletin();
+    }
+  }
+
   envoyerDemandeBulletin(): void {
     const emp = this.currentAgent || {};
     const empId = emp.id || this.currentUser?.id;
@@ -892,6 +979,7 @@ export class MonEspaceComponent implements OnInit {
       employeeName: empNom,
       matricule: empMat,
       periode: this.demandeBulletinForm.periode || this.periode,
+      typeBulletin: this.demandeBulletinForm.typeBulletin || 'ORDINAIRE',
       motif: this.demandeBulletinForm.motif,
       urgence: this.demandeBulletinForm.urgence,
       commentaire: this.demandeBulletinForm.commentaire,
@@ -905,6 +993,7 @@ export class MonEspaceComponent implements OnInit {
       this.isSubmittingBulletin = false;
       this.demandeEnvoyeeSuccess = true;
       this.chargerMesDemandesBulletins();
+      this.notifService.refresh();
       setTimeout(() => {
         this.fermerModalDemandeBulletin();
       }, 2000);
@@ -1283,6 +1372,7 @@ export class MonEspaceComponent implements OnInit {
         this.congeEnvoyeSuccess = true;
         // Rafraîchir les compteurs et l'historique sans quitter la page
         this.chargerSoldesConges(empId);
+        this.notifService.refresh();
         setTimeout(() => {
           this.fermerModalDemandeConge();
         }, 2200);

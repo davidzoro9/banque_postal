@@ -115,7 +115,7 @@
             <!-- ENCADRÉ SALAIRE DE BASE CONVENTIONNEL -->
             <div class="convention-salary-box">
               <span class="box-label">Salaire de base conventionnel</span>
-              <span class="box-value">{{ formatFcfa(salaireBaseAffiche) }}</span>
+              <span class="box-value">{{ chargementSalaireBase ? 'Actualisation...' : formatFcfa(salaireBaseAffiche) }}</span>
             </div>
           </div>
 
@@ -207,6 +207,17 @@
         <mat-icon>error_outline</mat-icon>
         <span>{{ messageErreur }}</span>
       </div>
+      <!-- ÉTAT INITIAL : EN ATTENTE DE CALCUL -->
+      <div *ngIf="!resultat && !enChargement && !messageErreur" class="empty-state-card">
+        <div class="empty-icon">
+          <mat-icon>calculate</mat-icon>
+        </div>
+        <h3>Prêt pour la simulation</h3>
+        <p>Renseignez vos critères (salaire net ou sursalaire, catégorie et échelon) puis cliquez sur <strong>« Actualiser le calcul »</strong> pour afficher la décomposition complète du bulletin.</p>
+        <button mat-flat-button color="primary" class="btn-empty-calc" (click)="lancerSimulation()">
+          <mat-icon>refresh</mat-icon> Calculer maintenant
+        </button>
+      </div>
 
       <div *ngIf="resultat && !enChargement" class="results-wrapper">
 
@@ -260,7 +271,7 @@
           <div class="kpi-card">
             <div class="kpi-icon"><mat-icon>receipt</mat-icon></div>
             <div class="kpi-info">
-              <span class="kpi-lbl">Total Retenues (CNSS + IUTS)</span>
+              <span class="kpi-lbl">Total Retenues Salariales</span>
               <span class="kpi-val">{{ formatFcfa(resultat.totalRetenuesSalariales) }}</span>
             </div>
           </div>
@@ -374,12 +385,28 @@
                   <td class="text-right">-</td>
                 </tr>
 
-                <!-- DÉDUCTIONS -->
+                <!-- DÉDUCTIONS SALARIALES -->
                 <tr class="row-deduction">
                   <td>Cotisation CNSS Salariale</td>
                   <td>{{ formatFcfa(resultat.baseCnss) }}</td>
                   <td>5.5 %</td>
                   <td class="text-right deduction">- {{ formatFcfa(resultat.cotisationCnss) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.cotisationCrrae && resultat.cotisationCrrae > 0" class="row-deduction">
+                  <td>Cotisation CRRAE / Retraite Complémentaire</td>
+                  <td>{{ formatFcfa(resultat.baseCrrae) }}</td>
+                  <td>6.0 %</td>
+                  <td class="text-right deduction">- {{ formatFcfa(resultat.cotisationCrrae) }}</td>
+                  <td class="text-right">-</td>
+                </tr>
+
+                <tr *ngIf="resultat.cotisationFsp && resultat.cotisationFsp > 0" class="row-deduction">
+                  <td>Fonds de Soutien Patriotique (FSP)</td>
+                  <td>{{ formatFcfa(resultat.baseFsp) }}</td>
+                  <td>1.0 %</td>
+                  <td class="text-right deduction">- {{ formatFcfa(resultat.cotisationFsp) }}</td>
                   <td class="text-right">-</td>
                 </tr>
 

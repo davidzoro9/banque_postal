@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { SimulationService } from '../services/simulation.service';
-import { DbRefService, RefItem } from '../../donnees-base/services/db-ref.service';
 import { IndemniteDetail, SimulationIndemnitesAuto, SimulationMode, SimulationRequest, SimulationResult } from '../models/simulation.model';
 
 interface CategorieOption {
@@ -56,11 +55,9 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   chargementIndemnites = false;
   indemnitesModifieesManuellement = false;
 
-  // Données de la Grille Salariale de Paramètres Généraux
+  // Salaire de base et classifications (100% connectés à PostgreSQL)
   salaireBaseAffiche = 203834;
-  grillesParametresGeneraux: RefItem[] = [];
-  categoriesParametresGeneraux: RefItem[] = [];
-  echelonsParametresGeneraux: RefItem[] = [];
+  chargementSalaireBase = false;
   private subscriptions: Subscription = new Subscription();
 
   // Résultat du calcul
@@ -68,37 +65,17 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   enChargement = false;
   messageErreur = '';
 
-  // Options de classification conventionnelle officielle BPBF
-  readonly categoriesParDefaut: CategorieOption[] = [
-    { code: '1', libelle: '1ère Catégorie (Agents d\'exécution)', groupe: 'GROUPE I' },
-    { code: '2', libelle: '2ème Catégorie (Agents d\'exécution)', groupe: 'GROUPE I' },
-    { code: '3', libelle: '3ème Catégorie (Employés)', groupe: 'GROUPE I' },
-    { code: '4', libelle: '4ème Catégorie (Employés qualifiés)', groupe: 'GROUPE I' },
-    { code: '5', libelle: '5ème Catégorie (Employés qualifiés)', groupe: 'GROUPE I' },
-    { code: '6', libelle: '6ème Catégorie (Employés très qualifiés)', groupe: 'GROUPE I' },
-    { code: '7', libelle: '7ème Catégorie (Employés très qualifiés)', groupe: 'GROUPE I' },
-    { code: 'I', libelle: 'Classe I (Agents de Maîtrise)', groupe: 'GROUPE II' },
-    { code: 'II', libelle: 'Classe II (Maîtrise & Cadres Moyens)', groupe: 'GROUPE II' },
-    { code: 'III', libelle: 'Classe III (Maîtrise & Cadres Moyens)', groupe: 'GROUPE II' },
-    { code: 'IV', libelle: 'Classe IV (Cadres Moyens confirmés)', groupe: 'GROUPE II' },
-    { code: 'V', libelle: 'Classe V (Cadres)', groupe: 'GROUPE III' },
-    { code: 'VI', libelle: 'Classe VI (Cadres Supérieurs)', groupe: 'GROUPE III' },
-    { code: 'VII', libelle: 'Classe VII (Cadres Supérieurs)', groupe: 'GROUPE III' },
-    { code: 'VIII', libelle: 'Classe VIII (Cadres Dirigeants)', groupe: 'GROUPE III' }
-  ];
-
-  categories: CategorieOption[] = [...this.categoriesParDefaut];
-
-  echelons = Array.from({ length: 15 }, (_, i) => i + 1);
+  // Classifications chargées dynamiquement depuis la base de données PostgreSQL
+  categories: CategorieOption[] = [];
+  echelons: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
   constructor(
-    private simulationService: SimulationService,
-    private dbRefService: DbRefService
+    private simulationService: SimulationService
   ) {}
 
   ngOnInit(): void {
     this.chargerReferences();
-    this.actualiserIndemnitesConventionnelles();
+    this.lancerSimulation();
   }
 
   ngOnDestroy(): void {
@@ -183,28 +160,7 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   chargerReferences(): void {
     this.chargementRefs = true;
 
-    // 1. Chargement de la grille salariale enregistrée dans les Paramètres Généraux
-    const subGrille = this.dbRefService.getItems('grille-salariale').subscribe({
-      next: (items) => {
-        this.grillesParametresGeneraux = items || [];
-        this.majSalaireBase();
-      },
-      error: (e) => console.warn('Erreur chargement grilles Paramètres Généraux:', e)
-    });
-    this.subscriptions.add(subGrille);
-
-    // 2. Écoute dynamique de toute modification dans Paramètres Généraux
-    const subChanges = this.dbRefService.refChanges$.subscribe((change) => {
-      if (change.type === 'grille-salariale') {
-        this.dbRefService.getItems('grille-salariale').subscribe((items) => {
-          this.grillesParametresGeneraux = items || [];
-          this.majSalaireBase();
-        });
-      }
-    });
-    this.subscriptions.add(subChanges);
-
-    // 3. Emplois et Fonctions
+    // 1. Emplois et Fonctions directement depuis le backend PostgreSQL
     const subEmp = this.simulationService.getEmplois().subscribe({
       next: (data) => {
         this.emplois = (data || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -225,65 +181,36 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     });
     this.subscriptions.add(subFnc);
 
-    // 4. Chargement dynamique des Catégories et Échelons depuis la base de données
-    const subCat = this.dbRefService.getItems('categorie').subscribe({
+    // 2. Chargement dynamique des Catégories DIRECTEMENT depuis la table PostgreSQL 'categorie'
+    const subCat = this.simulationService.getCategories().subscribe({
       next: (items) => {
         if (items && items.length > 0) {
-          const dbMap = new Map<string, RefItem>();
-          items.forEach(item => {
-            const codeNorm = this.normaliserCodeCategorie(item.code, item.libelle);
-            dbMap.set(codeNorm, item);
-            dbMap.set(item.code, item);
-          });
+          this.categories = items.map((item: any) => ({
+            code: item.code,
+            libelle: item.libelle || `Catégorie ${item.code}`,
+            groupe: this.determinerGroupe(item.code, item.description, item.libelle)
+          }));
 
-          const listeComplete: CategorieOption[] = this.categoriesParDefaut.map(def => {
-            const dbItem = dbMap.get(def.code);
-            if (dbItem) {
-              return {
-                code: def.code,
-                libelle: dbItem.libelle || def.libelle,
-                groupe: this.determinerGroupe(def.code, dbItem.description, dbItem.libelle)
-              };
-            }
-            return def;
-          });
-
-          items.forEach(item => {
-            const codeNorm = this.normaliserCodeCategorie(item.code, item.libelle);
-            if (!listeComplete.some(c => c.code === codeNorm || c.code === item.code)) {
-              listeComplete.push({
-                code: item.code,
-                libelle: item.libelle || item.name || `Catégorie ${item.code}`,
-                groupe: this.determinerGroupe(item.code, item.description, item.libelle)
-              });
-            }
-          });
-
-          this.categories = listeComplete;
-
-          // S'assurer que selectedCategorie correspond bien à une option existante
-          const normSelected = this.normaliserCodeCategorie(this.selectedCategorie);
-          if (this.categories.some(c => c.code === this.selectedCategorie)) {
-            // Correspondance directe
-          } else if (this.categories.some(c => c.code === normSelected)) {
-            this.selectedCategorie = normSelected;
-          } else if (this.categories.length > 0) {
+          const existe = this.categories.some(c => c.code === this.selectedCategorie);
+          if (!existe && this.categories.length > 0) {
             this.selectedCategorie = this.categories[0].code;
           }
-          this.majSalaireBase();
+          this.lancerSimulation();
         }
       },
       error: (e) => console.warn('Erreur chargement categories DB:', e)
     });
     this.subscriptions.add(subCat);
 
-    const subEch = this.dbRefService.getItems('echelon').subscribe({
+    // 3. Chargement dynamique des Échelons DIRECTEMENT depuis la table PostgreSQL 'echelon'
+    const subEch = this.simulationService.getEchelons().subscribe({
       next: (items) => {
         if (items && items.length > 0) {
-          const parsed = items.map(e => Number(e.code) || Number(e.libelle)).filter(n => !isNaN(n) && n > 0);
+          const parsed = items.map((e: any) => Number(e.code) || Number(e.libelle)).filter((n: number) => !isNaN(n) && n > 0);
           if (parsed.length > 0) {
-            this.echelons = Array.from(new Set(parsed)).sort((a, b) => a - b);
+            this.echelons = Array.from(new Set(parsed)).sort((a: number, b: number) => a - b);
           }
+          this.lancerSimulation();
         }
       },
       error: (e) => console.warn('Erreur chargement echelons DB:', e)
@@ -292,51 +219,14 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Interroge le backend (PostgreSQL + Convention BPBF) pour déduire automatiquement
-   * toutes les indemnités statutaires et de poste applicables.
+   * Actualise la simulation en une seule requête atomique.
    */
   actualiserIndemnitesConventionnelles(): void {
-    this.chargementIndemnites = true;
-    this.indemnitesModifieesManuellement = false;
-
-    const req: SimulationRequest = {
-      mode: this.mode,
-      categorieCode: this.selectedCategorie,
-      echelonCode: String(this.selectedEchelon),
-      gradeCode: this.selectedGrade,
-      emploiId: this.selectedEmploiId ? Number(this.selectedEmploiId) : undefined,
-      emploiNom: this.getNomEmploiSelectionne(),
-      fonctionId: this.selectedFonctionId ? Number(this.selectedFonctionId) : undefined,
-      fonctionNom: this.getNomFonctionSelectionnee(),
-      vehiculeFourni: this.vehiculeFourni,
-      logementFourni: this.logementFourni
-    };
-
-    this.simulationService.getIndemnitesAuto(req).subscribe({
-      next: (res: SimulationIndemnitesAuto) => {
-        if (res) {
-          this.indemniteLogement = res.indemniteLogement || 0;
-          this.indemniteTransport = res.indemniteTransport || 0;
-          this.indemniteFonction = res.indemniteFonction || 0;
-          this.indemniteCaisse = res.indemniteCaisse || 0;
-          this.indemniteSujetion = res.indemniteSujetion || 0;
-          this.indemniteCashPoint = res.indemniteCashPoint || 0;
-          this.autresIndemnites = res.autresIndemnites || 0;
-          this.indemnitesDetails = res.details || [];
-        }
-        this.chargementIndemnites = false;
-        this.lancerSimulation();
-      },
-      error: (err) => {
-        console.warn('Erreur récupération indemnités auto:', err);
-        this.chargementIndemnites = false;
-        this.lancerSimulation();
-      }
-    });
+    this.lancerSimulation();
   }
 
   onEmploiChange(): void {
-    this.actualiserIndemnitesConventionnelles();
+    this.lancerSimulation();
   }
 
   onFonctionChange(): void {
@@ -346,22 +236,19 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
       if (u.includes('DIRECTEUR GÉNÉRAL')) {
         this.selectedCategorie = 'VIII';
         this.selectedGrade = 'GROUPE III';
-        this.majSalaireBase();
       } else if (u.includes('DIRECTEUR')) {
         this.selectedCategorie = 'VI';
         this.selectedGrade = 'GROUPE III';
-        this.majSalaireBase();
       } else if (u.includes("CHEF D'AGENCE")) {
         this.selectedCategorie = 'IV';
         this.selectedGrade = 'GROUPE II';
-        this.majSalaireBase();
       }
     }
-    this.actualiserIndemnitesConventionnelles();
+    this.lancerSimulation();
   }
 
   onAvantageChange(): void {
-    this.actualiserIndemnitesConventionnelles();
+    this.lancerSimulation();
   }
 
   onClassificationChange(): void {
@@ -369,8 +256,8 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     if (catObj) {
       this.selectedGrade = catObj.groupe;
     }
-    this.majSalaireBase();
-    this.actualiserIndemnitesConventionnelles();
+    this.selectedEchelonId = undefined;
+    this.lancerSimulation();
   }
 
   onIndemniteManuelleChange(): void {
@@ -379,7 +266,8 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   }
 
   reinitialiserIndemnites(): void {
-    this.actualiserIndemnitesConventionnelles();
+    this.indemnitesModifieesManuellement = false;
+    this.lancerSimulation();
   }
 
   getTotalIndemnitesSaisies(): number {
@@ -404,79 +292,7 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
   }
 
   majSalaireBase(): void {
-    const rawCat = (this.selectedCategorie || '').trim().toUpperCase();
-    const echNum = Number(this.selectedEchelon || 1);
-
-    // Mappage conventionnel standard
-    const romanToCl: Record<string, string> = {
-      '1': 'C1', '2': 'C2', '3': 'C3', '4': 'C4', '5': 'C5', '6': 'C6', '7': 'C7',
-      'I': 'CL1', 'II': 'CL2', 'III': 'CL3', 'IV': 'CL4',
-      'V': 'CL5', 'VI': 'CL6', 'VII': 'CL7', 'VIII': 'CL8'
-    };
-    const targetCl = romanToCl[rawCat] || rawCat;
-    const targetGrade = `${targetCl}E${String(echNum).padStart(2, '0')}`;
-
-    let matchTrouve: RefItem | undefined;
-
-    // 1. Recherche directe dans la Grille Salariale de Paramètres Généraux
-    if (this.grillesParametresGeneraux && this.grillesParametresGeneraux.length > 0) {
-      matchTrouve = this.grillesParametresGeneraux.find(g => {
-        // A. Match par gradeCode complet (ex: "CL2E02")
-        const gCode = (g.code || g.grade || g.libelle || '').toUpperCase().trim();
-        if (gCode === targetGrade) return true;
-
-        // B. Vérification du numéro d'échelon
-        const gEchNum = Number(String(g.echellon || g.echelonCode || g.echelonLibelle || '').replace(/\D+/g, ''));
-        if (gEchNum !== echNum) return false;
-
-        // C. Vérification de la catégorie
-        const gCat = (g.categorie || g.categorieCode || '').toUpperCase().trim();
-        const gLib = (g.categorieLibelle || '').toUpperCase().trim();
-
-        if (gCat === targetCl || gCat === rawCat) return true;
-        if (gCode.startsWith(targetCl)) return true;
-
-        if (rawCat === 'II' && (gLib.includes('CLASSE II') || gCat.includes('CL2'))) return true;
-        if (rawCat === 'I' && (gLib.includes('CLASSE I') && !gLib.includes('CLASSE II') && !gLib.includes('CLASSE III') && !gLib.includes('CLASSE IV'))) return true;
-        if (rawCat === 'III' && gLib.includes('CLASSE III')) return true;
-        if (rawCat === 'IV' && gLib.includes('CLASSE IV')) return true;
-        if (rawCat === 'V' && (gLib.includes('CLASSE V') && !gLib.includes('CLASSE VI') && !gLib.includes('CLASSE VII') && !gLib.includes('CLASSE VIII'))) return true;
-        if (rawCat === 'VI' && gLib.includes('CLASSE VI')) return true;
-        if (rawCat === 'VII' && gLib.includes('CLASSE VII')) return true;
-        if (rawCat === 'VIII' && gLib.includes('CLASSE VIII')) return true;
-
-        // Catégories 1 à 7
-        if (['1','2','3','4','5','6','7'].includes(rawCat)) {
-          if (gLib.includes(rawCat + 'ÈRE') || gLib.includes(rawCat + 'ÈME') || gCat === 'C' + rawCat) return true;
-        }
-
-        return false;
-      });
-    }
-
-    if (matchTrouve && matchTrouve.montant != null && matchTrouve.montant > 0) {
-      this.salaireBaseAffiche = Number(matchTrouve.montant);
-      this.selectedCategorieId = matchTrouve.categorieId ? Number(matchTrouve.categorieId) : undefined;
-      this.selectedEchelonId = matchTrouve.echelonId ? Number(matchTrouve.echelonId) : undefined;
-      this.selectedGradeId = matchTrouve.gradeId ? Number(matchTrouve.gradeId) : undefined;
-      return;
-    }
-
-    // 2. Appel de confirmation direct par l'API REST lookup si pas encore présent dans le cache
-    this.simulationService.lookupGrille(rawCat, echNum).subscribe({
-      next: (g) => {
-        if (g && (g.basicSalary || g.salaireBase)) {
-          const val = Number(g.basicSalary || g.salaireBase);
-          if (val > 0) {
-            this.salaireBaseAffiche = val;
-            if (g.categorieId) this.selectedCategorieId = Number(g.categorieId);
-            if (g.echelonId) this.selectedEchelonId = Number(g.echelonId);
-            if (g.gradeId) this.selectedGradeId = Number(g.gradeId);
-          }
-        }
-      },
-      error: () => {}
-    });
+    this.lancerSimulation();
   }
 
   getTauxReductionCharge(charges: number): number {
@@ -496,6 +312,7 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     }
 
     this.enChargement = true;
+    this.chargementSalaireBase = true;
     this.messageErreur = '';
 
     const req: SimulationRequest = {
@@ -506,17 +323,17 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
       echelonCode: String(this.selectedEchelon),
       gradeId: this.selectedGradeId,
       gradeCode: this.selectedGrade,
-      salaireBaseManuel: this.salaireBaseAffiche,
+      salaireBaseManuel: undefined,
       nombrePersonnesCharge: this.nombrePersonnesCharge,
       netCibleSouhaite: this.mode === 'NET_VERS_SURSALAIRE' ? (this.netCibleSouhaite || 0) : undefined,
       surSalairePropose: this.mode === 'SURSALAIRE_VERS_NET' ? (this.surSalairePropose || 0) : undefined,
-      indemniteLogement: this.indemniteLogement || 0,
-      indemniteTransport: this.indemniteTransport || 0,
-      indemniteFonction: this.indemniteFonction || 0,
-      indemniteCaisse: this.indemniteCaisse || 0,
-      indemniteSujetion: this.indemniteSujetion || 0,
-      indemniteCashPoint: this.indemniteCashPoint || 0,
-      autresIndemnites: this.autresIndemnites || 0,
+      indemniteLogement: this.indemnitesModifieesManuellement ? (this.indemniteLogement || 0) : undefined,
+      indemniteTransport: this.indemnitesModifieesManuellement ? (this.indemniteTransport || 0) : undefined,
+      indemniteFonction: this.indemnitesModifieesManuellement ? (this.indemniteFonction || 0) : undefined,
+      indemniteCaisse: this.indemnitesModifieesManuellement ? (this.indemniteCaisse || 0) : undefined,
+      indemniteSujetion: this.indemnitesModifieesManuellement ? (this.indemniteSujetion || 0) : undefined,
+      indemniteCashPoint: this.indemnitesModifieesManuellement ? (this.indemniteCashPoint || 0) : undefined,
+      autresIndemnites: this.indemnitesModifieesManuellement ? (this.autresIndemnites || 0) : undefined,
       emploiId: this.selectedEmploiId ? Number(this.selectedEmploiId) : undefined,
       emploiNom: this.getNomEmploiSelectionne(),
       fonctionId: this.selectedFonctionId ? Number(this.selectedFonctionId) : undefined,
@@ -528,15 +345,29 @@ export class CalculatriceSimulationComponent implements OnInit, OnDestroy {
     this.simulationService.simuler(req).subscribe({
       next: (res) => {
         this.resultat = res;
-        if (res && res.salaireBase) {
-          this.salaireBaseAffiche = res.salaireBase;
-        }
         this.enChargement = false;
+        this.chargementSalaireBase = false;
+        if (res) {
+          if (res.salaireBase != null && res.salaireBase > 0) {
+            this.salaireBaseAffiche = res.salaireBase;
+          }
+          if (!this.indemnitesModifieesManuellement) {
+            this.indemniteLogement = res.indemniteLogement || 0;
+            this.indemniteTransport = res.indemniteTransport || 0;
+            this.indemniteFonction = res.indemniteFonction || 0;
+            this.indemniteCaisse = res.indemniteCaisse || 0;
+            this.indemniteSujetion = res.indemniteSujetion || 0;
+            this.indemniteCashPoint = res.indemniteCashPoint || 0;
+            this.autresIndemnites = res.autresIndemnites || 0;
+            this.indemnitesDetails = res.detailsIndemnites || [];
+          }
+        }
       },
       error: (err) => {
         console.error('Erreur simulation:', err);
         this.messageErreur = err?.error?.message || 'Impossible de calculer la simulation. Vérifiez les paramètres de calcul.';
         this.enChargement = false;
+        this.chargementSalaireBase = false;
       }
     });
   }

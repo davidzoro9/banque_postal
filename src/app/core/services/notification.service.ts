@@ -24,8 +24,20 @@ export class NotificationService {
 
   constructor(private http: HttpClient) {
     this.refresh();
-    // Rafraîchir périodiquement toutes les 60 secondes pour maintenir les alertes à jour
-    setInterval(() => this.refresh(), 60000);
+    // Rafraîchissement automatique en arrière-plan toutes les 10 secondes (temps réel)
+    setInterval(() => this.refresh(), 10000);
+
+    // Rafraîchissement instantané dès que la fenêtre/onglet redevient actif
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          this.refresh();
+        }
+      });
+      window.addEventListener('focus', () => {
+        this.refresh();
+      });
+    }
   }
 
   get unreadCount(): number {

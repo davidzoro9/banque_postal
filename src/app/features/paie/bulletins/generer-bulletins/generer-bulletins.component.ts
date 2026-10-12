@@ -176,11 +176,15 @@ export class GenererBulletinsComponent implements OnInit {
     motifAjustement: ''
   };
 
+  editStcMotifRupture: string = 'LICENCIEMENT_SIMPLE';
+  editStcStatutPreavis: string = 'DISPENSE_PAYE';
+
   get nbrGeneres(): number { return this.bulletins.filter(b => b.etat === 'GENERE').length; }
   get nbrValides(): number { return this.bulletins.filter(b => b.etat === 'VALIDE' || b.etat === 'CLOTURE').length; }
   get tousValides(): boolean { return this.sessionEstValidee || this.sessionCloturee || (this.bulletins.length > 0 && this.bulletins.every(b => b.etat === 'VALIDE' || b.etat === 'CLOTURE')); }
   get sessionStatut(): string { return this.currentSession ? (this.currentSession.statut || 'BROUILLON') : 'BROUILLON'; }
-  get sessionEstBrouillon(): boolean { return this.sessionStatut === 'BROUILLON'; }
+  get sessionEstNonTraitee(): boolean { return this.sessionStatut === 'NON_TRAITE'; }
+  get sessionEstBrouillon(): boolean { return this.sessionStatut === 'BROUILLON' || this.sessionStatut === 'NON_TRAITE'; }
   get sessionEstGeneree(): boolean { return this.sessionStatut === 'GENERE'; }
   get sessionEstValidee(): boolean { return this.sessionStatut === 'VALIDE'; }
   get sessionCloturee(): boolean { return this.sessionStatut === 'CLOTURE'; }
@@ -189,6 +193,52 @@ export class GenererBulletinsComponent implements OnInit {
     if (!s) return false;
     const n = (s.natureSession || s.name || s.codeSession || '').toUpperCase();
     return n.includes('MATERNITE') || n.includes('MAT');
+  }
+
+  get isSessionStc(): boolean {
+    const s = this.currentSession;
+    if (!s) return false;
+    const n = (s.natureSession || s.name || s.codeSession || '').toUpperCase();
+    return n.includes('STC') || n.includes('SOLDE DE TOUT COMPTE');
+  }
+
+  isBulletinStc(b: any): boolean {
+    if (!b) return false;
+    const nat = (b.natureSession || b.typeSession || '').toUpperCase();
+    return nat.includes('STC') || this.isSessionStc || !!b.motifRupture;
+  }
+
+  getMotifRuptureLibelle(motif?: string): string {
+    switch (motif) {
+      case 'LICENCIEMENT_SIMPLE': return 'Licenciement Motif Personnel';
+      case 'LICENCIEMENT_ECONOMIQUE': return 'Licenciement Économique';
+      case 'LICENCIEMENT_FAUTE_LOURDE': return 'Faute Lourde (Sans Indemnité)';
+      case 'DEMISSION': return 'Démission du Salarié';
+      case 'FIN_CDD': return 'Fin de Contrat CDD';
+      case 'RETRAITE': return 'Départ à la Retraite';
+      default: return motif || 'Licenciement Simple';
+    }
+  }
+
+  getStatutPreavisLibelle(statut?: string): string {
+    switch (statut) {
+      case 'DISPENSE_PAYE': return 'Dispensé & Payé par l\'Employeur';
+      case 'EFFECTUE': return 'Effectué pendant le Contrat';
+      case 'NON_EFFECTUE_SALARIE': return 'Non Effectué (Retenue sur STC)';
+      case 'NON_APPLICABLE': return 'Non Applicable';
+      default: return statut || 'Dispensé & Payé';
+    }
+  }
+
+  onStcParamChange(): void {
+    if (this.editStcMotifRupture === 'LICENCIEMENT_FAUTE_LOURDE' || this.editStcMotifRupture === 'FIN_CDD') {
+      this.editStcStatutPreavis = 'NON_APPLICABLE';
+    } else if (this.editStcMotifRupture === 'DEMISSION' && this.editStcStatutPreavis === 'DISPENSE_PAYE') {
+      this.editStcStatutPreavis = 'EFFECTUE';
+    } else if (this.editStcMotifRupture === 'RETRAITE' && this.editStcStatutPreavis === 'DISPENSE_PAYE') {
+      this.editStcStatutPreavis = 'NON_APPLICABLE';
+    }
+    this.recalculerLignesVariables();
   }
 
   get totalMasseSalarialeBrute(): number {
@@ -675,13 +725,29 @@ export class GenererBulletinsComponent implements OnInit {
     this.showSelectionEmployesModal = true;
   }
 
+  isEmployeNonEmbauchePourSession(emp: any): boolean {
+    if (!emp || !emp.dateEmbauche || !this.currentSession) return false;
+    let finSessionStr = this.currentSession.dateTo || this.currentSession.dateFin;
+    if (!finSessionStr && this.currentSession.annee && this.currentSession.mois) {
+      const y = this.currentSession.annee;
+      const m = parseInt(this.currentSession.mois, 10);
+      if (!isNaN(m) && m >= 1 && m <= 12) {
+        const lastDay = new Date(y, m, 0).getDate();
+        finSessionStr = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      }
+    }
+    if (!finSessionStr) return false;
+    const dEmb = String(emp.dateEmbauche).trim();
+    return dEmb > finSessionStr;
+  }
+
   chargerEmployesPourSelection(): void {
     this.employeeService.getAll().subscribe(employees => {
       this.tousLesEmployes = (employees || []).filter(e => e.statut === 'Actif' || !e.statut || (e.statut as any) === 'ACTIF');
       this.employesSelectionnesIds = {};
       this.employesSelectionnesIdsForNewSession = {};
       this.tousLesEmployes.forEach(e => {
-        if (e.id) {
+        if (e.id && !this.isEmployeNonEmbauchePourSession(e)) {
           this.employesSelectionnesIds[String(e.id)] = true;
           this.employesSelectionnesIdsForNewSession[String(e.id)] = true;
         }
@@ -715,7 +781,7 @@ export class GenererBulletinsComponent implements OnInit {
 
     let count = 0;
     for (const emp of this.poolEmployesRecalculSession) {
-      if (!emp.id) continue;
+      if (!emp.id || this.isEmployeNonEmbauchePourSession(emp)) continue;
       const alreadyDone = this.isAgentCalculeDansSession(emp.id);
       if (!onlyPending || !alreadyDone) {
         this.employesSelectionnesIds[String(emp.id)] = true;
@@ -754,7 +820,13 @@ export class GenererBulletinsComponent implements OnInit {
       ? this.employesFiltresPourSelection
       : this.poolEmployesRecalculSession;
     cible.forEach(e => {
-      if (e.id) this.employesSelectionnesIds[String(e.id)] = checked;
+      if (e.id) {
+        if (checked && this.isEmployeNonEmbauchePourSession(e)) {
+          this.employesSelectionnesIds[String(e.id)] = false;
+        } else {
+          this.employesSelectionnesIds[String(e.id)] = checked;
+        }
+      }
     });
   }
 
@@ -772,13 +844,17 @@ export class GenererBulletinsComponent implements OnInit {
       this.employesSelectionnesIds = {};
     } else {
       this.poolEmployesRecalculSession.forEach(e => {
-        if (e.id) this.employesSelectionnesIds[String(e.id)] = true;
+        if (e.id && !this.isEmployeNonEmbauchePourSession(e)) {
+          this.employesSelectionnesIds[String(e.id)] = true;
+        }
       });
     }
   }
 
   toggleSelectEmployeeGeneration(empId: any): void {
     if (!empId) return;
+    const emp = this.poolEmployesRecalculSession.find(e => String(e.id) === String(empId));
+    if (emp && this.isEmployeNonEmbauchePourSession(emp)) return;
     const key = String(empId);
     this.employesSelectionnesIds[key] = !this.employesSelectionnesIds[key];
   }
@@ -794,6 +870,16 @@ export class GenererBulletinsComponent implements OnInit {
         .filter(k => !!this.employesSelectionnesIds[k])
         .map(k => Number(k))
         .filter(n => !isNaN(n) && n > 0);
+
+      // Sécurité frontend : rejet strict de tout agent postérieur à la session
+      for (const id of ids) {
+        const emp = this.poolEmployesRecalculSession.find(e => String(e.id) === String(id));
+        if (emp && this.isEmployeNonEmbauchePourSession(emp)) {
+          alert(`L'agent ${emp.nom} ${emp.prenom} (${emp.matricule}) a une date d'embauche (${emp.dateEmbauche}) postérieure à cette session de paie. Génération impossible.`);
+          return;
+        }
+      }
+
       if (ids.length === 0) {
         alert('Veuillez sélectionner au moins un agent pour cette session de paie.');
         return;
@@ -1015,6 +1101,12 @@ export class GenererBulletinsComponent implements OnInit {
 
     copy.partsFiscales = b.partsFiscales != null ? b.partsFiscales : (b.nombreCharges != null ? b.nombreCharges : 0);
 
+    copy.motifRupture = b.motifRupture;
+    copy.statutPreavis = b.statutPreavis;
+    copy.montantIndemniteLicenciement = b.montantIndemniteLicenciement ?? 0;
+    copy.montantIndemnitePreavis = b.montantIndemnitePreavis ?? 0;
+    copy.montantIndemniteConges = b.montantIndemniteConges ?? 0;
+
     let indList = b.lines ? b.lines.filter((l: any) => {
       const cd = (l.code || '').toUpperCase();
       const nm = (l.name || l.libelle || '').toUpperCase();
@@ -1072,6 +1164,12 @@ export class GenererBulletinsComponent implements OnInit {
 
   ouvrirModalModifierVariables(b: any): void {
     this.selectedBulletinForEdit = b;
+    this.editStcMotifRupture = b.motifRupture || 'LICENCIEMENT_SIMPLE';
+    this.editStcStatutPreavis = b.statutPreavis || (
+      this.editStcMotifRupture === 'LICENCIEMENT_FAUTE_LOURDE' || this.editStcMotifRupture === 'FIN_CDD' || this.editStcMotifRupture === 'RETRAITE'
+        ? 'NON_APPLICABLE'
+        : (this.editStcMotifRupture === 'DEMISSION' ? 'EFFECTUE' : 'DISPENSE_PAYE')
+    );
     if (b.lines && b.lines.length > 0) {
       this.initEditableLines(b);
       this.showEditVariablesModal = true;
@@ -1085,6 +1183,12 @@ export class GenererBulletinsComponent implements OnInit {
       ).subscribe(fullB => {
         this.isCalculating = false;
         this.selectedBulletinForEdit = fullB || b;
+        if (this.selectedBulletinForEdit.motifRupture) {
+          this.editStcMotifRupture = this.selectedBulletinForEdit.motifRupture;
+        }
+        if (this.selectedBulletinForEdit.statutPreavis) {
+          this.editStcStatutPreavis = this.selectedBulletinForEdit.statutPreavis;
+        }
         this.initEditableLines(this.selectedBulletinForEdit);
         this.showEditVariablesModal = true;
       });
@@ -1268,7 +1372,9 @@ export class GenererBulletinsComponent implements OnInit {
     this.isCalculating = true;
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
-      scheduledWorkingDays: b.scheduledWorkingDays ?? 30
+      scheduledWorkingDays: b.scheduledWorkingDays ?? 30,
+      motifRupture: this.editStcMotifRupture,
+      statutPreavis: this.editStcStatutPreavis
     }).subscribe({
       next: (res) => {
         this.isCalculating = false;
@@ -1337,7 +1443,9 @@ export class GenererBulletinsComponent implements OnInit {
 
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
-      scheduledWorkingDays: b.scheduledWorkingDays ?? 30
+      scheduledWorkingDays: b.scheduledWorkingDays ?? 30,
+      motifRupture: this.editStcMotifRupture,
+      statutPreavis: this.editStcStatutPreavis
     }).subscribe({
       next: (savedDto) => {
         this.isCalculating = false;
@@ -1454,8 +1562,14 @@ export class GenererBulletinsComponent implements OnInit {
         } else if (cd.includes('IUTS') || nm.includes('IUTS')) {
           const nbChg = b.nombreCharges != null ? b.nombreCharges : (b.partsFiscales != null ? b.partsFiscales : (l.taux != null ? Math.round(Number(l.taux)) : 0));
           tauxStr = nbChg > 0 ? `${nbChg} chg` : '—';
-        } else if (cd.includes('ICCP') || nm.includes('CONGÉS') || nm.includes('CONGES')) {
-          tauxStr = l.taux !== undefined && l.taux !== null ? String(l.taux) : '';
+        } else if (cd.includes('IND_LICENC') || cd.includes('IND_RETRAITE') || nm.includes('INDEMNITÉ DE LICENCIEMENT') || nm.includes('INDEMNITE DE LICENCIEMENT') || nm.includes('RETRAITE')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} ans` : '';
+        } else if (cd.includes('IND_PREAVIS') || cd.includes('RET_PREAVIS') || nm.includes('PRÉAVIS') || nm.includes('PREAVIS')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} mois` : '';
+        } else if (cd.includes('IND_CP_ACQUIS') || cd.includes('ICCP') || nm.includes('CONGÉS') || nm.includes('CONGES')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} j` : '';
+        } else if (cd.includes('PRORATA_13EME') || cd.includes('PRORATA_14EME') || nm.includes('13ÈME') || nm.includes('14ÈME')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} %` : '';
         } else if (cd.startsWith('IND') || cd.includes('LOG') || cd.includes('TRP') || cd.includes('SUJ') || cd.includes('CS') || cd.includes('CAISSE') || cd.includes('CP') || cd.includes('CASH') || nm.includes('INDEMNIT') || nm.includes('CAISSE') || nm.includes('SUJÉTION') || nm.includes('SUJETION') || nm.includes('LOGEMENT') || nm.includes('TRANSPORT') || nm.includes('CASH POINT')) {
           // Indemnités forfaitaires mensuelles : pas de taux trompeur
           tauxStr = '';

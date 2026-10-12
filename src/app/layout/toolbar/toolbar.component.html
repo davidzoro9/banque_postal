@@ -26,8 +26,9 @@
   <div class="toolbar-right">
 
     <!-- Notifications -->
-    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="action-btn" matTooltip="Notifications">
-      <mat-icon [matBadge]="notifService.unreadCount > 0 ? notifService.unreadCount : null"
+    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="action-btn notif-btn" matTooltip="Notifications">
+      <mat-icon [class.bell-has-notif]="notifService.unreadCount > 0"
+                [matBadge]="notifService.unreadCount > 0 ? notifService.unreadCount : null"
                 [matBadgeHidden]="notifService.unreadCount === 0"
                 matBadgeColor="warn"
                 matBadgeSize="small">

@@ -99,7 +99,6 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'bulletin-lot', label: 'Génération de bulletin', icon: 'layers', route: '/paie/lots' },
         { id: 'simulateur-rh', label: 'Simulateur & Calculatrice RH', icon: 'calculate', route: '/paie/simulateur' },
-        { id: 'comptes-comptables', label: 'Comptes comptables', icon: 'account_tree', route: '/paie/comptes-comptables' },
         { id: 'avoirs', label: 'Rappels', icon: 'history_edu', route: '/paie/variables/avoirs' },
         { id: 'trop-percus', label: 'Trop-perçus', icon: 'history_toggle_drop_down', route: '/paie/variables/trop-percus' },
         { id: 'precomptes', label: 'Précomptes', icon: 'credit_card_off', route: '/paie/variables/precomptes' }
@@ -126,6 +125,14 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
         { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
         { id: 'etat-bulletin', label: 'État Bulletin', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
+      ]
+    },
+    {
+      id: 'comptes-comptables-menu',
+      label: 'Comptes comptables',
+      icon: 'account_tree',
+      children: [
+        { id: 'parametrage-comptes-comptables', label: 'Paramétrage des comptes comptables', icon: 'tune', route: '/paie/comptes-comptables' }
       ]
     }
   ],
@@ -223,6 +230,65 @@ export class ModuleNavService {
 
   clearModule(): void {
     this.activeModuleSubject.next(null);
+  }
+
+  syncActiveModuleWithUrl(url: string): void {
+    if (!url) return;
+    const cleanUrl = url.split('?')[0].split('#')[0];
+
+    // 1. Congés si route congés
+    if (cleanUrl.includes('/grh/conges') || cleanUrl.startsWith('/conges')) {
+      const congesMod = this.modules.find(m => m.id === 'conges');
+      if (congesMod && this.activeModule?.id !== 'conges') {
+        this.selectModule(congesMod);
+      }
+      return;
+    }
+
+    // 2. Paie si route paie (ex: /paie/lots, /paie/sessions)
+    if (cleanUrl.startsWith('/paie') || cleanUrl.includes('/paie/')) {
+      const paieMod = this.modules.find(m => m.id === 'paie');
+      if (paieMod && this.activeModule?.id !== 'paie') {
+        this.selectModule(paieMod);
+      }
+      return;
+    }
+
+    // 3. Carrières
+    if (cleanUrl.startsWith('/carrieres') || cleanUrl.includes('/carrieres/')) {
+      const carMod = this.modules.find(m => m.id === 'carrieres');
+      if (carMod && this.activeModule?.id !== 'carrieres') {
+        this.selectModule(carMod);
+      }
+      return;
+    }
+
+    // 4. Paramètres généraux
+    if (cleanUrl.startsWith('/donnees-base') || cleanUrl.includes('/donnees-base/')) {
+      const baseMod = this.modules.find(m => m.id === 'donnees-base');
+      if (baseMod && this.activeModule?.id !== 'donnees-base') {
+        this.selectModule(baseMod);
+      }
+      return;
+    }
+
+    // 5. Profils & Habilitations
+    if (cleanUrl.startsWith('/profils') || cleanUrl.includes('/profils/')) {
+      const profMod = this.modules.find(m => m.id === 'profils');
+      if (profMod && this.activeModule?.id !== 'profils') {
+        this.selectModule(profMod);
+      }
+      return;
+    }
+
+    // 6. Gestion Administrative (GRH)
+    if (cleanUrl.startsWith('/grh') || cleanUrl.includes('/grh/')) {
+      const grhMod = this.modules.find(m => m.id === 'grh');
+      if (grhMod && this.activeModule?.id !== 'grh') {
+        this.selectModule(grhMod);
+      }
+      return;
+    }
   }
 
   toggleDrawer(): void {

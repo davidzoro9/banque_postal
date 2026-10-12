@@ -30,6 +30,14 @@ export class SimulationService {
     });
   }
 
+  getCategories(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/categorie`);
+  }
+
+  getEchelons(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/echelon`);
+  }
+
   getEmplois(): Observable<any[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/emplois`);
   }

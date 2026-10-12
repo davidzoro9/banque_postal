@@ -1,8 +1,8 @@
 import { Component, ViewChild, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { MatSidenav } from '@angular/material/sidenav';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, filter } from 'rxjs/operators';
 import { ModuleNavService } from '../../core/services/module-nav.service';
 import { AppModule } from '../../core/models/app-module.model';
 
@@ -26,11 +26,17 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Activer le module GRH par défaut si aucun module n'est sélectionné
-    if (!this.moduleNav.activeModule) {
-      const grh = this.moduleNav.modules.find(m => m.id === 'grh');
-      if (grh) this.moduleNav.selectModule(grh);
-    }
+    // 1. Synchroniser le module actif avec l'URL courante dès l'initialisation
+    this.moduleNav.syncActiveModuleWithUrl(this.router.url);
+
+    // 2. Écouter les changements de route pour basculer automatiquement le module actif (ex: PAIE pour /paie/lots)
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      takeUntil(this.destroy$)
+    ).subscribe((e: any) => {
+      const currentUrl = e.urlAfterRedirects || e.url;
+      this.moduleNav.syncActiveModuleWithUrl(currentUrl);
+    });
 
     this.moduleNav.drawerOpen$.pipe(takeUntil(this.destroy$)).subscribe(open => {
       if (this.leftSidenav) {

@@ -78,6 +78,11 @@ export interface BulletinDto {
   etat?: string;
   dateCalcul?: string;
   dateValidation?: string;
+  motifRupture?: string;
+  statutPreavis?: string;
+  montantIndemniteLicenciement?: number;
+  montantIndemnitePreavis?: number;
+  montantIndemniteConges?: number;
   lines?: BulletinLineDto[];
 }
 
@@ -129,7 +134,7 @@ export class BulletinService {
     return this.http.post<BulletinDto[]>(`${this.apiUrl}/session/${sessionId}/recalculer`, {});
   }
 
-  recalculerBulletin(bulletinId: number, options?: { workedDays?: number; scheduledWorkingDays?: number }): Observable<BulletinDto> {
+  recalculerBulletin(bulletinId: number, options?: { workedDays?: number; scheduledWorkingDays?: number; motifRupture?: string; statutPreavis?: string }): Observable<BulletinDto> {
     return this.http.post<BulletinDto>(`${this.apiUrl}/${bulletinId}/recalculer`, options || {});
   }
 

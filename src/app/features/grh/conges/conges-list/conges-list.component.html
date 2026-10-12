@@ -199,10 +199,11 @@
                   </button>
                 }
 
-                <!-- Étape 3 : Visa N+1 (Directeur / Chef de pôle) -->
-                @if (row.statut === 'EN_ATTENTE_N1' && isValidateurOrAbove) {
+                <!-- Étape 3 : Visa N+1 (Chef Hiérarchique N+1) -->
+                @if (row.statut === 'EN_ATTENTE_N1' && isEligibleVisaN1(row)) {
                   <button mat-flat-button class="action-btn-sm info" style="background: #0284c7; color: white;"
-                          (click)="ouvrirModalVisaN1(row); $event.stopPropagation()" title="Viser la demande (Quorum direction)">
+                          (click)="ouvrirModalVisaN1(row); $event.stopPropagation()"
+                          [title]="row.employee?.superviseur ? 'Visa du chef hiérarchique (' + (row.employee?.superviseur?.prenom || '') + ' ' + (row.employee?.superviseur?.nom || '') + ')' : 'Viser la demande N+1'">
                     <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">verified_user</mat-icon> Visa N+1
                   </button>
                 }
@@ -210,8 +211,8 @@
                 <!-- Étape 4 : Contrôle & Délivrance Titre DRH -->
                 @if (row.statut === 'EN_ATTENTE_DRH' && isDrhOrAdmin) {
                   <button mat-flat-button class="action-btn-sm success" style="background: #059669; color: white;"
-                          (click)="ouvrirModalValidationDrh(row); $event.stopPropagation()" title="Contrôle DRH et délivrance Titre de Congé">
-                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">policy</mat-icon> Contrôle DRH
+                          (click)="ouvrirModalValidationDrh(row); $event.stopPropagation()" title="Validation DRH & Titre de Congé (Désactivation automatique du compte)">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle;">policy</mat-icon> Décision DRH
                   </button>
                 }
 
@@ -227,18 +228,18 @@
                   </button>
                 }
 
-                <!-- Étape 5 : Action Sécurité SI (Poste Sensible BCEAO) -->
-                @if (row.statut === 'APPROUVE' && row.posteSensibleBceao && isDsiOrAdmin) {
-                  <button mat-stroked-button class="action-btn-sm"
-                          [style.color]="row.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#dc2626'"
-                          [style.borderColor]="row.statutSi === 'ACCES_SUSPENDU' ? '#fdba74' : '#fca5a5'"
-                          (click)="toggleSecuriteSi(row); $event.stopPropagation()"
-                          [title]="row.statutSi === 'ACCES_SUSPENDU' ? 'Restaurer les accès SI' : 'Suspendre les accès SI (Règle prudentielle BCEAO)'">
-                    <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 2px; vertical-align: middle;">
-                      {{ row.statutSi === 'ACCES_SUSPENDU' ? 'lock' : 'lock_open' }}
-                    </mat-icon>
-                    {{ row.statutSi === 'ACCES_SUSPENDU' ? 'SI Suspendu' : 'Suspendre SI' }}
+                <!-- Étape 5 Automatisée : Compte suspendu jusqu'à la fin du congé -->
+                @if (row.statut === 'APPROUVE') {
+                  <button mat-flat-button class="action-btn-sm" style="background: #0060B3; color: white; padding: 0 10px; font-size: 11px; height: 28px; line-height: 28px;"
+                          (click)="telechargerTitreConge(row); $event.stopPropagation()"
+                          title="Télécharger l'Autorisation Officielle / Titre de Congé DRH (PDF)">
+                    <mat-icon style="font-size: 13px; width: 13px; height: 13px; margin-right: 3px; vertical-align: middle;">picture_as_pdf</mat-icon> Titre Congé
                   </button>
+                  <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;"
+                        title="Compte applicatif automatiquement désactivé pendant le congé jusqu'au {{ row.dateFin | date:'dd/MM/yyyy' }}">
+                    <mat-icon style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle;">lock</mat-icon>
+                    Compte suspendu auto
+                  </span>
                 }
 
                 <!-- Voir détails -->
@@ -1348,22 +1349,22 @@
               </div>
             </div>
 
-            <!-- Étape 5 : Sécurité Informatique (BCEAO) -->
+            <!-- Étape 5 : Sécurité Applicative Automatisée -->
             <div style="display: flex; gap: 12px; align-items: flex-start;">
-              <div [style.background]="selectedConge.posteSensibleBceao ? (selectedConge.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#0284c7') : '#94a3b8'"
+              <div [style.background]="selectedConge.statut === 'APPROUVE' ? '#dc2626' : '#94a3b8'"
                    style="width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">5</div>
               <div style="flex-grow: 1;">
                 <div style="display: flex; justify-content: space-between;">
-                  <strong style="color: #0f172a;">Sécurité SI — Règle Prudentielle BCEAO</strong>
-                  <span style="font-weight: 700;" [style.color]="selectedConge.statutSi === 'ACCES_SUSPENDU' ? '#ea580c' : '#64748b'">
-                    {{ selectedConge.posteSensibleBceao ? selectedConge.statutSi : 'NON REQUIS' }}
+                  <strong style="color: #0f172a;">Sécurité Applicative Automatisée</strong>
+                  <span style="font-weight: 700;" [style.color]="selectedConge.statut === 'APPROUVE' ? '#dc2626' : '#64748b'">
+                    {{ selectedConge.statut === 'APPROUVE' ? 'COMPTE SUSPENDU' : 'EN ATTENTE DRH' }}
                   </span>
                 </div>
                 <div style="color: #475569; font-size: 11px;">
-                  @if (selectedConge.posteSensibleBceao) {
-                    <span>Poste sensible : suspension des habilitations informatiques la veille du départ requise.</span>
+                  @if (selectedConge.statut === 'APPROUVE') {
+                    <span>Le compte de l'agent est automatiquement désactivé dès validation DRH jusqu'au {{ selectedConge.dateFin | date:'dd/MM/yyyy' }}. Réactivation automatique dès la fin du congé.</span>
                   } @else {
-                    <span>Poste non sensible aux risques d'opérations bancaires directes.</span>
+                    <span>Désactivation automatique du compte applicatif programmée dès validation finale par la DRH.</span>
                   }
                 </div>
               </div>

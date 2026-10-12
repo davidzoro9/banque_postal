@@ -11,6 +11,7 @@ import { ModuleNavService } from '../../../../core/services/module-nav.service';
 import { APP_MODULES } from '../../../../core/models/app-module.model';
 import { CongeService, Conge, SoldeConge, JourFerie, ParametrageConge, TypeAbsenceConge } from '../services/conge.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-conges-list',
@@ -270,12 +271,27 @@ export class CongesListComponent implements OnInit, OnDestroy {
 
   get isDrhOrAdmin(): boolean {
     const r = this.currentUserRole;
-    return r === 'DRH' || r === 'ADMIN' || r === 'RESPONSABLE_RH';
+    return r === 'DRH' || r === 'ADMIN';
   }
 
   get isValidateurOrAbove(): boolean {
     const r = this.currentUserRole;
     return r === 'VALIDATEUR' || this.isDrhOrAdmin || this.authService.hasPermission('CONGE_VALIDATE');
+  }
+
+  isSuperviseurFor(conge: Conge): boolean {
+    const user = this.authService.currentUser;
+    if (!user) return false;
+    const sup = conge?.employee?.superviseur;
+    if (!sup) return false;
+    if (sup.id && user.id && String(sup.id) === String(user.id)) return true;
+    if (sup.matricule && user.username && sup.matricule.trim().toLowerCase() === user.username.trim().toLowerCase()) return true;
+    if (sup.email && user.email && sup.email.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
+    return false;
+  }
+
+  isEligibleVisaN1(conge: Conge): boolean {
+    return this.isSuperviseurFor(conge) || this.isDrhOrAdmin;
   }
 
   get isDsiOrAdmin(): boolean {
@@ -415,6 +431,21 @@ export class CongesListComponent implements OnInit, OnDestroy {
         this.snackBar.open(`Statut sécurité SI mis à jour : ${newStatut}.`, 'Fermer', { duration: 3000 });
       },
       error: (err) => alert("Erreur sécurité SI : " + (err?.error?.message || err.message))
+    });
+  }
+
+  telechargerTitreConge(row: Conge): void {
+    if (!row?.id) return;
+    this.congeService.telechargerTitreCongePdf(row.id).subscribe({
+      next: (blob) => {
+        const num = row.numeroTitreConge ? String(row.numeroTitreConge).replace(/[\/\\]/g, '_') : `TC_${row.id}`;
+        const mat = row.employee?.matricule || 'AGENT';
+        this.congeService.telechargerPdfDirect(blob, `Titre_Conge_BPBF_${num}_${mat}.pdf`);
+      },
+      error: (err) => {
+        console.error('Erreur téléchargement Titre de Congé PDF:', err);
+        window.open(`${environment.apiUrl}/conges/${row.id}/titre-conge/pdf`, '_blank');
+      }
     });
   }
 

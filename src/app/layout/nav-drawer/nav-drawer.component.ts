@@ -121,6 +121,9 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
       if (url.includes('/paie/etats-synthese')) {
         this.expandedItems.add('etats-synthese');
       }
+      if (url.includes('/paie/comptes-comptables')) {
+        this.expandedItems.add('comptes-comptables-menu');
+      }
     });
 
     const initEmpId = this.extractEmpId(this.router.url);
@@ -131,6 +134,9 @@ export class NavDrawerComponent implements OnInit, OnDestroy {
     }
     if (this.router.url.includes('/paie/etats-synthese')) {
       this.expandedItems.add('etats-synthese');
+    }
+    if (this.router.url.includes('/paie/comptes-comptables')) {
+      this.expandedItems.add('comptes-comptables-menu');
     }
   }
 
