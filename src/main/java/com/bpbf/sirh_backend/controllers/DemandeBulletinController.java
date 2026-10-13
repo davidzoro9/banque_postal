@@ -14,6 +14,7 @@ import com.bpbf.sirh_backend.services.BulletinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -135,7 +136,13 @@ public class DemandeBulletinController {
         }
 
         if (demande.getBulletinId() == null) {
-            return ResponseEntity.notFound().build();
+            String msg = String.format("Impossible de générer le bulletin pour la demande #%d : aucun agent trouvé avec le matricule '%s' ou l'ID %s.",
+                    demande.getId(),
+                    demande.getMatricule() != null ? demande.getMatricule() : "NON_RENSEIGNÉ",
+                    demande.getEmployeeId() != null ? demande.getEmployeeId() : "NON_RENSEIGNÉ");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(msg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
 
         byte[] pdfBytes = bulletinPdfService.generateBulletinPdf(demande.getBulletinId());
@@ -170,37 +177,9 @@ public class DemandeBulletinController {
                     demande.setEmployeeId(empId);
                 }
             }
-            if (emp == null && demande.getEmployeeName() != null && !demande.getEmployeeName().isBlank()) {
-                String searchName = demande.getEmployeeName().trim().toUpperCase(Locale.ROOT);
-                List<Employee> all = employeeRepository.findAll();
-                for (Employee e : all) {
-                    String full = ((e.getPrenom() != null ? e.getPrenom() : "") + " " + (e.getNom() != null ? e.getNom() : "")).trim().toUpperCase(Locale.ROOT);
-                    String eName = (e.getName() != null ? e.getName() : "").toUpperCase(Locale.ROOT);
-                    String eMat = (e.getMatricule() != null ? e.getMatricule() : "").toUpperCase(Locale.ROOT);
-                    if (full.contains(searchName) || searchName.contains(full) || eName.contains(searchName) || searchName.contains(eName) || searchName.contains(eMat)) {
-                        emp = e;
-                        empId = emp.getId();
-                        demande.setEmployeeId(empId);
-                        demande.setMatricule(e.getMatricule());
-                        break;
-                    }
-                }
-            }
             if (emp == null) {
-                // Dernier recours : prendre le premier agent présent en base pour ne jamais bloquer
-                List<Employee> all = employeeRepository.findAll();
-                if (!all.isEmpty()) {
-                    emp = all.get(0);
-                    empId = emp.getId();
-                    demande.setEmployeeId(empId);
-                    if (demande.getMatricule() == null || demande.getMatricule().isBlank()) {
-                        demande.setMatricule(emp.getMatricule());
-                    }
-                    log.info("Agent par défaut affecté pour la demande #{}: {}", demande.getId(), emp.getMatricule());
-                }
-            }
-            if (emp == null) {
-                log.warn("Impossible de générer ou d'associer un bulletin sans employé en base pour la demande #{}", demande.getId());
+                log.warn("Impossible de générer ou d'associer un bulletin sans employé valide : aucun agent trouvé avec employeeId={} ou matricule='{}' pour la demande #{}",
+                        demande.getEmployeeId(), demande.getMatricule(), demande.getId());
                 return;
             }
 

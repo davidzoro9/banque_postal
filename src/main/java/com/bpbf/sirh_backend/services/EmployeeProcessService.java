@@ -32,6 +32,11 @@ public class EmployeeProcessService {
 
     @Transactional
     public void sync(Employee employee, EmployeeDto dto) {
+        sync(employee, dto, true);
+    }
+
+    @Transactional
+    public void sync(Employee employee, EmployeeDto dto, boolean recalculateInformation) {
         if (dto != null) {
             upsertInformation(employee, dto.getModePaiement(), dto.getBanque(), dto.getIban(), dto.getIntituleCompte());
         }
@@ -260,7 +265,9 @@ public class EmployeeProcessService {
             familleRepository.flush();
         }
 
-        informationCalculService.recalculate(employee);
+        if (recalculateInformation) {
+            informationCalculService.recalculate(employee);
+        }
     }
 
     private static java.time.LocalDate parseLocalDate(Object val) {

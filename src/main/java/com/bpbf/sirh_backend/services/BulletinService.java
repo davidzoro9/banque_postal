@@ -855,7 +855,7 @@ public class BulletinService {
         // ====================================================================
         if (isRetraite) {
             try {
-                employeeProcessService.sync(emp, null);
+                employeeProcessService.sync(emp, null, false);
             } catch (Exception e) {
                 log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
             }
@@ -929,7 +929,7 @@ public class BulletinService {
         // ====================================================================
         if (isDiffMat) {
             try {
-                employeeProcessService.sync(emp, null);
+                employeeProcessService.sync(emp, null, false);
             } catch (Exception e) {
                 log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
             }
@@ -1053,7 +1053,7 @@ public class BulletinService {
         // ====================================================================
         if (isStc) {
             try {
-                employeeProcessService.sync(emp, null);
+                employeeProcessService.sync(emp, null, false);
             } catch (Exception e) {
                 log.warn("Avertissement : échec synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
             }
@@ -1433,7 +1433,7 @@ public class BulletinService {
 
         // Indemnités - synchronisation dynamique automatique avec le poste, la fonction et le grade de l'agent
         try {
-            employeeProcessService.sync(emp, null);
+            employeeProcessService.sync(emp, null, false);
         } catch (Exception e) {
             System.err.println("Warn: Erreur synchronisation indemnités pour employé " + emp.getId() + ": " + e.getMessage());
         }

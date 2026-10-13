@@ -10,9 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -175,8 +173,14 @@ public class InformationSalarialeCalculService {
         information.setBaseImposable(baseImposable);
         information = informationRepository.save(information);
 
-        informationRetenueRepository.deleteByInformationSalarialeId(information.getId());
-        informationRetenueRepository.flush();
+        List<InformationSalarialeRetenue> existingRetenues = informationRetenueRepository.findByInformationSalarialeIdOrderByLibelleAsc(information.getId());
+        Map<Long, InformationSalarialeRetenue> existingByRetenueId = new HashMap<>();
+        for (InformationSalarialeRetenue r : existingRetenues) {
+            if (r.getRetenue() != null && r.getRetenue().getId() != null) {
+                existingByRetenueId.put(r.getRetenue().getId(), r);
+            }
+        }
+        Set<Long> processedRetenueIds = new HashSet<>();
 
         // Calcul IUTS et Net Cédulaire avant la boucle des retenues
         int nombreCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(employee.getId()));
@@ -218,9 +222,12 @@ public class InformationSalarialeCalculService {
                 montant = money(calculatePercentage(montantBase, taux));
             }
 
-            InformationSalarialeRetenue line = new InformationSalarialeRetenue();
-            line.setInformationSalariale(information);
-            line.setRetenue(retenue);
+            InformationSalarialeRetenue line = (retenue.getId() != null) ? existingByRetenueId.get(retenue.getId()) : null;
+            if (line == null) {
+                line = new InformationSalarialeRetenue();
+                line.setInformationSalariale(information);
+                line.setRetenue(retenue);
+            }
             line.setCode(retenue.getCode());
             line.setLibelle(retenue.getLibelle());
             line.setTypeRetenueCode(retenue.getTypeRetenue() != null && retenue.getTypeRetenue().getCode() != null
@@ -231,9 +238,20 @@ public class InformationSalarialeCalculService {
             line.setTaux(taux);
             line.setMontantCalcule(montant);
             informationRetenueRepository.save(line);
+            if (retenue.getId() != null) {
+                processedRetenueIds.add(retenue.getId());
+            }
 
             if (employeur) totalEmployeur = totalEmployeur.add(montant);
             else totalAgent = totalAgent.add(montant);
+        }
+
+        for (InformationSalarialeRetenue old : existingRetenues) {
+            if (old.getRetenue() != null && !processedRetenueIds.contains(old.getRetenue().getId())) {
+                try {
+                    informationRetenueRepository.delete(old);
+                } catch (Exception ignored) {}
+            }
         }
 
         BigDecimal totalDeduit = money(totalAgent.add(iutsAvecCharge));
