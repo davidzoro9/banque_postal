@@ -387,37 +387,27 @@ export class MonEspaceComponent implements OnInit {
   }
 
   /**
-   * Vérifie si un bulletin appartient bien à l'utilisateur / agent connecté
+   * Vérifie si un bulletin appartient bien à l'utilisateur / agent connecté (Strictement par ID ou Matricule)
    */
   private appartientALAgent(b: any): boolean {
     if (!b) return false;
-    const empId = this.currentAgent?.id || this.currentUser?.id;
+    const empId = this.currentAgent?.id;
     const empMat = (this.currentAgent?.matricule || this.currentUser?.matricule || this.currentUser?.username || '').trim().toUpperCase();
-    const userNom = (this.currentUser?.nom || '').trim().toUpperCase();
-    const userPrenom = (this.currentUser?.prenom || '').trim().toUpperCase();
 
     const bEmpId = b.employeeId || (b.employee ? b.employee.id : null);
-    const bMat = (b.matricule || '').trim().toUpperCase();
-    const bName = (b.employeeName || (b.employee ? `${b.employee.nom} ${b.employee.prenom}` : '')).trim().toUpperCase();
+    const bMat = (b.matricule || (b.employee ? b.employee.matricule : '') || '').trim().toUpperCase();
 
     // 1. Correspondance exacte d'identifiant employé
     if (empId && bEmpId && String(empId) === String(bEmpId)) return true;
 
-    // 2. Correspondance exacte de matricule
+    // 2. Correspondance exacte de matricule unique (sécurité bancaire anti-homonymes)
     if (empMat && bMat && empMat === bMat) return true;
-
-    // 3. Correspondance de nom / prénom
-    if (userNom && bName) {
-      if (bName.includes(userNom)) {
-        if (!userPrenom || bName.includes(userPrenom)) return true;
-      }
-    }
 
     return false;
   }
 
   /**
-   * Recherche de l'agent correspondant dans la liste des employés
+   * Recherche de l'agent correspondant dans la liste des employés (Strictement par Matricule, Username=Matricule ou Email)
    */
   private identifierAgent(employees: any[]): any {
     if (!employees || employees.length === 0) return null;
@@ -425,57 +415,29 @@ export class MonEspaceComponent implements OnInit {
     const userEmail = (this.currentUser?.email || '').trim().toLowerCase();
     const userUsername = (this.currentUser?.username || '').trim().toUpperCase();
     const userMatricule = (this.currentUser?.matricule || '').trim().toUpperCase();
-    const userNom = (this.currentUser?.nom || '').trim().toUpperCase();
-    const userPrenom = (this.currentUser?.prenom || '').trim().toUpperCase();
-    const userId = this.currentUser?.id;
+    const userId = this.currentUser?.employeeId;
 
-    // 1. Matricule exact
+    // 1. Matricule exact déclaré dans le compte
     if (userMatricule) {
       const found = employees.find(e => (e.matricule || '').trim().toUpperCase() === userMatricule);
       if (found) return found;
     }
 
-    // 2. Email exact
+    // 2. Si le username de connexion est le matricule de l'agent (ex: 'EMP-1001')
+    if (userUsername) {
+      const found = employees.find(e => (e.matricule || '').trim().toUpperCase() === userUsername);
+      if (found) return found;
+    }
+
+    // 3. Email professionnel unique
     if (userEmail) {
       const found = employees.find(e => (e.email || '').trim().toLowerCase() === userEmail);
       if (found) return found;
     }
 
-    // 3. ID direct
+    // 4. ID employé direct lié
     if (userId) {
       const found = employees.find(e => String(e.id) === String(userId));
-      if (found) return found;
-    }
-
-    // 4. Nom & Prénom
-    if (userNom && userPrenom) {
-      const found = employees.find(e => {
-        const eNom = (e.nom || '').trim().toUpperCase();
-        const ePrenom = (e.prenom || '').trim().toUpperCase();
-        const eName = (e.name || '').trim().toUpperCase();
-        const full = `${ePrenom} ${eNom} ${eName}`;
-        return full.includes(userNom) && full.includes(userPrenom);
-      });
-      if (found) return found;
-    }
-
-    // 5. Nom seul (ex: 'ZOROM' correspond à 'PAGNAGONEWENDE ZOROM' ou nom='ZOROM')
-    if (userNom) {
-      const found = employees.find(e => {
-        const eNom = (e.nom || '').trim().toUpperCase();
-        const eName = (e.name || '').trim().toUpperCase();
-        return (eNom && (eNom.includes(userNom) || userNom.includes(eNom))) || (eName && eName.includes(userNom));
-      });
-      if (found) return found;
-    }
-
-    // 6. Username (ex: 'davidzorom' -> match 'ZOROM')
-    if (userUsername) {
-      const found = employees.find(e => {
-        const eNom = (e.nom || '').trim().toUpperCase();
-        const eMat = (e.matricule || '').trim().toUpperCase();
-        return (eNom && userUsername.includes(eNom)) || (eMat && userUsername.includes(eMat));
-      });
       if (found) return found;
     }
 
