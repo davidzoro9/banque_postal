@@ -5,8 +5,6 @@
 -- Banque Postale du Burkina Faso
 -- =============================================================================
 
-BEGIN;
-
 -- 1. Consolidation des 3 Groupes hiérarchiques dans la table grade
 INSERT INTO grade (code, libelle, description, actif)
 VALUES
@@ -4594,10 +4592,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL7E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4622,10 +4617,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL4E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4650,10 +4642,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL5E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4678,10 +4667,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4706,10 +4692,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL7E06',
-  categorie_pro = c.libelle,
-  echelon = 'E06'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4734,10 +4717,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E07',
-  categorie_pro = c.libelle,
-  echelon = 'E07'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4762,10 +4742,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4790,10 +4767,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4818,10 +4792,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4846,10 +4817,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C2E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4874,10 +4842,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4902,10 +4867,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4930,10 +4892,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4958,10 +4917,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -4986,10 +4942,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5014,10 +4967,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5042,10 +4992,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5070,10 +5017,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5098,10 +5042,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5126,10 +5067,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5154,10 +5092,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5182,10 +5117,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5210,10 +5142,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5238,10 +5167,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5266,10 +5192,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5294,10 +5217,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5322,10 +5242,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E07',
-  categorie_pro = c.libelle,
-  echelon = 'E07'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5350,10 +5267,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5378,10 +5292,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5406,10 +5317,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C4E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5434,10 +5342,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5462,10 +5367,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5490,10 +5392,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E06',
-  categorie_pro = c.libelle,
-  echelon = 'E06'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5518,10 +5417,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5546,10 +5442,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5574,10 +5467,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5602,10 +5492,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5630,10 +5517,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5658,10 +5542,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5686,10 +5567,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C1E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5714,10 +5592,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5742,10 +5617,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5770,10 +5642,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5798,10 +5667,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5826,10 +5692,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5854,10 +5717,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5882,10 +5742,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5910,10 +5767,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5938,10 +5792,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5966,10 +5817,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C2E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -5994,10 +5842,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6022,10 +5867,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6050,10 +5892,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6078,10 +5917,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E06',
-  categorie_pro = c.libelle,
-  echelon = 'E06'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6106,10 +5942,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6134,10 +5967,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6162,10 +5992,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6190,10 +6017,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6218,10 +6042,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6246,10 +6067,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6274,10 +6092,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6302,10 +6117,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6330,10 +6142,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6358,10 +6167,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6386,10 +6192,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6414,10 +6217,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6442,10 +6242,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6470,10 +6267,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6498,10 +6292,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E07',
-  categorie_pro = c.libelle,
-  echelon = 'E07'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6526,10 +6317,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C4E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6554,10 +6342,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6582,10 +6367,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6610,10 +6392,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6638,10 +6417,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6666,10 +6442,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E06',
-  categorie_pro = c.libelle,
-  echelon = 'E06'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6694,10 +6467,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6722,10 +6492,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6750,10 +6517,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL1E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6778,10 +6542,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6806,10 +6567,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C1E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6834,10 +6592,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6862,10 +6617,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6890,10 +6642,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6918,10 +6667,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6946,10 +6692,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -6974,10 +6717,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7002,10 +6742,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E04',
-  categorie_pro = c.libelle,
-  echelon = 'E04'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7030,10 +6767,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7058,10 +6792,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7086,10 +6817,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C2E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7114,10 +6842,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7142,10 +6867,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7170,10 +6892,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7198,10 +6917,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E05',
-  categorie_pro = c.libelle,
-  echelon = 'E05'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7226,10 +6942,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C5E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7254,10 +6967,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7282,10 +6992,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7310,10 +7017,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C6E03',
-  categorie_pro = c.libelle,
-  echelon = 'E03'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7338,10 +7042,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'CL2E02',
-  categorie_pro = c.libelle,
-  echelon = 'E02'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7366,10 +7067,7 @@ SET
   grade_id = g.id,
   categorie_id = c.id,
   echelon_id = ech.id,
-  grille_salariale_id = gs.id,
-  grade = 'C3E01',
-  categorie_pro = c.libelle,
-  echelon = 'E01'
+  grille_salariale_id = gs.id
 FROM
   grade g,
   categorie c,
@@ -7387,5 +7085,3 @@ SET salaire_base = gs.salaire_base
 FROM employee e
 JOIN grille_salariale gs ON gs.id = e.grille_salariale_id
 WHERE inf.employee_id = e.id AND e.matricule = 'EMP-1100';
-
-COMMIT;
