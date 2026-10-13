@@ -517,7 +517,7 @@
                   </div>
                 </td>
                 <td>
-                  <span class="badge-grade">{{ b.grade || '-' }}</span>
+                  <span class="badge-grade">{{ b.grade || b.gradeLibelle || b.classification || '-' }}</span>
                 </td>
                 <td style="text-align: right; font-weight: 600;">{{ (b.salaireBase || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #16a34a; font-weight: 600;">+{{ (b.totalIndemnites || 0) | number:'1.0-0' }}</td>

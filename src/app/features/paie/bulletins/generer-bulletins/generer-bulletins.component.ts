@@ -1056,7 +1056,10 @@ export class GenererBulletinsComponent implements OnInit {
   private adapterBulletinFromBackend(b: any): any {
     let copy = JSON.parse(JSON.stringify(b));
     copy.mois = this.periode;
-    copy.etat = b.statut || (this.currentSession ? this.currentSession.statut : 'GENERE');
+    // Grade et Classification réels issus du backend
+    const resolvedGrade = b.grade || b.gradeLibelle || b.classification || (b.employee ? (b.employee.grade || b.employee.gradeLibelle) : '') || '';
+    copy.grade = resolvedGrade && resolvedGrade !== '—' ? resolvedGrade : '-';
+    copy.gradeLibelle = copy.grade;
 
     // Récupération stricte des montants réels calculés et persistés en base par Spring Boot
     copy.salaireBase = b.salaireBase ?? 0;
