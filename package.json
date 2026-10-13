@@ -6,7 +6,9 @@
     "start": "ng serve --host 127.0.0.1 --port 4200",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "format": "npx prettier --write \"src/**/*.{ts,html,scss,css,json}\"",
+    "format:check": "npx prettier --check \"src/**/*.{ts,html,scss,css,json}\""
   },
   "prettier": {
     "printWidth": 100,
