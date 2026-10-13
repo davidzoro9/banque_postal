@@ -2758,7 +2758,10 @@ public class BulletinService {
             classification = gradeStr != null ? gradeStr : "—";
         }
         dto.setClassification(classification);
-        dto.setGrade(gradeStr != null && !gradeStr.isBlank() ? gradeStr : (!classification.equals("—") ? classification : null));
+        String resolvedGrade = (!classification.equals("—") && !classification.toUpperCase().contains("GROUPE"))
+                ? classification
+                : ((gradeStr != null && !gradeStr.toUpperCase().contains("GROUPE")) ? gradeStr : (!classification.equals("—") ? classification : null));
+        dto.setGrade(resolvedGrade);
 
         int anciennete = (emp != null && emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
         if (emp != null && emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank()) {

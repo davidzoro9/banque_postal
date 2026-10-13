@@ -128,10 +128,16 @@ public class BulletinDto {
     public void setGradeLibelle(String gradeLibelle) { this.gradeLibelle = gradeLibelle; }
 
     public String getGrade() {
-        if (grade != null && !grade.isBlank()) return grade;
-        if (gradeLibelle != null && !gradeLibelle.isBlank()) return gradeLibelle;
-        if (classification != null && !classification.equals("—")) return classification;
-        return null;
+        if (classification != null && !classification.equals("—") && !classification.toUpperCase().contains("GROUPE")) {
+            return classification;
+        }
+        if (grade != null && !grade.isBlank() && !grade.toUpperCase().contains("GROUPE")) {
+            return grade;
+        }
+        if (gradeLibelle != null && !gradeLibelle.isBlank() && !gradeLibelle.toUpperCase().contains("GROUPE")) {
+            return gradeLibelle;
+        }
+        return classification != null && !classification.equals("—") ? classification : null;
     }
     public void setGrade(String grade) { this.grade = grade; }
 
