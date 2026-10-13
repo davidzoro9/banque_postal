@@ -26,6 +26,7 @@ public class BulletinDto {
     private String sessionPeriode;
     private Long gradeId;
     private String gradeLibelle;
+    private String grade;
     private Long contratId;
     private String typeSession;
     private String natureSession;
@@ -125,6 +126,14 @@ public class BulletinDto {
 
     public String getGradeLibelle() { return gradeLibelle; }
     public void setGradeLibelle(String gradeLibelle) { this.gradeLibelle = gradeLibelle; }
+
+    public String getGrade() {
+        if (grade != null && !grade.isBlank()) return grade;
+        if (gradeLibelle != null && !gradeLibelle.isBlank()) return gradeLibelle;
+        if (classification != null && !classification.equals("—")) return classification;
+        return null;
+    }
+    public void setGrade(String grade) { this.grade = grade; }
 
     public Long getContratId() { return contratId; }
     public void setContratId(Long contratId) { this.contratId = contratId; }
