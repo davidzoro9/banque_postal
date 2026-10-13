@@ -541,6 +541,22 @@ public class BulletinService {
 
     @Transactional
     public Bulletin computeAndSaveBulletin(SessionPaie session, Employee emp, BigDecimal customWorkedDays, BigDecimal customScheduledDays, Bulletin existingBulletin) {
+        // RÈGLE V3 : Prévention stricte des doublons physiques & logique
+        if (existingBulletin == null && session != null && session.getId() != null && emp != null && emp.getId() != null) {
+            List<Bulletin> found = bulletinRepository.findBySessionPaieIdAndEmployeeId(session.getId(), emp.getId());
+            if (found != null && !found.isEmpty()) {
+                existingBulletin = found.get(0);
+                log.info("Bulletin existant #{} réutilisé pour l'employé #{} dans la session #{}.",
+                        existingBulletin.getId(), emp.getId(), session.getId());
+            }
+        }
+        if (customWorkedDays == null && existingBulletin != null && existingBulletin.getWorkedDays() != null) {
+            customWorkedDays = existingBulletin.getWorkedDays();
+        }
+        if (customScheduledDays == null && existingBulletin != null && existingBulletin.getScheduledWorkingDays() != null) {
+            customScheduledDays = existingBulletin.getScheduledWorkingDays();
+        }
+
         SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
         BigDecimal salaireBase = BigDecimal.ZERO;
         if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {

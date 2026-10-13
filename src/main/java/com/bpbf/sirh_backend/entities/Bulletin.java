@@ -21,6 +21,8 @@ import java.util.List;
     @Index(name = "idx_bulletin_session", columnList = "session_paie_id"),
     @Index(name = "idx_bulletin_lot", columnList = "bulletin_lot_id"),
     @Index(name = "idx_bulletin_code", columnList = "code")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_bulletin_session_employee", columnNames = {"session_paie_id", "employee_id"})
 })
 public class Bulletin {
 

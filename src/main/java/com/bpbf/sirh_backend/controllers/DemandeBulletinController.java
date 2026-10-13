@@ -236,7 +236,8 @@ public class DemandeBulletinController {
             for (Bulletin b : bulletinsEmp) {
                 SessionPaie s = b.getSessionPaie();
                 if (s != null && s.getAnnee() != null && s.getAnnee() == annee) {
-                    if (s.getMois() != null && (s.getMois().equals(moisStr) || s.getMois().equals(String.valueOf(mois)))) {
+                    int bMois = BulletinService.parseMoisSafe(s.getMois());
+                    if (bMois == mois) {
                         if (isExtra) {
                             String sNat = s.getNatureSession() != null ? s.getNatureSession().toUpperCase(Locale.ROOT) : "";
                             String bNat = b.getNatureSession() != null ? b.getNatureSession().toUpperCase(Locale.ROOT) : "";
@@ -246,7 +247,7 @@ public class DemandeBulletinController {
                                 break;
                             }
                         } else {
-                            if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
+                            if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession()) && !"EXTRAORDINAIRE".equalsIgnoreCase(b.getTypeSession())) {
                                 bulletinTrouve = b;
                                 break;
                             }
@@ -259,8 +260,10 @@ public class DemandeBulletinController {
             if (bulletinTrouve == null && !isExtra) {
                 for (Bulletin b : bulletinsEmp) {
                     if (b.getDateFrom() != null && b.getDateFrom().getYear() == annee && b.getDateFrom().getMonthValue() == mois) {
-                        bulletinTrouve = b;
-                        break;
+                        if (!"EXTRAORDINAIRE".equalsIgnoreCase(b.getTypeSession())) {
+                            bulletinTrouve = b;
+                            break;
+                        }
                     }
                 }
             }
@@ -275,33 +278,42 @@ public class DemandeBulletinController {
                 return;
             }
 
-            // 2. Aucun bulletin trouvé : Création ou rattachement à la session de paie correspondante
+            // 2. Aucun bulletin trouvé : Rattachement à la session de paie existante ou création
             String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
             String nomMois = (mois >= 1 && mois <= 12) ? moisNoms[mois - 1] : ("Mois " + moisStr);
             String periodeStr = nomMois + " " + annee;
 
             SessionPaie targetSession = null;
-            List<SessionPaie> sessionsMois = sessionPaieRepository.findByMoisAndAnnee(moisStr, annee);
-            if (sessionsMois.isEmpty()) {
-                sessionsMois = sessionPaieRepository.findByMoisAndAnnee(String.valueOf(mois), annee);
-            }
-
-            if (isExtra) {
-                for (SessionPaie s : sessionsMois) {
-                    if ("EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
-                        String sNat = s.getNatureSession() != null ? s.getNatureSession().toUpperCase(Locale.ROOT) : "";
-                        if (sNat.contains(natureSession) || (natureSession.equals("13EME_MOIS") && sNat.contains("TREIZ"))) {
+            List<SessionPaie> allSessions = sessionPaieRepository.findAll();
+            for (SessionPaie s : allSessions) {
+                if (Objects.equals(s.getAnnee(), annee) && BulletinService.parseMoisSafe(s.getMois()) == mois) {
+                    if (isExtra) {
+                        if ("EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
+                            String sNat = s.getNatureSession() != null ? s.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                            if (sNat.contains(natureSession) || (natureSession.equals("13EME_MOIS") && sNat.contains("TREIZ"))) {
+                                targetSession = s;
+                                break;
+                            }
+                        }
+                    } else {
+                        if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
                             targetSession = s;
                             break;
                         }
                     }
                 }
-            } else {
-                for (SessionPaie s : sessionsMois) {
-                    if (!"EXTRAORDINAIRE".equalsIgnoreCase(s.getTypeSession())) {
-                        targetSession = s;
-                        break;
-                    }
+            }
+
+            // Si la session existe déjà, vérifier s'il existe déjà un bulletin de l'agent
+            if (targetSession != null) {
+                List<Bulletin> existants = bulletinRepository.findBySessionPaieIdAndEmployeeId(targetSession.getId(), emp.getId());
+                if (existants != null && !existants.isEmpty()) {
+                    Bulletin existant = existants.get(0);
+                    demande.setBulletinId(existant.getId());
+                    demande.setSessionId(targetSession.getId());
+                    log.info("Bulletin existant #{} déjà présent dans la session #{} ({}) associé directement à la demande #{}",
+                            existant.getId(), targetSession.getId(), targetSession.getCodeSession(), demande.getId());
+                    return;
                 }
             }
 
