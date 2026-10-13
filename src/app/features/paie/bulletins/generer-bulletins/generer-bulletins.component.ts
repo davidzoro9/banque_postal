@@ -1056,8 +1056,18 @@ export class GenererBulletinsComponent implements OnInit {
   private adapterBulletinFromBackend(b: any): any {
     let copy = JSON.parse(JSON.stringify(b));
     copy.mois = this.periode;
-    // Grade et Classification réels issus du backend
-    const resolvedGrade = b.grade || b.gradeLibelle || b.classification || (b.employee ? (b.employee.grade || b.employee.gradeLibelle) : '') || '';
+    // Grade hiérarchique conventionnel (ex: CL3E05, exclure les libellés 'GROUPE')
+    let resolvedGrade = '';
+    const candidates = [b.classification, b.grade, b.gradeLibelle, (b.employee ? (b.employee.grade || b.employee.gradeLibelle) : '')];
+    for (const c of candidates) {
+      if (c && typeof c === 'string' && c.trim() !== '—' && !c.toUpperCase().includes('GROUPE')) {
+        resolvedGrade = c.trim();
+        break;
+      }
+    }
+    if (!resolvedGrade) {
+      resolvedGrade = (b.classification && b.classification !== '—') ? b.classification : (b.grade && !b.grade.toUpperCase().includes('GROUPE') ? b.grade : '-');
+    }
     copy.grade = resolvedGrade && resolvedGrade !== '—' ? resolvedGrade : '-';
     copy.gradeLibelle = copy.grade;
 
