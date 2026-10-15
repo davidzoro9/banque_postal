@@ -195,6 +195,23 @@ export class GenererBulletinsComponent implements OnInit {
     return n.includes('MATERNITE') || n.includes('MAT');
   }
 
+  // Paramétrage du prorata 13ème et 14ème Mois
+  prorataUnit13eme: 'JOURS' | 'MOIS' = 'JOURS';
+  valeurProrata13eme: number = 360;
+
+  get isSession13Ou14eme(): boolean {
+    const s = this.currentSession;
+    if (!s) return false;
+    const n = (s.natureSession || s.name || s.codeSession || s.typeSession || '').toUpperCase();
+    return n.includes('13') || n.includes('14') || n.includes('GRATIF');
+  }
+
+  isBulletin13Ou14eme(b: any): boolean {
+    if (!b) return this.isSession13Ou14eme;
+    const n = (b.natureSession || b.typeSession || b.sessionPaieCode || b.sessionCode || '').toUpperCase();
+    return n.includes('13') || n.includes('14') || n.includes('GRATIF') || this.isSession13Ou14eme;
+  }
+
   get isSessionStc(): boolean {
     const s = this.currentSession;
     if (!s) return false;
@@ -1277,11 +1294,53 @@ export class GenererBulletinsComponent implements OnInit {
     if (!line) return false;
     const cd = (line.code || '').toUpperCase();
     const nm = (line.name || line.libelle || '').toUpperCase();
-    return cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE');
+    return cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE') || cd.includes('GRAT_13EME') || cd.includes('GRAT_14EME') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF');
+  }
+
+  onProrataUnitChange(): void {
+    if (this.prorataUnit13eme === 'MOIS') {
+      if (this.valeurProrata13eme > 12) {
+        this.valeurProrata13eme = Math.min(12, Math.round((this.valeurProrata13eme / 360) * 12 * 10) / 10);
+      }
+    } else {
+      if (this.valeurProrata13eme <= 12) {
+        this.valeurProrata13eme = Math.min(360, Math.round((this.valeurProrata13eme / 12) * 360));
+      }
+    }
+    this.recalculerLignesVariables();
+  }
+
+  onProrata13emeInputChange(): void {
+    this.recalculerLignesVariables();
+  }
+
+  getTauxProrata13emePercent(): string {
+    const denom = this.prorataUnit13eme === 'MOIS' ? 12 : 360;
+    const v = Number(this.valeurProrata13eme) || 0;
+    const pct = Math.min(100, Math.max(0, (v / denom) * 100));
+    return pct.toFixed(2);
+  }
+
+  onTableLineTauxChange(line: any): void {
+    if (this.isBulletin13Ou14eme(this.selectedBulletinForEdit)) {
+      this.valeurProrata13eme = Number(line.tauxOrNb) || 0;
+    }
+    this.recalculerLignesVariables();
   }
 
   getLineDisplayTaux(line: any): string {
     if (!line) return '—';
+    const is13or14 = this.isBulletin13Ou14eme(this.selectedBulletinForEdit);
+    if (is13or14) {
+      if (line.taux !== undefined && line.taux !== null && Number(line.taux) > 0) {
+        return `${Number(line.taux).toFixed(2)} %`;
+      }
+      if (line.tauxFormatted) return line.tauxFormatted;
+      if (line.tauxOrNb !== undefined && line.tauxOrNb !== null) {
+        const u = this.prorataUnit13eme === 'MOIS' ? 'm' : 'j';
+        return `${line.tauxOrNb} ${u}`;
+      }
+    }
     if (this.isDayLine(line)) {
       return (line.tauxOrNb ?? 30) + ' j';
     }
@@ -1333,6 +1392,13 @@ export class GenererBulletinsComponent implements OnInit {
     b.salaireNetOriginal = b.salaireNetOriginal || b.salaireNet;
 
     const enriched = this.enrichSelectedBulletinLines(b);
+    const is13or14 = this.isBulletin13Ou14eme(b);
+    if (is13or14) {
+      const scheduled = b.scheduledWorkingDays ? Number(b.scheduledWorkingDays) : 360;
+      this.prorataUnit13eme = (scheduled === 12 || (b.workedDays != null && Number(b.workedDays) <= 12)) ? 'MOIS' : 'JOURS';
+      this.valeurProrata13eme = b.workedDays != null ? Number(b.workedDays) : (this.prorataUnit13eme === 'MOIS' ? 12 : 360);
+    }
+
     const rawLines = enriched?.lines || [];
 
     const lines = rawLines.map((l: any, idx: number) => {
@@ -1346,14 +1412,18 @@ export class GenererBulletinsComponent implements OnInit {
         : (isGain ? Number(l.gain || 0) : Number(l.retenue || 0));
       let tauxOrNb: any = null;
 
-      if (cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE')) {
+      if (is13or14 && (cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE') || cd.includes('GRAT_13EME') || cd.includes('GRAT_14EME') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF'))) {
+        unit = this.prorataUnit13eme === 'MOIS' ? 'm' : 'j';
+        tauxOrNb = this.valeurProrata13eme;
+        fullBase = Number(b.salaireBaseOriginal || b.salaireBase || l.baseCalcul || l.gain || 0);
+      } else if (cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE')) {
         unit = 'j';
         const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : 30;
         tauxOrNb = wDays;
         fullBase = Number(b.salaireBaseOriginal || b.salaireBase || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
       } else if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
-        unit = 'j';
-        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : 30;
+        unit = is13or14 ? (this.prorataUnit13eme === 'MOIS' ? 'm' : 'j') : 'j';
+        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : (is13or14 ? this.valeurProrata13eme : 30);
         tauxOrNb = wDays;
         fullBase = Number(b.surSalaireOriginal || b.surSalaire || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
       } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
@@ -1433,25 +1503,47 @@ export class GenererBulletinsComponent implements OnInit {
   recalculerLignesVariables(): void {
     if (!this.selectedBulletinForEdit?.id || !this.editableLines) return;
     const b = this.selectedBulletinForEdit;
+    const is13or14 = this.isBulletin13Ou14eme(b);
 
-    const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
+    const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE') || (l.code || '').includes('GRAT_13EME') || (l.code || '').includes('GRAT_14EME'));
     const surSalLine = this.editableLines.find(l => (l.code || '').includes('SUR_SALAIRE') || (l.name || '').includes('SUR-SALAIRE') || (l.name || '').includes('SURSALAIRE'));
 
-    let workedDays = b.workedDays ?? b.scheduledWorkingDays ?? 30;
-    if (salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null) {
-      workedDays = Number(salBaseLine.tauxOrNb);
+    let workedDays: number;
+    let scheduledDays: number;
+
+    if (is13or14) {
+      scheduledDays = this.prorataUnit13eme === 'MOIS' ? 12 : 360;
+      if (this.valeurProrata13eme !== undefined && this.valeurProrata13eme !== null) {
+        workedDays = Number(this.valeurProrata13eme);
+      } else if (salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null) {
+        workedDays = Number(salBaseLine.tauxOrNb);
+      } else {
+        workedDays = b.workedDays != null ? Number(b.workedDays) : scheduledDays;
+      }
       if (isNaN(workedDays) || workedDays < 0) workedDays = 0;
-      if (workedDays > 31) workedDays = 31;
-      salBaseLine.tauxOrNb = workedDays;
-    }
-    if (surSalLine) {
-      surSalLine.tauxOrNb = workedDays;
+      const maxLimit = this.prorataUnit13eme === 'MOIS' ? 12 : 360;
+      if (workedDays > maxLimit) workedDays = maxLimit;
+      this.valeurProrata13eme = workedDays;
+      if (salBaseLine) salBaseLine.tauxOrNb = workedDays;
+      if (surSalLine) surSalLine.tauxOrNb = workedDays;
+    } else {
+      scheduledDays = b.scheduledWorkingDays ?? 30;
+      workedDays = b.workedDays ?? scheduledDays;
+      if (salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null) {
+        workedDays = Number(salBaseLine.tauxOrNb);
+        if (isNaN(workedDays) || workedDays < 0) workedDays = 0;
+        if (workedDays > 31) workedDays = 31;
+        salBaseLine.tauxOrNb = workedDays;
+      }
+      if (surSalLine) {
+        surSalLine.tauxOrNb = workedDays;
+      }
     }
 
     this.isCalculating = true;
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
-      scheduledWorkingDays: b.scheduledWorkingDays ?? 30,
+      scheduledWorkingDays: scheduledDays,
       motifRupture: this.editStcMotifRupture,
       statutPreavis: this.editStcStatutPreavis
     }).subscribe({
@@ -1459,13 +1551,13 @@ export class GenererBulletinsComponent implements OnInit {
         this.isCalculating = false;
         if (!res) return;
         this.modalSalaireBrut = res.salaireBrut || 0;
-        this.modalBaseImposable = (res as any).baseImposable || 0;
-        this.modalCotisationCnss = res.cotisationCnssAgent || (res as any).cotisationCnss || 0;
-        this.modalImpotIuts = res.impotIUTS || (res as any).impotIuts || 0;
-        this.modalCotisationCrrae = res.cotisationCrraeAgent || (res as any).cotisationCrrae || 0;
-        this.modalCotisationSolidarite = res.retenueFSP || (res as any).cotisationSolidarite || 0;
-        this.modalTotalRetenues = res.totalRetenues || 0;
-        this.modalSalaireNet = res.salaireNet || 0;
+        this.modalBaseImposable = is13or14 ? 0 : ((res as any).baseImposable || 0);
+        this.modalCotisationCnss = is13or14 ? 0 : (res.cotisationCnssAgent || (res as any).cotisationCnss || 0);
+        this.modalImpotIuts = is13or14 ? 0 : (res.impotIUTS || (res as any).impotIuts || 0);
+        this.modalCotisationCrrae = is13or14 ? 0 : (res.cotisationCrraeAgent || (res as any).cotisationCrrae || 0);
+        this.modalCotisationSolidarite = is13or14 ? 0 : (res.retenueFSP || (res as any).cotisationSolidarite || 0);
+        this.modalTotalRetenues = is13or14 ? 0 : (res.totalRetenues || 0);
+        this.modalSalaireNet = res.salaireNet || res.salaireBrut || 0;
 
         if (res.lines && res.lines.length > 0) {
           this.editableLines = res.lines.map((l: any, idx: number) => {
@@ -1477,9 +1569,9 @@ export class GenererBulletinsComponent implements OnInit {
               libelle: (l.libelle || l.name || '').replace(/[()]/g, '').trim(),
               typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
               baseCalcul: l.baseCalcul,
-              tauxOrNb: (l.code && (l.code.includes('SAL_BASE') || l.code.includes('SUR_SALAIRE'))) ? workedDays : (l.tauxSalarial || l.taux || l.rate),
+              tauxOrNb: is13or14 ? workedDays : ((l.code && (l.code.includes('SAL_BASE') || l.code.includes('SUR_SALAIRE'))) ? workedDays : (l.tauxSalarial || l.taux || l.rate)),
               gain: isGain ? (l.montantSalarial || l.gain || l.montant) : null,
-              retenue: !isGain ? (l.montantSalarial || l.retenue || l.montant) : null,
+              retenue: (!isGain && !is13or14) ? (l.montantSalarial || l.retenue || l.montant) : null,
               rate: l.tauxSalarial || l.taux || l.rate,
               ordre: l.ordre || (idx + 1)
             };
@@ -1513,39 +1605,48 @@ export class GenererBulletinsComponent implements OnInit {
     if (!this.selectedBulletinForEdit?.id) return;
 
     const b = this.selectedBulletinForEdit;
-    const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
-    const workedDays = salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null
-      ? Number(salBaseLine.tauxOrNb)
-      : (b.workedDays ?? b.scheduledWorkingDays ?? 30);
+    const is13or14 = this.isBulletin13Ou14eme(b);
+    let workedDays: number;
+    let scheduledDays: number;
+
+    if (is13or14) {
+      scheduledDays = this.prorataUnit13eme === 'MOIS' ? 12 : 360;
+      workedDays = this.valeurProrata13eme != null ? Number(this.valeurProrata13eme) : (b.workedDays != null ? Number(b.workedDays) : scheduledDays);
+    } else {
+      scheduledDays = b.scheduledWorkingDays ?? 30;
+      const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
+      workedDays = salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null
+        ? Number(salBaseLine.tauxOrNb)
+        : (b.workedDays ?? scheduledDays);
+    }
 
     this.isCalculating = true;
 
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
-      scheduledWorkingDays: b.scheduledWorkingDays ?? 30,
+      scheduledWorkingDays: scheduledDays,
       motifRupture: this.editStcMotifRupture,
       statutPreavis: this.editStcStatutPreavis
     }).subscribe({
       next: (savedDto) => {
         this.isCalculating = false;
-        if (savedDto) {
-          const updatedDto = this.adapterBulletinFromBackend(savedDto);
-          const idx = this.bulletins.findIndex(item => String(item.employeeId) === String(b.employeeId) || String(item.id) === String(b.id));
-          if (idx >= 0) {
-            this.bulletins[idx] = updatedDto;
-          } else {
-            this.bulletins.push(updatedDto);
-          }
-          if (this.selectedBulletin && (String(this.selectedBulletin.id) === String(b.id) || String(this.selectedBulletin.employeeId) === String(b.employeeId))) {
-            this.selectedBulletin = this.enrichSelectedBulletinLines(updatedDto);
-          }
-          this.snackBar.open(`Bulletin #${savedDto.id} mis à jour et recalculé avec succès !`, 'OK', { duration: 4000 });
+        const updatedDto = savedDto || b;
+        if (this.selectedBulletin && (String(this.selectedBulletin.id) === String(b.id) || String(this.selectedBulletin.employeeId) === String(b.employeeId))) {
+          this.selectedBulletin = this.enrichSelectedBulletinLines(updatedDto);
+        }
+        const idx = this.bulletins.findIndex(item => String(item.employeeId) === String(b.employeeId) || String(item.id) === String(b.id));
+        if (idx >= 0) {
+          this.bulletins[idx] = updatedDto;
+        } else {
+          this.bulletins.push(updatedDto);
         }
         this.fermerModalModifierVariables();
+        this.snackBar.open('Bulletin et variables de paie mis à jour avec succès.', 'Fermer', { duration: 3500 });
       },
       error: (err) => {
         this.isCalculating = false;
-        this.snackBar.open('Erreur lors de la mise à jour du bulletin: ' + (err?.error?.message || err.message), 'Fermer', { duration: 5000 });
+        console.error('Erreur sauvegarde variables:', err);
+        this.snackBar.open('Erreur lors de la mise à jour des variables de paie: ' + (err?.error?.message || err.message), 'Fermer', { duration: 5000 });
       }
     });
   }
@@ -1808,8 +1909,19 @@ export class GenererBulletinsComponent implements OnInit {
       } catch {}
     }
     copy.anciennete = genAnc;
-    copy.ancienneteAnnees = genAnc;
-    if (!copy.cotisationCnss && !copy.cotisationCNSS && !copy.cotisationCnssAgent) {
+    const is13or14Session = this.isBulletin13Ou14eme(copy);
+    if (is13or14Session) {
+      copy.cotisationCnss = 0;
+      copy.cotisationCNSS = 0;
+      copy.cotisationCnssAgent = 0;
+      copy.baseImposable = 0;
+      copy.impotIuts = 0;
+      copy.impotIUTS = 0;
+      copy.cotisationCrrae = 0;
+      copy.cotisationCrraeAgent = 0;
+      copy.cotisationSolidarite = 0;
+      copy.totalRetenues = 0;
+    } else if (!copy.cotisationCnss && !copy.cotisationCNSS && !copy.cotisationCnssAgent) {
       const cnssLine = lines.find((l: any) => {
         const c = (l.code || '').toUpperCase();
         const nm = (l.name || l.libelle || '').toUpperCase();
