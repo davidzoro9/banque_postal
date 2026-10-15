@@ -1729,8 +1729,18 @@ export class GenererBulletinsComponent implements OnInit {
         const gainVal = l.gain !== undefined ? l.gain : (isGain ? montant : undefined);
         const retenueVal = l.retenue !== undefined ? l.retenue : (!isGain ? montant : undefined);
 
+        const isSession1314 = this.isBulletin13Ou14eme(b) || this.isSession13Ou14eme;
         let tauxStr = '';
-        if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+        if (isSession1314 && isGain) {
+          if (l.taux !== undefined && l.taux !== null && l.taux !== '') {
+            const numTaux = Number(String(l.taux).replace('%', '').trim());
+            tauxStr = !isNaN(numTaux) ? `${numTaux.toFixed(2)} %` : String(l.taux);
+          } else if (l.tauxFormatted) {
+            tauxStr = l.tauxFormatted.includes('%') ? l.tauxFormatted : `${l.tauxFormatted} %`;
+          } else {
+            tauxStr = '100.00 %';
+          }
+        } else if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
           const days = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31)
             ? l.taux
             : (b.workedDays !== undefined && b.workedDays !== null ? b.workedDays : 30);
