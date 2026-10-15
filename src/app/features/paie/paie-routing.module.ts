@@ -48,8 +48,13 @@ const routes: Routes = [
   { path: 'precomptes', redirectTo: 'variables/precomptes', pathMatch: 'full' },
   { path: 'trop-percus', redirectTo: 'variables/trop-percus', pathMatch: 'full' },
 
-  // 3. Paramétrage de la Paie
+  // 3. Paramétrage des Comptes Comptables (Plan, Classes, Sens, Rubriques, Journaux)
   { path: 'comptes-comptables', component: ComptesComptablesComponent },
+  { path: 'comptes-comptables/comptes', component: ComptesComptablesComponent },
+  { path: 'comptes-comptables/classes', component: ComptesComptablesComponent },
+  { path: 'comptes-comptables/sens', component: ComptesComptablesComponent },
+  { path: 'comptes-comptables/rubriques', component: ComptesComptablesComponent },
+  { path: 'comptes-comptables/journaux', component: ComptesComptablesComponent },
   { path: 'parametrage/comptes-comptables', component: ComptesComptablesComponent },
   { path: 'parametrage/categories', component: CategoriesElementsComponent },
   { path: 'parametrage/elements', component: ElementsSalaireComponent },

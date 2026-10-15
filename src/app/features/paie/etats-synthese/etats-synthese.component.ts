@@ -25,6 +25,8 @@ export class EtatsSyntheseComponent implements OnInit {
   // Filtres
   sessions: any[] = [];
   selectedSessionId: number | null = null;
+  periodes: Array<{ key: string; label: string; annee: number; mois: string; countSessions: number }> = [];
+  selectedPeriode: string = '';
   directions: any[] = [];
   selectedDirectionId: number | null = null;
   banques: string[] = ['TOUTES'];
@@ -177,13 +179,11 @@ export class EtatsSyntheseComponent implements OnInit {
 
   // ─── CHARGEMENT DES FILTRES DEPUIS POSTGRESQL ────────────────────────────
   loadFiltersData(): void {
-    // 1. Charger les sessions
+    // 1. Charger les sessions et consolider les périodes uniques
     this.http.get<any[]>(`${environment.apiUrl}/paie/sessions`).subscribe({
       next: (res) => {
         this.sessions = res || [];
-        if (this.sessions.length > 0) {
-          this.selectedSessionId = this.sessions[0].id;
-        }
+        this.buildPeriodesList();
         if (this.selectedEtat) {
           this.loadEtatData();
         }
@@ -192,9 +192,7 @@ export class EtatsSyntheseComponent implements OnInit {
         this.http.get<any[]>(`${environment.apiUrl}/bulletin-lots`).subscribe({
           next: (lots) => {
             this.sessions = lots || [];
-            if (this.sessions.length > 0) {
-              this.selectedSessionId = this.sessions[0].id;
-            }
+            this.buildPeriodesList();
             if (this.selectedEtat) {
               this.loadEtatData();
             }
@@ -224,6 +222,67 @@ export class EtatsSyntheseComponent implements OnInit {
     });
   }
 
+  buildPeriodesList(): void {
+    const mapPeriodes = new Map<string, { key: string; label: string; annee: number; mois: string; countSessions: number }>();
+
+    for (const s of this.sessions) {
+      const annee = s.annee || (s.dateFrom ? new Date(s.dateFrom).getFullYear() : 2026);
+      let moisStr = s.mois || (s.dateFrom ? String(new Date(s.dateFrom).getMonth() + 1) : '1');
+      const moisNum = parseInt(String(moisStr).replace(/\D/g, ''), 10) || 1;
+      const key = `${annee}-${String(moisNum).padStart(2, '0')}`; // ex: 2029-10
+
+      const nomMois = this.getNomMoisFr(moisNum);
+      const label = `${nomMois} ${annee} (${String(moisNum).padStart(2, '0')}/${annee})`;
+
+      if (!mapPeriodes.has(key)) {
+        mapPeriodes.set(key, {
+          key: key,
+          label: label,
+          annee: annee,
+          mois: String(moisNum),
+          countSessions: 1
+        });
+      } else {
+        const item = mapPeriodes.get(key)!;
+        item.countSessions++;
+      }
+    }
+
+    // Convertir en liste triée par période décroissante (la plus récente d'abord)
+    this.periodes = Array.from(mapPeriodes.values()).sort((a, b) => b.key.localeCompare(a.key));
+
+    // Sélectionner la période la plus récente par défaut
+    if (this.periodes.length > 0 && !this.selectedPeriode) {
+      this.selectedPeriode = this.periodes[0].key;
+      const matchingSession = this.sessions.find(s => {
+        const annee = s.annee || (s.dateFrom ? new Date(s.dateFrom).getFullYear() : 2026);
+        const moisNum = parseInt(String(s.mois || '').replace(/\D/g, ''), 10) || 1;
+        return `${annee}-${String(moisNum).padStart(2, '0')}` === this.selectedPeriode;
+      });
+      if (matchingSession) {
+        this.selectedSessionId = matchingSession.id;
+      }
+    }
+  }
+
+  getNomMoisFr(m: number): string {
+    const MOIS = [
+      '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    return MOIS[m] || `Mois ${m}`;
+  }
+
+  onPeriodeChange(): void {
+    const matchingSession = this.sessions.find(s => {
+      const annee = s.annee || (s.dateFrom ? new Date(s.dateFrom).getFullYear() : 2026);
+      const moisNum = parseInt(String(s.mois || '').replace(/\D/g, ''), 10) || 1;
+      return `${annee}-${String(moisNum).padStart(2, '0')}` === this.selectedPeriode;
+    });
+    this.selectedSessionId = matchingSession ? matchingSession.id : null;
+    this.loadEtatData();
+  }
+
   selectEtat(key: string): void {
     this.selectedEtat = key;
     const slug = this.resolveSlugFromCode(key);
@@ -239,6 +298,7 @@ export class EtatsSyntheseComponent implements OnInit {
     this.isLoading = true;
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
+      periode: this.selectedPeriode,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -501,6 +561,7 @@ export class EtatsSyntheseComponent implements OnInit {
     this.isExporting = true;
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
+      periode: this.selectedPeriode,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -521,6 +582,7 @@ export class EtatsSyntheseComponent implements OnInit {
     this.isExporting = true;
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
+      periode: this.selectedPeriode,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -541,6 +603,7 @@ export class EtatsSyntheseComponent implements OnInit {
     this.isExporting = true;
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
+      periode: this.selectedPeriode,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque

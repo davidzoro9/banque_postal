@@ -132,7 +132,11 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'Comptes comptables',
       icon: 'account_tree',
       children: [
-        { id: 'parametrage-comptes-comptables', label: 'Paramétrage des comptes comptables', icon: 'tune', route: '/paie/comptes-comptables' }
+        { id: 'parametrage-comptes-comptables', label: 'Plan des comptes', icon: 'account_tree', route: '/paie/comptes-comptables/comptes' },
+        { id: 'parametrage-classes-comptables', label: 'Classes comptables', icon: 'category', route: '/paie/comptes-comptables/classes' },
+        { id: 'parametrage-sens-ecritures', label: 'Sens d\'écriture (OD)', icon: 'swap_horiz', route: '/paie/comptes-comptables/sens' },
+        { id: 'parametrage-rubriques-paie', label: 'Rubriques de paie affectées', icon: 'bookmark_border', route: '/paie/comptes-comptables/rubriques' },
+        { id: 'parametrage-journaux-comptables', label: 'Codes journaux OD', icon: 'menu_book', route: '/paie/comptes-comptables/journaux' }
       ]
     }
   ],

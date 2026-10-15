@@ -258,10 +258,28 @@
                     }
                   </td>
                   <td style="padding: 12px 14px; text-align: center;">
-                    <button mat-raised-button color="primary" (click)="selectionnerSession(s)"
-                      style="font-size: 12px; font-weight: 700; border-radius: 6px; background: #0060B3; color: white;">
-                      <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">visibility</mat-icon> Ouvrir / Traiter
-                    </button>
+                    <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                      <button mat-raised-button color="primary" (click)="selectionnerSession(s)"
+                        style="font-size: 12px; font-weight: 700; border-radius: 6px; background: #0060B3; color: white;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">visibility</mat-icon> Ouvrir
+                      </button>
+
+                      @if (s.statut === 'VALIDE') {
+                        <button mat-stroked-button (click)="reinitialiserStatutSession(s, $event)"
+                          title="Réinitialiser le statut (repasse en GÉNÉRÉ)"
+                          style="font-size: 11px; font-weight: 700; border-radius: 6px; color: #d97706; border-color: #f59e0b; padding: 0 8px; background: #fffbeb;">
+                          <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 2px;">restart_alt</mat-icon> Réinitialiser
+                        </button>
+                      }
+
+                      @if (s.statut !== 'VALIDE' && s.statut !== 'CLOTURE') {
+                        <button mat-stroked-button color="warn" (click)="supprimerSession(s, $event)"
+                          title="Supprimer cette session"
+                          style="font-size: 11px; font-weight: 700; border-radius: 6px; color: #dc2626; border-color: #fca5a5; padding: 0 8px;">
+                          <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 2px;">delete_outline</mat-icon> Supprimer
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
@@ -340,7 +358,19 @@
               style="font-weight: 700; border-radius: 8px; background: #059669; color: white;">
               <mat-icon style="margin-right: 4px;">check_circle</mat-icon> Valider la Session
             </button>
+
+            <button mat-stroked-button color="warn" (click)="supprimerSession()"
+              title="Supprimer cette session non validée"
+              style="font-weight: 700; border-radius: 8px; color: #dc2626; border-color: #fca5a5;">
+              <mat-icon style="margin-right: 4px;">delete_forever</mat-icon> Supprimer la Session
+            </button>
           } @else {
+            <button mat-stroked-button (click)="reinitialiserStatutSession()"
+              title="Réinitialiser l'état de la session (repasse en GÉNÉRÉ pour permettre modifications ou suppression)"
+              style="font-weight: 700; border-radius: 8px; color: #d97706; border-color: #f59e0b; background: #fffbeb;">
+              <mat-icon style="margin-right: 4px;">restart_alt</mat-icon> Réinitialiser l'état (Dévalider)
+            </button>
+
             <button mat-raised-button (click)="cloturerSession()"
               style="font-weight: 700; border-radius: 8px; background: #dc2626; color: white;">
               <mat-icon style="margin-right: 4px;">lock</mat-icon> Fermer la Session
@@ -484,6 +514,7 @@
               <th>Grade</th>
               <th style="text-align: right;">Sal. Base</th>
               <th style="text-align: right;">Indemnités</th>
+              <th style="text-align: right;">Avoirs</th>
               <th style="text-align: right;">Total Brut</th>
               <th style="text-align: right;" title="Cotisation CNSS Part Salariale 5.5%">CNSS 5.5%</th>
               <th style="text-align: right;" title="Impôt Unique sur Traitements et Salaires">IUTS</th>
@@ -521,6 +552,7 @@
                 </td>
                 <td style="text-align: right; font-weight: 600;">{{ (b.salaireBase || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #16a34a; font-weight: 600;">+{{ (b.totalIndemnites || 0) | number:'1.0-0' }}</td>
+                <td style="text-align: right; color: #0284c7; font-weight: 600;">+{{ (b.totalAvoirs || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; font-weight: 700;">{{ (b.salaireBrut || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #ef4444;">-{{ (b.cotisationCnss || b.cotisationCNSS || 0) | number:'1.0-0' }}</td>
                 <td style="text-align: right; color: #ef4444;">
@@ -601,6 +633,7 @@
               <td colspan="3" style="padding: 12px 14px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">TOTAL MASSE SALARIALE</td>
               <td style="text-align: right; padding: 12px 8px; font-family: monospace;">{{ totalSalaireBase | number:'1.0-0' }}</td>
               <td style="text-align: right; padding: 12px 8px; font-family: monospace; color: #16a34a;">+{{ totalIndemnitesGlobal | number:'1.0-0' }}</td>
+              <td style="text-align: right; padding: 12px 8px; font-family: monospace; color: #0284c7;">+{{ totalAvoirsGlobal | number:'1.0-0' }}</td>
               <td style="text-align: right; padding: 12px 8px; font-family: monospace; color: #0284c7; font-size: 13px;">{{ totalMasseSalarialeBrute | number:'1.0-0' }}</td>
               <td colspan="2" style="text-align: right; padding: 12px 8px; font-family: monospace; color: #ef4444;">-{{ (totalCotisationsSociales + totalImpotsRetenus) | number:'1.0-0' }}</td>
               <td style="text-align: right; padding: 12px 8px; font-family: monospace; color: #dc2626;">-{{ totalRetenuesGlobal | number:'1.0-0' }}</td>

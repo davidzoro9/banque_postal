@@ -94,18 +94,18 @@
   <!-- ========================================== -->
   <div class="filter-card">
     <div class="filter-grid">
-      <!-- Session de Paie -->
+      <!-- Période de Paie (Consolidée toutes sessions) -->
       <div class="filter-item">
         <label class="filter-label">
-          <span>Session / Période de paie</span>
+          <span>Période de paie</span>
         </label>
         <select
           class="form-select"
-          [(ngModel)]="selectedSessionId"
-          (change)="onFilterChange()"
+          [(ngModel)]="selectedPeriode"
+          (change)="onPeriodeChange()"
         >
-          <option *ngFor="let s of sessions" [value]="s.id">
-            {{ s.codeSession || s.name }} ({{ s.mois ? s.mois + ' ' + s.annee : s.dateFrom }}) — {{ s.typeSession || 'NORMALE' }}
+          <option *ngFor="let p of periodes" [value]="p.key">
+            {{ p.label }} {{ p.countSessions > 1 ? '— Consolidé (' + p.countSessions + ' sessions)' : '' }}
           </option>
         </select>
       </div>

@@ -1,20 +1,56 @@
 <div class="comptes-comptables-page">
-  <!-- En-tête de la page -->
+  <!-- En-tête de la page dynamique -->
   <div class="header-banner">
     <div class="header-content">
       <div class="header-icon">
-        <mat-icon>account_tree</mat-icon>
+        <mat-icon>
+          {{ activeTab === 'comptes' ? 'account_tree' : (activeTab === 'classes' ? 'category' : (activeTab === 'sens' ? 'swap_horiz' : (activeTab === 'rubriques' ? 'bookmark_border' : 'menu_book'))) }}
+        </mat-icon>
       </div>
       <div>
-        <h1>Paramétrage des Comptes Comptables de Paie</h1>
-        <p>Configuration du plan de comptes SYSCOHADA et affectation des rubriques de paie (OD de paie, charges sociales, tiers et net à payer).</p>
+        <h1>
+          {{ activeTab === 'comptes' ? 'Paramétrage des Comptes Comptables de Paie' : '' }}
+          {{ activeTab === 'classes' ? 'Paramétrage des Classes Comptables (SYSCOHADA)' : '' }}
+          {{ activeTab === 'sens' ? 'Paramétrage des Sens d\'Écriture (DÉBIT / CRÉDIT)' : '' }}
+          {{ activeTab === 'rubriques' ? 'Paramétrage des Rubriques de Paie Affectées' : '' }}
+          {{ activeTab === 'journaux' ? 'Paramétrage des Codes Journaux OD' : '' }}
+        </h1>
+        <p>
+          {{ activeTab === 'comptes' ? 'Configuration globale du plan de comptes SYSCOHADA et affectation des rubriques de paie (OD, dettes, charges).' : '' }}
+          {{ activeTab === 'classes' ? 'Configuration des classes comptables : définissez le numéro de la classe (ex: 6, 4) et le nom officiel (ex: Charges de personnel).' : '' }}
+          {{ activeTab === 'sens' ? 'Définition des sens comptables par défaut appliqués dans l\'OD de paie (DÉBIT pour charges/diminution dettes, CRÉDIT pour dettes/retenues).' : '' }}
+          {{ activeTab === 'rubriques' ? 'Paramétrage des rubriques de paie et de leurs imputations automatiques (classe suggérée, sens et compte par défaut).' : '' }}
+          {{ activeTab === 'journaux' ? 'Gestion des codes journaux comptables autorisés pour l\'imputation (OD_PAIE, BQ_PAIE, CAISSE_PAIE, AN_PAIE).' : '' }}
+        </p>
       </div>
     </div>
     <div class="header-actions">
-      <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalCreation()">
-        <mat-icon>add</mat-icon>
-        Nouveau compte
-      </button>
+      @if (activeTab === 'comptes') {
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalCreation()">
+          <mat-icon>add</mat-icon>
+          Nouveau compte
+        </button>
+      } @else if (activeTab === 'classes') {
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalClasse()">
+          <mat-icon>add</mat-icon>
+          Nouvelle classe
+        </button>
+      } @else if (activeTab === 'sens') {
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalSens()">
+          <mat-icon>add</mat-icon>
+          Nouveau sens
+        </button>
+      } @else if (activeTab === 'rubriques') {
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalRubrique()">
+          <mat-icon>add</mat-icon>
+          Nouvelle rubrique
+        </button>
+      } @else if (activeTab === 'journaux') {
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalJournal()">
+          <mat-icon>add</mat-icon>
+          Nouveau journal
+        </button>
+      }
     </div>
   </div>
 
@@ -32,217 +68,340 @@
     </div>
   }
 
-  <!-- Statistiques rapides SYSCOHADA -->
-  <div class="stats-grid">
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon icon-blue">
-          <mat-icon>account_balance</mat-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ totalComptes }}</span>
-          <span class="stat-label">Comptes configurés</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
+  <!-- Navigation par Onglets des Paramètres du Compte Comptable -->
+  <div class="comptes-nav-tabs">
+    <button
+      class="nav-tab-btn"
+      [class.active]="activeTab === 'comptes'"
+      (click)="switchTab('comptes')"
+    >
+      <mat-icon>account_tree</mat-icon>
+      <span>Plan des comptes</span>
+      <span class="tab-badge">{{ comptes.length }}</span>
+    </button>
 
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon icon-orange">
-          <mat-icon>trending_down</mat-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ totalClasse6 }}</span>
-          <span class="stat-label">Charges de personnel (Classe 6)</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <button
+      class="nav-tab-btn"
+      [class.active]="activeTab === 'classes'"
+      (click)="switchTab('classes')"
+    >
+      <mat-icon>category</mat-icon>
+      <span>Classes comptables</span>
+      <span class="tab-badge">{{ classesOptions.length }}</span>
+    </button>
 
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon icon-purple">
-          <mat-icon>credit_score</mat-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ totalClasse4 }}</span>
-          <span class="stat-label">Dettes & Tiers (Classe 4)</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <button
+      class="nav-tab-btn"
+      [class.active]="activeTab === 'sens'"
+      (click)="switchTab('sens')"
+    >
+      <mat-icon>swap_horiz</mat-icon>
+      <span>Sens d'écriture (OD)</span>
+      <span class="tab-badge">{{ sensOptions.length }}</span>
+    </button>
 
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon icon-green">
-          <mat-icon>verified</mat-icon>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ totalActifs }}</span>
-          <span class="stat-label">Comptes actifs en OD</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <button
+      class="nav-tab-btn"
+      [class.active]="activeTab === 'rubriques'"
+      (click)="switchTab('rubriques')"
+    >
+      <mat-icon>bookmark_border</mat-icon>
+      <span>Rubriques de paie</span>
+      <span class="tab-badge">{{ rubriqueOptions.length }}</span>
+    </button>
+
+    <button
+      class="nav-tab-btn"
+      [class.active]="activeTab === 'journaux'"
+      (click)="switchTab('journaux')"
+    >
+      <mat-icon>menu_book</mat-icon>
+      <span>Codes Journaux OD</span>
+      <span class="tab-badge">{{ journauxOptions.length }}</span>
+    </button>
   </div>
 
-  <!-- Barre de filtres et recherche -->
-  <div class="filters-card">
-    <div class="search-box">
-      <mat-icon class="search-icon">search</mat-icon>
-      <input
-        type="text"
-        placeholder="Rechercher par numéro (ex: 641100), libellé ou rubrique..."
-        [(ngModel)]="searchQuery"
-        (ngModelChange)="onSearchChange()"
-      />
-      @if (searchQuery) {
-        <button class="clear-btn" (click)="searchQuery = ''; onSearchChange()">
-          <mat-icon>close</mat-icon>
-        </button>
+  <!-- ===================================================================== -->
+  <!-- ONGLET 1 : PLAN DES COMPTES COMPTABLES -->
+  <!-- ===================================================================== -->
+  @if (activeTab === 'comptes') {
+    <!-- Statistiques rapides SYSCOHADA -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon icon-blue">
+            <mat-icon>account_balance</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ totalComptes }}</span>
+            <span class="stat-label">Comptes configurés</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon icon-orange">
+            <mat-icon>trending_down</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ totalClasse6 }}</span>
+            <span class="stat-label">Charges de personnel (Classe 6)</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon icon-purple">
+            <mat-icon>credit_score</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ totalClasse4 }}</span>
+            <span class="stat-label">Dettes & Tiers (Classe 4)</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon icon-green">
+            <mat-icon>verified</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ totalActifs }}</span>
+            <span class="stat-label">Comptes actifs en OD</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Barre de filtres et recherche -->
+    <div class="filters-card">
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          placeholder="Rechercher par numéro (ex: 641100), libellé ou rubrique..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+        />
+        @if (searchQuery) {
+          <button class="clear-btn" (click)="searchQuery = ''; onSearchChange()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <div class="filter-actions">
+        <!-- Filtre Classe Dynamique depuis PostgreSQL -->
+        <div class="btn-group">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedClasse === 'TOUS'"
+            (click)="onClasseChange('TOUS')"
+          >
+            Toutes classes
+          </button>
+          @for (c of classesOptions; track c.code) {
+            <button
+              type="button"
+              class="filter-pill"
+              [class.active]="selectedClasse === c.code"
+              (click)="onClasseChange(c.code)"
+            >
+              {{ c.numero && c.nom ? 'Classe ' + c.numero + ' (' + c.nom + ')' : c.libelle }}
+            </button>
+          }
+        </div>
+
+        <!-- Filtre Statut -->
+        <div class="btn-group">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedStatut === 'TOUS'"
+            (click)="onStatutChange('TOUS')"
+          >
+            Tous statuts
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedStatut === 'ACTIF'"
+            (click)="onStatutChange('ACTIF')"
+          >
+            Actifs
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedStatut === 'INACTIF'"
+            (click)="onStatutChange('INACTIF')"
+          >
+            Inactifs
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau des comptes -->
+    <div class="table-card">
+      @if (loading) {
+        <div class="loading-state">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Chargement des comptes comptables depuis le serveur...</span>
+        </div>
+      } @else if (filteredComptes.length === 0) {
+        <div class="empty-state">
+          <mat-icon>search_off</mat-icon>
+          <h3>Aucun compte comptable trouvé</h3>
+          <p>Ajustez vos filtres ou ajoutez un nouveau compte au plan comptable.</p>
+          <button mat-stroked-button color="primary" (click)="ouvrirModalCreation()">
+            <mat-icon>add</mat-icon> Ajouter un compte
+          </button>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="comptes-table">
+            <thead>
+              <tr>
+                <th style="width: 130px;">N° Compte</th>
+                <th>Intitulé du compte (SYSCOHADA)</th>
+                <th style="width: 200px;">Classe</th>
+                <th style="width: 100px;">Sens OD</th>
+                <th>Rubrique de Paie associée</th>
+                <th style="width: 110px;">Journal</th>
+                <th style="width: 110px;">Statut</th>
+                <th style="width: 110px; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of filteredComptes; track c.numeroCompte) {
+                <tr [class.row-inactive]="!c.actif">
+                  <td>
+                    <span class="account-badge" [class.badge-c6]="c.classeCompte === 'CLASSE_6' || c.classeCompte === '6'" [class.badge-c4]="c.classeCompte === 'CLASSE_4' || c.classeCompte === '4'">
+                      {{ c.numeroCompte }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="compte-libelle-cell">
+                      <strong>{{ c.libelle }}</strong>
+                      @if (c.description) {
+                        <span class="compte-desc">{{ c.description }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="pill-classe" [class.pill-c6]="c.classeCompte === 'CLASSE_6' || c.classeCompte === '6'" [class.pill-c4]="c.classeCompte === 'CLASSE_4' || c.classeCompte === '4'">
+                      {{ getLibelleClasse(c.classeCompte) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="pill-sens" [class.pill-debit]="c.sensParDefaut === 'DEBIT'" [class.pill-credit]="c.sensParDefaut === 'CREDIT'">
+                      {{ c.sensParDefaut }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="rubrique-tag">
+                      <mat-icon>bookmark_border</mat-icon>
+                      {{ getLibelleRubrique(c.typeRubriqueAssociee) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="journal-badge">{{ c.codeJournal || 'OD_PAIE' }}</span>
+                  </td>
+                  <td>
+                    <button
+                      class="status-toggle-btn"
+                      [class.status-active]="c.actif"
+                      [class.status-inactive]="!c.actif"
+                      (click)="toggleStatut(c, $event)"
+                      title="Cliquer pour changer le statut"
+                    >
+                      <mat-icon>{{ c.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                      <span>{{ c.actif ? 'Actif' : 'Inactif' }}</span>
+                    </button>
+                  </td>
+                  <td style="text-align: center;">
+                    <div class="actions-cell">
+                      <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalEdition(c)" title="Modifier">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button class="action-btn delete-btn" (click)="supprimerCompte(c, $event)" title="Supprimer">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
     </div>
+  }
 
-    <div class="filter-actions">
-      <!-- Filtre Classe -->
-      <div class="btn-group">
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedClasse === 'TOUS'"
-          (click)="onClasseChange('TOUS')"
-        >
-          Toutes classes
-        </button>
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedClasse === 'CLASSE_6'"
-          (click)="onClasseChange('CLASSE_6')"
-        >
-          Classe 6 (Charges)
-        </button>
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedClasse === 'CLASSE_4'"
-          (click)="onClasseChange('CLASSE_4')"
-        >
-          Classe 4 (Tiers / Dettes)
+  <!-- ===================================================================== -->
+  <!-- ONGLET 2 : CLASSES COMPTABLES (Numéro et Nom de la classe) -->
+  <!-- ===================================================================== -->
+  @if (activeTab === 'classes') {
+    <div class="table-card">
+      <div class="table-header-custom">
+        <div>
+          <h3>Référentiel des Classes Comptables SYSCOHADA</h3>
+          <p>Paramétrez ici le numéro et le nom des classes de comptes utilisées pour la ventilation des écritures.</p>
+        </div>
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalClasse()">
+          <mat-icon>add</mat-icon> Nouvelle classe
         </button>
       </div>
 
-      <!-- Filtre Statut -->
-      <div class="btn-group">
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedStatut === 'TOUS'"
-          (click)="onStatutChange('TOUS')"
-        >
-          Tous statuts
-        </button>
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedStatut === 'ACTIF'"
-          (click)="onStatutChange('ACTIF')"
-        >
-          Actifs
-        </button>
-        <button
-          type="button"
-          class="filter-pill"
-          [class.active]="selectedStatut === 'INACTIF'"
-          (click)="onStatutChange('INACTIF')"
-        >
-          Inactifs
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tableau des comptes -->
-  <div class="table-card">
-    @if (loading) {
-      <div class="loading-state">
-        <mat-spinner diameter="40"></mat-spinner>
-        <span>Chargement des comptes comptables...</span>
-      </div>
-    } @else if (filteredComptes.length === 0) {
-      <div class="empty-state">
-        <mat-icon>search_off</mat-icon>
-        <h3>Aucun compte comptable trouvé</h3>
-        <p>Ajustez vos filtres ou ajoutez un nouveau compte au plan comptable.</p>
-        <button mat-stroked-button color="primary" (click)="ouvrirModalCreation()">
-          <mat-icon>add</mat-icon> Ajouter un compte
-        </button>
-      </div>
-    } @else {
       <div class="table-responsive">
         <table class="comptes-table">
           <thead>
             <tr>
-              <th style="width: 130px;">N° Compte</th>
-              <th>Intitulé du compte (SYSCOHADA)</th>
-              <th style="width: 120px;">Classe</th>
-              <th style="width: 100px;">Sens OD</th>
-              <th>Rubrique de Paie associée</th>
-              <th style="width: 110px;">Journal</th>
+              <th style="width: 100px;">Numéro</th>
+              <th>Nom de la classe</th>
+              <th>Libellé complet</th>
+              <th style="width: 140px;">Code technique</th>
+              <th>Description</th>
               <th style="width: 110px;">Statut</th>
               <th style="width: 110px; text-align: center;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (c of filteredComptes; track c.numeroCompte) {
-              <tr [class.row-inactive]="!c.actif">
+            @for (cl of classesOptions; track cl.code) {
+              <tr [class.row-inactive]="!cl.actif">
                 <td>
-                  <span class="account-badge" [class.badge-c6]="c.classeCompte === 'CLASSE_6'" [class.badge-c4]="c.classeCompte === 'CLASSE_4'">
-                    {{ c.numeroCompte }}
+                  <span class="account-badge badge-c6">
+                    Classe {{ cl.numero }}
                   </span>
                 </td>
                 <td>
-                  <div class="compte-libelle-cell">
-                    <strong>{{ c.libelle }}</strong>
-                    @if (c.description) {
-                      <span class="compte-desc">{{ c.description }}</span>
-                    }
-                  </div>
+                  <strong>{{ cl.nom }}</strong>
                 </td>
-                <td>
-                  <span class="pill-classe" [class.pill-c6]="c.classeCompte === 'CLASSE_6'" [class.pill-c4]="c.classeCompte === 'CLASSE_4'">
-                    {{ c.classeCompte === 'CLASSE_6' ? 'Classe 6' : (c.classeCompte === 'CLASSE_4' ? 'Classe 4' : c.classeCompte) }}
-                  </span>
-                </td>
-                <td>
-                  <span class="pill-sens" [class.pill-debit]="c.sensParDefaut === 'DEBIT'" [class.pill-credit]="c.sensParDefaut === 'CREDIT'">
-                    {{ c.sensParDefaut }}
-                  </span>
-                </td>
-                <td>
-                  <span class="rubrique-tag">
-                    <mat-icon>bookmark_border</mat-icon>
-                    {{ getLibelleRubrique(c.typeRubriqueAssociee) }}
-                  </span>
-                </td>
-                <td>
-                  <span class="journal-badge">{{ c.codeJournal || 'OD_PAIE' }}</span>
-                </td>
+                <td>{{ cl.libelle }}</td>
+                <td><code>{{ cl.code }}</code></td>
+                <td>{{ cl.description || '—' }}</td>
                 <td>
                   <button
                     class="status-toggle-btn"
-                    [class.status-active]="c.actif"
-                    [class.status-inactive]="!c.actif"
-                    (click)="toggleStatut(c, $event)"
-                    title="Cliquer pour changer le statut"
+                    [class.status-active]="cl.actif"
+                    [class.status-inactive]="!cl.actif"
+                    (click)="toggleStatutClasse(cl, $event)"
                   >
-                    <mat-icon>{{ c.actif ? 'check_circle' : 'cancel' }}</mat-icon>
-                    <span>{{ c.actif ? 'Actif' : 'Inactif' }}</span>
+                    <mat-icon>{{ cl.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span>{{ cl.actif ? 'Actif' : 'Inactif' }}</span>
                   </button>
                 </td>
                 <td style="text-align: center;">
                   <div class="actions-cell">
-                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalEdition(c)" title="Modifier">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalClasse(cl)" title="Modifier">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerCompte(c, $event)" title="Supprimer">
+                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerClasse(cl, $event)" title="Supprimer">
                       <mat-icon>delete_outline</mat-icon>
                     </button>
                   </div>
@@ -252,10 +411,230 @@
           </tbody>
         </table>
       </div>
-    }
-  </div>
+    </div>
+  }
 
-  <!-- Modal Création / Édition -->
+  <!-- ===================================================================== -->
+  <!-- ONGLET 3 : SENS D'ÉCRITURE (DÉBIT / CRÉDIT) -->
+  <!-- ===================================================================== -->
+  @if (activeTab === 'sens') {
+    <div class="table-card">
+      <div class="table-header-custom">
+        <div>
+          <h3>Sens d'Imputation par Défaut dans l'OD</h3>
+          <p>Paramétrez les sens d'imputation comptable (DÉBIT / CRÉDIT) appliqués automatiquement dans l'OD de paie.</p>
+        </div>
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalSens()">
+          <mat-icon>add</mat-icon> Nouveau sens
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="comptes-table">
+          <thead>
+            <tr>
+              <th style="width: 120px;">Sens</th>
+              <th>Libellé d'imputation</th>
+              <th>Description & Règle métier</th>
+              <th style="width: 110px;">Statut</th>
+              <th style="width: 110px; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of sensOptions; track s.code) {
+              <tr [class.row-inactive]="!s.actif">
+                <td>
+                  <span class="pill-sens" [class.pill-debit]="s.code === 'DEBIT'" [class.pill-credit]="s.code === 'CREDIT'">
+                    {{ s.code }}
+                  </span>
+                </td>
+                <td><strong>{{ s.libelle }}</strong></td>
+                <td>{{ s.description || '—' }}</td>
+                <td>
+                  <button
+                    class="status-toggle-btn"
+                    [class.status-active]="s.actif"
+                    [class.status-inactive]="!s.actif"
+                    (click)="toggleStatutSens(s, $event)"
+                  >
+                    <mat-icon>{{ s.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span>{{ s.actif ? 'Actif' : 'Inactif' }}</span>
+                  </button>
+                </td>
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalSens(s)" title="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerSens(s, $event)" title="Supprimer">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- ONGLET 4 : RUBRIQUES DE PAIE AFFECTÉES -->
+  <!-- ===================================================================== -->
+  @if (activeTab === 'rubriques') {
+    <div class="table-card">
+      <div class="table-header-custom">
+        <div>
+          <h3>Rubriques de Paie et Règles d'Imputation</h3>
+          <p>Paramétrez les rubriques de paie (Gains, Retenues, Charges patronales) avec leur compte et sens par défaut.</p>
+        </div>
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalRubrique()">
+          <mat-icon>add</mat-icon> Nouvelle rubrique
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="comptes-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Code Rubrique</th>
+              <th>Libellé de la rubrique</th>
+              <th style="width: 110px;">Type</th>
+              <th style="width: 90px;">Sens</th>
+              <th style="width: 120px;">Classe</th>
+              <th style="width: 110px;">N° Compte</th>
+              <th style="width: 110px;">Statut</th>
+              <th style="width: 110px; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rubriqueOptions; track r.code) {
+              <tr [class.row-inactive]="!r.actif">
+                <td><code>{{ r.code }}</code></td>
+                <td>
+                  <strong>{{ r.libelle }}</strong>
+                  @if (r.description) {
+                    <span class="compte-desc">{{ r.description }}</span>
+                  }
+                </td>
+                <td>
+                  <span class="pill-classe" [class.badge-c6]="r.typeRubrique === 'GAIN'" [class.badge-c4]="r.typeRubrique === 'RETENUE'">
+                    {{ r.typeRubrique || 'PAIE' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="pill-sens" [class.pill-debit]="r.sensSuggere === 'DEBIT'" [class.pill-credit]="r.sensSuggere === 'CREDIT'">
+                    {{ r.sensSuggere }}
+                  </span>
+                </td>
+                <td>
+                  <span class="pill-classe" [class.pill-c6]="r.classeSuggeree === 'CLASSE_6'" [class.pill-c4]="r.classeSuggeree === 'CLASSE_4'">
+                    {{ getLibelleClasse(r.classeSuggeree) }}
+                  </span>
+                </td>
+                <td>
+                  <strong>{{ r.numeroCompteDefaut || '—' }}</strong>
+                </td>
+                <td>
+                  <button
+                    class="status-toggle-btn"
+                    [class.status-active]="r.actif"
+                    [class.status-inactive]="!r.actif"
+                    (click)="toggleStatutRubrique(r, $event)"
+                  >
+                    <mat-icon>{{ r.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span>{{ r.actif ? 'Actif' : 'Inactif' }}</span>
+                  </button>
+                </td>
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalRubrique(r)" title="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerRubrique(r, $event)" title="Supprimer">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- ONGLET 5 : CODES JOURNAUX OD -->
+  <!-- ===================================================================== -->
+  @if (activeTab === 'journaux') {
+    <div class="table-card">
+      <div class="table-header-custom">
+        <div>
+          <h3>Codes Journaux Comptables pour l'OD de Paie</h3>
+          <p>Paramétrez les codes des journaux comptables (OD_PAIE, BQ_PAIE, etc.) vers lesquels déverser les écritures.</p>
+        </div>
+        <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalJournal()">
+          <mat-icon>add</mat-icon> Nouveau journal
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="comptes-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Code Journal</th>
+              <th>Intitulé du journal</th>
+              <th style="width: 120px;">Type</th>
+              <th>Description d'imputation</th>
+              <th style="width: 110px;">Statut</th>
+              <th style="width: 110px; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (j of journauxOptions; track j.code) {
+              <tr [class.row-inactive]="!j.actif">
+                <td>
+                  <span class="journal-badge">{{ j.code }}</span>
+                </td>
+                <td><strong>{{ j.libelle }}</strong></td>
+                <td>
+                  <span class="pill-classe">{{ j.typeJournal || 'OD' }}</span>
+                </td>
+                <td>{{ j.description || '—' }}</td>
+                <td>
+                  <button
+                    class="status-toggle-btn"
+                    [class.status-active]="j.actif"
+                    [class.status-inactive]="!j.actif"
+                    (click)="toggleStatutJournal(j, $event)"
+                  >
+                    <mat-icon>{{ j.actif ? 'check_circle' : 'cancel' }}</mat-icon>
+                    <span>{{ j.actif ? 'Actif' : 'Inactif' }}</span>
+                  </button>
+                </td>
+                <td style="text-align: center;">
+                  <div class="actions-cell">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="ouvrirModalJournal(j)" title="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" (click)="supprimerJournal(j, $event)" title="Supprimer">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODALE 1 : NOUVEAU / MODIFIER COMPTE COMPTABLE -->
+  <!-- ===================================================================== -->
   @if (showModal) {
     <div class="modal-overlay" (click)="fermerModal()">
       <div class="modal-container" (click)="$event.stopPropagation()">
@@ -297,26 +676,29 @@
           </div>
 
           <div class="form-row">
+            <!-- Classe comptable dynamique (Numéro et Nom de la classe) -->
             <div class="form-group col-half">
               <label for="classeCompte">Classe comptable</label>
               <select id="classeCompte" class="form-select" [(ngModel)]="currentCompte.classeCompte">
-                <option value="CLASSE_6">Classe 6 — Charges de personnel</option>
-                <option value="CLASSE_4">Classe 4 — Comptes de tiers / Dettes</option>
-                <option value="CLASSE_1">Classe 1 — Capitaux & Provisions</option>
-                <option value="CLASSE_5">Classe 5 — Trésorerie / Banques</option>
+                @for (c of classesOptions; track c.code) {
+                  <option [value]="c.code">{{ c.numero && c.nom ? 'Classe ' + c.numero + ' — ' + c.nom : c.libelle }}</option>
+                }
               </select>
             </div>
 
+            <!-- Sens par défaut dynamique -->
             <div class="form-group col-half">
               <label for="sensCompte">Sens par défaut dans l'OD</label>
               <select id="sensCompte" class="form-select" [(ngModel)]="currentCompte.sensParDefaut">
-                <option value="DEBIT">DÉBIT (Charges / Diminution dettes)</option>
-                <option value="CREDIT">CRÉDIT (Net à payer / Retenues / Cotisations)</option>
+                @for (s of sensOptions; track s.code) {
+                  <option [value]="s.code">{{ s.libelle }}</option>
+                }
               </select>
             </div>
           </div>
 
           <div class="form-row">
+            <!-- Rubrique de paie dynamique -->
             <div class="form-group col-half">
               <label for="typeRubrique">Rubrique de paie affectée</label>
               <select
@@ -325,21 +707,25 @@
                 [(ngModel)]="currentCompte.typeRubriqueAssociee"
                 (ngModelChange)="onRubriqueSelect()"
               >
+                <option value="">-- Aucune rubrique spécifique --</option>
                 @for (opt of rubriqueOptions; track opt.code) {
                   <option [value]="opt.code">{{ opt.libelle }}</option>
                 }
               </select>
             </div>
 
+            <!-- Code Journal dynamique -->
             <div class="form-group col-half">
               <label for="codeJournal">Code Journal OD</label>
-              <input
+              <select
                 id="codeJournal"
-                type="text"
-                class="form-input"
-                placeholder="OD_PAIE"
+                class="form-select"
                 [(ngModel)]="currentCompte.codeJournal"
-              />
+              >
+                @for (j of journauxOptions; track j.code) {
+                  <option [value]="j.code">{{ j.code }} — {{ j.libelle }}</option>
+                }
+              </select>
             </div>
           </div>
 
@@ -367,6 +753,346 @@
           <button type="button" class="btn-save" (click)="enregistrerCompte()">
             <mat-icon>check</mat-icon>
             {{ isEditing ? 'Enregistrer les modifications' : 'Créer le compte' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODALE 2 : NOUVELLE / MODIFIER CLASSE COMPTABLE (Numéro et Nom) -->
+  <!-- ===================================================================== -->
+  @if (showClasseModal) {
+    <div class="modal-overlay" (click)="fermerModalClasse()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <mat-icon color="primary">category</mat-icon>
+            <h2>{{ isEditingClasse ? 'Modifier la classe comptable' : 'Nouvelle classe comptable' }}</h2>
+          </div>
+          <button class="modal-close-btn" (click)="fermerModalClasse()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="numClasse">Numéro de la classe <span class="req">*</span></label>
+              <input
+                id="numClasse"
+                type="text"
+                class="form-input"
+                placeholder="Ex: 6, 4, 1, 5, 7..."
+                [(ngModel)]="currentClasse.numero"
+              />
+              <span class="field-hint">Chiffre SYSCOHADA (1 à 8)</span>
+            </div>
+
+            <div class="form-group col-half">
+              <label for="nomClasse">Nom de la classe <span class="req">*</span></label>
+              <input
+                id="nomClasse"
+                type="text"
+                class="form-input"
+                placeholder="Ex: Charges de personnel"
+                [(ngModel)]="currentClasse.nom"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descClasse">Description de la classe</label>
+            <textarea
+              id="descClasse"
+              class="form-textarea"
+              rows="3"
+              placeholder="Précisez la nature des comptes regroupés dans cette classe..."
+              [(ngModel)]="currentClasse.description"
+            ></textarea>
+          </div>
+
+          <div class="form-check-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="currentClasse.actif" />
+              <span>Classe comptable active</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="fermerModalClasse()">Annuler</button>
+          <button type="button" class="btn-save" (click)="enregistrerClasse()">
+            <mat-icon>check</mat-icon>
+            {{ isEditingClasse ? 'Mettre à jour la classe' : 'Créer la classe' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODALE 3 : NOUVEAU / MODIFIER SENS D'ÉCRITURE -->
+  <!-- ===================================================================== -->
+  @if (showSensModal) {
+    <div class="modal-overlay" (click)="fermerModalSens()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <mat-icon color="primary">swap_horiz</mat-icon>
+            <h2>{{ isEditingSens ? 'Modifier le sens d\'écriture' : 'Nouveau sens d\'écriture' }}</h2>
+          </div>
+          <button class="modal-close-btn" (click)="fermerModalSens()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="codeSens">Code du sens <span class="req">*</span></label>
+              <input
+                id="codeSens"
+                type="text"
+                class="form-input"
+                placeholder="Ex: DEBIT ou CREDIT"
+                [(ngModel)]="currentSens.code"
+              />
+            </div>
+
+            <div class="form-group col-half">
+              <label for="libSens">Libellé d'imputation <span class="req">*</span></label>
+              <input
+                id="libSens"
+                type="text"
+                class="form-input"
+                placeholder="Ex: DÉBIT (Charges / Diminution dettes)"
+                [(ngModel)]="currentSens.libelle"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descSens">Description</label>
+            <textarea
+              id="descSens"
+              class="form-textarea"
+              rows="3"
+              placeholder="Règles comptables associées à ce sens..."
+              [(ngModel)]="currentSens.description"
+            ></textarea>
+          </div>
+
+          <div class="form-check-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="currentSens.actif" />
+              <span>Sens d'écriture actif</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="fermerModalSens()">Annuler</button>
+          <button type="button" class="btn-save" (click)="enregistrerSens()">
+            <mat-icon>check</mat-icon>
+            {{ isEditingSens ? 'Mettre à jour' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODALE 4 : NOUVELLE / MODIFIER RUBRIQUE DE PAIE -->
+  <!-- ===================================================================== -->
+  @if (showRubriqueModal) {
+    <div class="modal-overlay" (click)="fermerModalRubrique()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <mat-icon color="primary">bookmark_border</mat-icon>
+            <h2>{{ isEditingRubrique ? 'Modifier la rubrique de paie' : 'Nouvelle rubrique de paie affectée' }}</h2>
+          </div>
+          <button class="modal-close-btn" (click)="fermerModalRubrique()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="codeRub">Code Rubrique <span class="req">*</span></label>
+              <input
+                id="codeRub"
+                type="text"
+                class="form-input"
+                placeholder="Ex: SALAIRE_BASE ou INDEMNITE_TRANSPORT"
+                [(ngModel)]="currentRubrique.code"
+              />
+            </div>
+
+            <div class="form-group col-half">
+              <label for="libRub">Libellé de la rubrique <span class="req">*</span></label>
+              <input
+                id="libRub"
+                type="text"
+                class="form-input"
+                placeholder="Ex: Salaire de base"
+                [(ngModel)]="currentRubrique.libelle"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="classeRub">Classe suggérée</label>
+              <select id="classeRub" class="form-select" [(ngModel)]="currentRubrique.classeSuggeree">
+                @for (c of classesOptions; track c.code) {
+                  <option [value]="c.code">{{ c.numero && c.nom ? 'Classe ' + c.numero + ' — ' + c.nom : c.libelle }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group col-half">
+              <label for="sensRub">Sens suggéré</label>
+              <select id="sensRub" class="form-select" [(ngModel)]="currentRubrique.sensSuggere">
+                @for (s of sensOptions; track s.code) {
+                  <option [value]="s.code">{{ s.libelle }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="numCompteDefaut">N° de compte suggéré par défaut</label>
+              <input
+                id="numCompteDefaut"
+                type="text"
+                class="form-input"
+                placeholder="Ex: 641100 ou 421100"
+                [(ngModel)]="currentRubrique.numeroCompteDefaut"
+              />
+            </div>
+
+            <div class="form-group col-half">
+              <label for="typeRub">Type de rubrique</label>
+              <select id="typeRub" class="form-select" [(ngModel)]="currentRubrique.typeRubrique">
+                <option value="GAIN">GAIN (Rémunérations et Avantages)</option>
+                <option value="RETENUE">RETENUE (Charges salariales & Prêts)</option>
+                <option value="PATRONALE">PATRONALE (Charges patronales & Taxes)</option>
+                <option value="NET">NET (Net à payer)</option>
+                <option value="REGULARISATION">REGULARISATION (Arrondis & Écarts)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descRub">Description</label>
+            <textarea
+              id="descRub"
+              class="form-textarea"
+              rows="3"
+              placeholder="Explications sur l'imputation de cette rubrique..."
+              [(ngModel)]="currentRubrique.description"
+            ></textarea>
+          </div>
+
+          <div class="form-check-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="currentRubrique.actif" />
+              <span>Rubrique active</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="fermerModalRubrique()">Annuler</button>
+          <button type="button" class="btn-save" (click)="enregistrerRubrique()">
+            <mat-icon>check</mat-icon>
+            {{ isEditingRubrique ? 'Mettre à jour' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MODALE 5 : NOUVEAU / MODIFIER JOURNAL COMPTABLE -->
+  <!-- ===================================================================== -->
+  @if (showJournalModal) {
+    <div class="modal-overlay" (click)="fermerModalJournal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <mat-icon color="primary">menu_book</mat-icon>
+            <h2>{{ isEditingJournal ? 'Modifier le code journal' : 'Nouveau code journal OD' }}</h2>
+          </div>
+          <button class="modal-close-btn" (click)="fermerModalJournal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="codeJ">Code Journal <span class="req">*</span></label>
+              <input
+                id="codeJ"
+                type="text"
+                class="form-input"
+                placeholder="Ex: OD_PAIE ou BQ_PAIE"
+                [(ngModel)]="currentJournal.code"
+              />
+            </div>
+
+            <div class="form-group col-half">
+              <label for="libJ">Intitulé du journal <span class="req">*</span></label>
+              <input
+                id="libJ"
+                type="text"
+                class="form-input"
+                placeholder="Ex: Journal des Opérations Diverses de Paie"
+                [(ngModel)]="currentJournal.libelle"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="typeJ">Type de journal</label>
+              <select id="typeJ" class="form-select" [(ngModel)]="currentJournal.typeJournal">
+                <option value="OD">Opérations Diverses (OD)</option>
+                <option value="BANQUE">Banque / Règlements</option>
+                <option value="CAISSE">Caisse / Espèces</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descJ">Description</label>
+            <textarea
+              id="descJ"
+              class="form-textarea"
+              rows="3"
+              placeholder="Description des opérations enregistrées dans ce journal..."
+              [(ngModel)]="currentJournal.description"
+            ></textarea>
+          </div>
+
+          <div class="form-check-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="currentJournal.actif" />
+              <span>Journal actif</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" (click)="fermerModalJournal()">Annuler</button>
+          <button type="button" class="btn-save" (click)="enregistrerJournal()">
+            <mat-icon>check</mat-icon>
+            {{ isEditingJournal ? 'Mettre à jour' : 'Enregistrer' }}
           </button>
         </div>
       </div>

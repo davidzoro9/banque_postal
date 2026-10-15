@@ -253,6 +253,9 @@ export class GenererBulletinsComponent implements OnInit {
   get totalIndemnitesGlobal(): number {
     return this.bulletins.reduce((acc, b) => acc + (b.totalIndemnites || 0), 0);
   }
+  get totalAvoirsGlobal(): number {
+    return this.bulletins.reduce((acc, b) => acc + (b.totalAvoirs || 0), 0);
+  }
   get totalCotisationsSociales(): number {
     return this.bulletins.reduce((acc, b) => acc + (b.cotisationCNSS || 0) + (b.cotisationCarfoAgent || 0) + (b.cotisationCrraeAgent || 0), 0);
   }
@@ -994,6 +997,65 @@ export class GenererBulletinsComponent implements OnInit {
     }
   }
 
+  reinitialiserStatutSession(session?: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const s = session || this.currentSession;
+    if (!s || !s.id) return;
+    if (s.statut === 'CLOTURE') {
+      alert("Impossible de réinitialiser une session clôturée. La session est définitivement verrouillée.");
+      return;
+    }
+    if (confirm(`Confirmer la réinitialisation de la session validée ${s.codeSession || s.periode} ?\n\nLa session et ses bulletins repasseront au statut GÉNÉRÉ, vous permettant de faire des corrections ou de la supprimer.`)) {
+      this.http.put<any>(`${environment.apiUrl}/paie/sessions/${s.id}/reinitialiser`, {}).pipe(
+        catchError(err => {
+          alert('Erreur lors de la réinitialisation: ' + (err?.error?.message || err.message));
+          return of(null);
+        })
+      ).subscribe(res => {
+        if (res) {
+          alert('Statut de la session réinitialisé avec succès (GÉNÉRÉ).');
+          if (this.currentSession && this.currentSession.id === s.id) {
+            this.currentSession.statut = 'GENERE';
+            this.bulletins.forEach(b => b.etat = 'GENERE');
+            this.selectionnerSession(this.currentSession);
+          } else {
+            this.chargerToutesLesSessions();
+          }
+        }
+      });
+    }
+  }
+
+  supprimerSession(session?: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const s = session || this.currentSession;
+    if (!s || !s.id) return;
+    if (s.statut === 'VALIDE' || s.statut === 'CLOTURE') {
+      alert("Impossible de supprimer une session validée ou clôturée. Veuillez d'abord réinitialiser son statut.");
+      return;
+    }
+    if (confirm(`Êtes-vous sûr de vouloir supprimer définitivement la session de paie ${s.codeSession || s.periode} et tous ses bulletins associés ?\n\nCette action est irréversible.`)) {
+      this.http.delete(`${environment.apiUrl}/paie/sessions/${s.id}`).pipe(
+        catchError(err => {
+          alert('Erreur lors de la suppression: ' + (err?.error?.message || err.message));
+          return of(null);
+        })
+      ).subscribe(() => {
+        alert('Session supprimée avec succès.');
+        if (this.currentSession && this.currentSession.id === s.id) {
+          this.currentSession = null;
+          this.bulletins = [];
+          this.vueActive = 'LISTE_SESSIONS';
+        }
+        this.chargerToutesLesSessions();
+      });
+    }
+  }
+
   recalculerTousLesBulletins(): void {
     if (confirm("Voulez-vous recalculer TOUS les bulletins existants selon les règles officielles du CGI ?\nCette opération mettra à jour les exonérations d'indemnités, l'IUTS et le net à payer pour toutes les sessions.")) {
       this.isCalculating = true;
@@ -1345,9 +1407,13 @@ export class GenererBulletinsComponent implements OnInit {
         fullBase = nominal;
       }
 
+      const isProrataOrGratifOrAvoir = cd.includes('13') || cd.includes('14') || cd.includes('GRAT') || cd.includes('PRORATA') || cd.includes('AVOIR') ||
+        (l.name || l.libelle || '').toUpperCase().includes('13') || (l.name || l.libelle || '').toUpperCase().includes('14') || (l.name || l.libelle || '').toUpperCase().includes('GRATIF') || (l.name || l.libelle || '').toUpperCase().includes('PRORATA') || (l.name || l.libelle || '').toUpperCase().includes('AVOIR');
+      const cleanName = isProrataOrGratifOrAvoir ? (l.name || l.libelle || '').trim() : (l.name || l.libelle || '').replace(/[()]/g, '').trim();
+
       return {
         code: l.code || `LINE_${idx}`,
-        name: (l.name || l.libelle || '').replace(/[()]/g, '').trim(),
+        name: cleanName,
         typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
         baseCalcul: l.baseCalcul !== undefined && l.baseCalcul !== null ? Number(l.baseCalcul) : fullBase,
         fullBase: fullBase,
@@ -1542,7 +1608,9 @@ export class GenererBulletinsComponent implements OnInit {
       lines = b.lines.map((l: any) => {
         const cd = (l.code || '').toUpperCase();
         const rawName = (l.libelle || l.name || '').trim();
-        const nm = rawName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+        const isProrataOrGratifOrAvoir = cd.includes('13') || cd.includes('14') || cd.includes('GRAT') || cd.includes('PRORATA') || cd.includes('AVOIR') ||
+          rawName.toUpperCase().includes('13') || rawName.toUpperCase().includes('14') || rawName.toUpperCase().includes('GRATIF') || rawName.toUpperCase().includes('PRORATA') || rawName.toUpperCase().includes('AVOIR');
+        const nm = isProrataOrGratifOrAvoir ? rawName.replace(/\s+/g, ' ').trim() : rawName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
         const isRetenue = l.typeLigne === 'RETENUE' || l.typeLigne === 'RETENUE_SOCIALE' || l.typeLigne === 'IMPOT' ||
           l.typeLigne === 'PRECOMPTE' || l.category === 'RETENUE' || l.category === 'PRECOMPTE' ||
@@ -1574,33 +1642,44 @@ export class GenererBulletinsComponent implements OnInit {
           tauxStr = '1 %';
         } else if (cd.includes('IUTS') || nm.includes('IUTS')) {
           const nbChg = b.nombreCharges != null ? b.nombreCharges : (b.partsFiscales != null ? b.partsFiscales : (l.taux != null ? Math.round(Number(l.taux)) : 0));
-          tauxStr = nbChg > 0 ? `${nbChg} chg` : '—';
+          tauxStr = nbChg > 0 ? String(nbChg) : '—';
         } else if (cd.includes('IND_LICENC') || cd.includes('IND_RETRAITE') || nm.includes('INDEMNITÉ DE LICENCIEMENT') || nm.includes('INDEMNITE DE LICENCIEMENT') || nm.includes('RETRAITE')) {
           tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} ans` : '';
         } else if (cd.includes('IND_PREAVIS') || cd.includes('RET_PREAVIS') || nm.includes('PRÉAVIS') || nm.includes('PREAVIS')) {
           tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} mois` : '';
         } else if (cd.includes('IND_CP_ACQUIS') || cd.includes('ICCP') || nm.includes('CONGÉS') || nm.includes('CONGES')) {
           tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} j` : '';
-        } else if (cd.includes('PRORATA_13EME') || cd.includes('PRORATA_14EME') || nm.includes('13ÈME') || nm.includes('14ÈME')) {
-          tauxStr = (l.taux !== undefined && l.taux !== null) ? `${l.taux} %` : '';
-        } else if (cd.startsWith('IND') || cd.includes('LOG') || cd.includes('TRP') || cd.includes('SUJ') || cd.includes('CS') || cd.includes('CAISSE') || cd.includes('CP') || cd.includes('CASH') || nm.includes('INDEMNIT') || nm.includes('CAISSE') || nm.includes('SUJÉTION') || nm.includes('SUJETION') || nm.includes('LOGEMENT') || nm.includes('TRANSPORT') || nm.includes('CASH POINT')) {
-          // Indemnités forfaitaires mensuelles : pas de taux trompeur
-          tauxStr = '';
+        } else if (cd.includes('PRORATA_13EME') || cd.includes('PRORATA_14EME') || cd.includes('13EME') || cd.includes('14EME') || cd.includes('GRAT') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF')) {
+          if (l.taux !== undefined && l.taux !== null && l.taux !== '') {
+            tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${Number(l.taux).toFixed(2)} %`;
+          } else {
+            tauxStr = '100 %';
+          }
+        } else if (cd.includes('CASH') || nm.includes('CASH POINT')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? String(l.taux) : '30';
+        } else if (cd.includes('LOG') || nm.includes('LOGEMENT')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? `${l.taux} %` : '20 %';
+        } else if (cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? `${l.taux} %` : '5 %';
+        } else if (cd.includes('CAISSE') || nm.includes('CAISSE')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? `${l.taux} %` : '5 %';
+        } else if (cd.includes('SUJ') || nm.includes('SUJÉTION') || nm.includes('SUJETION')) {
+          tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? `${l.taux} %` : '5 %';
         } else if (cd.includes('TROP') || cd.includes('PREC') || nm.includes('TROP') || nm.includes('PRECOMPTE')) {
           tauxStr = '';
         } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
           tauxStr = (l.taux !== undefined && l.taux !== null && l.taux !== '') ? `${l.taux} %` : '';
-        } else if (l.tauxFormatted) {
-          tauxStr = l.tauxFormatted.replace(/[()]/g, '').trim();
         } else if (l.taux !== undefined && l.taux !== null && l.taux !== '' && Number(l.taux) > 0) {
           tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
+        } else if (l.tauxFormatted) {
+          tauxStr = l.tauxFormatted.replace(/[()]/g, '').trim();
         }
 
         const baseVal = l.baseCalcul !== undefined ? l.baseCalcul : (isGain ? montant : undefined);
 
         return {
           code: l.code,
-          name: nm,
+          name: isProrataOrGratifOrAvoir ? rawName : nm,
           typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
           gain: gainVal,
           retenue: retenueVal,
@@ -1648,6 +1727,9 @@ export class GenererBulletinsComponent implements OnInit {
       if (cd.includes('CRRAE') || nm.includes('CRRAE')) return 22;
       if (cd.includes('SOLIDAR') || cd.includes('FSP') || nm.includes('SOLIDARITE') || nm.includes('SOLIDARITÉ')) return 23;
 
+      // 13ème / 14ème mois / Gratification en priorité absolue pour ces sessions
+      if (cd.includes('13') || cd.includes('14') || cd.includes('GRAT') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF')) return 1;
+
       // 3. Salaire de base, sur-salaire et prime d'ancienneté
       if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP'))) return 1;
       if (cd === 'SUR_SALAIRE' || nm.includes('SURSALAIRE') || nm.includes('SUR-SALAIRE')) return 2;
@@ -1657,6 +1739,10 @@ export class GenererBulletinsComponent implements OnInit {
       if (cd.includes('TRANS') || cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT') || nm.includes('DÉPLACEMENT')) return 6;
       if (cd.includes('LOG') || nm.includes('LOGEMENT') || nm.includes('MAISON')) return 7;
       if (cd.includes('CASH') || cd.includes('CP') || nm.includes('CASH POINT') || nm.includes('CASHPOINT') || nm.includes('GUICHET')) return 8;
+
+      // Avoirs de l'employé
+      if (cd.includes('AVOIR') || nm.includes('AVOIR') || l.typeLigne === 'AVOIR') return 9;
+
       if (l.gain !== undefined && l.gain !== null && l.gain > 0) return 10;
 
       if (l.ordre !== undefined && l.ordre !== null && l.ordre > 0) {
