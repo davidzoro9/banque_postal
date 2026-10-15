@@ -741,22 +741,126 @@ public class BulletinService {
                 }
             }
 
-            // 4. Montant proratisé du 13ème / 14ème mois
-            BigDecimal montantGratification = money(basePleineReference.multiply(ratioProrata));
+            // 4. Ventilation détaillée de toutes les composantes du salaire brut au prorata
+            List<BulletinLine> linesGratification = new ArrayList<>();
+            int ordreLigne = 1;
 
-            BulletinLine gratLine = new BulletinLine();
-            gratLine.setCode(codePrefix);
-            gratLine.setLibelle(labelPrefix + " - Prorata : " + prorataVariableStr);
-            gratLine.setTypeLigne("GAIN");
-            gratLine.setBaseCalcul(basePleineReference);
-            gratLine.setTaux(tauxProrataPourcentage);
-            gratLine.setMontant(montantGratification);
-            gratLine.setOrdre(1);
+            // A. Composante 1 : Salaire de Base (au prorata temporis)
+            BigDecimal montantSalaireBaseProratise = money(salaireBasePlein.multiply(ratioProrata));
+            BulletinLine salBaseLine = new BulletinLine();
+            salBaseLine.setCode("SAL_BASE");
+            salBaseLine.setLibelle("Salaire de Base");
+            salBaseLine.setTypeLigne("GAIN");
+            salBaseLine.setBaseCalcul(salaireBasePlein);
+            salBaseLine.setTaux(tauxProrataPourcentage);
+            salBaseLine.setMontant(montantSalaireBaseProratise);
+            salBaseLine.setOrdre(ordreLigne++);
+            linesGratification.add(salBaseLine);
 
-            // 5. Récupération et intégration des AVOIRS
+            // B. Composante 2 : Sur-salaire (au prorata si existant)
+            BigDecimal montantSurSalaireProratise = BigDecimal.ZERO;
+            if (surSalairePlein != null && surSalairePlein.compareTo(BigDecimal.ZERO) > 0) {
+                montantSurSalaireProratise = money(surSalairePlein.multiply(ratioProrata));
+                if (montantSurSalaireProratise.compareTo(BigDecimal.ZERO) > 0) {
+                    BulletinLine surSalLine = new BulletinLine();
+                    surSalLine.setCode("SUR_SALAIRE");
+                    surSalLine.setLibelle("Sur-salaire");
+                    surSalLine.setTypeLigne("GAIN");
+                    surSalLine.setBaseCalcul(surSalairePlein);
+                    surSalLine.setTaux(tauxProrataPourcentage);
+                    surSalLine.setMontant(montantSurSalaireProratise);
+                    surSalLine.setOrdre(ordreLigne++);
+                    linesGratification.add(surSalLine);
+                }
+            }
+
+            // C. Composante 3 : Prime d'ancienneté (au prorata si applicable)
+            BigDecimal tauxAnciennete = BigDecimal.ZERO;
+            int anneesAnciennete = (emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
+            if (emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank()) {
+                try {
+                    LocalDate dateEmb = LocalDate.parse(emp.getDateEmbauche().trim());
+                    LocalDate dateRefAnciennete = debutPeriode != null ? debutPeriode : LocalDate.now();
+                    anneesAnciennete += Math.max(0, java.time.Period.between(dateEmb, dateRefAnciennete).getYears());
+                } catch (Exception ignored) {}
+            }
+            if (anneesAnciennete == 3) {
+                tauxAnciennete = new BigDecimal("5.00");
+            } else if (anneesAnciennete > 3) {
+                tauxAnciennete = new BigDecimal(5 + (anneesAnciennete - 3)).setScale(2, RoundingMode.HALF_UP);
+            }
+            BigDecimal montantPrimeAncienneteProratisee = BigDecimal.ZERO;
+            if (tauxAnciennete.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal pAncPleine = money(calculatePercentage(salaireBasePlein, tauxAnciennete));
+                montantPrimeAncienneteProratisee = money(pAncPleine.multiply(ratioProrata));
+                if (montantPrimeAncienneteProratisee.compareTo(BigDecimal.ZERO) > 0) {
+                    BulletinLine ancLine = new BulletinLine();
+                    ancLine.setCode("PRIME_ANC");
+                    ancLine.setLibelle("PRIME D'ANCIENNETE");
+                    ancLine.setTypeLigne("GAIN");
+                    ancLine.setBaseCalcul(montantSalaireBaseProratise);
+                    ancLine.setTaux(tauxAnciennete);
+                    ancLine.setMontant(montantPrimeAncienneteProratisee);
+                    ancLine.setOrdre(ordreLigne++);
+                    linesGratification.add(ancLine);
+                }
+            }
+
+            // D. Composante 4 : Indemnités conventionnelles et contractuelles de l'agent (au prorata)
+            try {
+                employeeProcessService.sync(emp, null, false);
+            } catch (Exception e) {
+                log.warn("Warn: Erreur synchronisation indemnités employé #{}: {}", emp.getId(), e.getMessage());
+            }
+            List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
+            List<IndemniteEmploye> activeIndemnites = rawIndemnites.stream()
+                    .filter(row -> !Boolean.FALSE.equals(row.getActif()))
+                    .filter(row -> {
+                        String code = (row.getTypeIndemnite() != null && row.getTypeIndemnite().getCode() != null)
+                                ? row.getTypeIndemnite().getCode().toUpperCase(Locale.ROOT) : "";
+                        String lib = row.getLibelle() != null ? row.getLibelle().toUpperCase(Locale.ROOT) : "";
+                        if (Boolean.TRUE.equals(emp.getVehiculeFourni()) && (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT") || lib.contains("DEPLACEMENT"))) {
+                            return false;
+                        }
+                        if (Boolean.TRUE.equals(emp.getLogementFourni()) && (code.contains("LOG") || code.contains("MAISON") || lib.contains("LOGEMENT"))) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    .sorted((a, b) -> {
+                        String la = (a.getLibelle() != null ? a.getLibelle() : "").toUpperCase(Locale.ROOT);
+                        String lb = (b.getLibelle() != null ? b.getLibelle() : "").toUpperCase(Locale.ROOT);
+                        return Integer.compare(getIndemniteSortWeight(la), getIndemniteSortWeight(lb));
+                    })
+                    .toList();
+
+            BigDecimal totalIndemnitesProratisees = BigDecimal.ZERO;
+            for (IndemniteEmploye ind : activeIndemnites) {
+                BigDecimal mPlein = money(ind.getMontant());
+                if (mPlein.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal mProratise = money(mPlein.multiply(ratioProrata));
+                    if (mProratise.compareTo(BigDecimal.ZERO) > 0) {
+                        totalIndemnitesProratisees = totalIndemnitesProratisees.add(mProratise);
+                        String indCode = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getCode() : "INDEMNITE";
+                        String rawLib = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
+                        String indLib = rawLib.toUpperCase(Locale.ROOT).trim();
+
+                        BulletinLine indLine = new BulletinLine();
+                        indLine.setCode(indCode);
+                        indLine.setLibelle(indLib);
+                        indLine.setTypeLigne("GAIN");
+                        indLine.setBaseCalcul(mPlein);
+                        indLine.setTaux(tauxProrataPourcentage);
+                        indLine.setMontant(mProratise);
+                        indLine.setOrdre(ordreLigne++);
+                        linesGratification.add(indLine);
+                    }
+                }
+            }
+
+            // E. Composante 5 : Avoirs actifs et rappels
             List<BulletinLine> linesAvoirs = new ArrayList<>();
             BigDecimal totalAvoirs = BigDecimal.ZERO;
-            int ordreLigne = 2;
 
             List<AvoirEmploye> avoirsEmploye = avoirRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
             for (AvoirEmploye av : avoirsEmploye) {
@@ -805,9 +909,14 @@ public class BulletinService {
                     }
                 }
             }
+            linesGratification.addAll(linesAvoirs);
 
             // 6. RÈGLE V3 : BRUT = NET (Exonération totale des retenues sociales et fiscales pour la gratification)
-            BigDecimal totalBrut = money(montantGratification.add(totalAvoirs));
+            BigDecimal totalBrut = money(montantSalaireBaseProratise
+                    .add(montantSurSalaireProratise)
+                    .add(montantPrimeAncienneteProratisee)
+                    .add(totalIndemnitesProratisees)
+                    .add(totalAvoirs));
             BigDecimal totalNet = totalBrut; // Le brut devient le net à payer !
 
             Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
@@ -825,9 +934,9 @@ public class BulletinService {
             bulletin.setDateTo(finPeriode);
             bulletin.setScheduledWorkingDays(joursPrevusAnnuels);
             bulletin.setWorkedDays(joursTravaillesAnnuels);
-            bulletin.setSalaireBase(money(salaireBasePlein.multiply(ratioProrata)));
-            bulletin.setSurSalaire(money(surSalairePlein.multiply(ratioProrata)));
-            bulletin.setTotalIndemnites(BigDecimal.ZERO);
+            bulletin.setSalaireBase(montantSalaireBaseProratise);
+            bulletin.setSurSalaire(montantSurSalaireProratise);
+            bulletin.setTotalIndemnites(totalIndemnitesProratisees);
             bulletin.setTotalAvoirs(totalAvoirs);
             bulletin.setSalaireBrut(totalBrut);
             bulletin.setTotalExonerations(totalBrut);
@@ -845,9 +954,8 @@ public class BulletinService {
             bulletin.setStatut("GENERE");
             bulletin.setDateCalcul(LocalDateTime.now());
 
-            bulletin.addLine(gratLine);
-            for (BulletinLine avL : linesAvoirs) {
-                bulletin.addLine(avL);
+            for (BulletinLine l : linesGratification) {
+                bulletin.addLine(l);
             }
             bulletin = bulletinRepository.save(bulletin);
             return bulletin;
@@ -2836,7 +2944,14 @@ public class BulletinService {
 
                 BigDecimal taux = l.getTaux();
                 String libUpper = cleanLib.toUpperCase(Locale.ROOT);
-                if (lCode.contains("SAL_BASE") || lCode.contains("SUR_SALAIRE") || libUpper.contains("SALAIRE DE BASE") || libUpper.contains("SUR-SALAIRE") || libUpper.contains("SURSALAIRE")) {
+                boolean is13Ou14Session = is13Ou14emeMois(b.getSessionPaie())
+                        || is13Ou14emeMois(b.getTypeSession())
+                        || is13Ou14emeMois(b.getNatureSession())
+                        || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie().getNatureSession()))
+                        || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie().getCodeSession()));
+                if (is13Ou14Session) {
+                    taux = l.getTaux();
+                } else if (lCode.contains("SAL_BASE") || lCode.contains("SUR_SALAIRE") || libUpper.contains("SALAIRE DE BASE") || libUpper.contains("SUR-SALAIRE") || libUpper.contains("SURSALAIRE")) {
                     taux = b.getWorkedDays() != null ? b.getWorkedDays() : new BigDecimal("30.00");
                 } else if (lCode.contains("CNSS") || libUpper.contains("CNSS")) {
                     taux = new BigDecimal("5.50");
@@ -3112,13 +3227,19 @@ public class BulletinService {
                 }
             }
         }
-        boolean bIsExtra = isExtraordinaire(b.getTypeSession()) || (b.getSessionPaie() != null && (isExtraordinaire(b.getSessionPaie().getTypeSession()) || is13Ou14emeMois(b.getSessionPaie())));
+        boolean bIs13Ou14 = is13Ou14emeMois(b.getSessionPaie())
+                || is13Ou14emeMois(b.getTypeSession())
+                || is13Ou14emeMois(b.getNatureSession())
+                || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie().getNatureSession()))
+                || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie().getCodeSession()));
+        boolean bIsExtra = bIs13Ou14 || isExtraordinaire(b.getTypeSession()) || (b.getSessionPaie() != null && isExtraordinaire(b.getSessionPaie().getTypeSession()));
         if (!bIsExtra && crraeVal.compareTo(BigDecimal.ZERO) == 0 && b.getSalaireBase() != null) {
             BigDecimal baseCrrae = b.getSalaireBase().add(b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO);
             crraeVal = baseCrrae.multiply(new BigDecimal("0.06")).setScale(0, java.math.RoundingMode.HALF_UP);
         }
         if (bIsExtra) {
             crraeVal = BigDecimal.ZERO;
+            solVal = BigDecimal.ZERO;
         }
         dto.setCotisationCrrae(crraeVal);
         dto.setCotisationSolidarite(solVal);
@@ -3128,18 +3249,23 @@ public class BulletinService {
         BigDecimal cnssMois = (b.getCotisationCnss() != null && b.getCotisationCnss().compareTo(BigDecimal.ZERO) > 0)
                 ? b.getCotisationCnss()
                 : (cnssFromLines.compareTo(BigDecimal.ZERO) > 0 ? cnssFromLines : BigDecimal.ZERO);
-        if (!bIsExtra && !is13Ou14emeMois(b.getSessionPaie()) && cnssMois.compareTo(BigDecimal.ZERO) == 0 && brutMois.compareTo(BigDecimal.ZERO) > 0) {
+        if (!bIsExtra && !bIs13Ou14 && cnssMois.compareTo(BigDecimal.ZERO) == 0 && brutMois.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal baseCnss = brutMois.min(new BigDecimal("800000.00"));
             cnssMois = baseCnss.multiply(new BigDecimal("0.055")).min(new BigDecimal("44000.00")).setScale(0, RoundingMode.HALF_UP);
         }
-        if (bIsExtra || (b.getSessionPaie() != null && is13Ou14emeMois(b.getSessionPaie()))) {
+        if (bIs13Ou14) {
+            cnssMois = BigDecimal.ZERO;
+            baseImpMois = BigDecimal.ZERO;
+            crraeVal = BigDecimal.ZERO;
+            solVal = BigDecimal.ZERO;
+        } else if (bIsExtra) {
             if (cnssFromLines.compareTo(BigDecimal.ZERO) == 0 && (b.getCotisationCnss() == null || b.getCotisationCnss().compareTo(BigDecimal.ZERO) == 0)) {
                 cnssMois = BigDecimal.ZERO;
             }
         }
         dto.setCotisationCnss(cnssMois);
 
-        BigDecimal iutsMois = b.getImpotIuts() != null ? b.getImpotIuts() : BigDecimal.ZERO;
+        BigDecimal iutsMois = bIs13Ou14 ? BigDecimal.ZERO : (b.getImpotIuts() != null ? b.getImpotIuts() : BigDecimal.ZERO);
 
         BigDecimal cBrut = brutMois;
         BigDecimal cBaseImp = baseImpMois;

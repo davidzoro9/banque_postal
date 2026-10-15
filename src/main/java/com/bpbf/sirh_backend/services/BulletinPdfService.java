@@ -1128,10 +1128,10 @@ public class BulletinPdfService {
                 }
             }
         }
-        if (b != null && b.getSessionPaie() != null && BulletinService.is13Ou14emeMois(b.getSessionPaie())) {
+        if (b != null && b.getSessionPaie() != null && (BulletinService.is13Ou14emeMois(b.getSessionPaie()) || BulletinService.is13Ou14emeMois(b.getSessionPaie().getNatureSession()) || BulletinService.is13Ou14emeMois(b.getSessionPaie().getCodeSession()))) {
             return BigDecimal.ZERO;
         }
-        if (b != null && BulletinService.is13Ou14emeMois(b.getTypeSession())) {
+        if (b != null && (BulletinService.is13Ou14emeMois(b.getTypeSession()) || BulletinService.is13Ou14emeMois(b.getNatureSession()) || (b.getTypeSession() != null && b.getTypeSession().toUpperCase(Locale.ROOT).contains("EXTRA")))) {
             return BigDecimal.ZERO;
         }
         // Failsafe légal : 5.5% du brut plafonné à 44 000 FCFA
@@ -1162,13 +1162,22 @@ public class BulletinPdfService {
                 }
             }
         }
-        if (dto.getTypeSession() != null && BulletinService.is13Ou14emeMois(dto.getTypeSession())) {
+        if (dto.getTypeSession() != null && (BulletinService.is13Ou14emeMois(dto.getTypeSession()) || dto.getTypeSession().toUpperCase(Locale.ROOT).contains("EXTRA"))) {
+            return BigDecimal.ZERO;
+        }
+        if (dto.getNatureSession() != null && BulletinService.is13Ou14emeMois(dto.getNatureSession())) {
             return BigDecimal.ZERO;
         }
         if (dto.getSessionType() != null && BulletinService.is13Ou14emeMois(dto.getSessionType())) {
             return BigDecimal.ZERO;
         }
         if (dto.getSessionPeriode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPeriode())) {
+            return BigDecimal.ZERO;
+        }
+        if (dto.getSessionCode() != null && BulletinService.is13Ou14emeMois(dto.getSessionCode())) {
+            return BigDecimal.ZERO;
+        }
+        if (dto.getSessionPaieCode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPaieCode())) {
             return BigDecimal.ZERO;
         }
         // Failsafe légal : 5.5% du brut plafonné à 44 000 FCFA
