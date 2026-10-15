@@ -177,11 +177,11 @@ public class EmployeeProcessService {
         situation.setSalaireBrut(salBrut);
         situationRepository.save(situation);
 
-        // Brut fiscal = Salaire brut total - CNSS employé (5.5%)
-        // C'est la base de référence pour calculer les limites d'exonération (guide ResHum : "Base d'exo")
+        // Base de déductions = Total brut - Rabattement Sécu (8% du salaire de base)
+        // C'est la base de référence pour calculer les limites d'exonération selon la circulaire BPBF
         double brutTotal = base + (employee.getSurSalaire() != null ? employee.getSurSalaire() : 0.0) + totalIndemnites;
-        double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
-        double brutFiscal = brutTotal - cnssAgent; // Brut après CNSS = base des taux d'exonération
+        double rabattementSecu = base * 0.08;
+        double baseDeductions = Math.max(0.0, brutTotal - rabattementSecu);
 
         for (IndemniteEmploye indemnite : current) {
             if (Boolean.FALSE.equals(indemnite.getActif()) || valueOrZero(indemnite.getMontant()) == 0.0) {
@@ -206,10 +206,8 @@ public class EmployeeProcessService {
             exoneration.setLibelle(type.getName());
             exoneration.setTauxExonere(taux);
             exoneration.setPlafondExonere(plafond);
-            // Guide ResHum / CGI BF (Art. 106) : Exo = MIN(Montant servi, Taux% × Brut fiscal, Plafond)
-            // Le taux est appliqué sur le BRUT FISCAL (brut global - CNSS), pas sur le montant de l'indemnité
-            // Alignement automatique légal permanent sans mémoire figée obsolète
-            double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+            // Circulaire BPBF / CGI BF : Limite = MIN(taux% × Base déductions, Plafond)
+            double exoAutorisee = calculateExonerationAutorisee(baseDeductions, taux, plafond);
             double exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
             exoneration.setMontantAutorise(exoAutorisee); // limite théorique affichée dans le tableau
             exoneration.setMontant(exoReelle);            // exonération réellement accordée
@@ -458,16 +456,17 @@ public class EmployeeProcessService {
                         .orElseGet(ExonerationEmploye::new);
                 double taux = valueOrZero(type.getTauxExoneration());
                 double plafond = valueOrZero(type.getPlafondExoneration());
-                double brutTotal = valueOrZero(employee.getGrilleSalariale() != null
-                        ? employee.getGrilleSalariale().getSalaireBase() : null)
+                double sb = valueOrZero(employee.getGrilleSalariale() != null
+                        ? employee.getGrilleSalariale().getSalaireBase() : null);
+                double brutTotal = sb
                         + (employee.getSurSalaire() != null ? employee.getSurSalaire() : 0.0)
                         + indemniteRepository.findByEmployeeId(employee.getId()).stream()
                                 .filter(i -> !Boolean.FALSE.equals(i.getActif()))
                                 .mapToDouble(i -> valueOrZero(i.getMontant())).sum();
-                double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
-                double brutFiscal = brutTotal - cnssAgent;
+                double rabattementSecu = sb * 0.08;
+                double baseDeductions = Math.max(0.0, brutTotal - rabattementSecu);
 
-                double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+                double exoAutorisee = calculateExonerationAutorisee(baseDeductions, taux, plafond);
                 double exoReelle = Math.min(valueOrZero(saved.getMontant()), exoAutorisee);
                 exoneration.setMontantAutorise(exoAutorisee);
                 exoneration.setMontant(exoReelle);
@@ -888,14 +887,15 @@ public class EmployeeProcessService {
                     exoneration.setIndemniteEmploye(indemnite);
                     exoneration.setLibelle(type.getName());
                     exoneration.setTauxExonere(taux);
-                    double brutTotal = valueOrZero(emp.getGrilleSalariale() != null
-                            ? emp.getGrilleSalariale().getSalaireBase() : null)
+                    double sb = valueOrZero(emp.getGrilleSalariale() != null
+                            ? emp.getGrilleSalariale().getSalaireBase() : null);
+                    double brutTotal = sb
                             + (emp.getSurSalaire() != null ? emp.getSurSalaire() : 0.0)
                             + indemnites.stream().filter(i -> !Boolean.FALSE.equals(i.getActif())).mapToDouble(i -> valueOrZero(i.getMontant())).sum();
-                    double cnssAgent = Math.min(brutTotal, 800000.0) * 5.5 / 100.0;
-                    double brutFiscal = brutTotal - cnssAgent;
+                    double rabattementSecu = sb * 0.08;
+                    double baseDeductions = Math.max(0.0, brutTotal - rabattementSecu);
 
-                    double exoAutorisee = calculateExonerationAutorisee(brutFiscal, taux, plafond);
+                    double exoAutorisee = calculateExonerationAutorisee(baseDeductions, taux, plafond);
                     double exoReelle = Math.min(valueOrZero(indemnite.getMontant()), exoAutorisee);
                     exoneration.setMontantAutorise(exoAutorisee);
                     exoneration.setMontant(exoReelle);

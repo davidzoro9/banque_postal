@@ -98,6 +98,12 @@ public class BulletinController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/devalider/session/{sessionPaieId}")
+    public ResponseEntity<Void> devaliderSession(@PathVariable Long sessionPaieId) {
+        bulletinService.devaliderSession(sessionPaieId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/session/{sessionPaieId}")
     public ResponseEntity<List<BulletinDto>> getBySession(@PathVariable Long sessionPaieId) {
         return ResponseEntity.ok(bulletinService.getBulletinsBySession(sessionPaieId));

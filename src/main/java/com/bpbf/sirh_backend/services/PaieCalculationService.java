@@ -92,7 +92,7 @@ public class PaieCalculationService {
         }
 
         Double salaireBrut = salaireBase + totalIndemnites;
-        Double cotisationCNSS = Math.round(Math.min(salaireBrut, 800000.0) * 0.055 * 100.0) / 100.0;
+        Double cotisationCNSS = Math.min(Math.round(Math.min(salaireBrut, 800000.0) * 0.055 * 100.0) / 100.0, 44000.0);
         Double brutFiscal = Math.max(0.0, salaireBrut - cotisationCNSS);
 
         for (IndemniteEmploye ind : empIndemnites) {

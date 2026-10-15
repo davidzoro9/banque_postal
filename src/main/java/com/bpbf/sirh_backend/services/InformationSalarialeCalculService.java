@@ -102,7 +102,13 @@ public class InformationSalarialeCalculService {
         BigDecimal cotisCnssAgent = money(calculatePercentage(baseCnss, new BigDecimal("5.50")));
         BigDecimal brutApresCnss = money(remunerationBrute.subtract(cotisCnssAgent).max(BigDecimal.ZERO));
 
-        // Exonérations fiscales : calcul dynamique légal permanent (CGI BF Art. 106) sans mémoire figée
+        // Cascade BPBF (Calculatrice de paie officielle)
+        // 1. Rabattement Sécurité Sociale = 8% du Salaire de Base
+        BigDecimal rabattementSecu = money(salaireBase.multiply(new BigDecimal("0.08")));
+        // 2. Base de déductions pour exonérations = Total Brut - Rabattement Sécu
+        BigDecimal baseDeductions = money(remunerationBrute.subtract(rabattementSecu).max(BigDecimal.ZERO));
+
+        // Exonérations fiscales : calcul dynamique sur Base de déductions (CGI BF Art. 106 / Circulaire BPBF)
         BigDecimal totalExonerations = BigDecimal.ZERO;
         for (IndemniteEmploye ind : indemnites) {
             BigDecimal mIndem = money(ind.getMontant());
@@ -117,9 +123,9 @@ public class InformationSalarialeCalculService {
                     ? BigDecimal.valueOf(type.getPlafondExoneration()) : BigDecimal.ZERO;
 
             if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
-                // Taux appliqué sur le Brut Fiscal (brut après CNSS), plafonné par le plafond et le montant de l'indemnité
+                // Taux appliqué sur la Base de déductions (Total Brut - Rabattement Sécu 8%), plafonné par le plafond et le montant de l'indemnité
                 BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        ? calculatePercentage(baseDeductions, tauxExo)
                         : mIndem;
                 if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                     limiteTheorique = limiteTheorique.min(plafondExo);
@@ -144,7 +150,7 @@ public class InformationSalarialeCalculService {
             }
         }
 
-        // Abattement forfaitaire légal : 20% du brut après CNSS plafonné à 75 000 FCFA
+        // Abattement forfaitaire légal 20% (Rabattement salaire de base) appliqué sur Salaire de Base + Sur-salaire + Ancienneté
         Categorie cat = situation != null ? situation.getCategorie() : null;
         if (cat == null && situation != null && situation.getGrilleSalariale() != null) {
             cat = situation.getGrilleSalariale().getCategorieObj();
@@ -159,11 +165,13 @@ public class InformationSalarialeCalculService {
                 tauxAbattement = tauxAbattement.multiply(CENT);
             }
         }
-        BigDecimal abattementCalcule = calculatePercentage(brutApresCnss, tauxAbattement);
+        BigDecimal baseAbattement = salaireBase.add(surSalaire).add(primeAnciennete);
+        BigDecimal abattementCalcule = calculatePercentage(baseAbattement, tauxAbattement);
         BigDecimal abattementForfaitaire = money(abattementCalcule.min(new BigDecimal("75000.00")));
 
-        // Base Imposable IUTS = Brut (après CNSS) - Total Exonérations - Abattement Forfaitaire
-        BigDecimal baseImposable = money(brutApresCnss.subtract(totalExonerations).subtract(abattementForfaitaire).max(BigDecimal.ZERO));
+        // Base Imposable IUTS = Total Brut - (Rabattement Sécu + Exonérations Indemnités + Abattement Forfaitaire)
+        BigDecimal totalRabattements = rabattementSecu.add(totalExonerations).add(abattementForfaitaire);
+        BigDecimal baseImposable = money(remunerationBrute.subtract(totalRabattements).max(BigDecimal.ZERO));
 
         information.setSalaireBase(salaireBase);
         information.setTotalIndemnites(totalIndemnites);
@@ -389,7 +397,13 @@ public class InformationSalarialeCalculService {
         BigDecimal cotisCnssAgent = money(calculatePercentage(baseCnss, new BigDecimal("5.50")));
         BigDecimal brutApresCnss = money(remunerationBrute.subtract(cotisCnssAgent).max(BigDecimal.ZERO));
 
-        // Exonérations fiscales : calcul dynamique légal permanent (CGI BF Art. 106) sans mémoire figée
+        // Cascade BPBF (Calculatrice de paie officielle)
+        // 1. Rabattement Sécurité Sociale = 8% du Salaire de Base
+        BigDecimal rabattementSecu = money(salaireBase.multiply(new BigDecimal("0.08")));
+        // 2. Base de déductions pour exonérations = Total Brut - Rabattement Sécu
+        BigDecimal baseDeductions = money(remunerationBrute.subtract(rabattementSecu).max(BigDecimal.ZERO));
+
+        // Exonérations fiscales : calcul dynamique sur Base de déductions (CGI BF Art. 106 / Circulaire BPBF)
         BigDecimal totalExonerations = BigDecimal.ZERO;
         for (IndemniteEmploye ind : simulateIndemnites) {
             BigDecimal mIndem = money(ind.getMontant());
@@ -405,7 +419,7 @@ public class InformationSalarialeCalculService {
 
             if (tauxExo.compareTo(BigDecimal.ZERO) > 0 || plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal limiteTheorique = (tauxExo.compareTo(BigDecimal.ZERO) > 0)
-                        ? calculatePercentage(brutApresCnss, tauxExo)
+                        ? calculatePercentage(baseDeductions, tauxExo)
                         : mIndem;
                 if (plafondExo.compareTo(BigDecimal.ZERO) > 0) {
                     limiteTheorique = limiteTheorique.min(plafondExo);
@@ -415,7 +429,7 @@ public class InformationSalarialeCalculService {
             }
         }
 
-        // Abattement forfaitaire légal : 20% du brut après CNSS plafonné à 75 000 FCFA
+        // Abattement forfaitaire légal 20% (Rabattement salaire de base) appliqué sur Salaire de Base + Sur-salaire + Ancienneté
         Categorie cat = situation != null ? situation.getCategorie() : null;
         if (cat == null && situation != null && situation.getGrilleSalariale() != null) {
             cat = situation.getGrilleSalariale().getCategorieObj();
@@ -430,11 +444,13 @@ public class InformationSalarialeCalculService {
                 tauxAbattement = tauxAbattement.multiply(CENT);
             }
         }
-        BigDecimal abattementCalcule = calculatePercentage(brutApresCnss, tauxAbattement);
+        BigDecimal baseAbattement = salaireBase.add(surSalaire).add(primeAnciennete);
+        BigDecimal abattementCalcule = calculatePercentage(baseAbattement, tauxAbattement);
         BigDecimal abattementForfaitaire = money(abattementCalcule.min(new BigDecimal("75000.00")));
 
-        // Base Imposable IUTS = Brut (après CNSS) - Total Exonérations - Abattement Forfaitaire
-        BigDecimal baseImposable = money(brutApresCnss.subtract(totalExonerations).subtract(abattementForfaitaire).max(BigDecimal.ZERO));
+        // Base Imposable IUTS = Total Brut - (Rabattement Sécu + Exonérations Indemnités + Abattement Forfaitaire)
+        BigDecimal totalRabattements = rabattementSecu.add(totalExonerations).add(abattementForfaitaire);
+        BigDecimal baseImposable = money(remunerationBrute.subtract(totalRabattements).max(BigDecimal.ZERO));
 
         int nombreCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(employee.getId()));
         BigDecimal iutsSansCharge = calculateIuts(baseImposable);

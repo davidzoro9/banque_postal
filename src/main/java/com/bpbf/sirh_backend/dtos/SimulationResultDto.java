@@ -61,9 +61,19 @@ public class SimulationResultDto {
     private Double netCibleSouhaite;
     private Double ecartNetCible;
 
+    // Cascade BPBF (Calculatrice de paie)
+    private Double rabattementSecu;
+    private Double baseDeductions;
+    private Double rabattementSalaireBase;
+    private Double totalRabattements;
+    private Double salairesImposable;
+    private Double avantagesImposables;
+
     // Coût Global Employeur
     private Double cotisationCnssPatronale;
+    private Double cotisationTpaPatronale;
     private Double totalChargesPatronales;
+    private Double masseSalariale;
     private Double coutTotalEmployeur;
 
     // Poste et Fonction appliqués

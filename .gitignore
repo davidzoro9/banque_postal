@@ -11,6 +11,7 @@ target/
 
 ### Database / runtime data ###
 data/
+logs/
 
 ### STS ###
 .apt_generated

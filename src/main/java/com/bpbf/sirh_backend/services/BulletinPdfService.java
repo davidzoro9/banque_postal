@@ -40,6 +40,8 @@ public class BulletinPdfService {
     private final EmployeeRepository employeeRepository;
     private final FamilleEmployeRepository familleRepository;
     private final IndemniteEmployeRepository indemniteRepository;
+    private final com.bpbf.sirh_backend.repositories.AvoirEmployeRepository avoirRepository;
+    private final com.bpbf.sirh_backend.repositories.AvoirRepository avoirVariableRepository;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color HEADER_BG = new Color(241, 245, 249);
@@ -600,7 +602,11 @@ public class BulletinPdfService {
         for (BulletinLine l : existingLines) {
             String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
             String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
-            String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
+            boolean isGratOrProrata = code.contains("13") || code.contains("14") || code.contains("GRAT") || code.contains("PRORATA")
+                    || rawLib.toUpperCase(Locale.ROOT).contains("13") || rawLib.toUpperCase(Locale.ROOT).contains("14")
+                    || rawLib.toUpperCase(Locale.ROOT).contains("GRATIFICATION") || rawLib.toUpperCase(Locale.ROOT).contains("PRORATA")
+                    || rawLib.toUpperCase(Locale.ROOT).contains("AVOIR") || rawLib.toUpperCase(Locale.ROOT).contains("RAPPEL");
+            String lib = isGratOrProrata ? rawLib.replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT) : rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
             if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 
@@ -609,7 +615,7 @@ public class BulletinPdfService {
                 continue;
             }
 
-            boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne());
+            boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne());
             boolean isRetenue = "RETENUE".equalsIgnoreCase(l.getTypeLigne()) ||
                     "RETENUE_SOCIALE".equalsIgnoreCase(l.getTypeLigne()) ||
                     "IMPOT".equalsIgnoreCase(l.getTypeLigne()) ||
@@ -647,6 +653,8 @@ public class BulletinPdfService {
                 tauxStr = "1 %";
             } else if (code.contains("ANC")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+            } else if (code.contains("13") || code.contains("14") || code.contains("GRAT") || lib.contains("13") || lib.contains("14") || lib.contains("GRATIFICATION") || lib.contains("PRORATA")) {
+                tauxStr = (l.getTaux() != null ? l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() : "100") + " %";
             } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {
                 tauxStr = "";
             } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
@@ -690,6 +698,31 @@ public class BulletinPdfService {
                         dynTauxStr = BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()).stripTrailingZeros().toPlainString() + " %";
                     }
                     displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), dynTauxStr, mnt, null, 10));
+                }
+            }
+        }
+
+        // 4.bis Garantir la présence des Avoirs si totalAvoirs > 0 et aucune ligne d'avoir trouvée
+        boolean hasAvoirLine = displayLines.stream().anyMatch(dl -> dl.code.startsWith("AVOIR") || dl.code.startsWith("RAPPEL") || normalizeText(dl.libelle).contains("AVOIR") || normalizeText(dl.libelle).contains("RAPPEL"));
+        if (!hasAvoirLine && b.getTotalAvoirs() != null && b.getTotalAvoirs().compareTo(BigDecimal.ZERO) > 0 && b.getEmployee() != null) {
+            List<com.bpbf.sirh_backend.entities.AvoirEmploye> activeAvoirs = avoirRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
+            for (com.bpbf.sirh_backend.entities.AvoirEmploye av : activeAvoirs) {
+                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                    displayLines.add(new DisplayLine("AVOIR_" + av.getId(), (av.getLibelle() != null ? av.getLibelle() : "AVOIR").toUpperCase(Locale.ROOT), formatMoney(av.getMontantInitial()), "", av.getMontantMensuel(), null, 9));
+                }
+            }
+            List<com.bpbf.sirh_backend.entities.Avoir> activeVars = avoirVariableRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
+            for (com.bpbf.sirh_backend.entities.Avoir av : activeVars) {
+                BigDecimal m = av.getAmount();
+                if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                    m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
+                }
+                if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(av.getMontantRestant());
+                }
+                if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                    String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
+                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
         }
@@ -809,7 +842,11 @@ public class BulletinPdfService {
             for (com.bpbf.sirh_backend.dtos.BulletinLineDto l : dto.getLines()) {
                 String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
                 String rawLib = l.getLibelle() != null ? l.getLibelle() : (l.getName() != null ? l.getName() : code);
-                String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
+                boolean isGratOrProrata = code.contains("13") || code.contains("14") || code.contains("GRAT") || code.contains("PRORATA")
+                        || rawLib.toUpperCase(Locale.ROOT).contains("13") || rawLib.toUpperCase(Locale.ROOT).contains("14")
+                        || rawLib.toUpperCase(Locale.ROOT).contains("GRATIFICATION") || rawLib.toUpperCase(Locale.ROOT).contains("PRORATA")
+                        || rawLib.toUpperCase(Locale.ROOT).contains("AVOIR") || rawLib.toUpperCase(Locale.ROOT).contains("RAPPEL");
+                String lib = isGratOrProrata ? rawLib.replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT) : rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
                 if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 
@@ -860,6 +897,8 @@ public class BulletinPdfService {
                     tauxStr = "1 %";
                 } else if (code.contains("ANC")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+                } else if (code.contains("13") || code.contains("14") || code.contains("GRAT") || lib.contains("13") || lib.contains("14") || lib.contains("GRATIFICATION") || lib.contains("PRORATA")) {
+                    tauxStr = (l.getTaux() != null ? l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() : "100") + " %";
                 } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {
                     tauxStr = "";
                 } else if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
@@ -904,6 +943,31 @@ public class BulletinPdfService {
                         dynTauxStr = BigDecimal.valueOf(ind.getTypeIndemnite().getTauxExoneration()).stripTrailingZeros().toPlainString() + " %";
                     }
                     displayLines.add(new DisplayLine(iCode, iLib, formatMoney(mnt), dynTauxStr, mnt, null, 10));
+                }
+            }
+        }
+
+        // Garantir la présence des Avoirs si totalAvoirs > 0 et aucune ligne d'avoir trouvée
+        boolean hasAvoirLine = displayLines.stream().anyMatch(dl -> dl.code.startsWith("AVOIR") || dl.code.startsWith("RAPPEL") || normalizeText(dl.libelle).contains("AVOIR") || normalizeText(dl.libelle).contains("RAPPEL"));
+        if (!hasAvoirLine && dto.getTotalAvoirs() != null && dto.getTotalAvoirs().compareTo(BigDecimal.ZERO) > 0 && emp != null) {
+            List<com.bpbf.sirh_backend.entities.AvoirEmploye> activeAvoirs = avoirRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
+            for (com.bpbf.sirh_backend.entities.AvoirEmploye av : activeAvoirs) {
+                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                    displayLines.add(new DisplayLine("AVOIR_" + av.getId(), (av.getLibelle() != null ? av.getLibelle() : "AVOIR").toUpperCase(Locale.ROOT), formatMoney(av.getMontantInitial()), "", av.getMontantMensuel(), null, 9));
+                }
+            }
+            List<com.bpbf.sirh_backend.entities.Avoir> activeVars = avoirVariableRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
+            for (com.bpbf.sirh_backend.entities.Avoir av : activeVars) {
+                BigDecimal m = av.getAmount();
+                if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                    m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
+                }
+                if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(av.getMontantRestant());
+                }
+                if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                    String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
+                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
         }
@@ -1070,11 +1134,11 @@ public class BulletinPdfService {
         if (b != null && BulletinService.is13Ou14emeMois(b.getTypeSession())) {
             return BigDecimal.ZERO;
         }
-        // Failsafe légal : 5.5% du brut
+        // Failsafe légal : 5.5% du brut plafonné à 44 000 FCFA
         BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
         if (brut.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal baseCnss = brut.min(new BigDecimal("800000.00"));
-            return baseCnss.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
+            return baseCnss.multiply(new BigDecimal("0.055")).min(new BigDecimal("44000.00")).setScale(0, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
@@ -1082,7 +1146,7 @@ public class BulletinPdfService {
     private BigDecimal extractCnssFromDto(BulletinDto dto) {
         if (dto == null) return BigDecimal.ZERO;
         if (dto.getCotisationCnss() != null && dto.getCotisationCnss().compareTo(BigDecimal.ZERO) > 0) {
-            return dto.getCotisationCnss();
+            return dto.getCotisationCnss().min(new BigDecimal("44000.00"));
         }
         if (dto.getLines() != null) {
             for (BulletinLineDto line : dto.getLines()) {
@@ -1090,10 +1154,10 @@ public class BulletinPdfService {
                 String lib = (line.getLibelle() != null ? line.getLibelle() : (line.getName() != null ? line.getName() : "")).toUpperCase(Locale.ROOT);
                 if ((code.contains("CNSS") || lib.contains("CNSS")) && !code.contains("PATRON") && !lib.contains("PATRON")) {
                     if (line.getMontant() != null && line.getMontant().compareTo(BigDecimal.ZERO) > 0) {
-                        return line.getMontant();
+                        return line.getMontant().min(new BigDecimal("44000.00"));
                     }
                     if (line.getAmount() != null && Math.abs(line.getAmount()) > 0) {
-                        return BigDecimal.valueOf(Math.abs(line.getAmount()));
+                        return BigDecimal.valueOf(Math.abs(line.getAmount())).min(new BigDecimal("44000.00"));
                     }
                 }
             }
@@ -1107,11 +1171,11 @@ public class BulletinPdfService {
         if (dto.getSessionPeriode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPeriode())) {
             return BigDecimal.ZERO;
         }
-        // Failsafe légal : 5.5% du brut
+        // Failsafe légal : 5.5% du brut plafonné à 44 000 FCFA
         BigDecimal brut = dto.getSalaireBrut() != null ? dto.getSalaireBrut() : BigDecimal.ZERO;
         if (brut.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal baseCnss = brut.min(new BigDecimal("800000.00"));
-            return baseCnss.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
+            return baseCnss.multiply(new BigDecimal("0.055")).min(new BigDecimal("44000.00")).setScale(0, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }

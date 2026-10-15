@@ -69,6 +69,18 @@ public class MoteurCalculPaie {
         private long cotisationCnss;
         private double brutApresCnss;
 
+        // Cascade BPBF (Calculatrice de paie)
+        private double rabattementSecu;
+        private double baseDeductions;
+        private long exoLogement;
+        private long exoTransport;
+        private long exoFonction;
+        private long totalExoIndemnites;
+        private long rabattementSalaireBase;
+        private double totalRabattements;
+        private double salairesImposable;
+        private double avantagesImposables;
+
         // IUTS
         private double totalExonerations;
         private double abattementForfaitaire;
@@ -96,7 +108,9 @@ public class MoteurCalculPaie {
 
         // Employeur
         private long cotisationCnssPatronale;
+        private long cotisationTpaPatronale;
         private long totalChargesPatronales;
+        private long masseSalariale;
         private long coutTotalEmployeur;
 
         // Lignes détaillées
@@ -135,52 +149,75 @@ public class MoteurCalculPaie {
         BigDecimal totalIndem = log.add(trp).add(fnc).add(cai).add(suj).add(csh).add(aut);
         BigDecimal remunerationBrute = sb.add(ss).add(pa).add(totalIndem);
 
-        // 1. Cotisation CNSS (5.5% plafonnée à 800 000 FCFA)
+        // 1. Cotisation CNSS Salariale (5.5% plafonnée à 800 000 FCFA)
         BigDecimal baseCnss = remunerationBrute.min(PLAFOND_CNSS);
         BigDecimal cotisCnss = baseCnss.multiply(TAUX_CNSS_SALARIE).divide(CENT, 2, RoundingMode.HALF_UP);
         BigDecimal cotisCnssArrondi = cotisCnss.setScale(0, RoundingMode.CEILING);
         BigDecimal brutApresCnss = remunerationBrute.subtract(cotisCnssArrondi).max(BigDecimal.ZERO);
 
-        // 2. Exonérations fiscales CGI BF Art. 106 (Logement max 20% brut après CNSS plafonné à 75k, Transport max 5% plafonné à 30k)
-        BigDecimal limiteLogement = brutApresCnss.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00"));
-        BigDecimal exoLogement = log.min(limiteLogement);
+        // 2. Cotisation CNSS Patronale (16% plafonnée)
+        BigDecimal cotisPatronale = baseCnss.multiply(TAUX_CNSS_PATRONAL).divide(CENT, 0, RoundingMode.HALF_UP);
 
-        BigDecimal limiteTransport = brutApresCnss.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
-        BigDecimal exoTransport = trp.min(limiteTransport);
+        // 3. Rabattement Sécu (8% du Salaire de Base selon Circulaire BPBF / Calculatrice de paie)
+        BigDecimal rabattementSecu = sb.multiply(new BigDecimal("0.08")).setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal totalExonerations = exoLogement.add(exoTransport).setScale(0, RoundingMode.CEILING);
+        // 4. Base de déductions (Total Brut - Rabattement Sécu)
+        BigDecimal baseDeductions = remunerationBrute.subtract(rabattementSecu).max(BigDecimal.ZERO);
 
-        // 3. Abattement forfaitaire légal 20% plafonné à 75 000 FCFA
-        BigDecimal abattementForfaitaire = brutApresCnss.multiply(new BigDecimal("0.20")).min(PLAFOND_ABATTEMENT).setScale(0, RoundingMode.CEILING);
+        // 5. Exonérations des indemnités (calculées sur Base de déductions)
+        BigDecimal limiteTransport = baseDeductions.multiply(new BigDecimal("0.05")).min(new BigDecimal("30000.00"));
+        BigDecimal exoTransport = trp.min(limiteTransport).setScale(0, RoundingMode.HALF_UP);
 
-        // 4. Base imposable IUTS
-        BigDecimal baseImposableReelle = brutApresCnss.subtract(totalExonerations).subtract(abattementForfaitaire).max(BigDecimal.ZERO);
-        BigDecimal baseIutsTronquee = baseImposableReelle.divideToIntegralValue(CENT).multiply(CENT);
+        BigDecimal limiteFonction = baseDeductions.multiply(new BigDecimal("0.05")).min(new BigDecimal("50000.00"));
+        BigDecimal exoFonction = fnc.min(limiteFonction).setScale(0, RoundingMode.HALF_UP);
 
-        // 5. Calcul IUTS progressif
+        BigDecimal limiteLogement = new BigDecimal("75000.00");
+        BigDecimal exoLogement = log.min(limiteLogement).setScale(0, RoundingMode.HALF_UP);
+
+        BigDecimal totalExoIndemnites = exoTransport.add(exoFonction).add(exoLogement);
+
+        // 6. Rabattement Salaire de Base (Abattement forfaitaire 20% sur salaire base + sursalaire + prime ancienneté, plafonné à 75 000 FCFA)
+        BigDecimal baseSalaireFixe = sb.add(ss).add(pa);
+        BigDecimal rabattementSalaireBase = baseSalaireFixe.multiply(new BigDecimal("0.20")).min(PLAFOND_ABATTEMENT).setScale(0, RoundingMode.CEILING);
+
+        // 7. Total des rabattements déductibles
+        BigDecimal totalRabattements = rabattementSecu.add(totalExoIndemnites).add(rabattementSalaireBase);
+
+        // 8. Base imposable IUTS et arrondi
+        BigDecimal baseImposableReelle = remunerationBrute.subtract(totalRabattements).max(BigDecimal.ZERO);
+        BigDecimal netImposable = baseImposableReelle.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal baseIutsTronquee = netImposable.divideToIntegralValue(CENT).multiply(CENT);
+
+        // 9. Ventilation Salaires imposable et Avantages imposables
+        BigDecimal salairesImposable = baseSalaireFixe.subtract(rabattementSalaireBase).subtract(rabattementSecu).max(BigDecimal.ZERO);
+        BigDecimal avantagesImposables = totalIndem.subtract(totalExoIndemnites).max(BigDecimal.ZERO);
+
+        // 10. Calcul IUTS progressif
         BigDecimal iutsBrut = calculerIutsProgressif(baseIutsTronquee);
 
-        // 6. Réduction pour charges de famille
+        // 11. Réduction pour charges de famille
         BigDecimal tauxReduction = reductionRate(charges);
-        BigDecimal reductionCharges = iutsBrut.multiply(tauxReduction).divide(CENT, 0, RoundingMode.HALF_UP);
-        BigDecimal iutsNetArrondi = iutsBrut.subtract(reductionCharges).max(BigDecimal.ZERO).setScale(0, RoundingMode.CEILING);
+        BigDecimal reductionChargesExacte = iutsBrut.multiply(tauxReduction).divide(CENT, 8, RoundingMode.HALF_UP);
+        BigDecimal iutsNetArrondi = iutsBrut.subtract(reductionChargesExacte).max(BigDecimal.ZERO).setScale(0, RoundingMode.CEILING);
+        BigDecimal reductionCharges = iutsBrut.subtract(iutsNetArrondi);
 
-        // 7. Retraite Complémentaire CRRAE (6% sur Salaire Base + Sursalaire + Ancienneté)
+        // 12. Retraite Complémentaire CRRAE (6% sur Salaire Base + Sursalaire + Ancienneté)
         BigDecimal baseCrrae = sb.add(ss).add(pa);
         BigDecimal cotisCrraeArrondi = baseCrrae.multiply(TAUX_CRRAE).divide(CENT, 2, RoundingMode.HALF_UP).setScale(0, RoundingMode.CEILING);
 
-        // 8. Fonds de Soutien Patriotique FSP (1% sur Net Cédulaire)
+        // 13. Fonds de Soutien Patriotique FSP (1% sur Net Cédulaire = Brut - CNSS - IUTS)
         BigDecimal netCedulaire = remunerationBrute.setScale(0, RoundingMode.CEILING)
                 .subtract(cotisCnssArrondi).subtract(iutsNetArrondi).max(BigDecimal.ZERO);
         BigDecimal cotisFspArrondi = netCedulaire.multiply(TAUX_FSP).divide(CENT, 2, RoundingMode.HALF_UP).setScale(0, RoundingMode.CEILING);
 
-        // 9. Synthèse des retenues salariales totales
+        // 14. Synthèse des retenues salariales totales et Net à payer
         BigDecimal totalRetenues = cotisCnssArrondi.add(cotisCrraeArrondi).add(cotisFspArrondi).add(iutsNetArrondi);
         BigDecimal salaireNet = remunerationBrute.setScale(0, RoundingMode.CEILING).subtract(totalRetenues);
 
-        // 10. Charges patronales CNSS (16% plafonnée)
-        BigDecimal cotisPatronale = baseCnss.multiply(TAUX_CNSS_PATRONAL).divide(CENT, 0, RoundingMode.HALF_UP);
-        BigDecimal coutTotal = remunerationBrute.setScale(0, RoundingMode.CEILING).add(cotisPatronale);
+        // 15. TPA (3%) et Masse Salariale Employeur
+        BigDecimal tpaPatronale = remunerationBrute.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal totalChargesPatronales = cotisPatronale.add(tpaPatronale);
+        BigDecimal masseSalariale = remunerationBrute.setScale(0, RoundingMode.CEILING).add(totalChargesPatronales);
 
         // Lignes détaillées
         List<LigneDetail> lignes = new ArrayList<>();
@@ -219,8 +256,9 @@ public class MoteurCalculPaie {
         lignes.add(new LigneDetail("FSP_SAL", "Fonds de Soutien Patriotique - FSP (1% Net Cédulaire)", "RETENUE_SALARIALE", netCedulaire.doubleValue(), 1.0, 0.0, cotisFspArrondi.doubleValue()));
         lignes.add(new LigneDetail("IUTS_NET", "Impôt IUTS (après " + charges + " chg / -" + tauxReduction + "%)", "RETENUE_SALARIALE", baseIutsTronquee.doubleValue(), null, 0.0, iutsNetArrondi.doubleValue()));
 
-        // Charge patronale
+        // Charges patronales
         lignes.add(new LigneDetail("CNSS_PAT", "Cotisation CNSS Patronale (16%)", "RETENUE_PATRONALE", baseCnss.doubleValue(), 16.0, 0.0, cotisPatronale.doubleValue()));
+        lignes.add(new LigneDetail("TPA_PAT", "Taxe Patronale d'Apprentissage - TPA (3%)", "RETENUE_PATRONALE", remunerationBrute.doubleValue(), 3.0, 0.0, tpaPatronale.doubleValue()));
 
         return ResultatPaie.builder()
                 .salaireBase(sb.longValue())
@@ -239,8 +277,18 @@ public class MoteurCalculPaie {
                 .tauxCnssSalarial(5.5)
                 .cotisationCnss(cotisCnssArrondi.longValue())
                 .brutApresCnss(brutApresCnss.doubleValue())
-                .totalExonerations(totalExonerations.doubleValue())
-                .abattementForfaitaire(abattementForfaitaire.doubleValue())
+                .rabattementSecu(rabattementSecu.doubleValue())
+                .baseDeductions(baseDeductions.doubleValue())
+                .exoLogement(exoLogement.longValue())
+                .exoTransport(exoTransport.longValue())
+                .exoFonction(exoFonction.longValue())
+                .totalExoIndemnites(totalExoIndemnites.longValue())
+                .rabattementSalaireBase(rabattementSalaireBase.longValue())
+                .totalRabattements(totalRabattements.doubleValue())
+                .salairesImposable(salairesImposable.doubleValue())
+                .avantagesImposables(avantagesImposables.doubleValue())
+                .totalExonerations(totalExoIndemnites.doubleValue())
+                .abattementForfaitaire(rabattementSalaireBase.doubleValue())
                 .baseImposableIuts(baseImposableReelle.doubleValue())
                 .baseIutsTronquee(baseIutsTronquee.longValue())
                 .iutsBrut(iutsBrut.setScale(0, RoundingMode.CEILING).longValue())
@@ -257,8 +305,10 @@ public class MoteurCalculPaie {
                 .totalRetenuesSalariales(totalRetenues.longValue())
                 .salaireNet(salaireNet.longValue())
                 .cotisationCnssPatronale(cotisPatronale.longValue())
-                .totalChargesPatronales(cotisPatronale.longValue())
-                .coutTotalEmployeur(coutTotal.longValue())
+                .cotisationTpaPatronale(tpaPatronale.longValue())
+                .totalChargesPatronales(totalChargesPatronales.longValue())
+                .masseSalariale(masseSalariale.longValue())
+                .coutTotalEmployeur(masseSalariale.longValue())
                 .lignes(lignes)
                 .build();
     }

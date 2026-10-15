@@ -235,4 +235,24 @@ public class SessionPaieController {
             return ResponseEntity.ok(sessionPaieRepository.save(session));
         }).orElse(ResponseEntity.notFound().build());
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSession(@PathVariable Long id) {
+        bulletinService.deleteSession(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/reinitialiser")
+    public ResponseEntity<SessionPaie> reinitialiserSession(@PathVariable Long id) {
+        SessionPaie session = bulletinService.devaliderSession(id);
+        enrichSessionMetrics(session);
+        return ResponseEntity.ok(session);
+    }
+
+    @PutMapping("/{id}/devalider")
+    public ResponseEntity<SessionPaie> devaliderSession(@PathVariable Long id) {
+        SessionPaie session = bulletinService.devaliderSession(id);
+        enrichSessionMetrics(session);
+        return ResponseEntity.ok(session);
+    }
 }

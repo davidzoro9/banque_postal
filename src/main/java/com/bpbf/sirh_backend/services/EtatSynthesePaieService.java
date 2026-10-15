@@ -80,19 +80,38 @@ public class EtatSynthesePaieService {
 
     @Transactional(readOnly = true)
     public EtatSyntheseWrapperDto getEtatSynthese(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        return getEtatSynthese(typeEtat, null, sessionPaieId, bulletinLotId, directionId, banqueNom);
+    }
+
+    @Transactional(readOnly = true)
+    public EtatSyntheseWrapperDto getEtatSynthese(String typeEtat, String periodeFiltre, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
         String type = typeEtat != null ? typeEtat.trim().toUpperCase(Locale.ROOT) : "LIVRE_PAIE";
 
-        // 1. Récupération des bulletins éligibles selon les filtres
-        List<Bulletin> bulletins = findBulletins(sessionPaieId, bulletinLotId, directionId, banqueNom);
+        // 1. Récupération des bulletins éligibles selon les filtres (consolidés par agent)
+        List<Bulletin> bulletins = findBulletins(periodeFiltre, sessionPaieId, bulletinLotId, directionId, banqueNom);
 
         // Récupérer les informations de la session ou du lot de référence
-        String codeSession = "GLOBAL";
-        String periode = "Toutes périodes";
+        String codeSession = (periodeFiltre != null && !periodeFiltre.isBlank()) ? ("PÉRIODE " + periodeFiltre) : "GLOBAL";
+        String periode = (periodeFiltre != null && !periodeFiltre.isBlank()) ? periodeFiltre : "Toutes périodes";
         Integer annee = 2026;
         String mois = "Toutes";
-        String typeSession = "ORDINAIRE";
+        String typeSession = "CONSOLIDÉ (TOUTES SESSIONS)";
 
-        if (sessionPaieId != null) {
+        if (periodeFiltre != null && !periodeFiltre.isBlank() && !periodeFiltre.equalsIgnoreCase("TOUTES")) {
+            List<SessionPaie> matchingSessions = sessionPaieRepository.findAll().stream()
+                    .filter(s -> isMatchingPeriode(s, periodeFiltre))
+                    .toList();
+            if (!matchingSessions.isEmpty()) {
+                SessionPaie s0 = matchingSessions.get(0);
+                annee = s0.getAnnee();
+                mois = s0.getMois();
+                codeSession = "PER-" + (s0.getAnnee() != null ? s0.getAnnee() : "") + "-" + (s0.getMois() != null ? s0.getMois() : "");
+                periode = (s0.getMois() != null ? s0.getMois() : "") + "/" + (s0.getAnnee() != null ? s0.getAnnee() : "");
+                typeSession = matchingSessions.size() > 1
+                        ? "CUMUL PÉRIODE (" + matchingSessions.size() + " SESSIONS)"
+                        : (s0.getTypeSession() != null ? s0.getTypeSession() : "ORDINAIRE");
+            }
+        } else if (sessionPaieId != null) {
             SessionPaie s = sessionPaieRepository.findById(sessionPaieId).orElse(null);
             if (s != null) {
                 codeSession = s.getCodeSession();
@@ -256,17 +275,59 @@ public class EtatSynthesePaieService {
                 .build();
     }
 
-    private List<Bulletin> findBulletins(Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        List<Bulletin> list;
-        if (sessionPaieId != null) {
-            list = bulletinRepository.findBySessionPaieId(sessionPaieId);
+    private List<Bulletin> findBulletins(String periodeFiltre, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        List<Bulletin> list = new ArrayList<>();
+
+        if (periodeFiltre != null && !periodeFiltre.isBlank() && !periodeFiltre.equalsIgnoreCase("TOUTES")) {
+            // Cumul de toutes les sessions correspondant à cette période (ex: Ordinaire + 13ème + 14ème + rappels)
+            List<SessionPaie> matchingSessions = sessionPaieRepository.findAll().stream()
+                    .filter(s -> isMatchingPeriode(s, periodeFiltre))
+                    .toList();
+            if (!matchingSessions.isEmpty()) {
+                for (SessionPaie s : matchingSessions) {
+                    list.addAll(bulletinRepository.findBySessionPaieId(s.getId()));
+                }
+            } else {
+                list = bulletinRepository.findAll().stream()
+                        .filter(b -> isBulletinMatchingPeriode(b, periodeFiltre))
+                        .collect(Collectors.toList());
+            }
+        } else if (sessionPaieId != null) {
+            // Si sessionPaieId est spécifié sans filtre de période explicite, on cumule toutes les sessions du même mois/année !
+            SessionPaie ref = sessionPaieRepository.findById(sessionPaieId).orElse(null);
+            if (ref != null) {
+                Integer refAnnee = ref.getAnnee();
+                String refMois = ref.getMois();
+                String refPer = ref.getPeriode();
+                List<SessionPaie> samePeriodeSessions = sessionPaieRepository.findAll().stream()
+                        .filter(s -> isSamePeriode(s, refAnnee, refMois, refPer))
+                        .toList();
+                if (!samePeriodeSessions.isEmpty()) {
+                    for (SessionPaie s : samePeriodeSessions) {
+                        list.addAll(bulletinRepository.findBySessionPaieId(s.getId()));
+                    }
+                } else {
+                    list = bulletinRepository.findBySessionPaieId(sessionPaieId);
+                }
+            } else {
+                list = bulletinRepository.findBySessionPaieId(sessionPaieId);
+            }
         } else if (bulletinLotId != null) {
             list = bulletinRepository.findByBulletinLotId(bulletinLotId);
         } else {
-            // Prendre les bulletins de la dernière session créée
+            // Par défaut : toutes les sessions de la période la plus récente
             List<SessionPaie> sessions = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
             if (!sessions.isEmpty()) {
-                list = bulletinRepository.findBySessionPaieId(sessions.get(0).getId());
+                SessionPaie latest = sessions.get(0);
+                Integer lAnnee = latest.getAnnee();
+                String lMois = latest.getMois();
+                String lPer = latest.getPeriode();
+                List<SessionPaie> samePeriode = sessions.stream()
+                        .filter(s -> isSamePeriode(s, lAnnee, lMois, lPer))
+                        .toList();
+                for (SessionPaie s : samePeriode) {
+                    list.addAll(bulletinRepository.findBySessionPaieId(s.getId()));
+                }
             } else {
                 list = bulletinRepository.findAll();
             }
@@ -291,13 +352,192 @@ public class EtatSynthesePaieService {
             }).collect(Collectors.toList());
         }
 
-        // Trier par matricule ou nom
-        list.sort(Comparator.comparing(b -> {
+        // CUMUL PAR AGENT SUR LA PÉRIODE :
+        // "par ex un meme agent peut avoir le meme etat 4 fois sur la meme periode et donc on les additionne"
+        List<Bulletin> listConsolidee = consoliderBulletinsParAgent(list);
+
+        // Trier par matricule
+        listConsolidee.sort(Comparator.comparing(b -> {
             Employee e = b.getEmployee();
             return e != null && e.getMatricule() != null ? e.getMatricule() : "";
         }));
 
-        return list;
+        return listConsolidee;
+    }
+
+    private boolean isSamePeriode(SessionPaie s, Integer annee, String mois, String periode) {
+        if (s == null) return false;
+        if (annee != null && s.getAnnee() != null && annee.equals(s.getAnnee())) {
+            if (mois != null && s.getMois() != null && parseMois(mois) == parseMois(s.getMois())) {
+                return true;
+            }
+        }
+        if (periode != null && s.getPeriode() != null && periode.trim().equalsIgnoreCase(s.getPeriode().trim())) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isMatchingPeriode(SessionPaie s, String filter) {
+        if (s == null || filter == null || filter.isBlank()) return false;
+        String f = filter.trim().toLowerCase(Locale.ROOT);
+        if (s.getPeriode() != null && s.getPeriode().toLowerCase(Locale.ROOT).contains(f)) return true;
+        if (s.getCodeSession() != null && s.getCodeSession().toLowerCase(Locale.ROOT).contains(f)) return true;
+
+        int m = parseMois(s.getMois());
+        int y = s.getAnnee() != null ? s.getAnnee() : 0;
+        String p1 = String.format("%02d/%d", m, y).toLowerCase(Locale.ROOT);
+        String p2 = String.format("%d-%02d", y, m).toLowerCase(Locale.ROOT);
+        String p3 = (s.getMois() != null ? s.getMois() : "") + " " + y;
+
+        return f.equals(p1) || f.equals(p2) || f.equalsIgnoreCase(p3.trim()) || f.contains(p1) || f.contains(p2);
+    }
+
+    private boolean isBulletinMatchingPeriode(Bulletin b, String filter) {
+        if (b == null || filter == null) return false;
+        String f = filter.trim().toLowerCase(Locale.ROOT);
+        if (b.getSessionPaie() != null && isMatchingPeriode(b.getSessionPaie(), filter)) return true;
+        if (b.getDateFrom() != null) {
+            String pIso = b.getDateFrom().toString();
+            if (pIso.contains(f)) return true;
+        }
+        return false;
+    }
+
+    private int parseMois(String moisStr) {
+        if (moisStr == null || moisStr.isBlank()) return 0;
+        String digits = moisStr.replaceAll("\\D", "");
+        if (!digits.isEmpty()) {
+            try { return Integer.parseInt(digits); } catch (Exception ignored) {}
+        }
+        String m = moisStr.trim().toLowerCase(Locale.ROOT);
+        if (m.startsWith("jan")) return 1;
+        if (m.startsWith("fév") || m.startsWith("fev")) return 2;
+        if (m.startsWith("mar")) return 3;
+        if (m.startsWith("avr")) return 4;
+        if (m.startsWith("mai")) return 5;
+        if (m.startsWith("jui") && !m.startsWith("juil")) return 6;
+        if (m.startsWith("juil")) return 7;
+        if (m.startsWith("aoû") || m.startsWith("aou")) return 8;
+        if (m.startsWith("sep")) return 9;
+        if (m.startsWith("oct")) return 10;
+        if (m.startsWith("nov")) return 11;
+        if (m.startsWith("déc") || m.startsWith("dec")) return 12;
+        return 0;
+    }
+
+    private List<Bulletin> consoliderBulletinsParAgent(List<Bulletin> rawBulletins) {
+        if (rawBulletins == null || rawBulletins.isEmpty()) return Collections.emptyList();
+
+        Map<Long, List<Bulletin>> parEmploye = rawBulletins.stream()
+                .filter(b -> b.getEmployee() != null && b.getEmployee().getId() != null)
+                .collect(Collectors.groupingBy(b -> b.getEmployee().getId(), LinkedHashMap::new, Collectors.toList()));
+
+        List<Bulletin> consolides = new ArrayList<>();
+
+        for (Map.Entry<Long, List<Bulletin>> entry : parEmploye.entrySet()) {
+            List<Bulletin> list = entry.getValue();
+            if (list.size() == 1) {
+                Bulletin b = list.get(0);
+                if (b.getCotisationCnss() != null && b.getCotisationCnss().compareTo(new BigDecimal("44000.00")) > 0) {
+                    b.setCotisationCnss(new BigDecimal("44000.00"));
+                }
+                consolides.add(b);
+                continue;
+            }
+
+            // Plusieurs bulletins pour le même employé sur la même période : additionner / cumuler !
+            Bulletin baseB = list.get(0);
+            Bulletin bCons = new Bulletin();
+            bCons.setId(baseB.getId());
+            bCons.setEmployee(baseB.getEmployee());
+            bCons.setGrade(baseB.getGrade());
+            bCons.setContrat(baseB.getContrat());
+            bCons.setSessionPaie(baseB.getSessionPaie());
+            bCons.setTypeSession("SYNTHESE");
+            bCons.setNatureSession("CONSOLIDE");
+            bCons.setDateFrom(baseB.getDateFrom());
+            bCons.setDateTo(baseB.getDateTo());
+            bCons.setCode(baseB.getCode());
+            bCons.setStatut("VALIDE");
+
+            BigDecimal sumBase = BigDecimal.ZERO;
+            BigDecimal sumSurSalaire = BigDecimal.ZERO;
+            BigDecimal sumIndemnites = BigDecimal.ZERO;
+            BigDecimal sumAvoirs = BigDecimal.ZERO;
+            BigDecimal sumBrut = BigDecimal.ZERO;
+            BigDecimal sumCnss = BigDecimal.ZERO;
+            BigDecimal sumBaseImp = BigDecimal.ZERO;
+            BigDecimal sumAbattement = BigDecimal.ZERO;
+            BigDecimal sumIutsSansCharge = BigDecimal.ZERO;
+            BigDecimal sumReducCharge = BigDecimal.ZERO;
+            BigDecimal sumIuts = BigDecimal.ZERO;
+            BigDecimal sumRetSociales = BigDecimal.ZERO;
+            BigDecimal sumPrecomptes = BigDecimal.ZERO;
+            BigDecimal sumRetenues = BigDecimal.ZERO;
+            BigDecimal sumPatronales = BigDecimal.ZERO;
+            BigDecimal sumExonerations = BigDecimal.ZERO;
+            BigDecimal sumNet = BigDecimal.ZERO;
+
+            List<BulletinLine> allLines = new ArrayList<>();
+
+            for (Bulletin b : list) {
+                if (b.getSalaireBase() != null) sumBase = sumBase.add(b.getSalaireBase());
+                if (b.getSurSalaire() != null) sumSurSalaire = sumSurSalaire.add(b.getSurSalaire());
+                if (b.getTotalIndemnites() != null) sumIndemnites = sumIndemnites.add(b.getTotalIndemnites());
+                if (b.getTotalAvoirs() != null) sumAvoirs = sumAvoirs.add(b.getTotalAvoirs());
+                if (b.getSalaireBrut() != null) sumBrut = sumBrut.add(b.getSalaireBrut());
+                if (b.getCotisationCnss() != null) sumCnss = sumCnss.add(b.getCotisationCnss());
+                if (b.getBaseImposable() != null) sumBaseImp = sumBaseImp.add(b.getBaseImposable());
+                if (b.getAbattementForfaitaire() != null) sumAbattement = sumAbattement.add(b.getAbattementForfaitaire());
+                if (b.getImpotIutsSansCharge() != null) sumIutsSansCharge = sumIutsSansCharge.add(b.getImpotIutsSansCharge());
+                if (b.getReductionIutsCharge() != null) sumReducCharge = sumReducCharge.add(b.getReductionIutsCharge());
+                if (b.getImpotIuts() != null) sumIuts = sumIuts.add(b.getImpotIuts());
+                if (b.getTotalRetenuesSociales() != null) sumRetSociales = sumRetSociales.add(b.getTotalRetenuesSociales());
+                if (b.getTotalPrecomptes() != null) sumPrecomptes = sumPrecomptes.add(b.getTotalPrecomptes());
+                if (b.getTotalRetenues() != null) sumRetenues = sumRetenues.add(b.getTotalRetenues());
+                if (b.getTotalCotisationsPatronales() != null) sumPatronales = sumPatronales.add(b.getTotalCotisationsPatronales());
+                if (b.getTotalExonerations() != null) sumExonerations = sumExonerations.add(b.getTotalExonerations());
+                if (b.getSalaireNet() != null) sumNet = sumNet.add(b.getSalaireNet());
+
+                if (b.getLines() != null) {
+                    allLines.addAll(b.getLines());
+                }
+            }
+
+            // Plafonnement formel de la CNSS salariale à 44 000 FCFA max par mois
+            if (sumCnss.compareTo(new BigDecimal("44000.00")) > 0) {
+                sumCnss = new BigDecimal("44000.00");
+            }
+
+            bCons.setSalaireBase(sumBase);
+            bCons.setSurSalaire(sumSurSalaire);
+            bCons.setTotalIndemnites(sumIndemnites);
+            bCons.setTotalAvoirs(sumAvoirs);
+            bCons.setSalaireBrut(sumBrut);
+            bCons.setCotisationCnss(sumCnss);
+            bCons.setBaseImposable(sumBaseImp);
+            bCons.setAbattementForfaitaire(sumAbattement);
+            bCons.setImpotIutsSansCharge(sumIutsSansCharge);
+            bCons.setReductionIutsCharge(sumReducCharge);
+            bCons.setImpotIuts(sumIuts);
+            bCons.setTotalRetenuesSociales(sumRetSociales);
+            bCons.setTotalPrecomptes(sumPrecomptes);
+            bCons.setTotalRetenues(sumRetenues);
+            bCons.setTotalCotisationsPatronales(sumPatronales);
+            bCons.setTotalExonerations(sumExonerations);
+            bCons.setSalaireNet(sumNet);
+            bCons.setLines(allLines);
+
+            consolides.add(bCons);
+        }
+
+        // Ajouter d'éventuels bulletins sans employé rattaché
+        rawBulletins.stream()
+                .filter(b -> b.getEmployee() == null || b.getEmployee().getId() == null)
+                .forEach(consolides::add);
+
+        return consolides;
     }
 
     // ─── CONSTRUCTEURS DES LIGNES PAR ÉTAT ──────────────────────────────────
@@ -1439,7 +1679,11 @@ public class EtatSynthesePaieService {
 
 
     public byte[] generatePdfReport(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generatePdfReport(typeEtat, null, sessionPaieId, bulletinLotId, directionId, banqueNom);
+    }
+
+    public byte[] generatePdfReport(String typeEtat, String periodeFiltre, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, sessionPaieId, bulletinLotId, directionId, banqueNom);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4.rotate(), 15, 15, 20, 20);
@@ -2178,7 +2422,11 @@ public class EtatSynthesePaieService {
     // ─── GÉNÉRATION DU FICHIER CSV (COMPATIBLE EXCEL UTF-8 AVEC BOM) ─────────
 
     public byte[] generateCsvExport(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generateCsvExport(typeEtat, null, sessionPaieId, bulletinLotId, directionId, banqueNom);
+    }
+
+    public byte[] generateCsvExport(String typeEtat, String periodeFiltre, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, sessionPaieId, bulletinLotId, directionId, banqueNom);
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -2660,7 +2908,11 @@ public class EtatSynthesePaieService {
     // ─── GÉNÉRATION DU FICHIER EXCEL NATIF (.XLSX MULTI-COLONNES STYLISÉ) ───
 
     public byte[] generateExcelExport(String typeEtat, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generateExcelExport(typeEtat, null, sessionPaieId, bulletinLotId, directionId, banqueNom);
+    }
+
+    public byte[] generateExcelExport(String typeEtat, String periodeFiltre, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, sessionPaieId, bulletinLotId, directionId, banqueNom);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             String sheetName = etat.getTypeEtat() != null ? etat.getTypeEtat() : "ETAT";

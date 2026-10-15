@@ -1,56 +1,56 @@
 package com.bpbf.sirh_backend.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
+@Table(name = "rubrique_paie")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "rubrique_paie")
+@Builder
 public class RubriquePaie {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, length = 50)
     private String codeRubrique;
+
+    @Column(nullable = false, length = 150)
     private String libelle;
-    private String typeRubrique; // GAIN, RETENUE, COTISATION
+
+    @Column(length = 50)
+    private String typeRubrique; // GAIN, RETENUE, PATRONALE, NET, REGULARISATION, AUTRE
+
+    @Column(length = 20)
+    private String sensSuggere; // DEBIT, CREDIT
+
+    @Column(length = 50)
+    private String classeSuggeree; // CLASSE_6, CLASSE_4
+
+    @Column(length = 30)
+    private String numeroCompteDefaut; // ex: 641100, 421100
+
+    @Column(length = 255)
+    private String description;
+
+    @Builder.Default
+    private Integer ordre = 0;
+
+    @Builder.Default
     private Boolean imposable = true;
+
+    @Builder.Default
     private Boolean cotisable = true;
+
+    @Column(length = 255)
     private String formuleCalcul;
+
+    @Builder.Default
     private Boolean actif = true;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getCodeRubrique() { return codeRubrique; }
-    public void setCodeRubrique(String codeRubrique) { this.codeRubrique = codeRubrique; }
-
-    public String getLibelle() { return libelle; }
-    public void setLibelle(String libelle) { this.libelle = libelle; }
-
-    public String getTypeRubrique() { return typeRubrique; }
-    public void setTypeRubrique(String typeRubrique) { this.typeRubrique = typeRubrique; }
-
-    public Boolean getImposable() { return imposable; }
-    public void setImposable(Boolean imposable) { this.imposable = imposable; }
-
-    public Boolean getCotisable() { return cotisable; }
-    public void setCotisable(Boolean cotisable) { this.cotisable = cotisable; }
-
-    public String getFormuleCalcul() { return formuleCalcul; }
-    public void setFormuleCalcul(String formuleCalcul) { this.formuleCalcul = formuleCalcul; }
-
-    public Boolean getActif() { return actif; }
-    public void setActif(Boolean actif) { this.actif = actif; }
 }
-
