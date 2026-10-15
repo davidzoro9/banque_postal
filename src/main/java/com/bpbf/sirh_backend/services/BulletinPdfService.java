@@ -557,6 +557,10 @@ public class BulletinPdfService {
         addHeaderCell(table, "AVOIRS", Element.ALIGN_RIGHT);
         addHeaderCell(table, "RETENUES", Element.ALIGN_RIGHT);
 
+        boolean is13Ou14 = BulletinService.is13Ou14emeMois(b.getSessionPaie())
+                || BulletinService.is13Ou14emeMois(b.getTypeSession())
+                || BulletinService.is13Ou14emeMois(b.getNatureSession())
+                || (b.getSessionPaie() != null && BulletinService.is13Ou14emeMois(b.getSessionPaie().getCodeSession()));
         String daysStr = b.getWorkedDays() != null ? b.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
         List<BulletinLine> existingLines = b.getLines() != null ? b.getLines() : List.of();
@@ -567,9 +571,11 @@ public class BulletinPdfService {
         BigDecimal salBaseBase = (salBaseL != null && salBaseL.getBaseCalcul() != null && salBaseL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
                 ? salBaseL.getBaseCalcul()
                 : (b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO);
-        String salBaseDays = (salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
-                ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
-                : daysStr;
+        String salBaseDays = is13Ou14
+                ? ((salBaseL != null && salBaseL.getTaux() != null) ? salBaseL.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %" : "100 %")
+                : ((salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                    ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
+                    : daysStr);
         if (salBaseAmount != null && salBaseAmount.compareTo(BigDecimal.ZERO) > 0) {
             displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(salBaseBase), salBaseDays, salBaseAmount, null, 0));
         }
@@ -580,9 +586,11 @@ public class BulletinPdfService {
         BigDecimal surSalBase = (surSalL != null && surSalL.getBaseCalcul() != null && surSalL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
                 ? surSalL.getBaseCalcul()
                 : (b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO);
-        String surSalDays = (surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
-                ? surSalL.getTaux().stripTrailingZeros().toPlainString()
-                : daysStr;
+        String surSalDays = is13Ou14
+                ? ((surSalL != null && surSalL.getTaux() != null) ? surSalL.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %" : "100 %")
+                : ((surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                    ? surSalL.getTaux().stripTrailingZeros().toPlainString()
+                    : daysStr);
         if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
             displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }
@@ -793,6 +801,10 @@ public class BulletinPdfService {
         addHeaderCell(table, "AVOIRS", Element.ALIGN_RIGHT);
         addHeaderCell(table, "RETENUES", Element.ALIGN_RIGHT);
 
+        boolean is13Ou14 = BulletinService.is13Ou14emeMois(dto.getSessionPaieCode())
+                || BulletinService.is13Ou14emeMois(dto.getTypeSession())
+                || BulletinService.is13Ou14emeMois(dto.getNatureSession())
+                || BulletinService.is13Ou14emeMois(dto.getSessionPeriode());
         String daysStr = dto.getWorkedDays() != null ? dto.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
         List<com.bpbf.sirh_backend.dtos.BulletinLineDto> dLines = dto.getLines() != null ? dto.getLines() : List.of();
@@ -803,9 +815,11 @@ public class BulletinPdfService {
         BigDecimal salBaseBase = (salBaseL != null && salBaseL.getBaseCalcul() != null && salBaseL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
                 ? salBaseL.getBaseCalcul()
                 : (dto.getSalaireBase() != null ? dto.getSalaireBase() : BigDecimal.ZERO);
-        String salBaseDays = (salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
-                ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
-                : daysStr;
+        String salBaseDays = is13Ou14
+                ? ((salBaseL != null && salBaseL.getTaux() != null) ? salBaseL.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %" : "100 %")
+                : ((salBaseL != null && salBaseL.getTaux() != null && salBaseL.getTaux().compareTo(BigDecimal.ZERO) > 0 && salBaseL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                    ? salBaseL.getTaux().stripTrailingZeros().toPlainString()
+                    : daysStr);
         if (salBaseAmount != null && salBaseAmount.compareTo(BigDecimal.ZERO) > 0) {
             displayLines.add(new DisplayLine("SAL_BASE", "SALAIRE DE BASE", formatMoney(salBaseBase), salBaseDays, salBaseAmount, null, 0));
         }
@@ -816,9 +830,11 @@ public class BulletinPdfService {
         BigDecimal surSalBase = (surSalL != null && surSalL.getBaseCalcul() != null && surSalL.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0)
                 ? surSalL.getBaseCalcul()
                 : (dto.getSurSalaire() != null ? dto.getSurSalaire() : BigDecimal.ZERO);
-        String surSalDays = (surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
-                ? surSalL.getTaux().stripTrailingZeros().toPlainString()
-                : daysStr;
+        String surSalDays = is13Ou14
+                ? ((surSalL != null && surSalL.getTaux() != null) ? surSalL.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %" : "100 %")
+                : ((surSalL != null && surSalL.getTaux() != null && surSalL.getTaux().compareTo(BigDecimal.ZERO) > 0 && surSalL.getTaux().compareTo(new BigDecimal("31.00")) <= 0)
+                    ? surSalL.getTaux().stripTrailingZeros().toPlainString()
+                    : daysStr);
         if (surSalAmount != null && surSalAmount.compareTo(BigDecimal.ZERO) > 0) {
             displayLines.add(new DisplayLine("SUR_SALAIRE", "SURSALAIRE", formatMoney(surSalBase), surSalDays, surSalAmount, null, 1));
         }

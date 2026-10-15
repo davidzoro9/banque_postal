@@ -664,8 +664,9 @@ public class BulletinService {
                     : (finPeriode != null ? finPeriode.getYear() : LocalDate.now().getYear());
             LocalDate debutAnneeRef = LocalDate.of(anneeRef, 1, 1);
             LocalDate finAnneeRef = LocalDate.of(anneeRef, 12, 31);
-            LocalDate dateFinEvaluation = (finPeriode != null && !finPeriode.isAfter(finAnneeRef) && finPeriode.getYear() == anneeRef)
-                    ? finPeriode : finAnneeRef;
+            // La gratification 13è / 14è mois couvre l'année civile complète (31 décembre) :
+            // Tout agent en contrat actif toute l'année a droit à 100% (360 jours / 12 mois).
+            LocalDate dateFinEvaluation = finAnneeRef;
 
             // 3. Prorata temporis annuel
             BigDecimal ratioProrata;
