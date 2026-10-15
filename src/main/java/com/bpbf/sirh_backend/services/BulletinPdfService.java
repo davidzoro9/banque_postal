@@ -1174,9 +1174,6 @@ public class BulletinPdfService {
         if (dto.getSessionPeriode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPeriode())) {
             return BigDecimal.ZERO;
         }
-        if (dto.getSessionCode() != null && BulletinService.is13Ou14emeMois(dto.getSessionCode())) {
-            return BigDecimal.ZERO;
-        }
         if (dto.getSessionPaieCode() != null && BulletinService.is13Ou14emeMois(dto.getSessionPaieCode())) {
             return BigDecimal.ZERO;
         }
