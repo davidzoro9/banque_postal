@@ -1165,33 +1165,6 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 18px;">
-        <!-- Année & Mois -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-          <div>
-            <label class="form-group-label">
-              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">calendar_today</mat-icon>
-              Année *
-            </label>
-            <select class="form-control-select" [(ngModel)]="newSessionForm.annee" (ngModelChange)="actualiserCodeSession()">
-              @for (an of anneesDisponibles; track an) {
-                <option [value]="an">{{ an }}</option>
-              }
-            </select>
-          </div>
-
-          <div>
-            <label class="form-group-label">
-              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">date_range</mat-icon>
-              Mois *
-            </label>
-            <select class="form-control-select" [(ngModel)]="newSessionForm.mois" (ngModelChange)="actualiserCodeSession()">
-              @for (m of moisNoms; track $index) {
-                <option [value]="$index + 1 < 10 ? '0' + ($index + 1) : '' + ($index + 1)">{{ m }}</option>
-              }
-            </select>
-          </div>
-        </div>
-
         <!-- Type de session -->
         <div>
           <label class="form-group-label">
@@ -1212,8 +1185,8 @@
               Nature de la session extraordinaire *
             </label>
             <select class="form-control-select" [(ngModel)]="newSessionForm.natureExtraordinaire" (ngModelChange)="onNatureExtraordinaireChange()">
-              <option value="13EME_MOIS">13ème Mois</option>
-              <option value="14EME_MOIS">14ème Mois</option>
+              <option value="13EME_MOIS">13ème Mois (Gratification annuelle)</option>
+              <option value="14EME_MOIS">14ème Mois (Gratification annuelle)</option>
               <option value="CONGE_PAYE">Congé Payé</option>
               <option value="STC">Solde de Tout Compte</option>
               <option value="INDEMNITE_RETRAITE">Indemnités de Départ à la Retraite</option>
@@ -1228,6 +1201,58 @@
             </label>
             <input type="text" class="form-control-input" [(ngModel)]="newSessionForm.name" (ngModelChange)="actualiserCodeSession()"
                    placeholder="Ex: 13ème Mois 2026, Solde de Tout Compte...">
+          </div>
+        }
+
+        <!-- Périodicité : Année & Mois (ou Année seule si 13e/14e mois) -->
+        @if (!isCreationSession13ou14) {
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div>
+              <label class="form-group-label">
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;">calendar_today</mat-icon>
+                Année *
+              </label>
+              <select class="form-control-select" [(ngModel)]="newSessionForm.annee" (ngModelChange)="actualiserCodeSession()">
+                @for (an of anneesDisponibles; track an) {
+                  <option [value]="an">{{ an }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="form-group-label">
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;">date_range</mat-icon>
+                Mois *
+              </label>
+              <select class="form-control-select" [(ngModel)]="newSessionForm.mois" (ngModelChange)="actualiserCodeSession()">
+                @for (m of moisNoms; track $index) {
+                  <option [value]="$index + 1 < 10 ? '0' + ($index + 1) : '' + ($index + 1)">{{ m }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        } @else {
+          <div style="display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start;">
+            <div>
+              <label class="form-group-label">
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;">calendar_today</mat-icon>
+                Année de Référence *
+              </label>
+              <select class="form-control-select" [(ngModel)]="newSessionForm.annee" (ngModelChange)="actualiserCodeSession()">
+                @for (an of anneesDisponibles; track an) {
+                  <option [value]="an">{{ an }}</option>
+                }
+              </select>
+            </div>
+
+            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-top: 18px;">
+              <mat-icon style="color: #16a34a; font-size: 24px; width: 24px; height: 24px; flex-shrink: 0;">event_available</mat-icon>
+              <div style="font-size: 12px; color: #166534; line-height: 1.4;">
+                <strong style="color: #15803d; font-size: 13px;">Session Annuelle (Sans sélection de mois)</strong><br>
+                Période civile : <strong>01/01/{{ newSessionForm.annee }} au 31/12/{{ newSessionForm.annee }}</strong>.<br>
+                Prorata temporis calculé sur <strong>360 jours</strong> depuis la date d'embauche de chaque agent.
+              </div>
+            </div>
           </div>
         }
 

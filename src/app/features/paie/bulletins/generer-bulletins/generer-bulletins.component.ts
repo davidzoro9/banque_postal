@@ -364,6 +364,11 @@ export class GenererBulletinsComponent implements OnInit {
     return this.newSessionForm.typeSession === 'EXTRAORDINAIRE' && this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE';
   }
 
+  get isCreationSession13ou14(): boolean {
+    return this.newSessionForm.typeSession === 'EXTRAORDINAIRE' &&
+      (this.newSessionForm.natureExtraordinaire === '13EME_MOIS' || this.newSessionForm.natureExtraordinaire === '14EME_MOIS');
+  }
+
   get poolEmployesNouvelleSession(): Employee[] {
     return this.isCreationSessionMaternite ? this.employesMaterniteEligibles : this.tousLesEmployes;
   }
@@ -454,32 +459,40 @@ export class GenererBulletinsComponent implements OnInit {
 
     if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
       this.newSessionForm.name = `13ème Mois ${y}`;
-      this.newSessionForm.codeSession = `SESS-13EME-${y}-${m}`;
+      this.newSessionForm.codeSession = `SESS-13EME-${y}`;
+      this.newSessionForm.periode = `13ème Mois ${y}`;
+      this.newSessionForm.mois = '12';
       this.newSessionForm.modeCible = 'TOUS';
       this.changerModeCibleNouvelleSession('TOUS');
     } else if (this.newSessionForm.natureExtraordinaire === '14EME_MOIS') {
       this.newSessionForm.name = `14ème Mois ${y}`;
-      this.newSessionForm.codeSession = `SESS-14EME-${y}-${m}`;
+      this.newSessionForm.codeSession = `SESS-14EME-${y}`;
+      this.newSessionForm.periode = `14ème Mois ${y}`;
+      this.newSessionForm.mois = '12';
       this.newSessionForm.modeCible = 'TOUS';
       this.changerModeCibleNouvelleSession('TOUS');
     } else if (this.newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
       this.newSessionForm.name = `Congés Payés — ${nomMois} ${y}`;
       this.newSessionForm.codeSession = `SESS-CP-${y}-${m}`;
+      this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'SELECTION';
       this.changerModeCibleNouvelleSession('SELECTION');
     } else if (this.newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
       this.newSessionForm.name = `Indemnités de Départ à la Retraite — ${y}`;
       this.newSessionForm.codeSession = `SESS-RETR-${y}-${m}`;
+      this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'SELECTION';
       this.changerModeCibleNouvelleSession('SELECTION');
     } else if (this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
       this.newSessionForm.name = `Session Congé Maternité — ${nomMois} ${y}`;
       this.newSessionForm.codeSession = `SESS-MAT-${y}-${m}`;
+      this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'TOUS';
       this.chargerFemmesMaterniteEligibles();
     } else {
       this.newSessionForm.name = `Solde de Tout Compte — ${nomMois} ${y}`;
       this.newSessionForm.codeSession = `SESS-STC-${y}-${m}`;
+      this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'SELECTION';
       this.changerModeCibleNouvelleSession('SELECTION');
     }
@@ -488,20 +501,30 @@ export class GenererBulletinsComponent implements OnInit {
 
   actualiserCodeSession(): void {
     const y = Number(this.newSessionForm.annee) || this.selectedYear;
-    const m = String(this.newSessionForm.mois || '01').padStart(2, '0');
     this.newSessionForm.annee = y;
+    const isExtra = this.newSessionForm.typeSession === 'EXTRAORDINAIRE';
+
+    if (isExtra && (this.newSessionForm.natureExtraordinaire === '13EME_MOIS' || this.newSessionForm.natureExtraordinaire === '14EME_MOIS')) {
+      const is14 = this.newSessionForm.natureExtraordinaire === '14EME_MOIS';
+      const label = is14 ? `14ème Mois ${y}` : `13ème Mois ${y}`;
+      const code = is14 ? `SESS-14EME-${y}` : `SESS-13EME-${y}`;
+      this.newSessionForm.mois = '12';
+      this.newSessionForm.periode = label;
+      this.newSessionForm.codeSession = code;
+      if (!this.newSessionForm.name || this.newSessionForm.name.startsWith('13ème Mois') || this.newSessionForm.name.startsWith('14ème Mois')) {
+        this.newSessionForm.name = label;
+      }
+      return;
+    }
+
+    const m = String(this.newSessionForm.mois || '01').padStart(2, '0');
     this.newSessionForm.mois = m;
     const mIdx = Math.max(0, Math.min(11, parseInt(m, 10) - 1));
     const nomMois = this.moisNoms[mIdx] || `Mois ${m}`;
-    const isExtra = this.newSessionForm.typeSession === 'EXTRAORDINAIRE';
 
     if (isExtra) {
       let prefix = 'STC';
-      if (this.newSessionForm.natureExtraordinaire === '13EME_MOIS') {
-        prefix = '13EME';
-      } else if (this.newSessionForm.natureExtraordinaire === '14EME_MOIS') {
-        prefix = '14EME';
-      } else if (this.newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
+      if (this.newSessionForm.natureExtraordinaire === 'CONGE_PAYE') {
         prefix = 'CP';
       } else if (this.newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
         prefix = 'RETR';
@@ -688,20 +711,28 @@ export class GenererBulletinsComponent implements OnInit {
       idsPourGeneration = this.employesMaterniteEligibles.map(e => Number(e.id)).filter(n => !isNaN(n) && n > 0);
     }
 
+    const is1314 = this.isCreationSession13ou14;
+    const y = Number(this.newSessionForm.annee) || this.selectedYear;
     const rawName = (this.newSessionForm.name || '').trim();
-    const rawCode = (this.newSessionForm.codeSession || '').trim();
-    const rawPeriode = (this.newSessionForm.periode || `${this.newSessionForm.mois}/${this.newSessionForm.annee}`).trim();
+    const rawCode = is1314
+      ? ((this.newSessionForm.natureExtraordinaire === '14EME_MOIS' ? 'SESS-14EME-' : 'SESS-13EME-') + y)
+      : (this.newSessionForm.codeSession || '').trim();
+    const rawPeriode = is1314
+      ? ((this.newSessionForm.natureExtraordinaire === '14EME_MOIS' ? '14ème Mois ' : '13ème Mois ') + y)
+      : (this.newSessionForm.periode || `${this.newSessionForm.mois}/${this.newSessionForm.annee}`).trim();
     const rawType = (this.newSessionForm.typeSession || 'ORDINAIRE').trim();
     const rawNature = this.newSessionForm.typeSession === 'EXTRAORDINAIRE' ? (this.newSessionForm.natureExtraordinaire || '').trim() : null;
 
     const payload = {
       codeSession: rawCode.length > 50 ? rawCode.substring(0, 50) : rawCode,
-      name: rawName.length > 50 ? rawName.substring(0, 50) : rawName,
-      mois: this.newSessionForm.mois,
-      annee: this.newSessionForm.annee,
+      name: rawName.length > 50 ? rawName.substring(0, 50) : (rawPeriode.length > 50 ? rawPeriode.substring(0, 50) : rawPeriode),
+      mois: is1314 ? '12' : this.newSessionForm.mois,
+      annee: y,
       periode: rawPeriode.length > 50 ? rawPeriode.substring(0, 50) : rawPeriode,
       typeSession: rawType.length > 50 ? rawType.substring(0, 50) : rawType,
       natureSession: rawNature ? (rawNature.length > 50 ? rawNature.substring(0, 50) : rawNature) : null,
+      dateFrom: is1314 ? `${y}-01-01` : undefined,
+      dateTo: is1314 ? `${y}-12-31` : undefined,
       statut: 'BROUILLON'
     };
 
