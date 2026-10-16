@@ -145,6 +145,22 @@ public class SessionPaieController {
                         session.setNatureSession("TREIZIEME_MOIS");
                     }
                 }
+
+                boolean is1314 = session.getNatureSession() != null &&
+                        (session.getNatureSession().contains("13") || session.getNatureSession().contains("TREIZIEME") ||
+                         session.getNatureSession().contains("14") || session.getNatureSession().contains("QUATORZIEME"));
+                if (is1314) {
+                    int an = session.getAnnee() != null ? session.getAnnee() : java.time.LocalDate.now().getYear();
+                    session.setDateFrom(java.time.LocalDate.of(an, 1, 1));
+                    session.setDateTo(java.time.LocalDate.of(an, 12, 31));
+                    if (session.getMois() == null || session.getMois().isBlank()) {
+                        session.setMois("12");
+                    }
+                    if (session.getPeriode() == null || session.getPeriode().isBlank() || session.getPeriode().contains("/")) {
+                        boolean is14 = session.getNatureSession().contains("14") || session.getNatureSession().contains("QUATORZIEME");
+                        session.setPeriode((is14 ? "14ème Mois " : "13ème Mois ") + an);
+                    }
+                }
             }
 
             String[] moisNoms = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};

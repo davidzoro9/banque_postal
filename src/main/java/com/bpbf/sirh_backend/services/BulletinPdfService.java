@@ -661,6 +661,8 @@ public class BulletinPdfService {
                 tauxStr = "1 %";
             } else if (code.contains("ANC")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+            } else if (is13Ou14 && isGain && l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
+                tauxStr = l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %";
             } else if (code.contains("13") || code.contains("14") || code.contains("GRAT") || lib.contains("13") || lib.contains("14") || lib.contains("GRATIFICATION") || lib.contains("PRORATA")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() : "100") + " %";
             } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {
@@ -913,6 +915,8 @@ public class BulletinPdfService {
                     tauxStr = "1 %";
                 } else if (code.contains("ANC")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
+                } else if (is13Ou14 && isGain && l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
+                    tauxStr = l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %";
                 } else if (code.contains("13") || code.contains("14") || code.contains("GRAT") || lib.contains("13") || lib.contains("14") || lib.contains("GRATIFICATION") || lib.contains("PRORATA")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() : "100") + " %";
                 } else if (code.startsWith("IND_") || code.contains("LOG") || code.contains("TRP") || code.contains("SUJ") || code.contains("CS") || code.contains("CAISSE") || code.contains("CP") || code.contains("CASH")) {

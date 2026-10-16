@@ -587,7 +587,11 @@ public class BulletinService {
         // Calcul automatique du nombre de jours travaillés selon dateEmbauche & contrat (prorata temporis)
         LocalDate debutPeriode = session != null ? session.getDateFrom() : null;
         LocalDate finPeriode = session != null ? session.getDateTo() : null;
-        if (debutPeriode == null && session != null) {
+        if (is13 || is14) {
+            int an = session != null && session.getAnnee() != null ? session.getAnnee() : LocalDate.now().getYear();
+            debutPeriode = LocalDate.of(an, 1, 1);
+            finPeriode = LocalDate.of(an, 12, 31);
+        } else if (debutPeriode == null && session != null) {
             int an = session.getAnnee() != null ? session.getAnnee() : LocalDate.now().getYear();
             int mo = parseMoisSafe(session.getMois());
             debutPeriode = LocalDate.of(an, mo, 1);
