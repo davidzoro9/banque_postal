@@ -82,17 +82,17 @@
     <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'TOUS'" (click)="setAvoirTab('TOUS')">
       <mat-icon>dashboard</mat-icon>
       <span>Tous les Rappels</span>
-      <span class="tab-count">({{ avoirsList.length }})</span>
+      <span class="tab-count">{{ avoirsList.length }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'ACTIFS'" (click)="setAvoirTab('ACTIFS')">
       <mat-icon>hourglass_top</mat-icon>
       <span>Rappels en attente de paie</span>
-      <span class="tab-count active-count">({{ countActifs }})</span>
+      <span class="tab-count active-count">{{ countActifs }}</span>
     </button>
     <button type="button" class="tab-btn" [class.active]="activeTabAvoir === 'HISTORIQUE'" (click)="setAvoirTab('HISTORIQUE')">
       <mat-icon>history</mat-icon>
       <span>Historique des avoirs soldés</span>
-      <span class="tab-count done-count">({{ countSoldes }})</span>
+      <span class="tab-count done-count">{{ countSoldes }}</span>
     </button>
   </div>
 
@@ -178,7 +178,7 @@
               <th>Agent</th>
               <th>Élément de salaire</th>
               <th>Date d'effet</th>
-              <th style="text-align: right;">Montant (FCFA)</th>
+              <th style="text-align: right;">Montant FCFA</th>
               <th style="text-align: center; width: 110px;">Statut</th>
               <th style="text-align: center; width: 100px;">Actions</th>
             </tr>
@@ -380,11 +380,11 @@
             <!-- Bénéficiaire (Agent - Liste Déroulante) -->
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-label>Bénéficiaire Agent *</mat-label>
                 <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingAvoir" placeholder="Sélectionner un agent...">
                   @for (emp of employeesList; track emp.id) {
                     <mat-option [value]="emp.id">
-                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}
                     </mat-option>
                   }
                 </mat-select>

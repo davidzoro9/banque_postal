@@ -36,6 +36,7 @@ export class EmployeeDetailComponent implements OnInit {
   module = APP_MODULES.find(m => m.id === 'grh')!;
   employee: Employee | undefined;
   loading = true;
+  errorMessage: string | null = null;
   readonly sections = EMPLOYEE_SECTIONS;
 
   constructor(
@@ -47,10 +48,28 @@ export class EmployeeDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.moduleNav.selectModule(this.module);
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.employeeService.getById(id).subscribe(emp => {
-      this.employee = emp;
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
       this.loading = false;
+      this.errorMessage = 'Identifiant agent non renseigné.';
+      return;
+    }
+    this.loadEmployee(id);
+  }
+
+  loadEmployee(id: string): void {
+    this.loading = true;
+    this.errorMessage = null;
+    this.employeeService.getById(id).subscribe({
+      next: (emp) => {
+        this.employee = emp;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement employé:', err);
+        this.loading = false;
+        this.errorMessage = err?.error?.message || 'Erreur lors du chargement des informations de cet employé.';
+      }
     });
   }
 

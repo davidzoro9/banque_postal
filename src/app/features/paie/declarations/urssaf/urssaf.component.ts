@@ -30,7 +30,7 @@ import { EtatSyntheseService } from '../../services/etat-synthese.service';
                   (click)="telechargerEtatIuts('pdf')"
                   style="background: #0060B3; font-weight: 600; padding: 0 20px; height: 42px;">
             <mat-icon style="margin-right: 6px;">picture_as_pdf</mat-icon>
-            {{ isExporting ? 'Génération en cours...' : 'Générer l\'État IUTS (PDF)' }}
+            {{ isExporting ? 'Génération en cours...' : 'Générer l\'État IUTS - PDF' }}
           </button>
 
           <button mat-stroked-button
@@ -39,7 +39,7 @@ import { EtatSyntheseService } from '../../services/etat-synthese.service';
                   (click)="telechargerEtatIuts('excel')"
                   style="font-weight: 600; padding: 0 20px; height: 42px;">
             <mat-icon style="margin-right: 6px;">table_view</mat-icon>
-            Générer l'État IUTS (Excel)
+            Générer l'État IUTS - Excel
           </button>
 
           <button mat-button

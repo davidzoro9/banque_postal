@@ -124,7 +124,8 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'etat-mutuelle', label: 'État Mutuelle', icon: 'health_and_safety', route: '/paie/etats-synthese/mutuelle' },
         { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
         { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
-        { id: 'etat-bulletin', label: 'État Bulletin', icon: 'rule', route: '/paie/etats-synthese/bulletin' }
+        { id: 'etat-bulletin', label: 'État Bulletin', icon: 'rule', route: '/paie/etats-synthese/bulletin' },
+        { id: 'etat-stc', label: 'État Solde de Tout Compte', icon: 'gavel', route: '/paie/etats-synthese/stc' }
       ]
     },
     {
@@ -134,7 +135,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       children: [
         { id: 'parametrage-comptes-comptables', label: 'Plan des comptes', icon: 'account_tree', route: '/paie/comptes-comptables/comptes' },
         { id: 'parametrage-classes-comptables', label: 'Classes comptables', icon: 'category', route: '/paie/comptes-comptables/classes' },
-        { id: 'parametrage-sens-ecritures', label: 'Sens d\'écriture (OD)', icon: 'swap_horiz', route: '/paie/comptes-comptables/sens' },
+        { id: 'parametrage-sens-ecritures', label: 'Sens d\'écriture', icon: 'swap_horiz', route: '/paie/comptes-comptables/sens' },
         { id: 'parametrage-rubriques-paie', label: 'Rubriques de paie affectées', icon: 'bookmark_border', route: '/paie/comptes-comptables/rubriques' },
         { id: 'parametrage-journaux-comptables', label: 'Codes journaux OD', icon: 'menu_book', route: '/paie/comptes-comptables/journaux' }
       ]
@@ -153,7 +154,7 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       icon: 'beach_access',
       children: [
         { id: 'liste-demandes', label: 'État & Historique des Congés & Absences', icon: 'history', route: '/grh/conges' },
-        { id: 'nouvelle-demande', label: 'Autorisation d\'Absence (Accident / Maladie)', icon: 'medical_services', route: '/grh/conges/nouveau' },
+        { id: 'nouvelle-demande', label: 'Autorisation d\'Absence', icon: 'medical_services', route: '/grh/conges/nouveau' },
         { id: 'soldes-agents', label: 'Soldes des Agents', icon: 'account_balance_wallet', route: '/grh/conges/soldes' },
         { id: 'planning-departs', label: 'Planning des Départs', icon: 'calendar_month', route: '/grh/conges/planning' },
         { id: 'jours-feries', label: 'Jours Fériés Légaux', icon: 'event_available', route: '/grh/conges/feries' }
@@ -363,7 +364,9 @@ export class ModuleNavService {
       'ETAT_TYPE_EMPLOYE': 'type-employe',
       'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
       'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
-      'ETAT_BULLETIN': 'bulletin'
+      'ETAT_BULLETIN': 'bulletin',
+      'ETAT_STC': 'stc',
+      'ETAT_SOLDE_TOUT_COMPTE': 'stc'
     };
     return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }

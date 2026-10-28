@@ -1,20 +1,14 @@
-# Utiliser Node.js 20 sur Alpine
-FROM node:20-alpine
-
-# Définir le dossier de travail
+# Etape 1: Compiler l'application Angular
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Copier les fichiers de dépendances
 COPY package*.json ./
-
-# Installer les dépendances
-RUN npm ci --legacy-peer-deps
-
-# Copier le reste du code source
+RUN npm install --legacy-peer-deps
 COPY . .
+RUN npm run build -- --configuration=production
 
-# Exposer le port 4200 de l'application Angular
-EXPOSE 4200
-
-# Démarrer le serveur Angular ouvert sur 0.0.0.0
-CMD ["npm", "start"]
+# Etape 2: Servir avec Nginx
+FROM nginx:stable-alpine
+COPY --from=build /app/dist/hr-management/browser /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

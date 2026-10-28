@@ -12,7 +12,7 @@
     <div>
       <button mat-raised-button color="primary" (click)="nouveauConge()"
         style="background: #0060B3; color: white; font-weight: 700; height: 42px; border-radius: 8px; padding: 0 20px; box-shadow: 0 4px 12px rgba(0,96,179,0.25);">
-        <mat-icon style="margin-right: 6px;">medical_services</mat-icon> + Autoriser une Absence (Accident / Maladie)
+        <mat-icon style="margin-right: 6px;">medical_services</mat-icon> + Autoriser une Absence
       </button>
     </div>
   </div>
@@ -35,7 +35,7 @@
       </div>
       <div class="kpi-info">
         <span class="kpi-val" style="color: #059669;">{{ totalEnCongeCeMois }}</span>
-        <span class="kpi-label">Agents en congé (ce mois)</span>
+        <span class="kpi-label">Agents en congé ce mois</span>
       </div>
     </div>
 
@@ -63,16 +63,19 @@
   <!-- NAVIGATION ONGLETS -->
   <div class="tabs-bar">
     <button class="tab-btn" [class.active]="activeTab === 'DEMANDES'" (click)="setTab('DEMANDES')">
-      <mat-icon>history</mat-icon> État &amp; Historique des Congés &amp; Absences ({{ conges.length }})
+      <mat-icon>history</mat-icon> État &amp; Historique des Congés &amp; Absences
+      <span class="tab-badge" style="margin-left: 6px; background: rgba(0,96,179,0.1); color: #0060B3; font-weight: 700; padding: 2px 7px; border-radius: 10px; font-size: 11px;">{{ conges.length }}</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'SOLDES'" (click)="setTab('SOLDES')">
-      <mat-icon>account_balance_wallet</mat-icon> Soldes de congés des agents ({{ soldes.length }})
+      <mat-icon>account_balance_wallet</mat-icon> Soldes de congés des agents
+      <span class="tab-badge" style="margin-left: 6px; background: rgba(0,96,179,0.1); color: #0060B3; font-weight: 700; padding: 2px 7px; border-radius: 10px; font-size: 11px;">{{ soldes.length }}</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'PLANNING'" (click)="setTab('PLANNING')">
       <mat-icon>calendar_month</mat-icon> Planning des départs
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'JOURS_FERIES'" (click)="setTab('JOURS_FERIES')">
-      <mat-icon>event_available</mat-icon> Jours Fériés Légaux ({{ joursFeriesDataSource.data.length }})
+      <mat-icon>event_available</mat-icon> Jours Fériés Légaux
+      <span class="tab-badge" style="margin-left: 6px; background: rgba(0,96,179,0.1); color: #0060B3; font-weight: 700; padding: 2px 7px; border-radius: 10px; font-size: 11px;">{{ joursFeriesDataSource.data.length }}</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'PARAMETRAGE'" (click)="setTab('PARAMETRAGE')">
       <mat-icon>tune</mat-icon> Règles & Paramètres
@@ -586,12 +589,15 @@
 
           <!-- Type Column -->
           <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef style="width: 130px;"> Type </th>
+            <th mat-header-cell *matHeaderCellDef style="width: 140px;"> Type </th>
             <td mat-cell *matCellDef="let jf">
-              <span [style.background]="jf.type === 'RELIGIEUX' ? '#fdf4ff' : (jf.type === 'MOBILE' ? '#fffbeb' : '#f0f9ff')"
-                    [style.color]="jf.type === 'RELIGIEUX' ? '#9333ea' : (jf.type === 'MOBILE' ? '#b45309' : '#0369a1')"
-                    style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">
-                {{ jf.type || 'FIXE' }}
+              <span [style.background]="(jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? '#fffbeb' : '#f0f9ff'"
+                    [style.color]="(jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? '#b45309' : '#0369a1'"
+                    [style.border]="(jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? '1px solid #fde68a' : '1px solid #bae6fd'"
+                    style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%;"
+                      [style.background]="(jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? '#d97706' : '#0284c7'"></span>
+                {{ (jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? 'Variable' : 'Fixe' }}
               </span>
             </td>
           </ng-container>
@@ -708,7 +714,7 @@
             <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px;">
               <input type="radio" name="modeDecompte" [(ngModel)]="configModel.modeDecompte" value="OUVRABLE_5J" style="width: 18px; height: 18px; margin-top: 2px;">
               <div>
-                <strong style="color: #0060B3;">Jours Ouvrables (5 jours / semaine)</strong>
+                <strong style="color: #0060B3;">Jours Ouvrés (5 jours / semaine)</strong>
                 <div style="font-size: 12px; color: #64748b; font-weight: 500; margin-top: 2px;">Exclut les Samedis et Dimanches (Recommandé banque &amp; Code du travail)</div>
               </div>
             </label>
@@ -757,6 +763,21 @@
             <span style="font-weight: 600; color: #475569; font-size: 13px;">jours max reportables</span>
           </div>
         </div>
+
+        <!-- 6. Quota annuel de permissions d'absence -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px;">
+          <label style="display: block; font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px;">
+            Quota annuel de permissions (jours)
+          </label>
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 12px;">
+            Plafond annuel de permissions exceptionnelles rémunérées (Standard : 10 jours / an) :
+          </p>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="number" [(ngModel)]="configModel.quotaPermissionsAnnuel" min="0" max="60"
+                   style="width: 130px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: 700; color: #d97706; background: #ffffff;">
+            <span style="font-weight: 600; color: #475569; font-size: 13px;">jours / an</span>
+          </div>
+        </div>
       </div>
     </mat-card>
 
@@ -798,6 +819,7 @@
               <th style="padding: 14px 16px; width: 280px;">Libellé du Congé / Absence</th>
               <th style="padding: 14px 12px; width: 140px;">Code Système</th>
               <th style="padding: 14px 12px; width: 130px; text-align: center;">Catégorie</th>
+              <th style="padding: 14px 12px; width: 160px; text-align: center;">Type de Jours</th>
               <th style="padding: 14px 12px; width: 110px; text-align: center;">Quota Légal</th>
               <th style="padding: 14px 12px; width: 140px; text-align: center;">Maintien Salaire</th>
               <th style="padding: 14px 14px; width: 200px;">Pièce Justificative</th>
@@ -831,6 +853,16 @@
                     <option value="CONGE">Congé</option>
                     <option value="PERMISSION">Permission</option>
                     <option value="ABSENCE">Absence</option>
+                  </select>
+                </td>
+
+                <!-- 3b. Type de Jours Décomptés (Ouvrés / Ouvrables / Calendaires) -->
+                <td style="padding: 10px 12px; text-align: center;">
+                  <select [(ngModel)]="t.typeJour"
+                          style="padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0284c7; background: #f0f9ff; cursor: pointer; width: 100%;">
+                    <option value="OUVRE">Jours Ouvrés (5j/sem)</option>
+                    <option value="OUVRABLE">Jours Ouvrables (6j/sem)</option>
+                    <option value="CALENDAIRE">Jours Calendaires (7j/7)</option>
                   </select>
                 </td>
 
@@ -906,7 +938,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="10" style="text-align: center; padding: 36px; color: #64748b; font-size: 14px;">
+                <td colspan="11" style="text-align: center; padding: 36px; color: #64748b; font-size: 14px;">
                   Aucun type configuré. Cliquez sur « Ajouter un type » pour configurer les permissions et congés spéciaux.
                 </td>
               </tr>
@@ -967,14 +999,12 @@
 
         <div>
           <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-            Type de fête
+            Type de fête *
           </label>
           <select [(ngModel)]="ferieFormModel.type"
-                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; box-sizing: border-box; background: white;">
-            <option value="FIXE">Fête Fixe</option>
-            <option value="MOBILE">Fête Mobile (Chrétienne)</option>
-            <option value="RELIGIEUX">Fête Religieuse (Musulmane)</option>
-            <option value="EXCEPTIONNEL">Jour férié exceptionnel décrété</option>
+                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; box-sizing: border-box; background: white; font-weight: 600;">
+            <option value="FIXE">Fixe</option>
+            <option value="VARIABLE">Variable</option>
           </select>
         </div>
       </div>

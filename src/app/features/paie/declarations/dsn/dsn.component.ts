@@ -30,7 +30,7 @@ import { EtatSyntheseService } from '../../services/etat-synthese.service';
                   (click)="telechargerEtatCnss('excel')"
                   style="background: #0060B3; font-weight: 600; padding: 0 20px; height: 42px;">
             <mat-icon style="margin-right: 6px;">table_view</mat-icon>
-            {{ isExporting ? 'Génération en cours...' : 'Télécharger Bordereau CNSS (Excel)' }}
+            {{ isExporting ? 'Génération en cours...' : 'Télécharger Bordereau CNSS - Excel' }}
           </button>
 
           <button mat-stroked-button
@@ -39,7 +39,7 @@ import { EtatSyntheseService } from '../../services/etat-synthese.service';
                   (click)="telechargerEtatCnss('pdf')"
                   style="font-weight: 600; padding: 0 20px; height: 42px;">
             <mat-icon style="margin-right: 6px;">picture_as_pdf</mat-icon>
-            Télécharger Bordereau CNSS (PDF)
+            Télécharger Bordereau CNSS - PDF
           </button>
 
           <button mat-button

@@ -116,7 +116,7 @@ export class GenererBulletinsComponent implements OnInit {
     name: '',
     periode: `${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][new Date().getMonth()]} ${new Date().getFullYear()}`,
     typeSession: 'ORDINAIRE',
-    natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE' | 'DIFFERENTIEL_MATERNITE',
+    natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE' | 'RELIQUAT' | 'DIFFERENTIEL_MATERNITE',
     codeSession: `SESS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
     modeCible: 'TOUS' as 'TOUS' | 'SELECTION'
   };
@@ -229,7 +229,7 @@ export class GenererBulletinsComponent implements OnInit {
     switch (motif) {
       case 'LICENCIEMENT_SIMPLE': return 'Licenciement Motif Personnel';
       case 'LICENCIEMENT_ECONOMIQUE': return 'Licenciement Économique';
-      case 'LICENCIEMENT_FAUTE_LOURDE': return 'Faute Lourde (Sans Indemnité)';
+      case 'LICENCIEMENT_FAUTE_LOURDE': return 'Faute Lourde - Sans Indemnité';
       case 'DEMISSION': return 'Démission du Salarié';
       case 'FIN_CDD': return 'Fin de Contrat CDD';
       case 'RETRAITE': return 'Départ à la Retraite';
@@ -241,7 +241,7 @@ export class GenererBulletinsComponent implements OnInit {
     switch (statut) {
       case 'DISPENSE_PAYE': return 'Dispensé & Payé par l\'Employeur';
       case 'EFFECTUE': return 'Effectué pendant le Contrat';
-      case 'NON_EFFECTUE_SALARIE': return 'Non Effectué (Retenue sur STC)';
+      case 'NON_EFFECTUE_SALARIE': return 'Non Effectué - Retenue sur STC';
       case 'NON_APPLICABLE': return 'Non Applicable';
       default: return statut || 'Dispensé & Payé';
     }
@@ -281,6 +281,69 @@ export class GenererBulletinsComponent implements OnInit {
   }
   get totalRetenuesGlobal(): number {
     return this.bulletins.reduce((acc, b) => acc + (b.totalRetenues || 0), 0);
+  }
+
+  getNatureLibelle(s: any): string {
+    if (!s) return 'Ordinaire';
+    const type = (s.typeSession || 'ORDINAIRE').toUpperCase();
+    const nat = (s.natureSession || '').toUpperCase();
+    const name = (s.name || '').toUpperCase();
+    const code = (s.codeSession || '').toUpperCase();
+
+    if (nat.includes('13') || name.includes('13') || code.includes('13') || nat.includes('TREIZIEME')) return '13ème Mois';
+    if (nat.includes('14') || name.includes('14') || code.includes('14') || nat.includes('QUATORZIEME')) return '14ème Mois';
+    if (nat.includes('CONGE') || name.includes('CONGE') || code.includes('-CP-') || nat.includes('CONGÉ') || name.includes('CONGÉ')) return 'Congé Payé';
+    if (nat.includes('STC') || name.includes('STC') || code.includes('STC') || nat.includes('SOLDE') || name.includes('SOLDE')) return 'Solde de Tout Compte';
+    if (nat.includes('RETRAITE') || name.includes('RETRAITE') || code.includes('RETR')) return 'Indemnités Retraite';
+    if (nat.includes('RELIQUAT') || nat.includes('MATERNITE') || name.includes('RELIQUAT') || name.includes('MATERNITE') || code.includes('RELIQ') || code.includes('MAT')) return 'Reliquat';
+    if (type === 'EXTRAORDINAIRE') return s.natureSession || s.name || 'Extraordinaire';
+    return 'Ordinaire';
+  }
+
+  getNatureBadgeStyle(s: any): { background: string; color: string; border: string } {
+    const lib = this.getNatureLibelle(s);
+    switch (lib) {
+      case '13ème Mois':
+      case '14ème Mois':
+        return { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' };
+      case 'Solde de Tout Compte':
+        return { background: '#f3e8ff', color: '#7e22ce', border: '1px solid #e9d5ff' };
+      case 'Reliquat':
+        return { background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' };
+      case 'Congé Payé':
+        return { background: '#ccfbf1', color: '#0f766e', border: '1px solid #99f6e4' };
+      case 'Indemnités Retraite':
+        return { background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa' };
+      case 'Ordinaire':
+        return { background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' };
+      default:
+        return { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #dbeafe' };
+    }
+  }
+
+  getSessionLabelForBulletin(b: any): string {
+    if (!b) return 'ORDINAIRE';
+    const rawType = (b.sessionType || b.typeSession || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE').toUpperCase();
+    const rawNature = (b.natureSession || this.currentSession?.natureSession || this.newSessionForm?.natureExtraordinaire || '').toUpperCase();
+    const sName = (b.sessionName || this.currentSession?.name || '').toUpperCase();
+
+    if (rawType.includes('EXTRAORDINAIRE') || rawType === 'EXTRAORDINAIRE') {
+      let nature = 'EXTRAORDINAIRE';
+      if (rawNature.includes('13') || sName.includes('13')) nature = '13EME MOIS';
+      else if (rawNature.includes('14') || sName.includes('14')) nature = '14EME MOIS';
+      else if (rawNature.includes('STC') || rawNature.includes('SOLDE') || sName.includes('STC') || sName.includes('SOLDE')) nature = 'SOLDE DE TOUT COMPTE';
+      else if (rawNature.includes('RELIQUAT') || rawNature.includes('MATERNITE') || sName.includes('RELIQUAT') || sName.includes('MATERNITE')) nature = 'RELIQUAT';
+      else if (rawNature.includes('BONUS') || sName.includes('BONUS')) nature = 'BONUS / GRATIFICATION';
+      else if (rawNature.includes('RAPPEL') || sName.includes('RAPPEL')) nature = 'RAPPEL SUR SALAIRE';
+      else if (rawNature.includes('INDEMNITE') || sName.includes('INDEMNITE')) nature = 'INDEMNITES SPECIFIQUES';
+      else if (rawNature.trim()) nature = rawNature.trim();
+
+      if (rawType.includes(' - ')) {
+        return rawType.replace(/[()]/g, '').trim();
+      }
+      return `EXTRAORDINAIRE - ${nature}`;
+    }
+    return rawType.replace(/[()]/g, '').trim();
   }
 
   constructor(
@@ -345,7 +408,7 @@ export class GenererBulletinsComponent implements OnInit {
       annee: this.selectedYear,
       name: '',
       typeSession: 'ORDINAIRE',
-      natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE',
+      natureExtraordinaire: '13EME_MOIS' as '13EME_MOIS' | '14EME_MOIS' | 'CONGE_PAYE' | 'STC' | 'INDEMNITE_RETRAITE' | 'RELIQUAT' | 'DIFFERENTIEL_MATERNITE',
       periode: '',
       codeSession: '',
       modeCible: 'TOUS'
@@ -361,7 +424,8 @@ export class GenererBulletinsComponent implements OnInit {
   }
 
   get isCreationSessionMaternite(): boolean {
-    return this.newSessionForm.typeSession === 'EXTRAORDINAIRE' && this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE';
+    return this.newSessionForm.typeSession === 'EXTRAORDINAIRE' &&
+      (this.newSessionForm.natureExtraordinaire === 'RELIQUAT' || this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE');
   }
 
   get isCreationSession13ou14(): boolean {
@@ -483,9 +547,9 @@ export class GenererBulletinsComponent implements OnInit {
       this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'SELECTION';
       this.changerModeCibleNouvelleSession('SELECTION');
-    } else if (this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
-      this.newSessionForm.name = `Session Congé Maternité — ${nomMois} ${y}`;
-      this.newSessionForm.codeSession = `SESS-MAT-${y}-${m}`;
+    } else if (this.newSessionForm.natureExtraordinaire === 'RELIQUAT' || this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
+      this.newSessionForm.name = `Session Reliquat — ${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-RELIQ-${y}-${m}`;
       this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'TOUS';
       this.chargerFemmesMaterniteEligibles();
@@ -528,8 +592,8 @@ export class GenererBulletinsComponent implements OnInit {
         prefix = 'CP';
       } else if (this.newSessionForm.natureExtraordinaire === 'INDEMNITE_RETRAITE') {
         prefix = 'RETR';
-      } else if (this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
-        prefix = 'MAT';
+      } else if (this.newSessionForm.natureExtraordinaire === 'RELIQUAT' || this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
+        prefix = 'RELIQ';
       } else {
         prefix = 'STC';
       }
@@ -693,7 +757,7 @@ export class GenererBulletinsComponent implements OnInit {
     }
 
     if (this.isCreationSessionMaternite && this.employesMaterniteEligibles.length === 0) {
-      alert(`Impossible de créer la Session Congé Maternité : aucune collaboratrice n'a de congé de maternité approuvé en cours pour ${this.newSessionForm.periode}.`);
+      alert(`Impossible de créer la Session Reliquat : aucune collaboratrice n'a de congé de maternité approuvé en cours pour ${this.newSessionForm.periode}.`);
       return;
     }
 
@@ -1740,9 +1804,7 @@ export class GenererBulletinsComponent implements OnInit {
       lines = b.lines.map((l: any) => {
         const cd = (l.code || '').toUpperCase();
         const rawName = (l.libelle || l.name || '').trim();
-        const isProrataOrGratifOrAvoir = cd.includes('13') || cd.includes('14') || cd.includes('GRAT') || cd.includes('PRORATA') || cd.includes('AVOIR') ||
-          rawName.toUpperCase().includes('13') || rawName.toUpperCase().includes('14') || rawName.toUpperCase().includes('GRATIF') || rawName.toUpperCase().includes('PRORATA') || rawName.toUpperCase().includes('AVOIR');
-        const nm = isProrataOrGratifOrAvoir ? rawName.replace(/\s+/g, ' ').trim() : rawName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+        const nm = rawName.replace(/[()]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
         const isRetenue = l.typeLigne === 'RETENUE' || l.typeLigne === 'RETENUE_SOCIALE' || l.typeLigne === 'IMPOT' ||
           l.typeLigne === 'PRECOMPTE' || l.category === 'RETENUE' || l.category === 'PRECOMPTE' ||
@@ -1821,7 +1883,7 @@ export class GenererBulletinsComponent implements OnInit {
 
         return {
           code: l.code,
-          name: isProrataOrGratifOrAvoir ? rawName : nm,
+          name: nm,
           typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
           gain: gainVal,
           retenue: retenueVal,
@@ -1999,8 +2061,11 @@ export class GenererBulletinsComponent implements OnInit {
         copy.dateTo = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
       }
     }
-    copy.periode = copy.periode || copy.sessionPeriode || this.currentSession?.periode || this.periode;
-    copy.sessionType = copy.sessionType || copy.typeSession || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE';
+    copy.periode = (copy.periode || copy.sessionPeriode || this.currentSession?.periode || this.periode || '').replace(/[()]/g, '').trim();
+    copy.sessionType = (copy.sessionType || copy.typeSession || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE').replace(/[()]/g, '').trim();
+    if (copy.classification) copy.classification = String(copy.classification).replace(/[()]/g, '').trim();
+    if (copy.emploi) copy.emploi = String(copy.emploi).replace(/[()]/g, '').trim();
+    if (copy.banque) copy.banque = String(copy.banque).replace(/[()]/g, '').trim();
 
     copy.modeReglement = copy.modePaiement || (emp && emp.modePaiement) || `Virement bancaire / ${copy.banque}`;
     copy.numeroCompteBancaire = copy.numeroCompteBancaire || copy.iban || (emp ? emp.iban : '—');
@@ -2086,6 +2151,10 @@ export class GenererBulletinsComponent implements OnInit {
       ancienneteAnnees: enriched.ancienneteAnnees,
       dateFrom: enriched.dateFrom,
       dateTo: enriched.dateTo,
+      sessionType: enriched.sessionType || enriched.typeSession || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE',
+      typeSession: enriched.typeSession || enriched.sessionType || this.currentSession?.typeSession || this.sessionType || 'ORDINAIRE',
+      natureSession: enriched.natureSession || this.currentSession?.natureSession || this.newSessionForm?.natureExtraordinaire || null,
+      periode: enriched.periode || this.currentSession?.periode || this.periode,
       scheduledWorkingDays: enriched.scheduledWorkingDays ?? 30,
       workedDays: (enriched.joursPresents !== undefined && enriched.joursPresents !== null)
         ? Number(enriched.joursPresents)
@@ -2111,8 +2180,8 @@ export class GenererBulletinsComponent implements OnInit {
       statut: enriched.statut || enriched.etat || 'GENERE',
       lines: (enriched.lines || []).map((l: any) => ({
         code: l.code || 'LINE',
-        libelle: l.name || l.libelle,
-        name: l.name || l.libelle,
+        libelle: String(l.name || l.libelle || '').replace(/[()]/g, '').trim(),
+        name: String(l.name || l.libelle || '').replace(/[()]/g, '').trim(),
         typeLigne: l.retenue ? 'RETENUE' : 'GAIN',
         taux: l.rate || (l.taux != null ? l.taux : (l.tauxFormatted ? parseFloat(String(l.tauxFormatted).replace('%', '').trim()) : 100)),
         baseCalcul: l.baseCalcul,

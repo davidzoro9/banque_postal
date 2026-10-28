@@ -57,6 +57,9 @@ export interface SoldeConge {
   joursEnAttente: number;
   soldeRestant: number;
   dateDernierConge?: string;
+  quotaPermissions?: number;
+  permissionsPrises?: number;
+  soldePermissionsRestant?: number;
 }
 
 export interface TypeAbsenceConge {
@@ -66,6 +69,7 @@ export interface TypeAbsenceConge {
   deductibleDuSolde?: boolean;
   dureeMaxLegaleJours?: number;
   categorie?: 'CONGE' | 'ABSENCE' | 'PERMISSION' | string;
+  typeJour?: 'OUVRE' | 'OUVRABLE' | 'CALENDAIRE' | string;
   sexeRequis?: 'FEMININ' | 'MASCULIN' | 'TOUS' | string;
   remunere?: boolean;
   tauxRemuneration?: number;
@@ -80,7 +84,7 @@ export interface JourFerie {
   id?: number;
   libelle: string;
   date: string; // YYYY-MM-DD
-  type?: string;
+  type?: 'FIXE' | 'VARIABLE' | string;
   chomePaye?: boolean;
   description?: string;
 }
@@ -93,6 +97,7 @@ export interface ParametrageConge {
   deduireJoursFeries: boolean;
   plafondReportJours: number;
   bloquerSiSoldeInsuffisant: boolean;
+  quotaPermissionsAnnuel?: number; // Quota annuel de permissions d'absence (ex: 10 j)
   preavisJoursMin?: number;
 }
 

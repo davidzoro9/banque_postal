@@ -61,9 +61,11 @@ export class EtatsSyntheseComponent implements OnInit {
   selectedAgent1: Employee | null = null;
   selectedAgent2: Employee | null = null;
   titresStandards: string[] = [
+    'Directeur Administratif et Moyens Généraux',
+    'Directeur Général /PI',
+    'Directeur Général',
     'Le Comptable',
     'Le Directeur Financier et Comptable',
-    'Le Directeur Général',
     'Le Responsable Paie & RH',
     'Le Chef de Département Ressources Humaines',
     'L\'Auditeur Interne',
@@ -521,7 +523,11 @@ export class EtatsSyntheseComponent implements OnInit {
       'elements-salaire': 'ETAT_ELEMENT_SALAIRE',
       'etat-elements-salaire': 'ETAT_ELEMENT_SALAIRE',
       'bulletin': 'ETAT_BULLETIN',
-      'etat-bulletin': 'ETAT_BULLETIN'
+      'etat-bulletin': 'ETAT_BULLETIN',
+      'stc': 'ETAT_STC',
+      'etat-stc': 'ETAT_STC',
+      'solde-tout-compte': 'ETAT_STC',
+      'etat-solde-tout-compte': 'ETAT_STC'
     };
     if (SLUG_MAP[clean]) {
       return SLUG_MAP[clean];
@@ -551,7 +557,9 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_TYPE_EMPLOYE': 'type-employe',
       'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
       'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
-      'ETAT_BULLETIN': 'bulletin'
+      'ETAT_BULLETIN': 'bulletin',
+      'ETAT_STC': 'stc',
+      'ETAT_SOLDE_TOUT_COMPTE': 'stc'
     };
     return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }
@@ -659,7 +667,9 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_TYPE_EMPLOYE',
       'ETAT_ELEMENTS_SALAIRE',
       'ETAT_ELEMENT_SALAIRE',
-      'ETAT_BULLETIN'
+      'ETAT_BULLETIN',
+      'ETAT_STC',
+      'ETAT_SOLDE_TOUT_COMPTE'
     ];
     return !builtIn.includes(this.selectedEtat);
   }
@@ -791,19 +801,19 @@ export class EtatsSyntheseComponent implements OnInit {
 
   saveSignataires(): void {
     if (!this.signatairesForm.employeeId1 && !this.selectedAgent1) {
-      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 1 (Bas Gauche).';
+      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 1 - Bas Gauche.';
       return;
     }
     if (!this.signatairesForm.titreSignataire1?.trim()) {
-      this.signatairesError = 'Le titre / fonction du Signataire 1 (Gauche) est obligatoire.';
+      this.signatairesError = 'Le titre / fonction du Signataire 1 - Gauche est obligatoire.';
       return;
     }
     if (!this.signatairesForm.employeeId2 && !this.selectedAgent2) {
-      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 2 (Bas Droite).';
+      this.signatairesError = 'Veuillez sélectionner un agent enregistré pour le Signataire 2 - Bas Droite.';
       return;
     }
     if (!this.signatairesForm.titreSignataire2?.trim()) {
-      this.signatairesError = 'Le titre / fonction du Signataire 2 (Droite) est obligatoire.';
+      this.signatairesError = 'Le titre / fonction du Signataire 2 - Droite est obligatoire.';
       return;
     }
 

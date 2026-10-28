@@ -231,13 +231,13 @@
                     </button>
 
                     @if (p.statut !== 'SOLDE') {
-                      <button mat-icon-button class="action-btn solder-action-btn" title="Passer en Soldé (avec justificatif)" (click)="openSolderModal(p); $event.stopPropagation()">
+                      <button mat-icon-button class="action-btn solder-action-btn" title="Passer en Soldé - avec justificatif" (click)="openSolderModal(p); $event.stopPropagation()">
                         <mat-icon>check_circle</mat-icon>
                       </button>
                     }
 
                     @if (p.statut === 'EN_COURS') {
-                      <button mat-icon-button class="action-btn suspend-action-btn" title="Suspendre la retenue ce mois (avec motif)" (click)="openSuspendreModal(p); $event.stopPropagation()">
+                      <button mat-icon-button class="action-btn suspend-action-btn" title="Suspendre la retenue ce mois - avec motif" (click)="openSuspendreModal(p); $event.stopPropagation()">
                         <mat-icon>pause_circle_outline</mat-icon>
                       </button>
                     } @else if (p.statut === 'SUSPENDU') {
@@ -341,7 +341,7 @@
                 </div>
                 <div class="info-row">
                   <span class="info-label"><mat-icon>repeat</mat-icon> Échéances</span>
-                  <span class="info-val">{{ selectedPrecompte.echeance }} mois ({{ selectedPrecompte.retenueMensuelle | number:'1.2-2' }} FCFA / mois)</span>
+                  <span class="info-val">{{ selectedPrecompte.echeance }} mois — {{ selectedPrecompte.retenueMensuelle | number:'1.2-2' }} FCFA / mois</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label"><mat-icon>event</mat-icon> Date d'échéance</span>
@@ -448,11 +448,11 @@
             <!-- Bénéficiaire (Agent - Liste Déroulante) -->
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Bénéficiaire (Agent) *</mat-label>
+                <mat-label>Bénéficiaire Agent *</mat-label>
                 <mat-select [(ngModel)]="formModel.employeeId" (selectionChange)="selectEmployeeById($event.value)" [disabled]="!!editingPrecompte" placeholder="Sélectionner un agent...">
                   @for (emp of employeesList; track emp.id) {
                     <mat-option [value]="emp.id">
-                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} ({{ emp.fonction || 'Agent' }})
+                      <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}
                     </mat-option>
                   }
                 </mat-select>

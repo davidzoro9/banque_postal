@@ -60,7 +60,7 @@
         class="btn-export btn-excel"
         (click)="exportExcel()"
         [disabled]="isExporting || isLoading"
-        matTooltip="Télécharger le classeur officiel Excel (.xlsx multi-colonnes)"
+        matTooltip="Télécharger le classeur officiel Excel - XLSX multi-colonnes"
       >
         <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">table_view</mat-icon>
         <span>Exporter Excel</span>
@@ -71,7 +71,7 @@
         class="btn-export btn-csv"
         (click)="exportCsv()"
         [disabled]="isExporting || isLoading"
-        matTooltip="Télécharger au format CSV délimité pour progiciels comptables (.csv)"
+        matTooltip="Télécharger au format CSV délimité pour progiciels comptables - CSV"
       >
         <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin-right: 4px;">text_snippet</mat-icon>
         <span>Exporter CSV</span>
@@ -194,7 +194,7 @@
         <mat-icon>remove_circle_outline</mat-icon>
       </div>
       <div class="kpi-info">
-        <span class="kpi-label">Total Retenues (CNSS, IUTS, Prêts)</span>
+        <span class="kpi-label">Total Retenues - CNSS, IUTS, Prêts</span>
         <span class="kpi-val">{{ formatFcfa(etatData.totalRetenues) }}</span>
         <span class="kpi-sub">Prélèvements fiscaux et sociaux</span>
       </div>
@@ -244,8 +244,8 @@
           <tr>
             <th style="width: 15%;">Numéro de Compte</th>
             <th style="width: 45%;">Intitulé du Compte</th>
-            <th class="text-right" style="width: 20%;">Débit (FCFA)</th>
-            <th class="text-right" style="width: 20%;">Crédit (FCFA)</th>
+            <th class="text-right" style="width: 20%;">Débit FCFA</th>
+            <th class="text-right" style="width: 20%;">Crédit FCFA</th>
           </tr>
         </thead>
         <tbody>
@@ -258,7 +258,7 @@
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="2" class="font-bold">TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE)</td>
+            <td colspan="2" class="font-bold">TOTAL DE L'ÉTAT - BALANCE ÉQUILIBRÉE</td>
             <td class="text-right font-bold col-net">{{ formatFcfa(etatData?.totalMasseSalariale) }}</td>
             <td class="text-right font-bold col-net">{{ formatFcfa(etatData?.totalMasseSalariale) }}</td>
           </tr>
@@ -360,7 +360,7 @@
             <thead>
               <tr>
                 <th>Matricule</th>
-                <th>Nom &amp; Prénom(s)</th>
+                <th>Nom &amp; Prénoms</th>
                 <th class="text-center">Code Banque</th>
                 <th class="text-center">Code Guichet</th>
                 <th>Compte à créditer</th>
@@ -381,7 +381,7 @@
             </tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="6" class="font-bold">TOTAL DE L'ORDRE DE VIREMENT ({{ bq.nombreBeneficiaires }} Bénéficiaires)</td>
+                <td colspan="6" class="font-bold">TOTAL DE L'ORDRE DE VIREMENT - {{ bq.nombreBeneficiaires }} Bénéficiaires</td>
                 <td class="text-right font-bold col-net">{{ formatFcfa(bq.totalNet) }}</td>
               </tr>
             </tfoot>
@@ -449,11 +449,11 @@
             <th>N° CNSS</th>
             <th>Date Embauche</th>
             <th class="text-right">Salaire Brut</th>
-            <th class="text-right">Assiette CNSS (plaf. 800k)</th>
-            <th class="text-right">Part Sal. (5.5%)</th>
-            <th class="text-right">Prest. Fam. (7.0%)</th>
-            <th class="text-right">Risques Pro (3.5%)</th>
-            <th class="text-right">Retraite Pat. (5.5%)</th>
+            <th class="text-right">Assiette CNSS - plaf. 800k</th>
+            <th class="text-right">Part Sal. 5.5%</th>
+            <th class="text-right">Prest. Fam. 7.0%</th>
+            <th class="text-right">Risques Pro 3.5%</th>
+            <th class="text-right">Retraite Pat. 5.5%</th>
             <th class="text-right">Total Patronal</th>
             <th class="text-right col-net">Total reversé CNSS</th>
           </tr>
@@ -809,6 +809,94 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- TABLEAU : ÉTAT DU SOLDE DE TOUT COMPTE STC -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_STC' || selectedEtat === 'ETAT_SOLDE_TOUT_COMPTE') && filteredRows.length > 0">
+      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">ÉTAT DU SOLDE DE TOUT COMPTE — INDEMNITÉS LÉGALES DE RUPTURE</span>
+        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Départ, Licenciement, Retraite &amp; Soldes des Créances</span>
+      </div>
+      <table class="bpbf-table font-compact" style="font-size: 11.5px;">
+        <thead>
+          <tr>
+            <th>Mle</th>
+            <th>Nom et Prénoms</th>
+            <th>Emploi &amp; Structure</th>
+            <th>Motif Rupture</th>
+            <th class="text-center">Ancienneté</th>
+            <th class="text-right">Indemnité Congés Acquis</th>
+            <th class="text-right">Indemnité Licenciement</th>
+            <th class="text-right">Indemnité Préavis</th>
+            <th class="text-right">Prorata Gratifications</th>
+            <th class="text-right">Total Brut STC</th>
+            <th class="text-right">Total Retenues</th>
+            <th class="text-right col-net">Net STC à Payer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>{{ row.emploi }} — <span class="text-muted">{{ row.direction }}</span></td>
+            <td>
+              <span class="badge" style="background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600;">
+                {{ row.motifRupture || 'Rupture' }}
+              </span>
+            </td>
+            <td class="text-center font-mono font-bold">
+              {{ row.ancienneteAnnees != null ? row.ancienneteAnnees + ' ans' : '—' }}
+            </td>
+            <td class="text-right font-mono">
+              <div class="font-bold">{{ formatFcfa(row.indemniteCongesAcquis) }}</div>
+              <div style="font-size: 10px; color: #64748b;" *ngIf="row.joursCongesAcquis > 0">
+                {{ row.joursCongesAcquis }} j &bull; Base {{ formatFcfa(row.salaireMoyenJournalier) }}
+              </div>
+            </td>
+            <td class="text-right font-mono">
+              <div class="font-bold">{{ formatFcfa(row.indemniteLicenciement) }}</div>
+              <div style="font-size: 10px; color: #16a34a;" *ngIf="row.indemniteLicenciement > 0">
+                100% Exonéré &bull; Base {{ formatFcfa(row.salaireGlobalMoyen) }}
+              </div>
+            </td>
+            <td class="text-right font-mono">
+              <div class="font-bold">{{ formatFcfa(row.indemnitePreavis) }}</div>
+              <div style="font-size: 10px; color: #64748b;" *ngIf="row.moisPreavis > 0">
+                {{ row.moisPreavis }} mois
+              </div>
+            </td>
+            <td class="text-right font-mono">
+              {{ formatFcfa(row.prorataGratifications) }}
+            </td>
+            <td class="text-right font-mono font-bold" style="color: #0f172a;">
+              {{ formatFcfa(row.totalBrutStc) }}
+            </td>
+            <td class="text-right font-mono text-danger">
+              <div class="font-bold">{{ formatFcfa(row.totalRetenues) }}</div>
+              <div style="font-size: 10px; color: #dc2626;" *ngIf="row.retenuesPretsEtPrecomptes > 0">
+                Prêts soldés: {{ formatFcfa(row.retenuesPretsEtPrecomptes) }}
+              </div>
+            </td>
+            <td class="text-right col-net font-bold font-mono" style="font-size: 12.5px;">
+              {{ formatFcfa(row.netSoldeToutCompte) }}
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5" class="font-bold">TOTAL DES INDEMNITÉS DE SOLDE DE TOUT COMPTE</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemniteCongesAcquis')) }}</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemniteLicenciement')) }}</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemnitePreavis')) }}</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('prorataGratifications')) }}</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(etatData?.totalBrut || getSum('totalBrutStc')) }}</td>
+            <td class="text-right font-bold font-mono text-danger">{{ formatFcfa(etatData?.totalRetenues || getSum('totalRetenues')) }}</td>
+            <td class="text-right col-net font-bold font-mono" style="font-size: 13px;">{{ formatFcfa(etatData?.totalNet || getSum('netSoldeToutCompte')) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
     <!-- 13. TABLEAU DYNAMIQUE : ÉTATS PERSONNALISÉS  -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && isCustomEtat && filteredRows.length > 0">
@@ -955,10 +1043,10 @@
           <div class="form-group">
             <label class="form-label">Filtre / Source des données</label>
             <select class="form-control" [(ngModel)]="configForm.filtreType">
-              <option value="ALL">Toutes les rubriques (Vue globale)</option>
+              <option value="ALL">Toutes les rubriques - Vue globale</option>
               <option value="INDEMNITE">Indemnités & Primes uniquement</option>
               <option value="RETENUE">Retenues & Précomptes uniquement</option>
-              <option value="BANQUE">Ventilation bancaire (Virements)</option>
+              <option value="BANQUE">Ventilation bancaire - Virements</option>
               <option value="DIRECTION">Ventilation par Direction / Service</option>
             </select>
           </div>
@@ -1049,7 +1137,7 @@
           <!-- Signataire 1 : Gauche -->
           <div class="signataire-card">
             <div class="signataire-card-header">
-              <span class="signataire-badge">Signataire 1 (Bas Gauche)</span>
+              <span class="signataire-badge">Signataire 1 - Bas Gauche</span>
               @if (selectedAgent1) {
                 <span class="signataire-mat-badge">{{ selectedAgent1.matricule }}</span>
               }
@@ -1065,7 +1153,7 @@
                 <option [ngValue]="null" disabled>— Sélectionner un agent enregistré —</option>
                 @for (emp of employeesList; track emp.id) {
                   <option [ngValue]="emp.id">
-                    {{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }}) — {{ emp.poste || emp.fonction || 'Collaborateur' }}
+                    {{ emp.prenom }} {{ emp.nom }} - {{ emp.matricule }} — {{ emp.poste || emp.fonction || 'Collaborateur' }}
                   </option>
                 }
               </select>
@@ -1105,7 +1193,7 @@
           <!-- Signataire 2 : Droite -->
           <div class="signataire-card">
             <div class="signataire-card-header">
-              <span class="signataire-badge badge-primary">Signataire 2 (Bas Droite)</span>
+              <span class="signataire-badge badge-primary">Signataire 2 - Bas Droite</span>
               @if (selectedAgent2) {
                 <span class="signataire-mat-badge">{{ selectedAgent2.matricule }}</span>
               }
@@ -1121,7 +1209,7 @@
                 <option [ngValue]="null" disabled>— Sélectionner un agent enregistré —</option>
                 @for (emp of employeesList; track emp.id) {
                   <option [ngValue]="emp.id">
-                    {{ emp.prenom }} {{ emp.nom }} ({{ emp.matricule }}) — {{ emp.poste || emp.fonction || 'Collaborateur' }}
+                    {{ emp.prenom }} {{ emp.nom }} - {{ emp.matricule }} — {{ emp.poste || emp.fonction || 'Collaborateur' }}
                   </option>
                 }
               </select>

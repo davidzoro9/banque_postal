@@ -27,7 +27,7 @@ export interface TrancheIuts {
       <!-- Header -->
       <div class="page-header">
         <div>
-          <h2>Paramétrage des Cotisations Sociales & Fiscalité (CNSS, CRRAE-UMOA, IUTS, TPA)</h2>
+          <h2>Paramétrage des Cotisations Sociales & Fiscalité - CNSS, CRRAE-UMOA, IUTS, TPA</h2>
           <p class="subtitle">Gestion des taux de cotisations salariales, patronales et régimes de retraite complémentaires du secteur bancaire.</p>
         </div>
         <div class="header-actions">
@@ -52,7 +52,7 @@ export interface TrancheIuts {
         <mat-card class="config-card">
           <div class="card-title">
             <mat-icon style="color: #004080;">account_balance</mat-icon>
-            <h3>Taux des Organismes de Cotisation & Retraite (CNSS & CRRAE-UMOA)</h3>
+            <h3>Taux des Organismes de Cotisation & Retraite - CNSS & CRRAE-UMOA</h3>
           </div>
           
           <table class="cotisations-table">
@@ -60,8 +60,8 @@ export interface TrancheIuts {
               <tr>
                 <th>Code</th>
                 <th>Cotisation / Organisme</th>
-                <th>Part Salariale (%)</th>
-                <th>Part Patronale (%)</th>
+                <th>Part Salariale %</th>
+                <th>Part Patronale %</th>
                 <th>Assiette de Calcul</th>
                 <th>Statut</th>
                 <th>Actions</th>
@@ -85,7 +85,7 @@ export interface TrancheIuts {
                     <option value="Salaire brut imposable">Salaire brut imposable</option>
                     <option value="Salaire de base">Salaire de base</option>
                     <option value="Masse salariale brute">Masse salariale brute</option>
-                    <option value="Plafond CNSS">Plafond CNSS (800 000)</option>
+                    <option value="Plafond CNSS">Plafond CNSS - 800 000</option>
                   </select>
                 </td>
                 <td>
@@ -121,7 +121,7 @@ export interface TrancheIuts {
             La base imposable est arrondie à la <strong>centaine inférieure</strong> (TRUNC -2).
           </p>
           <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:12px; color:#92400e;">
-            <strong>Exonérations légales (Circulaire MINEFID N°2020-0432) :</strong><br>
+            <strong>Exonérations légales - Circulaire MINEFID N°2020-0432 :</strong><br>
             • Logement : MIN(montant, 20% × Salaire Brut, <strong>75 000</strong>)<br>
             • Transport/Déplacement : MIN(montant, 5% × Salaire Brut, <strong>30 000</strong>)<br>
             • Fonctions (Astreinte, Technicité, Responsabilité, etc.) : chacune MIN(montant, 5% × Salaire Brut, <strong>50 000</strong>) — sans cumul
@@ -129,7 +129,7 @@ export interface TrancheIuts {
 
           <div class="iuts-settings-row">
             <div class="setting-item">
-              <label>Abattement Forfaitaire 20% (Art. 111 CGI) :</label>
+              <label>Abattement Forfaitaire 20% - Art. 111 CGI :</label>
               <input type="number" [(ngModel)]="abattementPro" class="setting-input"> %
             </div>
             <div class="setting-item">
@@ -150,13 +150,13 @@ export interface TrancheIuts {
             </div>
           </div>
 
-          <h4 style="margin-top: 20px; font-size: 14px; color: #1e293b;">Tranches de l'IUTS — Barème Officiel Burkina Faso (Circulaire MINEFID N°2020-0432)</h4>
+          <h4 style="margin-top: 20px; font-size: 14px; color: #1e293b;">Tranches de l'IUTS — Barème Officiel Burkina Faso - Circulaire MINEFID N°2020-0432</h4>
           <table class="iuts-table">
             <thead>
               <tr>
                 <th>Tranche de Base Imposable</th>
-                <th>Taux marginal (%)</th>
-                <th>Cumul Impôt sur tranche (indicatif)</th>
+                <th>Taux marginal %</th>
+                <th>Cumul Impôt sur tranche indicatif</th>
               </tr>
             </thead>
             <tbody>

@@ -71,7 +71,7 @@
 
           <!-- 2. POSITIONNEMENT CONVENTIONNEL BPBF -->
           <div class="form-section-title">
-            <span>2. Positionnement conventionnel (Grille BPBF)</span>
+            <span>2. Positionnement conventionnel - Grille BPBF</span>
           </div>
 
           <div class="form-row">
@@ -129,10 +129,10 @@
               <mat-label>Personnes à charge</mat-label>
               <mat-select [(ngModel)]="nombrePersonnesCharge" (selectionChange)="lancerSimulation()">
                 <mat-option [value]="0">0 charge</mat-option>
-                <mat-option [value]="1">1 charge (-8% IUTS)</mat-option>
-                <mat-option [value]="2">2 charges (-10% IUTS)</mat-option>
-                <mat-option [value]="3">3 charges (-12% IUTS)</mat-option>
-                <mat-option [value]="4">4 charges ou plus (-14% IUTS)</mat-option>
+                <mat-option [value]="1">1 charge - réduction 8% IUTS</mat-option>
+                <mat-option [value]="2">2 charges - réduction 10% IUTS</mat-option>
+                <mat-option [value]="3">3 charges - réduction 12% IUTS</mat-option>
+                <mat-option [value]="4">4 charges ou plus - réduction 14% IUTS</mat-option>
               </mat-select>
             </mat-form-field>
 
@@ -173,11 +173,11 @@
           <div class="avantages-nature-group">
             <label class="checkbox-container">
               <input type="checkbox" [(ngModel)]="vehiculeFourni" (change)="onAvantageChange()">
-              <span>Véhicule de fonction attribué (neutralise l'indemnité de transport)</span>
+              <span>Véhicule de fonction attribué — neutralise l'indemnité de transport</span>
             </label>
             <label class="checkbox-container">
               <input type="checkbox" [(ngModel)]="logementFourni" (change)="onAvantageChange()">
-              <span>Logement de fonction attribué (neutralise l'indemnité de logement)</span>
+              <span>Logement de fonction attribué — neutralise l'indemnité de logement</span>
             </label>
           </div>
 
@@ -213,7 +213,7 @@
           <mat-icon>calculate</mat-icon>
         </div>
         <h3>Prêt pour la simulation</h3>
-        <p>Renseignez vos critères (salaire net ou sursalaire, catégorie et échelon) puis cliquez sur <strong>« Actualiser le calcul »</strong> pour afficher la décomposition complète du bulletin.</p>
+        <p>Renseignez vos critères - salaire net ou sursalaire, catégorie et échelon - puis cliquez sur <strong>« Actualiser le calcul »</strong> pour afficher la décomposition complète du bulletin.</p>
         <button mat-flat-button color="primary" class="btn-empty-calc" (click)="lancerSimulation()">
           <mat-icon>refresh</mat-icon> Calculer maintenant
         </button>
@@ -279,7 +279,7 @@
           <div class="kpi-card">
             <div class="kpi-icon"><mat-icon>account_balance</mat-icon></div>
             <div class="kpi-info">
-              <span class="kpi-lbl">Coût Total Banque (Employeur)</span>
+              <span class="kpi-lbl">Coût Total Banque - Employeur</span>
               <span class="kpi-val">{{ formatFcfa(resultat.coutTotalEmployeur) }}</span>
             </div>
           </div>
@@ -291,7 +291,7 @@
           <mat-card-header>
             <div class="card-title-group">
               <span class="card-main-title">Décomposition du bulletin prévisionnel</span>
-              <span class="card-main-subtitle">Conforme au barème IUTS (Circulaire MINEFID N°2020-0432) et aux cotisations CNSS</span>
+              <span class="card-main-subtitle">Conforme au barème IUTS - Circulaire MINEFID N°2020-0432 et aux cotisations CNSS</span>
             </div>
           </mat-card-header>
 
@@ -340,7 +340,7 @@
                 </tr>
 
                 <tr *ngIf="(resultat.indemniteSujetion || 0) > 0" class="row-gain">
-                  <td>Indemnité de Sujétion (Statutaire)</td>
+                  <td>Indemnité de Sujétion - Statutaire</td>
                   <td>-</td>
                   <td>-</td>
                   <td class="text-right gain">+ {{ formatFcfa(resultat.indemniteSujetion) }}</td>
@@ -403,7 +403,7 @@
                 </tr>
 
                 <tr *ngIf="resultat.cotisationFsp && resultat.cotisationFsp > 0" class="row-deduction">
-                  <td>Fonds de Soutien Patriotique (FSP)</td>
+                  <td>Fonds de Soutien Patriotique FSP</td>
                   <td>{{ formatFcfa(resultat.baseFsp) }}</td>
                   <td>1.0 %</td>
                   <td class="text-right deduction">- {{ formatFcfa(resultat.cotisationFsp) }}</td>
@@ -414,7 +414,7 @@
                   <td colspan="5">
                     <span class="fiscal-badge">Fiscalité :</span>
                     Brut après CNSS : <strong>{{ formatFcfa(resultat.brutApresCnss) }}</strong> • 
-                    Abattement (20%) : <strong>{{ formatFcfa(resultat.abattementForfaitaire) }}</strong> • 
+                    Abattement 20% : <strong>{{ formatFcfa(resultat.abattementForfaitaire) }}</strong> • 
                     Base IUTS : <strong>{{ formatFcfa(resultat.baseImposableIuts) }}</strong>
                   </td>
                 </tr>
@@ -423,7 +423,7 @@
                   <td>
                     Impôt IUTS 
                     <span *ngIf="resultat.nombrePersonnesCharge > 0" class="charges-note">
-                      ({{ resultat.nombrePersonnesCharge }} charge(s) : -{{ resultat.tauxReductionCharges }}%)
+                      — {{ resultat.nombrePersonnesCharge }} charge - réduction {{ resultat.tauxReductionCharges }}%
                     </span>
                   </td>
                   <td>{{ formatFcfa(resultat.baseImposableIuts) }}</td>
@@ -434,7 +434,7 @@
 
                 <!-- CHARGE PATRONALE -->
                 <tr class="row-patronale">
-                  <td>Cotisation CNSS Patronale (PF + AT/MP + Retraite)</td>
+                  <td>Cotisation CNSS Patronale - PF, AT/MP, Retraite</td>
                   <td>{{ formatFcfa(resultat.baseCnss) }}</td>
                   <td>16.0 %</td>
                   <td class="text-right">-</td>

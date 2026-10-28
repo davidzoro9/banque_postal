@@ -68,7 +68,7 @@ export interface ParametragePaieRule {
                 <th style="padding: 14px 18px; width: 120px;">Code</th>
                 <th style="padding: 14px 18px; min-width: 220px;">Libellé de la Retenue</th>
                 <th style="padding: 14px 18px; width: 220px; color: #0060B3;">Type de Part / Nature</th>
-                <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1; width: 130px;">Taux (%)</th>
+                <th style="padding: 14px 18px; text-align: center; background: #e0f2fe; color: #0369a1; width: 130px;">Taux %</th>
                 <th style="padding: 14px 18px;">Description</th>
                 <th style="padding: 14px 18px; text-align: center; width: 90px;">Statut</th>
                 <th style="padding: 14px 18px; text-align: right; width: 100px;">Actions</th>

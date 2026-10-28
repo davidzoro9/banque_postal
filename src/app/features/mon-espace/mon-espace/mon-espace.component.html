@@ -56,8 +56,8 @@
 
       <div class="hero-quick-actions">
         <button mat-stroked-button class="hero-action-btn" (click)="setActiveTab('CONGES'); ouvrirModalDemandeConge()">
-          <mat-icon>beach_access</mat-icon>
-          <span>Demander un congé</span>
+          <mat-icon>add_circle</mat-icon>
+          <span>Faire une demande</span>
         </button>
         <button mat-flat-button class="hero-action-btn primary" (click)="setActiveTab('BULLETINS')">
           <mat-icon>receipt_long</mat-icon>
@@ -93,7 +93,7 @@
         <div class="tab-text-group">
           <span class="tab-title">Mes Bulletins de Paie</span>
           <span class="tab-badge-pill">
-            {{ moisDisponibles.length || 0 }} disponible(s)
+            {{ moisDisponibles.length || 0 }} disponibles
           </span>
         </div>
       </button>
@@ -108,7 +108,7 @@
         <div class="tab-text-group">
           <span class="tab-title">Mes Demandes RH & Attestations</span>
           <span class="tab-badge-pill">
-            {{ mesDemandesBulletins.length || 0 }} demande(s)
+            {{ mesDemandesBulletins.length || 0 }} demandes
           </span>
         </div>
       </button>
@@ -197,7 +197,7 @@
 
             <button mat-flat-button class="btn-primary-action" (click)="ouvrirModalDemandeConge()">
               <mat-icon>add_circle</mat-icon>
-              <span>Demander un congé / absence</span>
+              <span>Faire une demande</span>
             </button>
           </div>
 
@@ -285,7 +285,7 @@
                             <button mat-flat-button class="btn-download-direct"
                                     (click)="telechargerTitreConge(c)"
                                     [disabled]="isDownloadingTitreConge === c.id"
-                                    title="Télécharger le Titre officiel de Congé DRH (PDF)">
+                                    title="Télécharger le Titre officiel de Congé DRH - PDF">
                               <mat-icon>picture_as_pdf</mat-icon>
                               <span>{{ isDownloadingTitreConge === c.id ? 'Téléchargement...' : 'Titre de congé' }}</span>
                             </button>
@@ -449,12 +449,12 @@
                 <!-- CARTOUCHE PÉRIODE & CHARGES -->
                 <div class="cartouche-clean">
                   <div class="info-block">
-                    <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ b.dateFrom }} au {{ b.dateTo }} ({{ periode }})</strong></div>
+                    <div class="info-row"><span class="lbl">Période de Paie :</span> <strong>{{ b.dateFrom }} au {{ b.dateTo }} — {{ periode }}</strong></div>
                     <div class="info-row"><span class="lbl">Jours Travaillés :</span> <strong>{{ b.workedDays }} / {{ b.scheduledWorkingDays }} Jours</strong></div>
                   </div>
                   <div class="info-block">
                     <div class="info-row"><span class="lbl">Siège Social :</span> <span>01 BP 600 Ouagadougou 01</span></div>
-                    <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ b.nombreCharges }} charge(s)</strong></div>
+                    <div class="info-row"><span class="lbl">Charges de Famille :</span> <strong>{{ b.nombreCharges }} charges</strong></div>
                   </div>
                 </div>
 
@@ -466,7 +466,7 @@
                         <th style="width: 25%;">NOM DE LA RUBRIQUE</th>
                         <th style="width: 14%;">CATÉGORIE</th>
                         <th style="text-align: right; width: 8%;">QUANTITÉ</th>
-                        <th style="text-align: right; width: 9%;">TAUX (%)</th>
+                        <th style="text-align: right; width: 9%;">TAUX %</th>
                         <th style="width: 22%;">RÈGLE SALARIALE</th>
                         <th style="text-align: right; width: 11%;">MONTANT</th>
                         <th style="text-align: right; width: 11%;">TOTAL</th>
@@ -884,13 +884,13 @@
               <mat-form-field appearance="outline" class="w-full">
                 <mat-label>Niveau d'urgence</mat-label>
                 <mat-select [(ngModel)]="demandeBulletinForm.urgence">
-                  <mat-option value="NORMALE">Normale (sous 48h)</mat-option>
-                  <mat-option value="URGENTE">Urgente (sous 24h)</mat-option>
+                  <mat-option value="NORMALE">Normale — sous 48h</mat-option>
+                  <mat-option value="URGENTE">Urgente — sous 24h</mat-option>
                 </mat-select>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Précisions / Commentaire (optionnel)</mat-label>
+                <mat-label>Précisions / Commentaire — optionnel</mat-label>
                 <textarea matInput [(ngModel)]="demandeBulletinForm.commentaire" rows="3" placeholder="Ajouter une précision si nécessaire..."></textarea>
               </mat-form-field>
             </div>
@@ -922,7 +922,7 @@
               <mat-icon>beach_access</mat-icon>
             </div>
             <div>
-              <h3>Nouvelle Demande de Congé ou Absence</h3>
+              <h3>Faire une Demande de Congé ou Absence</h3>
               <p>Portail Collaborateur — Banque Postale du Burkina Faso</p>
             </div>
           </div>
@@ -941,7 +941,7 @@
           } @else {
             <div class="modal-form-stack">
 
-              <!-- RÉCAPITULATIF COLLABORATEUR -->
+              <!-- RÉCAPITULATIF COLLABORATEUR & SOLDES EN FONCTION DE L'ONGLET -->
               <div class="modal-agent-recap">
                 <div>
                   <span class="mar-lbl">COLLABORATEUR</span>
@@ -949,8 +949,21 @@
                   <div class="mar-sub">Matricule : {{ currentAgent?.matricule || currentUser?.username }}</div>
                 </div>
                 <div class="mar-balance">
-                  <span class="mar-lbl">SOLDE RESTANT</span>
-                  <div class="mar-days">{{ (monSoldeConge?.soldeRestant || 0) | number:'1.0-1' }} jours</div>
+                  <span class="mar-lbl">{{ categorieActive === 'CONGE' ? 'SOLDE CONGÉ RESTANT' : 'SOLDE PERMISSIONS RESTANT' }}</span>
+                  <div class="mar-days" [style.color]="categorieActive === 'CONGE' ? '#16a34a' : '#d97706'">
+                    @if (categorieActive === 'CONGE') {
+                      {{ (monSoldeConge?.soldeRestant || 0) | number:'1.0-1' }} jours
+                    } @else {
+                      {{ soldePermissionRestant | number:'1.0-1' }} / {{ quotaPermissionAnnuel | number:'1.0-1' }} j
+                    }
+                  </div>
+                  <div style="font-size: 11px; color: #64748b; font-weight: 500; margin-top: 2px;">
+                    @if (categorieActive === 'CONGE') {
+                      Sur {{ (monSoldeConge?.droitAnnuel || 30) }} jours annuels
+                    } @else {
+                      {{ permissionsPrises }} j pris sur {{ quotaPermissionAnnuel }} j/an
+                    }
+                  </div>
                 </div>
               </div>
 
@@ -961,7 +974,7 @@
                         [class.active]="categorieActive === 'CONGE'"
                         (click)="setCategorieActive('CONGE')">
                   <mat-icon>beach_access</mat-icon>
-                  <span>CONGÉ PAYÉ</span>
+                  <span>CONGÉ</span>
                 </button>
                 <button type="button"
                         class="toggle-btn amber"
@@ -972,20 +985,29 @@
                 </button>
               </div>
 
-              <!-- SÉLECTEUR TYPE -->
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>{{ categorieActive === 'CONGE' ? 'Type de congé' : 'Motif d\'absence / permission' }}</mat-label>
-                <mat-select [(ngModel)]="congeForm.typeAbsenceCongeId" (selectionChange)="onCongeTypeChange()">
-                  @for (t of listeTypesPourCategorieActive; track t.id) {
-                    <mat-option [value]="t.id">
-                      {{ t.name }}
-                    </mat-option>
-                  }
-                  @if (listeTypesPourCategorieActive.length === 0) {
-                    <mat-option disabled value="">Aucun type disponible</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <!-- SÉLECTEUR OU MOTIF SELON LA CATÉGORIE -->
+              @if (categorieActive === 'CONGE') {
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Type de congé</mat-label>
+                  <mat-select [(ngModel)]="congeForm.typeAbsenceCongeId" (selectionChange)="onCongeTypeChange()">
+                    @for (t of congesList; track t.id) {
+                      <mat-option [value]="t.id">
+                        {{ t.name }}
+                      </mat-option>
+                    }
+                    @if (congesList.length === 0) {
+                      <mat-option disabled value="">Aucun type de congé disponible</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              } @else {
+                <!-- ONGLET PERMISSION : CHAMP DE SAISIE DE MOTIF (PAS DE MENU DÉROULANT) -->
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Motif de la permission / absence *</mat-label>
+                  <input matInput [(ngModel)]="congeForm.motif" placeholder="Précisez le motif : Événement familial, Rendez-vous administratif, Urgence..." required>
+                  <mat-hint>Indiquez clairement la raison de votre demande de permission</mat-hint>
+                </mat-form-field>
+              }
 
               <!-- DATES DE DÉPART ET DE RETOUR SOUHAITÉES -->
               <div class="grid-dates-split">
@@ -1010,9 +1032,9 @@
               <!-- DÉCOMPTE AUTOMATIQUE ET IMPACT SUR LE SOLDE -->
               <div class="conge-decompte-card">
                 <div class="cdc-item">
-                  <span class="cdc-label">DURÉE DU CONGÉ</span>
-                  <div class="cdc-val primary">
-                    <mat-icon>event_available</mat-icon>
+                  <span class="cdc-label">{{ categorieActive === 'CONGE' ? 'DURÉE DU CONGÉ' : 'DURÉE DE L\'ABSENCE' }}</span>
+                  <div class="cdc-val" [class.primary]="categorieActive === 'CONGE'" [style.color]="categorieActive === 'ABSENCE' ? '#d97706' : ''">
+                    <mat-icon>{{ categorieActive === 'CONGE' ? 'event_available' : 'schedule' }}</mat-icon>
                     <strong>{{ congeForm.dureeDemandee }} jour{{ congeForm.dureeDemandee > 1 ? 's' : '' }} ouvrable{{ congeForm.dureeDemandee > 1 ? 's' : '' }}</strong>
                   </div>
                   <span class="cdc-sub">Hors week-ends &amp; jours fériés chômés</span>
@@ -1021,18 +1043,29 @@
                 <div class="cdc-divider"></div>
 
                 <div class="cdc-item">
-                  <span class="cdc-label">IMPACT SUR LE SOLDE</span>
-                  <div class="cdc-val" [class.warn]="nouveauSoldePrevisionnel < 0" [class.success]="nouveauSoldePrevisionnel >= 0">
-                    <mat-icon>{{ isTypeDeductible ? 'account_balance_wallet' : 'verified' }}</mat-icon>
+                  <span class="cdc-label">{{ categorieActive === 'CONGE' ? 'IMPACT SUR LE SOLDE CONGÉ' : 'IMPACT SUR LE SOLDE PERMISSIONS' }}</span>
+                  <div class="cdc-val" [class.warn]="(categorieActive === 'CONGE' ? nouveauSoldePrevisionnel : nouveauSoldePermissionsPrevisionnel) < 0"
+                                        [class.success]="(categorieActive === 'CONGE' ? nouveauSoldePrevisionnel : nouveauSoldePermissionsPrevisionnel) >= 0">
+                    <mat-icon>{{ categorieActive === 'CONGE' ? (isTypeDeductible ? 'account_balance_wallet' : 'verified') : 'assignment_turned_in' }}</mat-icon>
                     <strong>
-                      @if (isTypeDeductible) {
-                        Déduction : {{ congeForm.dureeDemandee }} j &rarr; Solde restant : {{ nouveauSoldePrevisionnel }} j
+                      @if (categorieActive === 'CONGE') {
+                        @if (isTypeDeductible) {
+                          Déduction : {{ congeForm.dureeDemandee }} j &rarr; Solde restant : {{ nouveauSoldePrevisionnel }} j
+                        } @else {
+                          Non déductible (0 j déduit)
+                        }
                       } @else {
-                        Non déductible (0 j déduit)
+                        Déduction : {{ congeForm.dureeDemandee }} j &rarr; Solde permission restant : {{ nouveauSoldePermissionsPrevisionnel }} j
                       }
                     </strong>
                   </div>
-                  <span class="cdc-sub">Solde initial : {{ (monSoldeConge?.soldeRestant || 0) | number:'1.0-1' }} jours</span>
+                  <span class="cdc-sub">
+                    @if (categorieActive === 'CONGE') {
+                      Solde initial : {{ (monSoldeConge?.soldeRestant || 0) | number:'1.0-1' }} jours
+                    } @else {
+                      Quota annuel : {{ quotaPermissionAnnuel }} jours ({{ permissionsPrises }} j déjà pris)
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -1047,11 +1080,13 @@
                 </mat-select>
               </mat-form-field>
 
-              <!-- MOTIF DE LA DEMANDE -->
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Motif de la demande</mat-label>
-                <textarea matInput [(ngModel)]="congeForm.motif" rows="2" placeholder="Précisez le motif..."></textarea>
-              </mat-form-field>
+              <!-- MOTIF DE LA DEMANDE (uniquement pour CONGÉ car pour permission il est saisi en haut) -->
+              @if (categorieActive === 'CONGE') {
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Motif de la demande ou observations (facultatif)</mat-label>
+                  <textarea matInput [(ngModel)]="congeForm.motif" rows="2" placeholder="Précisez des observations si nécessaire..."></textarea>
+                </mat-form-field>
+              }
 
             </div>
           }

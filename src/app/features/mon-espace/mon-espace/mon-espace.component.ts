@@ -108,9 +108,9 @@ export class MonEspaceComponent implements OnInit {
 
   typesBulletinDisponibles = [
     { value: 'ORDINAIRE', label: 'Bulletin Ordinaire Mensuel', desc: 'Paie standard du mois civil' },
-    { value: '13EME_MOIS', label: '13ème Mois (Gratification Annuelle)', desc: 'Session extraordinaire BPBF (Brut = Net)' },
-    { value: '14EME_MOIS', label: '14ème Mois (Gratification Spéciale)', desc: 'Session extraordinaire BPBF' },
-    { value: 'STC', label: 'Solde de Tout Compte (STC)', desc: 'Départ, fin de contrat ou indemnité' },
+    { value: '13EME_MOIS', label: '13ème Mois - Gratification Annuelle', desc: 'Session extraordinaire BPBF - Brut = Net' },
+    { value: '14EME_MOIS', label: '14ème Mois - Gratification Spéciale', desc: 'Session extraordinaire BPBF' },
+    { value: 'STC', label: 'Solde de Tout Compte', desc: 'Départ, fin de contrat ou indemnité' },
     { value: 'CONGE_PAYE', label: 'Session Congé Payé', desc: 'Indemnité de congés annuels' },
     { value: 'RAPPEL', label: 'Rappel / Régularisation', desc: 'Régularisation salariale / avancement' }
   ];
@@ -275,7 +275,7 @@ export class MonEspaceComponent implements OnInit {
           : `${per.annee}-${String(per.moisIndex + 1).padStart(2, '0')}`;
 
         const label = isExtra && extraTag
-          ? `${extraTag} (${this.moisNoms[per.moisIndex]} ${per.annee})`
+          ? `${extraTag} — ${this.moisNoms[per.moisIndex]} ${per.annee}`
           : `${this.moisNoms[per.moisIndex]} ${per.annee}`;
 
         if (!mapMois.has(key)) {
@@ -458,7 +458,10 @@ export class MonEspaceComponent implements OnInit {
             joursAcquis: solde.joursAcquis !== undefined ? solde.joursAcquis : 30,
             joursPris: solde.joursPris !== undefined ? solde.joursPris : 0,
             joursEnAttente: solde.joursEnAttente !== undefined ? solde.joursEnAttente : 0,
-            soldeRestant: solde.soldeRestant !== undefined ? solde.soldeRestant : 30
+            soldeRestant: solde.soldeRestant !== undefined ? solde.soldeRestant : 30,
+            quotaPermissions: solde.quotaPermissions !== undefined ? solde.quotaPermissions : 10,
+            permissionsPrises: solde.permissionsPrises !== undefined ? solde.permissionsPrises : 0,
+            soldePermissionsRestant: solde.soldePermissionsRestant !== undefined ? solde.soldePermissionsRestant : 10
           };
         }
       });
@@ -753,14 +756,17 @@ export class MonEspaceComponent implements OnInit {
           else if (nameUp.includes('TRANSPORT')) val = empRef.primeTransport || 0;
         }
 
+        const rawLineName = l.libelle || l.name || l.elementName || 'Rubrique';
+        const cleanLineName = String(rawLineName).replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+
         return {
           id: l.id,
           code: l.code || l.codeRubrique || 'LINE',
-          name: l.libelle || l.name || l.elementName || 'Rubrique',
+          name: cleanLineName,
           category: l.typeLigne || l.category || 'ELEMENT',
           quantity: l.quantity !== undefined ? l.quantity : (l.quantite !== undefined ? l.quantite : 1.0),
           rate: l.rate !== undefined ? l.rate : (l.taux !== undefined ? l.taux : 100.0),
-          regle: l.regle || l.libelle || l.name || '—',
+          regle: String(l.regle || cleanLineName).replace(/[()]/g, '').trim(),
           amount: val
         };
       }).filter((l: any) => {
@@ -972,22 +978,24 @@ export class MonEspaceComponent implements OnInit {
     return this.typesConge.filter(t => {
       const req = (t.sexeRequis || '').toUpperCase();
       const code = (t.code || '').toUpperCase();
+      if ((t.code || '').toUpperCase().includes('PATERNITE')) return false;
       if (req === 'FEMININ' || code.includes('MATERNITE')) {
         return !isHomme;
-      }
-      if (req === 'MASCULIN' || code.includes('PATERNITE')) {
-        return !isFemme;
       }
       return true;
     });
   }
 
   get congesList(): TypeAbsenceConge[] {
-    return this.filteredTypesConge.filter(t => (t.categorie || '').toUpperCase() === 'CONGE' || (!t.categorie && (t.code || '').toUpperCase().startsWith('CONGE')));
+    return this.filteredTypesConge.filter(t => {
+      const code = (t.code || '').toUpperCase();
+      if (code.includes('PATERNITE')) return false;
+      return (t.categorie || '').toUpperCase() === 'CONGE' || (!t.categorie && code.startsWith('CONGE'));
+    });
   }
 
   get absencesList(): TypeAbsenceConge[] {
-    return this.filteredTypesConge.filter(t => (t.categorie || '').toUpperCase() === 'ABSENCE' || (!t.categorie && !(t.code || '').toUpperCase().startsWith('CONGE')));
+    return this.filteredTypesConge.filter(t => (t.categorie || '').toUpperCase() === 'ABSENCE' || (t.categorie || '').toUpperCase() === 'PERMISSION' || (!t.categorie && !(t.code || '').toUpperCase().startsWith('CONGE')));
   }
 
   categorieActive: 'CONGE' | 'ABSENCE' = 'CONGE';
@@ -1021,7 +1029,6 @@ export class MonEspaceComponent implements OnInit {
     if (code === 'SANS_SOLDE' || name.includes('sans solde')) return false;
 
     if (code.includes('MATERNITE') || name.includes('materni')) return true;
-    if (code.includes('PATERNITE') || name.includes('paterni')) return true;
     if (code.includes('MARIAGE') || name.includes('mariage')) return true;
     if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return true;
     if (code.includes('NAISSANCE') || name.includes('naissance')) return true;
@@ -1034,11 +1041,43 @@ export class MonEspaceComponent implements OnInit {
     const code = (type.code || '').toUpperCase();
     const name = (type.name || '').toLowerCase();
     if (code.includes('MATERNITE') || name.includes('materni')) return 98;
-    if (code.includes('PATERNITE') || name.includes('paterni')) return 3;
     if (code.includes('MARIAGE') || name.includes('mariage')) return type.dureeMaxLegaleJours || 3;
     if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return type.dureeMaxLegaleJours || 5;
     if (code.includes('NAISSANCE') || name.includes('naissance')) return type.dureeMaxLegaleJours || 3;
     return type.dureeMaxLegaleJours || 1;
+  }
+
+  get quotaPermissionAnnuel(): number {
+    return this.monSoldeConge?.quotaPermissions ?? 10;
+  }
+
+  get permissionsPrises(): number {
+    if (this.monSoldeConge?.permissionsPrises !== undefined && this.monSoldeConge.permissionsPrises !== null) {
+      return this.monSoldeConge.permissionsPrises;
+    }
+    return (this.mesConges || [])
+      .filter(c => {
+        const statut = (c.statut || '').toUpperCase();
+        if (statut !== 'APPROUVE' && statut !== 'VALIDE') return false;
+        const code = (c.typeAbsenceConge?.code || '').toUpperCase();
+        const cat = (c.typeAbsenceConge?.categorie || '').toUpperCase();
+        const type = (c.type || '').toLowerCase();
+        return cat === 'PERMISSION' || cat === 'ABSENCE' || code.startsWith('EVT_') || code.startsWith('ABS_') || type.includes('permission') || type.includes('absence');
+      })
+      .reduce((sum, c) => sum + (c.nbJours || 0), 0);
+  }
+
+  get soldePermissionRestant(): number {
+    if (this.monSoldeConge?.soldePermissionsRestant !== undefined && this.monSoldeConge.soldePermissionsRestant !== null) {
+      return this.monSoldeConge.soldePermissionsRestant;
+    }
+    return Math.max(0, this.quotaPermissionAnnuel - this.permissionsPrises);
+  }
+
+  get nouveauSoldePermissionsPrevisionnel(): number {
+    const restant = this.soldePermissionRestant;
+    const nbJours = Number(this.congeForm.dureeDemandee) || 0;
+    return Math.max(0, restant - nbJours);
   }
 
   onCongeTypeChange(): void {
@@ -1055,10 +1094,21 @@ export class MonEspaceComponent implements OnInit {
 
   setCategorieActive(cat: 'CONGE' | 'ABSENCE'): void {
     this.categorieActive = cat;
-    const list = cat === 'CONGE' ? this.congesList : this.absencesList;
-    if (list && list.length > 0) {
-      this.congeForm.typeAbsenceCongeId = list[0].id;
-      this.onCongeTypeChange();
+    if (cat === 'CONGE') {
+      const list = this.congesList;
+      const annuel = list.find(tc => (tc.code || '').toUpperCase().includes('ANNUEL'));
+      this.congeForm.typeAbsenceCongeId = annuel ? annuel.id : (list.length > 0 ? list[0].id : null);
+      this.congeForm.dureeDemandee = 15;
+      this.calculerDateFinDepuisDuree(this.congeForm.dateDebut, 15);
+    } else {
+      const permType = this.typesConge.find(t => {
+        const c = (t.code || '').toUpperCase();
+        const ct = (t.categorie || '').toUpperCase();
+        return c === 'PERMISSION' || c === 'ABS_AUTORISEE' || ct === 'PERMISSION';
+      }) || (this.absencesList.length > 0 ? this.absencesList[0] : null);
+      this.congeForm.typeAbsenceCongeId = permType ? permType.id : null;
+      this.congeForm.dureeDemandee = 2;
+      this.calculerDateFinDepuisDuree(this.congeForm.dateDebut, 2);
     }
   }
 
@@ -1187,12 +1237,22 @@ export class MonEspaceComponent implements OnInit {
       return;
     }
 
+    const typeSelected = this.typesConge?.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));
+    const mode = typeSelected?.typeJour || 'OUVRABLE';
+
     let joursComptes = 0;
     const cur = new Date(start);
 
     while (cur <= end) {
       const dow = cur.getDay();
-      const isWeekend = (dow === 0 || dow === 6); // Samedi et Dimanche exclus en mode ouvrable bancaire
+      let isWeekend = false;
+      if (mode === 'CALENDAIRE') {
+        isWeekend = false;
+      } else if (mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') {
+        isWeekend = (dow === 0);
+      } else { // OUVRE ou OUVRABLE_5J
+        isWeekend = (dow === 0 || dow === 6);
+      }
       const isFerie = this.isJourFerie(cur);
 
       if (!isWeekend && !isFerie) {
@@ -1216,8 +1276,13 @@ export class MonEspaceComponent implements OnInit {
   }
 
   private calculerDateFinDepuisDuree(debut: Date, nbJours: number): void {
+    const typeSelected = this.typesConge?.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));
+    const mode = typeSelected?.typeJour || 'OUVRABLE';
+
     let cur = new Date(debut);
-    if (cur.getDay() === 0) {
+    if ((mode === 'OUVRE' || mode === 'OUVRABLE_5J') && (cur.getDay() === 0 || cur.getDay() === 6)) {
+      while (cur.getDay() === 0 || cur.getDay() === 6) cur.setDate(cur.getDate() + 1);
+    } else if ((mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') && cur.getDay() === 0) {
       cur.setDate(cur.getDate() + 1);
     }
     let joursComptes = 0;
@@ -1225,7 +1290,14 @@ export class MonEspaceComponent implements OnInit {
 
     while (joursComptes < nbJours) {
       const dow = cur.getDay();
-      const isWeekend = (dow === 0 || dow === 6);
+      let isWeekend = false;
+      if (mode === 'CALENDAIRE') {
+        isWeekend = false;
+      } else if (mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') {
+        isWeekend = (dow === 0);
+      } else {
+        isWeekend = (dow === 0 || dow === 6);
+      }
       const isFerie = this.isJourFerie(cur);
 
       if (!isWeekend && !isFerie) {
@@ -1256,12 +1328,10 @@ export class MonEspaceComponent implements OnInit {
     const inDb = this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
     if (inDb) return true;
 
-    // Fêtes légales chômées et payées au Burkina Faso (Loi 028-2008 / Code du Travail) :
-    // 01-01 (Jour de l'An), 01-03 (Soulèvement Populaire), 03-08 (Journée de la Femme),
-    // 05-01 (Fête du Travail), 08-05 (Indépendance), 08-15 (Assomption),
-    // 10-31 (Martyrs), 11-01 (Toussaint), 12-11 (Fête Nationale), 12-25 (Noël)
+    // Fêtes légales chômées et payées au Burkina Faso (Exactement 11 jours : 7 fêtes fixes et 4 fêtes mobiles) :
+    // Fixes : 01-01 (Jour de l'An), 03-08 (Femme), 05-01 (Travail), 05-15 (Coutumes et Traditions), 08-15 (Assomption), 12-11 (Fête Nationale), 12-25 (Noël)
     const md = `${m}-${day}`;
-    const feriesFixesBF = ['01-01', '01-03', '03-08', '05-01', '08-05', '08-15', '10-31', '11-01', '12-11', '12-25'];
+    const feriesFixesBF = ['01-01', '03-08', '05-01', '05-15', '08-15', '12-11', '12-25'];
     return feriesFixesBF.includes(md);
   }
 
@@ -1309,18 +1379,38 @@ export class MonEspaceComponent implements OnInit {
       ? `${emp.prenom} ${emp.nom}`.toUpperCase()
       : `${this.currentUser?.prenom || ''} ${this.currentUser?.nom || ''}`.trim().toUpperCase();
 
+    if (this.categorieActive === 'ABSENCE' && !this.congeForm.motif?.trim()) {
+      alert('Veuillez renseigner le motif de votre absence ou permission.');
+      return;
+    }
+
     this.isSubmittingConge = true;
-    const typeSelected = this.typesConge.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));
+    let typeSelected = this.typesConge.find(t => String(t.id) === String(this.congeForm.typeAbsenceCongeId));
+    if (!typeSelected && this.categorieActive === 'ABSENCE') {
+      typeSelected = this.typesConge.find(t => {
+        const c = (t.code || '').toUpperCase();
+        const ct = (t.categorie || '').toUpperCase();
+        return c === 'PERMISSION' || c === 'ABS_AUTORISEE' || ct === 'PERMISSION';
+      }) || (this.absencesList.length > 0 ? this.absencesList[0] : undefined);
+    }
+
+    const typeLabel = this.categorieActive === 'ABSENCE'
+      ? (typeSelected ? typeSelected.name : 'Permission d\'absence exceptionnelle')
+      : (typeSelected ? typeSelected.name : 'Congé annuel payé');
+
+    const defaultMotif = this.categorieActive === 'ABSENCE'
+      ? `Permission d'absence (${this.congeForm.dureeDemandee} jours)`
+      : `Demande de ${typeLabel} (${this.congeForm.dureeDemandee} jours)`;
 
     const payload = {
       employee: { id: Number(empId), matricule: empMat },
       employe: empName,
       typeAbsenceConge: typeSelected ? { id: typeSelected.id, code: typeSelected.code, name: typeSelected.name } : null,
-      type: typeSelected ? typeSelected.name : 'Congé annuel payé',
+      type: typeLabel,
       dateDebut: this.formatDateToIso(this.congeForm.dateDebut),
       dateFin: this.formatDateToIso(this.congeForm.dateFin),
-      nbJours: Number(this.congeForm.dureeDemandee) || 15,
-      motif: this.congeForm.motif || `Demande de ${typeSelected?.name || 'congé'} (${this.congeForm.dureeDemandee} jours ouvrables)`,
+      nbJours: Number(this.congeForm.dureeDemandee) || (this.categorieActive === 'ABSENCE' ? 2 : 15),
+      motif: this.congeForm.motif?.trim() || defaultMotif,
       justificatif: this.congeForm.justificatif,
       interimaire: this.congeForm.interimaireId ? { id: Number(this.congeForm.interimaireId) } : null,
       posteSensibleBceao: !!this.congeForm.posteSensibleBceao,

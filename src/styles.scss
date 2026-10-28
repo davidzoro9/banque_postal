@@ -751,7 +751,8 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
 .page-header,
 .header-banner,
 .profile-header,
-.header-container {
+.header-container,
+.module-header {
   background: var(--brand-blue, #0060B3) !important;
   color: #ffffff !important;
   border: 1px solid #004d8f !important;
@@ -763,6 +764,15 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
   align-items: center !important;
   justify-content: space-between !important;
   margin-bottom: 18px !important; // Espace net pour séparer le bandeau bleu des carreaux/blocs suivants
+
+  h1, h2, h3, h4, h5, h6,
+  .page-header-title, .title, .module-title, .mh-title h2, strong, b {
+    color: #ffffff !important;
+  }
+
+  p, .page-header-subtitle, .subtitle, .mh-sub, span, em {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
 }
 
 // Si immédiatement suivi d'une barre de filtres/actions liée (.filter-card)
@@ -790,6 +800,41 @@ mat-card, mat-toolbar, mat-sidenav, .module-navbar,
   align-items: center !important;
   justify-content: space-between !important;
   margin-bottom: 0 !important;
+
+  h1, h2, h3, h4, h5, h6,
+  .modal-title, .title, .head-title-wrap h2, .mh-title h2, strong, b {
+    color: #ffffff !important;
+  }
+
+  p, span, div, .modal-subtitle, .subtitle, .head-title-wrap div, em, small {
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  .head-icon-circle,
+  .modal-icon,
+  .header-icon {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    mat-icon {
+      color: #ffffff !important;
+    }
+  }
+
+  mat-icon,
+  .close-btn,
+  button.close-btn,
+  .modal-close,
+  [mat-icon-button] {
+    color: #ffffff !important;
+    mat-icon {
+      color: #ffffff !important;
+    }
+    &:hover {
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.15) !important;
+    }
+  }
 }
 
 // Espace systématique pour les carreaux / grilles KPI pour éviter qu'ils ne soient collés au bandeau bleu

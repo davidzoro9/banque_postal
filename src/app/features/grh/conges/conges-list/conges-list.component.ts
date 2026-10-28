@@ -45,14 +45,15 @@ export class CongesListComponent implements OnInit, OnDestroy {
     modeDecompte: 'OUVRABLE_5J',
     deduireJoursFeries: true,
     plafondReportJours: 15,
-    bloquerSiSoldeInsuffisant: false
+    bloquerSiSoldeInsuffisant: false,
+    quotaPermissionsAnnuel: 10
   };
   savingConfig = false;
 
   // --- CATALOGUE DES AUTRES CONGÉS & ABSENCES ---
   typesAbsenceList: TypeAbsenceConge[] = [];
   editingTypeAbsence: TypeAbsenceConge | null = null;
-  typeAbsenceFormModel: TypeAbsenceConge = { code: '', name: '', categorie: 'CONGE', dureeMaxLegaleJours: 30, deductibleDuSolde: true, sexeRequis: 'TOUS' };
+  typeAbsenceFormModel: TypeAbsenceConge = { code: '', name: '', categorie: 'CONGE', typeJour: 'OUVRABLE', dureeMaxLegaleJours: 30, deductibleDuSolde: true, sexeRequis: 'TOUS' };
   savingTypeAbsence = false;
   showTypeModal = false;
   selectedSoldeType: string = 'CONGE_ANNUEL';
@@ -643,7 +644,10 @@ export class CongesListComponent implements OnInit, OnDestroy {
   loadJoursFeries(): void {
     this.congeService.getJoursFeries().subscribe({
       next: (list) => {
-        this.joursFeries = list || [];
+        this.joursFeries = (list || []).map(jf => ({
+          ...jf,
+          type: (jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? 'VARIABLE' : 'FIXE'
+        }));
         this.filterJoursFeriesByYear();
       },
       error: () => {
@@ -678,7 +682,8 @@ export class CongesListComponent implements OnInit, OnDestroy {
 
   openEditFerieModal(jf: JourFerie): void {
     this.editingFerie = jf;
-    this.ferieFormModel = { ...jf };
+    const type = (jf.type === 'VARIABLE' || jf.type === 'MOBILE' || jf.type === 'RELIGIEUX') ? 'VARIABLE' : 'FIXE';
+    this.ferieFormModel = { ...jf, type };
     this.dialog.open(this.ferieDialogTpl, { width: '500px' });
   }
 
@@ -758,6 +763,7 @@ export class CongesListComponent implements OnInit, OnDestroy {
       next: (types) => {
         this.typesAbsenceList = (types || []).map(t => ({
           ...t,
+          typeJour: t.typeJour || 'OUVRABLE',
           remunere: t.remunere !== undefined ? t.remunere : true,
           tauxRemuneration: t.tauxRemuneration !== undefined ? t.tauxRemuneration : 100,
           justificatifRequis: t.justificatifRequis !== undefined ? t.justificatifRequis : false,
@@ -792,6 +798,7 @@ export class CongesListComponent implements OnInit, OnDestroy {
       code: 'TYPE_' + idx,
       name: 'Nouveau Type ' + idx,
       categorie: 'PERMISSION',
+      typeJour: 'OUVRABLE',
       dureeMaxLegaleJours: 3,
       deductibleDuSolde: false,
       sexeRequis: 'TOUS',

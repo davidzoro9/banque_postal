@@ -4,10 +4,14 @@
     <div class="loading"><mat-icon class="spin-icon">sync</mat-icon><span>Chargement...</span></div>
   }
 
-  @if (!loading && !employee) {
+  @if (!loading && (errorMessage || !employee)) {
     <div class="loading">
-      <mat-icon>person_off</mat-icon><span>Employé introuvable</span>
-      <button mat-raised-button color="primary" (click)="back()">Retour</button>
+      <mat-icon>person_off</mat-icon>
+      <span>{{ errorMessage || 'Employé introuvable' }}</span>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button mat-stroked-button (click)="back()">Retour</button>
+        <button mat-raised-button color="primary" (click)="ngOnInit()">Réessayer</button>
+      </div>
     </div>
   }
 

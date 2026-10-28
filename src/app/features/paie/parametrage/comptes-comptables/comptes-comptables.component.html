@@ -10,8 +10,8 @@
       <div>
         <h1>
           {{ activeTab === 'comptes' ? 'Paramétrage des Comptes Comptables de Paie' : '' }}
-          {{ activeTab === 'classes' ? 'Paramétrage des Classes Comptables (SYSCOHADA)' : '' }}
-          {{ activeTab === 'sens' ? 'Paramétrage des Sens d\'Écriture (DÉBIT / CRÉDIT)' : '' }}
+          {{ activeTab === 'classes' ? 'Paramétrage des Classes Comptables SYSCOHADA' : '' }}
+          {{ activeTab === 'sens' ? 'Paramétrage des Sens d\'Écriture Débit / Crédit' : '' }}
           {{ activeTab === 'rubriques' ? 'Paramétrage des Rubriques de Paie Affectées' : '' }}
           {{ activeTab === 'journaux' ? 'Paramétrage des Codes Journaux OD' : '' }}
         </h1>
@@ -96,7 +96,7 @@
       (click)="switchTab('sens')"
     >
       <mat-icon>swap_horiz</mat-icon>
-      <span>Sens d'écriture (OD)</span>
+      <span>Sens d'écriture</span>
       <span class="tab-badge">{{ sensOptions.length }}</span>
     </button>
 
@@ -182,7 +182,7 @@
         <mat-icon class="search-icon">search</mat-icon>
         <input
           type="text"
-          placeholder="Rechercher par numéro (ex: 641100), libellé ou rubrique..."
+          placeholder="Rechercher par numéro (ex: 661100), libellé ou rubrique..."
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
         />
@@ -268,7 +268,7 @@
             <thead>
               <tr>
                 <th style="width: 130px;">N° Compte</th>
-                <th>Intitulé du compte (SYSCOHADA)</th>
+                <th>Intitulé du compte SYSCOHADA</th>
                 <th style="width: 200px;">Classe</th>
                 <th style="width: 100px;">Sens OD</th>
                 <th>Rubrique de Paie associée</th>
@@ -422,7 +422,7 @@
       <div class="table-header-custom">
         <div>
           <h3>Sens d'Imputation par Défaut dans l'OD</h3>
-          <p>Paramétrez les sens d'imputation comptable (DÉBIT / CRÉDIT) appliqués automatiquement dans l'OD de paie.</p>
+          <p>Paramétrez les sens d'imputation comptable DÉBIT / CRÉDIT appliqués automatiquement dans l'OD de paie.</p>
         </div>
         <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalSens()">
           <mat-icon>add</mat-icon> Nouveau sens
@@ -487,7 +487,7 @@
       <div class="table-header-custom">
         <div>
           <h3>Rubriques de Paie et Règles d'Imputation</h3>
-          <p>Paramétrez les rubriques de paie (Gains, Retenues, Charges patronales) avec leur compte et sens par défaut.</p>
+          <p>Paramétrez les rubriques de paie - Gains, Retenues, Charges patronales - avec leur compte et sens par défaut.</p>
         </div>
         <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalRubrique()">
           <mat-icon>add</mat-icon> Nouvelle rubrique
@@ -573,7 +573,7 @@
       <div class="table-header-custom">
         <div>
           <h3>Codes Journaux Comptables pour l'OD de Paie</h3>
-          <p>Paramétrez les codes des journaux comptables (OD_PAIE, BQ_PAIE, etc.) vers lesquels déverser les écritures.</p>
+          <p>Paramétrez les codes des journaux comptables vers lesquels déverser les écritures.</p>
         </div>
         <button mat-raised-button color="primary" class="btn-nouveau" (click)="ouvrirModalJournal()">
           <mat-icon>add</mat-icon> Nouveau journal
@@ -656,11 +656,11 @@
                 id="numCompte"
                 type="text"
                 class="form-input"
-                placeholder="Ex: 641100 ou 421100"
+                placeholder="Ex: 661100 ou 421100"
                 [(ngModel)]="currentCompte.numeroCompte"
                 (ngModelChange)="onNumeroCompteChange()"
               />
-              <span class="field-hint">SYSCOHADA révisé (6 chiffres)</span>
+              <span class="field-hint">SYSCOHADA révisé - 6 chiffres</span>
             </div>
 
             <div class="form-group col-half">
@@ -743,7 +743,7 @@
           <div class="form-check-group">
             <label class="checkbox-label">
               <input type="checkbox" [(ngModel)]="currentCompte.actif" />
-              <span>Compte actif (pris en compte dans les écritures comptables mensuelles)</span>
+              <span>Compte actif - pris en compte dans les écritures comptables mensuelles</span>
             </label>
           </div>
         </div>
@@ -786,7 +786,7 @@
                 placeholder="Ex: 6, 4, 1, 5, 7..."
                 [(ngModel)]="currentClasse.numero"
               />
-              <span class="field-hint">Chiffre SYSCOHADA (1 à 8)</span>
+              <span class="field-hint">Chiffre SYSCOHADA - 1 à 8</span>
             </div>
 
             <div class="form-group col-half">
@@ -866,7 +866,7 @@
                 id="libSens"
                 type="text"
                 class="form-input"
-                placeholder="Ex: DÉBIT (Charges / Diminution dettes)"
+                placeholder="Ex: DÉBIT - Charges / Diminution dettes"
                 [(ngModel)]="currentSens.libelle"
               />
             </div>
@@ -970,7 +970,7 @@
                 id="numCompteDefaut"
                 type="text"
                 class="form-input"
-                placeholder="Ex: 641100 ou 421100"
+                placeholder="Ex: 661100 ou 421100"
                 [(ngModel)]="currentRubrique.numeroCompteDefaut"
               />
             </div>
@@ -978,11 +978,11 @@
             <div class="form-group col-half">
               <label for="typeRub">Type de rubrique</label>
               <select id="typeRub" class="form-select" [(ngModel)]="currentRubrique.typeRubrique">
-                <option value="GAIN">GAIN (Rémunérations et Avantages)</option>
-                <option value="RETENUE">RETENUE (Charges salariales & Prêts)</option>
-                <option value="PATRONALE">PATRONALE (Charges patronales & Taxes)</option>
-                <option value="NET">NET (Net à payer)</option>
-                <option value="REGULARISATION">REGULARISATION (Arrondis & Écarts)</option>
+                <option value="GAIN">GAIN - Rémunérations et Avantages</option>
+                <option value="RETENUE">RETENUE - Charges salariales & Prêts</option>
+                <option value="PATRONALE">PATRONALE - Charges patronales & Taxes</option>
+                <option value="NET">NET - Net à payer</option>
+                <option value="REGULARISATION">REGULARISATION - Arrondis & Écarts</option>
               </select>
             </div>
           </div>
@@ -1062,7 +1062,7 @@
             <div class="form-group col-half">
               <label for="typeJ">Type de journal</label>
               <select id="typeJ" class="form-select" [(ngModel)]="currentJournal.typeJournal">
-                <option value="OD">Opérations Diverses (OD)</option>
+                <option value="OD">Opérations Diverses - OD</option>
                 <option value="BANQUE">Banque / Règlements</option>
                 <option value="CAISSE">Caisse / Espèces</option>
               </select>

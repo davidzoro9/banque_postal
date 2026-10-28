@@ -109,11 +109,16 @@ export class CongesFormComponent implements OnInit {
         return false;
       }
 
+      // Exclure également le congé de paternité supprimé
+      if (code.includes('PATERNITE') || name.includes('paterni')) {
+        return false;
+      }
+
       const req = (t.sexeRequis || '').toUpperCase();
       if (req === 'FEMININ' || code.includes('MATERNITE')) {
         return !isHomme;
       }
-      if (req === 'MASCULIN' || code.includes('PATERNITE')) {
+      if (req === 'MASCULIN') {
         return !isFemme;
       }
       return true;
@@ -184,7 +189,6 @@ export class CongesFormComponent implements OnInit {
     if (code === 'SANS_SOLDE' || name.includes('sans solde')) return false;
 
     if (code.includes('MATERNITE') || name.includes('materni')) return true;
-    if (code.includes('PATERNITE') || name.includes('paterni')) return true;
     if (code.includes('MARIAGE') || name.includes('mariage')) return true;
     if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return true;
     if (code.includes('NAISSANCE') || name.includes('naissance')) return true;
@@ -197,7 +201,6 @@ export class CongesFormComponent implements OnInit {
     const code = (type.code || '').toUpperCase();
     const name = (type.name || '').toLowerCase();
     if (code.includes('MATERNITE') || name.includes('materni')) return 98;
-    if (code.includes('PATERNITE') || name.includes('paterni')) return 3;
     if (code.includes('MARIAGE') || name.includes('mariage')) return type.dureeMaxLegaleJours || 3;
     if (code.includes('DECES') || name.includes('décès') || name.includes('deces')) return type.dureeMaxLegaleJours || 5;
     if (code.includes('NAISSANCE') || name.includes('naissance')) return type.dureeMaxLegaleJours || 3;
@@ -232,7 +235,6 @@ export class CongesFormComponent implements OnInit {
     if (code.includes('NAISSANCE') || name.includes('naissance')) return 'child_friendly';
     if (code.includes('MARIAGE') || name.includes('mariage')) return 'favorite';
     if (code.includes('MATERNITE') || name.includes('materni')) return 'child_care';
-    if (code.includes('PATERNITE') || name.includes('paterni')) return 'family_restroom';
     return 'health_and_safety';
   }
 
@@ -250,9 +252,6 @@ export class CongesFormComponent implements OnInit {
     }
     if (code.includes('MATERNITE')) {
       return 'Congé légal de maternité — Arrêt pour accouchement accordé aux collaboratrices. Indemnisation CNSS avec différentiel bancaire.';
-    }
-    if (code.includes('PATERNITE')) {
-      return 'Congé de paternité — 3 jours consécutifs accordés au collaborateur pour la venue d\'un enfant au foyer.';
     }
     if (code.includes('MARIAGE')) {
       return 'Absence exceptionnelle rémunérée — 3 jours ouvrables autorisés pour le mariage de l\'agent (sur acte d\'état civil).';
@@ -477,8 +476,14 @@ export class CongesFormComponent implements OnInit {
     const nbJours = duree !== undefined ? duree : Number(this.form?.get('dureeDemandee')?.value || 3);
     if (!debutVal || nbJours <= 0) return;
 
+    const selectedType = this.typesConge?.find((t: TypeAbsenceConge) => t.id === Number(this.form?.get('typeAbsenceCongeId')?.value));
+    const mode = selectedType?.typeJour || this.parametrage?.modeDecompte || 'OUVRABLE_5J';
+
     let cur = new Date(debutVal);
-    if (cur.getDay() === 0) {
+    if ((mode === 'OUVRE' || mode === 'OUVRABLE_5J') && (cur.getDay() === 0 || cur.getDay() === 6)) {
+      while (cur.getDay() === 0 || cur.getDay() === 6) cur.setDate(cur.getDate() + 1);
+      this.form.patchValue({ dateDebut: new Date(cur) }, { emitEvent: false });
+    } else if ((mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') && cur.getDay() === 0) {
       cur.setDate(cur.getDate() + 1);
       this.form.patchValue({ dateDebut: new Date(cur) }, { emitEvent: false });
     }
@@ -488,7 +493,14 @@ export class CongesFormComponent implements OnInit {
 
     while (joursComptes < nbJours) {
       const dow = cur.getDay();
-      const isWeekend = (dow === 0 || dow === 6);
+      let isWeekend = false;
+      if (mode === 'CALENDAIRE') {
+        isWeekend = false;
+      } else if (mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') {
+        isWeekend = (dow === 0);
+      } else {
+        isWeekend = (dow === 0 || dow === 6);
+      }
       const isFerie = this.isJourFerie(cur);
 
       if (!isWeekend && !isFerie) {
@@ -536,17 +548,29 @@ export class CongesFormComponent implements OnInit {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const iso = `${y}-${m}-${day}`;
-    return this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
+    const inDb = this.joursFeries.some(jf => jf.date === iso && jf.chomePaye !== false);
+    if (inDb) return true;
+    const md = `${m}-${day}`;
+    const feriesFixesBF = ['01-01', '03-08', '05-01', '05-15', '08-15', '12-11', '12-25'];
+    return feriesFixesBF.includes(md);
   }
 
   private calculerJoursOuvrablesEntre(d1: Date, d2: Date): number {
     let count = 0;
     let cur = new Date(d1);
-    const mode = this.parametrage?.modeDecompte || 'OUVRABLE_5J';
+    const selectedType = this.typesConge?.find((t: TypeAbsenceConge) => t.id === Number(this.form?.get('typeAbsenceCongeId')?.value));
+    const mode = selectedType?.typeJour || this.parametrage?.modeDecompte || 'OUVRABLE_5J';
     const deduireFeries = this.parametrage?.deduireJoursFeries !== false;
     while (cur <= d2) {
       const dow = cur.getDay();
-      const isWeekend = mode === 'OUVRABLE_6J' ? (dow === 0) : (dow === 0 || dow === 6);
+      let isWeekend = false;
+      if (mode === 'CALENDAIRE') {
+        isWeekend = false;
+      } else if (mode === 'OUVRABLE' || mode === 'OUVRABLE_6J') {
+        isWeekend = (dow === 0);
+      } else {
+        isWeekend = (dow === 0 || dow === 6);
+      }
       const isFerie = deduireFeries ? this.isJourFerie(cur) : false;
       if (!isWeekend && !isFerie) {
         count++;
