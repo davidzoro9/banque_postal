@@ -170,7 +170,7 @@ public class CongeWorkflowService {
                 if (end != null) conge.setDateFin(end.format(ISO_FORMATTER));
 
                 if (start != null && end != null) {
-                    int calculatedDays = calculateJoursOuvrables(start, end);
+                    int calculatedDays = calculateJoursConge(start, end, conge.getTypeAbsenceConge());
                     if (conge.getNbJours() == null || conge.getNbJours() <= 0) {
                         conge.setNbJours(calculatedDays);
                     }
@@ -421,8 +421,29 @@ public class CongeWorkflowService {
         int joursEnAttente = 0;
         String dernierConge = null;
 
+        int quotaPermissions = config.getQuotaPermissionsAnnuel() != null ? config.getQuotaPermissionsAnnuel() : 10;
+        int permissionsPrises = 0;
+
         for (Conge c : employeeConges) {
             int j = c.getNbJours() != null ? c.getNbJours() : 0;
+            boolean isPermission = false;
+            if (c.getTypeAbsenceConge() != null) {
+                String cat = c.getTypeAbsenceConge().getCategorie();
+                String code = c.getTypeAbsenceConge().getCode();
+                if ("PERMISSION".equalsIgnoreCase(cat) || "ABSENCE".equalsIgnoreCase(cat)
+                        || (code != null && (code.startsWith("EVT_") || code.startsWith("ABS_") || code.contains("PERMISSION")))) {
+                    isPermission = true;
+                }
+            } else if (c.getType() != null && (c.getType().toLowerCase().contains("permission") || c.getType().toLowerCase().contains("absence") || c.getType().toLowerCase().contains("événement") || c.getType().toLowerCase().contains("evenement"))) {
+                isPermission = true;
+            }
+
+            if (isPermission) {
+                if ("APPROUVE".equalsIgnoreCase(c.getStatut()) || "VALIDE".equalsIgnoreCase(c.getStatut())) {
+                    permissionsPrises += j;
+                }
+            }
+
             int jDeductibles = 0;
             if (c.getTypeAbsenceConge() != null) {
                 TypeAbsenceConge type = c.getTypeAbsenceConge();
@@ -432,7 +453,7 @@ public class CongeWorkflowService {
                     int plafond = type.getPlafondJoursNonDeductible();
                     jDeductibles = Math.max(0, j - plafond);
                 }
-            } else {
+            } else if (!isPermission) {
                 jDeductibles = j;
             }
 
@@ -449,6 +470,7 @@ public class CongeWorkflowService {
         }
 
         double soldeRestant = Math.max(0.0, Math.round((joursAcquis - joursPris) * 10.0) / 10.0);
+        int soldePermissionsRestant = Math.max(0, quotaPermissions - permissionsPrises);
 
         String nomComplet = ((emp.getPrenom() != null ? emp.getPrenom() : "") + " "
                 + (emp.getNom() != null ? emp.getNom() : "")).trim();
@@ -474,6 +496,9 @@ public class CongeWorkflowService {
                 .joursEnAttente(joursEnAttente)
                 .soldeRestant(soldeRestant)
                 .dateDernierConge(dernierConge)
+                .quotaPermissions(quotaPermissions)
+                .permissionsPrises(permissionsPrises)
+                .soldePermissionsRestant(soldePermissionsRestant)
                 .build();
     }
 
@@ -492,13 +517,21 @@ public class CongeWorkflowService {
     }
 
     public int calculateJoursOuvrables(LocalDate start, LocalDate end) {
+        return calculateJoursConge(start, end, null);
+    }
+
+    public int calculateJoursConge(LocalDate start, LocalDate end, TypeAbsenceConge typeAbsence) {
         if (start == null || end == null) return 0;
         if (end.isBefore(start)) return 0;
 
         com.bpbf.sirh_backend.entities.ParametrageConge config = parametrageCongeRepository.findAll().stream().findFirst()
                 .orElseGet(com.bpbf.sirh_backend.entities.ParametrageConge::new);
 
-        String mode = config.getModeDecompte() != null ? config.getModeDecompte() : "OUVRABLE_5J";
+        String typeJourConfig = (typeAbsence != null && typeAbsence.getTypeJour() != null && !typeAbsence.getTypeJour().isBlank())
+                ? typeAbsence.getTypeJour().toUpperCase()
+                : null;
+
+        String mode = typeJourConfig != null ? typeJourConfig : (config.getModeDecompte() != null ? config.getModeDecompte().toUpperCase() : "OUVRABLE_5J");
         boolean checkFeries = Boolean.TRUE.equals(config.getDeduireJoursFeries());
 
         int workingDays = 0;
@@ -507,12 +540,17 @@ public class CongeWorkflowService {
             DayOfWeek day = current.getDayOfWeek();
             boolean isExcludedDay = false;
 
-            if ("OUVRABLE_5J".equals(mode)) {
+            if ("OUVRE".equals(mode) || "OUVRABLE_5J".equals(mode)) {
+                // Jours ouvrés : 5 jours/semaine (exclut Samedi et Dimanche)
                 isExcludedDay = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY);
-            } else if ("OUVRABLE_6J".equals(mode)) {
+            } else if ("OUVRABLE".equals(mode) || "OUVRABLE_6J".equals(mode)) {
+                // Jours ouvrables : 6 jours/semaine (compte le Samedi, exclut uniquement le Dimanche)
                 isExcludedDay = (day == DayOfWeek.SUNDAY);
-            } else {
+            } else if ("CALENDAIRE".equals(mode)) {
+                // Jours calendaires : 7 jours/semaine
                 isExcludedDay = false;
+            } else {
+                isExcludedDay = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY);
             }
 
             String dateStr = current.format(ISO_FORMATTER);
@@ -570,13 +608,10 @@ public class CongeWorkflowService {
 
     private static final java.util.Set<String> FERIES_FIXES_BF = java.util.Set.of(
             "01-01", // Jour de l'An
-            "01-03", // Soulèvement Populaire
-            "03-08", // Journée de la Femme
+            "03-08", // Journée Internationale des Droits de la Femme
             "05-01", // Fête du Travail
-            "08-05", // Fête de l'Indépendance
+            "05-15", // Journée des Coutumes et Traditions
             "08-15", // Assomption
-            "10-31", // Journée des Martyrs
-            "11-01", // Toussaint
             "12-11", // Fête Nationale
             "12-25"  // Noël
     );

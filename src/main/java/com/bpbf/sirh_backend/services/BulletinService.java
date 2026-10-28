@@ -979,7 +979,7 @@ public class BulletinService {
 
             BulletinLine cpLine = new BulletinLine();
             cpLine.setCode("IND_CONGE_PAYE");
-            cpLine.setLibelle("Indemnité de Congé Payé (" + formatMoneyNoDec(joursAcquis) + " j)");
+            cpLine.setLibelle("Indemnité de Congé Payé - " + formatMoneyNoDec(joursAcquis) + " j");
             cpLine.setTypeLigne("GAIN");
             cpLine.setBaseCalcul(smj);
             cpLine.setTaux(joursAcquis);
@@ -1047,7 +1047,7 @@ public class BulletinService {
             if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
                 cnssLine.setCode("COT_CNSS");
-                cnssLine.setLibelle("Cotisation CNSS (5.5%)");
+                cnssLine.setLibelle("Cotisation CNSS 5.5%");
                 cnssLine.setTypeLigne("RETENUE_SOCIALE");
                 cnssLine.setBaseCalcul(baseCnss);
                 cnssLine.setTaux(new BigDecimal("5.50"));
@@ -1098,7 +1098,7 @@ public class BulletinService {
 
             BulletinLine retLine = new BulletinLine();
             retLine.setCode("IND_RETRAITE");
-            retLine.setLibelle("Indemnité de Départ à la Retraite (" + String.format(Locale.US, "%.1f", ancienneteAns) + " ans)");
+            retLine.setLibelle("Indemnité de Départ à la Retraite - " + String.format(Locale.US, "%.1f", ancienneteAns) + " ans");
             retLine.setTypeLigne("GAIN");
             retLine.setBaseCalcul(sgm);
             retLine.setTaux(BigDecimal.valueOf(ancienneteAns));
@@ -1197,7 +1197,7 @@ public class BulletinService {
 
             BulletinLine compLine = new BulletinLine();
             compLine.setCode("COMPL_MATERNITE");
-            compLine.setLibelle("Complément Maternité (Dépassement Plafond CNSS 800 000 FCFA)");
+            compLine.setLibelle("Complément Maternité - Dépassement Plafond CNSS 800 000 FCFA");
             compLine.setTypeLigne("GAIN");
             compLine.setBaseCalcul(remuBruteNormale);
             compLine.setTaux(new BigDecimal("100.00"));
@@ -1447,10 +1447,10 @@ public class BulletinService {
                 BulletinLine lLic = new BulletinLine();
                 if ("RETRAITE".equalsIgnoreCase(motifRupture)) {
                     lLic.setCode("IND_RETRAITE");
-                    lLic.setLibelle("Indemnité de Départ à la Retraite (" + String.format(Locale.US, "%.1f", ancienneteAns) + " ans)");
+                    lLic.setLibelle("Indemnité de Départ à la Retraite - " + String.format(Locale.US, "%.1f", ancienneteAns) + " ans");
                 } else {
                     lLic.setCode("IND_LICENC");
-                    lLic.setLibelle("Indemnité de Licenciement (" + String.format(Locale.US, "%.1f", ancienneteAns) + " ans)");
+                    lLic.setLibelle("Indemnité de Licenciement - " + String.format(Locale.US, "%.1f", ancienneteAns) + " ans");
                 }
                 lLic.setTypeLigne("GAIN");
                 lLic.setBaseCalcul(sgm);
@@ -1463,7 +1463,7 @@ public class BulletinService {
             if (indemnitePreavis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine lPreav = new BulletinLine();
                 lPreav.setCode("IND_PREAVIS");
-                lPreav.setLibelle("Indemnité Compensatrice de Préavis (" + moisPreavis + " mois)");
+                lPreav.setLibelle("Indemnité Compensatrice de Préavis - " + moisPreavis + " mois");
                 lPreav.setTypeLigne("GAIN");
                 lPreav.setBaseCalcul(sgm);
                 lPreav.setTaux(BigDecimal.valueOf(moisPreavis));
@@ -1475,7 +1475,7 @@ public class BulletinService {
             if (indemniteCongesAcquis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine lCp = new BulletinLine();
                 lCp.setCode("IND_CP_ACQUIS");
-                lCp.setLibelle("Indemnité Compensatrice de Congés Acquis (" + formatMoneyNoDec(joursCongeAcquis) + " j)");
+                lCp.setLibelle("Indemnité Compensatrice de Congés Acquis - " + formatMoneyNoDec(joursCongeAcquis) + " j");
                 lCp.setTypeLigne("GAIN");
                 lCp.setBaseCalcul(smj);
                 lCp.setTaux(joursCongeAcquis);
@@ -1487,7 +1487,7 @@ public class BulletinService {
             if (prorata13eme.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine l13P = new BulletinLine();
                 l13P.setCode("PRORATA_13EME");
-                l13P.setLibelle("13ème Mois au Prorata (" + moisDepart + "/12)");
+                l13P.setLibelle("13ème Mois au Prorata " + moisDepart + "/12");
                 l13P.setTypeLigne("GAIN");
                 l13P.setBaseCalcul(salaireBase.add(surSalaire));
                 BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
@@ -1500,7 +1500,7 @@ public class BulletinService {
             if (prorata14eme.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine l14P = new BulletinLine();
                 l14P.setCode("PRORATA_14EME");
-                l14P.setLibelle("14ème Mois au Prorata (" + moisDepart + "/12)");
+                l14P.setLibelle("14ème Mois au Prorata " + moisDepart + "/12");
                 l14P.setTypeLigne("GAIN");
                 l14P.setBaseCalcul(salaireBase.add(surSalaire));
                 BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
@@ -1514,7 +1514,7 @@ public class BulletinService {
             if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
                 cnssLine.setCode("COT_CNSS");
-                cnssLine.setLibelle("Cotisation CNSS (5.5%)");
+                cnssLine.setLibelle("Cotisation CNSS 5.5%");
                 cnssLine.setTypeLigne("RETENUE_SOCIALE");
                 cnssLine.setBaseCalcul(baseCnss);
                 cnssLine.setTaux(new BigDecimal("5.50"));
@@ -1539,11 +1539,31 @@ public class BulletinService {
                 lines.add(iutsLine);
             }
 
+            // 7.bis Retenue Fonds de Soutien Patriotique (FSP 1% sur le net imposable / cédulaire)
+            BigDecimal baseFsp = money(brutSoumis.subtract(cnssEmploye).subtract(impotIuts).max(BigDecimal.ZERO));
+            if (baseFsp.compareTo(BigDecimal.ZERO) == 0 && totalBrutStc.compareTo(BigDecimal.ZERO) > 0) {
+                baseFsp = money(totalBrutStc.subtract(cnssEmploye).subtract(impotIuts).max(BigDecimal.ZERO));
+            }
+            BigDecimal fspMontant = BigDecimal.ZERO;
+            if (baseFsp.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal tauxFsp = new BigDecimal("1.00");
+                fspMontant = money(calculatePercentage(baseFsp, tauxFsp));
+                BulletinLine fspLine = new BulletinLine();
+                fspLine.setCode("RET_FSP");
+                fspLine.setLibelle("Fonds de Soutien Patriotique - FSP 1%");
+                fspLine.setTypeLigne("RETENUE_SOCIALE");
+                fspLine.setBaseCalcul(baseFsp);
+                fspLine.setTaux(tauxFsp);
+                fspLine.setMontant(fspMontant);
+                fspLine.setOrdre(ordre++);
+                lines.add(fspLine);
+            }
+
             // Retenue Préavis non effectué par le salarié
             if (retenuePreavis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine retPreavLine = new BulletinLine();
                 retPreavLine.setCode("RET_PREAVIS");
-                retPreavLine.setLibelle("Préavis non effectué par le salarié (" + moisPreavis + " mois)");
+                retPreavLine.setLibelle("Préavis non effectué par le salarié - " + moisPreavis + " mois");
                 retPreavLine.setTypeLigne("RETENUE");
                 retPreavLine.setBaseCalcul(sgm);
                 retPreavLine.setTaux(BigDecimal.valueOf(moisPreavis));
@@ -1603,7 +1623,7 @@ public class BulletinService {
                 }
             }
 
-            BigDecimal totalRetenues = money(cnssEmploye.add(impotIuts).add(totalPrecomptesStc).add(retenuePreavis));
+            BigDecimal totalRetenues = money(cnssEmploye.add(impotIuts).add(fspMontant).add(totalPrecomptesStc).add(retenuePreavis));
             BigDecimal salaireNet = money(totalBrutStc.subtract(totalRetenues));
 
             Contrat contrat = contratRepository.findFirstByEmployeeIdOrderByIdDesc(emp.getId()).orElse(null);
@@ -1633,7 +1653,7 @@ public class BulletinService {
             bulletin.setImpotIutsSansCharge(iutsSansCharge);
             bulletin.setReductionIutsCharge(reductionIuts);
             bulletin.setImpotIuts(impotIuts);
-            bulletin.setTotalRetenuesSociales(cnssEmploye);
+            bulletin.setTotalRetenuesSociales(money(cnssEmploye.add(fspMontant)));
             bulletin.setTotalPrecomptes(money(totalPrecomptesStc.add(retenuePreavis)));
             bulletin.setTotalRetenues(totalRetenues);
             bulletin.setTotalCotisationsPatronales(cnssPatronale);
@@ -1919,7 +1939,7 @@ public class BulletinService {
         BulletinLine salBaseLine = new BulletinLine();
         salBaseLine.setCode("SAL_BASE");
         if (workedDays != null && scheduledDays != null && workedDays.compareTo(scheduledDays) < 0) {
-            salBaseLine.setLibelle("Salaire de Base (" + workedDays.stripTrailingZeros().toPlainString() + "/" + scheduledDays.stripTrailingZeros().toPlainString() + " j)");
+            salBaseLine.setLibelle("Salaire de Base - " + workedDays.stripTrailingZeros().toPlainString() + "/" + scheduledDays.stripTrailingZeros().toPlainString() + " j");
         } else {
             salBaseLine.setLibelle("Salaire de Base");
         }
@@ -1935,7 +1955,7 @@ public class BulletinService {
             BulletinLine surSalLine = new BulletinLine();
             surSalLine.setCode("SUR_SALAIRE");
             if (workedDays != null && scheduledDays != null && workedDays.compareTo(scheduledDays) < 0) {
-                surSalLine.setLibelle("Sur-salaire (" + workedDays.stripTrailingZeros().toPlainString() + "/" + scheduledDays.stripTrailingZeros().toPlainString() + " j)");
+                surSalLine.setLibelle("Sur-salaire - " + workedDays.stripTrailingZeros().toPlainString() + "/" + scheduledDays.stripTrailingZeros().toPlainString() + " j");
             } else {
                 surSalLine.setLibelle("Sur-salaire");
             }
@@ -2936,12 +2956,9 @@ public class BulletinService {
                 ld.setBulletinId(b.getId());
                 ld.setRubriquePaieId(l.getRubriquePaie() != null ? l.getRubriquePaie().getId() : null);
                 String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
+                String cleanLib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim();
                 String lCode = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
-                boolean isGratOrProrata = lCode.contains("13") || lCode.contains("14") || lCode.contains("GRAT") || lCode.contains("PRORATA")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("13") || rawLib.toUpperCase(Locale.ROOT).contains("14")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("GRATIFICATION") || rawLib.toUpperCase(Locale.ROOT).contains("PRORATA")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("AVOIR") || rawLib.toUpperCase(Locale.ROOT).contains("RAPPEL");
-                String cleanLib = isGratOrProrata ? rawLib.replaceAll("\\s+", " ").trim() : rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim();
+                boolean isGratOrProrata = cleanLib.toUpperCase(Locale.ROOT).contains("PRORATA") || cleanLib.toUpperCase(Locale.ROOT).contains("13") || cleanLib.toUpperCase(Locale.ROOT).contains("14");
                 ld.setCode(l.getCode());
                 ld.setLibelle(cleanLib);
                 ld.setTypeLigne(l.getTypeLigne());
@@ -3179,9 +3196,13 @@ public class BulletinService {
         dto.setPeriode(periodeStr);
         dto.setSessionPeriode(periodeStr);
 
-        String sessionType = b.getTypeSession() != null ? b.getTypeSession() : (b.getSessionPaie() != null ? b.getSessionPaie().getTypeSession() : "ORDINAIRE");
-        dto.setSessionType(sessionType);
-        dto.setTypeSession(sessionType);
+        String rawSessionType = b.getTypeSession() != null ? b.getTypeSession() : (b.getSessionPaie() != null ? b.getSessionPaie().getTypeSession() : "ORDINAIRE");
+        String rawNature = b.getNatureSession() != null ? b.getNatureSession() : (b.getSessionPaie() != null ? b.getSessionPaie().getNatureSession() : null);
+        String sessionName = b.getSessionPaie() != null ? b.getSessionPaie().getName() : null;
+        String formattedSessionType = BulletinPdfService.formatSessionTypeLabel(rawSessionType, rawNature, sessionName);
+        dto.setSessionType(formattedSessionType);
+        dto.setTypeSession(formattedSessionType);
+        dto.setNatureSession(rawNature);
 
         // Calcul des écarts N et N-1
         if (b.getEmployee() != null && b.getSessionPaie() != null) {
@@ -3232,6 +3253,7 @@ public class BulletinService {
                 }
             }
         }
+        boolean bIsStc = isStc(b.getNatureSession()) || isStc(b.getTypeSession()) || (b.getSessionPaie() != null && isStc(b.getSessionPaie()));
         boolean bIs13Ou14 = is13Ou14emeMois(b.getSessionPaie())
                 || is13Ou14emeMois(b.getTypeSession())
                 || is13Ou14emeMois(b.getNatureSession())
@@ -3242,9 +3264,15 @@ public class BulletinService {
             BigDecimal baseCrrae = b.getSalaireBase().add(b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO);
             crraeVal = baseCrrae.multiply(new BigDecimal("0.06")).setScale(0, java.math.RoundingMode.HALF_UP);
         }
-        if (bIsExtra) {
+        if (bIs13Ou14) {
             crraeVal = BigDecimal.ZERO;
             solVal = BigDecimal.ZERO;
+        } else if (bIsExtra && !bIsStc) {
+            crraeVal = BigDecimal.ZERO;
+            solVal = BigDecimal.ZERO;
+        } else if (bIsExtra) {
+            crraeVal = BigDecimal.ZERO;
+            // Pour STC : le FSP (Fonds de Soutien Patriotique) doit figurer !
         }
         dto.setCotisationCrrae(crraeVal);
         dto.setCotisationSolidarite(solVal);
@@ -3263,7 +3291,7 @@ public class BulletinService {
             baseImpMois = BigDecimal.ZERO;
             crraeVal = BigDecimal.ZERO;
             solVal = BigDecimal.ZERO;
-        } else if (bIsExtra) {
+        } else if (bIsExtra && !bIsStc) {
             if (cnssFromLines.compareTo(BigDecimal.ZERO) == 0 && (b.getCotisationCnss() == null || b.getCotisationCnss().compareTo(BigDecimal.ZERO) == 0)) {
                 cnssMois = BigDecimal.ZERO;
             }
@@ -3597,17 +3625,17 @@ public class BulletinService {
     public static boolean isDifferentielMaternite(SessionPaie session) {
         if (session == null) return false;
         String nat = session.getNatureSession() != null ? session.getNatureSession().toUpperCase(Locale.ROOT) : "";
-        if (nat.equals("DIFFERENTIEL_MATERNITE") || nat.equals("COMPLEMENT_MATERNITE") || nat.contains("MATERNITE") || nat.contains("MATERNITÉ")) return true;
+        if (nat.equals("DIFFERENTIEL_MATERNITE") || nat.equals("COMPLEMENT_MATERNITE") || nat.contains("MATERNITE") || nat.contains("MATERNITÉ") || nat.equals("RELIQUAT") || nat.contains("RELIQUAT")) return true;
         String t = (session.getTypeSession() != null ? session.getTypeSession() : "").toUpperCase(Locale.ROOT);
         String n = (session.getName() != null ? session.getName() : "").toUpperCase(Locale.ROOT);
         String c = (session.getCodeSession() != null ? session.getCodeSession() : "").toUpperCase(Locale.ROOT);
-        return n.contains("MATERNITE") || n.contains("MATERNITÉ") || c.contains("MATERNITE") || t.contains("MATERNITE");
+        return n.contains("MATERNITE") || n.contains("MATERNITÉ") || c.contains("MATERNITE") || t.contains("MATERNITE") || n.contains("RELIQUAT") || c.contains("RELIQUAT");
     }
 
     public static boolean isDifferentielMaternite(String text) {
         if (text == null) return false;
         String t = text.trim().toUpperCase(Locale.ROOT);
-        return t.contains("MATERNITE") || t.contains("MATERNITÉ");
+        return t.contains("MATERNITE") || t.contains("MATERNITÉ") || t.contains("RELIQUAT");
     }
 
     private static boolean isGratification(String typeSession) {

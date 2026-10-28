@@ -17,6 +17,10 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     Optional<Utilisateur> findByEmail(String email);
     Optional<Utilisateur> findByUsername(String username);
     Optional<Utilisateur> findByUsernameIgnoreCaseOrEmailIgnoreCase(String username, String email);
+
+    @Query("SELECT u FROM Utilisateur u WHERE LOWER(u.username) = LOWER(:login) OR LOWER(u.email) = LOWER(:login) ORDER BY u.actif DESC, u.id ASC")
+    java.util.List<Utilisateur> findByUsernameOrEmail(@Param("login") String login);
+
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
 

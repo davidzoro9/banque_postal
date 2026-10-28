@@ -1,13 +1,9 @@
 package com.bpbf.sirh_backend.dtos;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class SensEcritureDto {
     private Long id;
@@ -16,4 +12,15 @@ public class SensEcritureDto {
     private String description;
     private Integer ordre;
     private Boolean actif;
+
+    public SensEcritureDto() {}
+
+    public SensEcritureDto(Long id, String code, String libelle, String description, Integer ordre, Boolean actif) {
+        this.id = id;
+        this.code = code;
+        this.libelle = libelle;
+        this.description = description;
+        this.ordre = ordre;
+        this.actif = actif;
+    }
 }

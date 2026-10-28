@@ -17,6 +17,7 @@ public class TypeAbsenceCongeDto {
     private Integer dureeMaxLegaleJours;
     private String categorie;
     private String sexeRequis;
+    private String typeJour;
     private Boolean remunere;
     private Double tauxRemuneration;
     private Boolean justificatifRequis;

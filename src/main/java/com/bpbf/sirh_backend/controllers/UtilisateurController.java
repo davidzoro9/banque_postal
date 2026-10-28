@@ -47,7 +47,8 @@ public class UtilisateurController {
         String trimmedLogin = login.trim();
 
         // Recherche par email ou username (insensible à la casse)
-        Optional<Utilisateur> existing = utilisateurRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(trimmedLogin, trimmedLogin);
+        java.util.List<Utilisateur> users = utilisateurRepository.findByUsernameOrEmail(trimmedLogin);
+        Optional<Utilisateur> existing = users.stream().findFirst();
 
         if (existing.isPresent()) {
             Utilisateur u = existing.get();
@@ -124,7 +125,7 @@ public class UtilisateurController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Utilisateur> update(@PathVariable Long id, @RequestBody Utilisateur user) {
+    public ResponseEntity<Utilisateur> update(@PathVariable("id") Long id, @RequestBody Utilisateur user) {
         Utilisateur existing = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
 
@@ -144,7 +145,7 @@ public class UtilisateurController {
     }
 
     @PutMapping("/{id}/password")
-    public ResponseEntity<Map<String, String>> updatePassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, String>> updatePassword(@PathVariable("id") Long id, @RequestBody Map<String, String> payload) {
         Utilisateur existing = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
 
@@ -160,7 +161,7 @@ public class UtilisateurController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         utilisateurRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

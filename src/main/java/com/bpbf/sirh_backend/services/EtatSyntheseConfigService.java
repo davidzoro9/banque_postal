@@ -197,8 +197,11 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("ETAT_BULLETIN", "État Bulletin", "Audit & Contrôle", 
                 "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 16, true, true));
 
-        defaults.add(createEntity("ETAT_OD_COMPTABLE", "Ordre de Débit Comptable (OD de Paie)", "Comptabilité & Paie", 
+        defaults.add(createEntity("ETAT_OD_COMPTABLE", "Ordre de Débit Comptable OD de Paie", "Comptabilité & Paie", 
                 "Écritures comptables équilibrées SYSCOHADA (Débit 64x / Crédit 42x, 43x, 44x) pour import DAF.", "receipt", 17, true, true));
+
+        defaults.add(createEntity("ETAT_STC", "État du Solde de Tout Compte", "Indemnités de Rupture",
+                "Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.", "gavel", 18, true, true));
 
         for (EtatSyntheseConfig def : defaults) {
 

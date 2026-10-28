@@ -21,4 +21,9 @@ public class SoldeCongeDto {
     private Integer joursEnAttente; // Congés soumis en attente de validation
     private Double soldeRestant; // Jours acquis - jours pris
     private String dateDernierConge;
+
+    // Quotas & Soldes Permissions / Absences exceptionnelles
+    private Integer quotaPermissions;          // Quota annuel paramétré (ex: 10 jours)
+    private Integer permissionsPrises;         // Jours de permissions pris sur l'année
+    private Integer soldePermissionsRestant;   // quotaPermissions - permissionsPrises
 }

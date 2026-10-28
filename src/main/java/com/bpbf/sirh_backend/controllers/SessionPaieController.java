@@ -139,11 +139,13 @@ public class SessionPaieController {
                         session.setNatureSession("INDEMNITE_RETRAITE");
                     } else if (n.contains("STC") || n.contains("SOLDE")) {
                         session.setNatureSession("STC");
-                    } else if (n.contains("MATERNITE") || n.contains("MATERNITÉ")) {
-                        session.setNatureSession("DIFFERENTIEL_MATERNITE");
+                    } else if (n.contains("MATERNITE") || n.contains("MATERNITÉ") || n.contains("RELIQUAT")) {
+                        session.setNatureSession("RELIQUAT");
                     } else {
                         session.setNatureSession("TREIZIEME_MOIS");
                     }
+                } else if ("DIFFERENTIEL_MATERNITE".equalsIgnoreCase(session.getNatureSession())) {
+                    session.setNatureSession("RELIQUAT");
                 }
 
                 boolean is1314 = session.getNatureSession() != null &&

@@ -239,7 +239,6 @@ public class PayrollDataInitializer implements CommandLineRunner {
         // 3. Types officiels de Congés et Absences au Burkina Faso
         getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé", true, 30);
         getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité (14 semaines)", false, 98);
-        getOrCreateTypeAbsence("CONGE_PATERNITE", "Congé de paternité", false, 3);
         getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie (Arrêt médical)", false, 180);
         getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage de l'agent", false, 3);
         getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès (Conjoint/Parent/Enfant)", false, 5);
@@ -347,37 +346,47 @@ public class PayrollDataInitializer implements CommandLineRunner {
     }
 
     private void seedJoursFeries(String year) {
+        // Exactement 11 Fêtes légales chômées au Burkina Faso (7 fixes + 4 mobiles)
         getOrCreateJourFerie("Jour de l'An", year + "-01-01", "FIXE", "Fête du Nouvel An");
-        getOrCreateJourFerie("Soulèvement populaire du 3 Janvier 1966", year + "-01-03", "FIXE", "Commémoration nationale");
-        getOrCreateJourFerie("Journée Internationale des Droits des Femmes", year + "-03-08", "FIXE", "8 Mars");
+        getOrCreateJourFerie("Journée Internationale des Droits de la Femme", year + "-03-08", "FIXE", "8 Mars");
         getOrCreateJourFerie("Fête du Travail", year + "-05-01", "FIXE", "1er Mai");
-        getOrCreateJourFerie("Fête de l'Indépendance", year + "-08-05", "FIXE", "Proclamation de l'Indépendance");
+        getOrCreateJourFerie("Journée des Coutumes et Traditions", year + "-05-15", "FIXE", "Fête des traditions et coutumes burkinabè");
         getOrCreateJourFerie("Assomption", year + "-08-15", "FIXE", "Fête religieuse chrétienne");
-        getOrCreateJourFerie("Journée des Martyrs", year + "-10-31", "FIXE", "Hommage aux martyrs de l'insurrection");
-        getOrCreateJourFerie("Toussaint", year + "-11-01", "FIXE", "Fête religieuse chrétienne");
         getOrCreateJourFerie("Fête Nationale", year + "-12-11", "FIXE", "Proclamation de la République");
         getOrCreateJourFerie("Noël", year + "-12-25", "FIXE", "Fête de la Nativité");
 
-        // Fêtes mobiles selon l'année
+        // 4 Fêtes à dates variables selon l'année (Ascension, Ramadan, Tabaski, Mouloud)
         if ("2026".equals(year)) {
-            getOrCreateJourFerie("Lundi de Pâques", "2026-04-06", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Ascension", "2026-05-14", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Lundi de Pentecôte", "2026-05-25", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Aïd el-Fitr (Ramadan)", "2026-03-20", "RELIGIEUX", "Fête musulmane");
-            getOrCreateJourFerie("Aïd el-Kébir (Tabaski)", "2026-05-27", "RELIGIEUX", "Fête musulmane");
-            getOrCreateJourFerie("Mouloud", "2026-08-26", "RELIGIEUX", "Naissance du Prophète");
+            getOrCreateJourFerie("Aïd el-Fitr (Ramadan)", "2026-03-20", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Ascension", "2026-05-14", "VARIABLE", "Fête chrétienne");
+            getOrCreateJourFerie("Aïd el-Kébir (Tabaski)", "2026-05-27", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Mouloud", "2026-08-26", "VARIABLE", "Naissance du Prophète");
         } else if ("2025".equals(year)) {
-            getOrCreateJourFerie("Lundi de Pâques", "2025-04-21", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Ascension", "2025-05-29", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Lundi de Pentecôte", "2025-06-09", "MOBILE", "Fête chrétienne");
-            getOrCreateJourFerie("Aïd el-Fitr (Ramadan)", "2025-03-31", "RELIGIEUX", "Fête musulmane");
-            getOrCreateJourFerie("Aïd el-Kébir (Tabaski)", "2025-06-07", "RELIGIEUX", "Fête musulmane");
-            getOrCreateJourFerie("Mouloud", "2025-09-05", "RELIGIEUX", "Naissance du Prophète");
+            getOrCreateJourFerie("Aïd el-Fitr (Ramadan)", "2025-03-31", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Ascension", "2025-05-29", "VARIABLE", "Fête chrétienne");
+            getOrCreateJourFerie("Aïd el-Kébir (Tabaski)", "2025-06-07", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Mouloud", "2025-09-05", "VARIABLE", "Naissance du Prophète");
+        } else if ("2027".equals(year)) {
+            getOrCreateJourFerie("Aïd el-Fitr (Ramadan)", "2027-03-10", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Ascension", "2027-05-06", "VARIABLE", "Fête chrétienne");
+            getOrCreateJourFerie("Aïd el-Kébir (Tabaski)", "2027-05-17", "VARIABLE", "Fête musulmane");
+            getOrCreateJourFerie("Mouloud", "2027-08-16", "VARIABLE", "Naissance du Prophète");
         }
     }
 
     private com.bpbf.sirh_backend.entities.JourFerie getOrCreateJourFerie(String libelle, String date, String type, String desc) {
-        return jourFerieRepository.findByDate(date).orElseGet(() -> {
+        return jourFerieRepository.findByDate(date).map(existing -> {
+            boolean changed = false;
+            if (existing.getType() == null || !type.equalsIgnoreCase(existing.getType())) {
+                existing.setType(type);
+                changed = true;
+            }
+            if (existing.getLibelle() == null || !existing.getLibelle().equals(libelle)) {
+                existing.setLibelle(libelle);
+                changed = true;
+            }
+            return changed ? jourFerieRepository.save(existing) : existing;
+        }).orElseGet(() -> {
             com.bpbf.sirh_backend.entities.JourFerie jf = new com.bpbf.sirh_backend.entities.JourFerie();
             jf.setLibelle(libelle);
             jf.setDate(date);
@@ -389,21 +398,26 @@ public class PayrollDataInitializer implements CommandLineRunner {
     }
 
     private void seedTypesAbsenceConges() {
-        getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé", true, 30, "CONGE", "TOUS");
-        getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité", false, 98, "CONGE", "FEMININ");
-        getOrCreateTypeAbsence("CONGE_PATERNITE", "Congé de paternité", false, 3, "CONGE", "MASCULIN");
-        getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie", false, 180, "CONGE", "TOUS");
-        getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage", false, 3, "ABSENCE", "TOUS");
-        getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès", false, 5, "ABSENCE", "TOUS");
-        getOrCreateTypeAbsence("EVT_NAISSANCE", "Événement familial - Naissance", false, 3, "ABSENCE", "TOUS");
-        getOrCreateTypeAbsence("ABS_AUTORISEE", "Absence autorisée", false, 2, "ABSENCE", "TOUS");
+        typeAbsenceCongeRepository.findByCode("CONGE_PATERNITE").ifPresent(typeAbsenceCongeRepository::delete);
+        getOrCreateTypeAbsence("CONGE_ANNUEL", "Congé annuel payé", true, 30, "CONGE", "TOUS", "OUVRABLE");
+        getOrCreateTypeAbsence("CONGE_MATERNITE", "Congé de maternité", false, 98, "CONGE", "FEMININ", "CALENDAIRE");
+        getOrCreateTypeAbsence("CONGE_MALADIE", "Congé de maladie", false, 180, "CONGE", "TOUS", "CALENDAIRE");
+        getOrCreateTypeAbsence("EVT_MARIAGE", "Événement familial - Mariage", false, 3, "PERMISSION", "TOUS", "OUVRABLE");
+        getOrCreateTypeAbsence("EVT_DECES", "Événement familial - Décès", false, 5, "PERMISSION", "TOUS", "OUVRABLE");
+        getOrCreateTypeAbsence("EVT_NAISSANCE", "Événement familial - Naissance", false, 3, "PERMISSION", "TOUS", "OUVRABLE");
+        getOrCreateTypeAbsence("ABS_AUTORISEE", "Absence autorisée", false, 2, "PERMISSION", "TOUS", "OUVRE");
+        getOrCreateTypeAbsence("PERMISSION", "Permission d'absence exceptionnelle", false, 10, "PERMISSION", "TOUS", "OUVRABLE");
     }
 
     private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours) {
-        return getOrCreateTypeAbsence(code, name, deductible, maxJours, null, null);
+        return getOrCreateTypeAbsence(code, name, deductible, maxJours, null, null, null);
     }
 
     private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours, String categorie, String sexeRequis) {
+        return getOrCreateTypeAbsence(code, name, deductible, maxJours, categorie, sexeRequis, null);
+    }
+
+    private com.bpbf.sirh_backend.entities.TypeAbsenceConge getOrCreateTypeAbsence(String code, String name, Boolean deductible, Integer maxJours, String categorie, String sexeRequis, String typeJour) {
         return typeAbsenceCongeRepository.findByCode(code).map(existing -> {
             boolean changed = false;
             if (existing.getDeductibleDuSolde() == null || !existing.getDeductibleDuSolde().equals(deductible)) {
@@ -422,6 +436,10 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 existing.setSexeRequis(sexeRequis);
                 changed = true;
             }
+            if (typeJour != null && (existing.getTypeJour() == null || !existing.getTypeJour().equals(typeJour))) {
+                existing.setTypeJour(typeJour);
+                changed = true;
+            }
             if (changed) {
                 return typeAbsenceCongeRepository.save(existing);
             }
@@ -435,11 +453,12 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 t.setDureeMaxLegaleJours(maxJours);
                 t.setCategorie(categorie);
                 t.setSexeRequis(sexeRequis);
+                t.setTypeJour(typeJour != null ? typeJour : "OUVRABLE");
                 return typeAbsenceCongeRepository.save(t);
             } catch (Exception e) {
                 try {
                     Long nextId = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) + 1 FROM type_absence_conge", Long.class);
-                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name, deductible_du_solde, duree_max_legale_jours, categorie, sexe_requis) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name, deductible, maxJours, categorie, sexeRequis);
+                    jdbcTemplate.update("INSERT INTO type_absence_conge (id, code, name, deductible_du_solde, duree_max_legale_jours, categorie, sexe_requis, type_jour) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", nextId, code, name, deductible, maxJours, categorie, sexeRequis, typeJour != null ? typeJour : "OUVRABLE");
                     return typeAbsenceCongeRepository.findByCode(code).orElse(null);
                 } catch (Exception ex) {
                     log.debug("Notice insert type absence: {}", ex.getMessage());
@@ -486,29 +505,29 @@ public class PayrollDataInitializer implements CommandLineRunner {
 
     private void initComptesComptables() {
         try {
-            log.info("Vérification et initialisation des comptes comptables SYSCOHADA de paie...");
-            createCompteIfAbsent("641100", "Salaires de base du personnel national", "CLASSE_6", "DEBIT", "SALAIRE_BASE", "OD_PAIE", "Traitements et salaires fixes");
-            createCompteIfAbsent("642200", "Sur-salaires du personnel", "CLASSE_6", "DEBIT", "SUR_SALAIRE", "OD_PAIE", "Sur-salaire contractuel et majorations");
-            createCompteIfAbsent("641200", "Primes et gratifications", "CLASSE_6", "DEBIT", "PRIMES", "OD_PAIE", "Primes d'ancienneté, de rendement et gratifications");
-            createCompteIfAbsent("641300", "Indemnités et avantages divers", "CLASSE_6", "DEBIT", "INDEMNITES", "OD_PAIE", "Indemnités de logement, transport, fonction, caisse, etc.");
-            createCompteIfAbsent("642500", "Rappels sur salaires antérieurs (Avoirs accordés)", "CLASSE_6", "DEBIT", "RAPPELS", "OD_PAIE", "Rappels sur salaires et avoirs");
-            createCompteIfAbsent("641400", "Rémunérations des heures supplémentaires", "CLASSE_6", "DEBIT", "HEURES_SUPP", "OD_PAIE", "Heures supplémentaires majorées");
-            createCompteIfAbsent("646100", "Cotisations sociales patronales (CNSS)", "CLASSE_6", "DEBIT", "COTISATIONS_PATRONALES", "OD_PAIE", "Charges patronales CNSS (Prestations familiales, Risques pro, Retraite)");
-            createCompteIfAbsent("646200", "Cotisations patronales régimes complémentaires (CRRAE)", "CLASSE_6", "DEBIT", "CRRAE_PATRONALE", "OD_PAIE", "Charges patronales de retraite complémentaire CRRAE");
-            createCompteIfAbsent("647100", "Taxe Patronale d'Apprentissage (TPA - Charge)", "CLASSE_6", "DEBIT", "TPA", "OD_PAIE", "Taxe Patronale d'Apprentissage (TPA)");
-            createCompteIfAbsent("421100", "Personnel - Rémunérations dues (Net à payer)", "CLASSE_4", "CREDIT", "NET_A_PAYER", "OD_PAIE", "Salaires nets à verser aux employés de la banque");
-            createCompteIfAbsent("422100", "Personnel - Avances et acomptes", "CLASSE_4", "CREDIT", "ACOMPTES", "OD_PAIE", "Acomptes consentis sur salaires");
-            createCompteIfAbsent("422000", "Personnel - Prêts, avances et précomptes récupérés", "CLASSE_4", "CREDIT", "PRECOMPTES", "OD_PAIE", "Précomptes et retenues sur prêts");
-            createCompteIfAbsent("428700", "Personnel - Trop-perçus régularisés sur salaires antérieurs", "CLASSE_4", "CREDIT", "TROP_PERCUS", "OD_PAIE", "Régularisations de trop-perçus");
-            createCompteIfAbsent("431100", "Sécurité Sociale (CNSS)", "CLASSE_4", "CREDIT", "CNSS", "OD_PAIE", "Cotisations CNSS part salariale (5.5%) et part patronale");
-            createCompteIfAbsent("431200", "Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)", "CLASSE_4", "CREDIT", "CRRAE", "OD_PAIE", "Cotisations prévoyance CRRAE salariale et patronale");
-            createCompteIfAbsent("442100", "État - Impôt sur les Traitements et Salaires (IUTS)", "CLASSE_4", "CREDIT", "IUTS", "OD_PAIE", "Retenues à la source IUTS selon barème progressif");
-            createCompteIfAbsent("442800", "État - Fonds de Soutien Patriotique (FSP)", "CLASSE_4", "CREDIT", "FSP", "OD_PAIE", "Prélèvement légal FSP sur rémunérations");
-            createCompteIfAbsent("447300", "État - Taxe Patronale d'Apprentissage à reverser (TPA)", "CLASSE_4", "CREDIT", "TPA_DETTE", "OD_PAIE", "Taxe patronale TPA à reverser");
+            log.info("Vérification et initialisation des comptes comptables SYSCOHADA Révisé de paie...");
+            createCompteIfAbsent("661100", "Salaires de base du personnel national", "CLASSE_6", "DEBIT", "SALAIRE_BASE", "OD_PAIE", "Traitements et salaires fixes indiciaires");
+            createCompteIfAbsent("661200", "Primes et gratifications du personnel national", "CLASSE_6", "DEBIT", "PRIMES", "OD_PAIE", "Primes d'ancienneté, de rendement, sur-salaire et gratifications");
+            createCompteIfAbsent("661300", "Indemnités de congés payés", "CLASSE_6", "DEBIT", "CONGES_PAYES", "OD_PAIE", "Charges sur indemnités de congés payés");
+            createCompteIfAbsent("661500", "Rappels sur salaires antérieurs (Avoirs accordés)", "CLASSE_6", "DEBIT", "RAPPELS", "OD_PAIE", "Rappels sur salaires et avoirs");
+            createCompteIfAbsent("661800", "Autres indemnités et avantages du personnel", "CLASSE_6", "DEBIT", "INDEMNITES", "OD_PAIE", "Indemnités de logement, transport, fonction, caisse et heures supplémentaires");
+            createCompteIfAbsent("661900", "Charges de personnel - Écarts d'arrondis sur salaires", "CLASSE_6", "DEBIT", "ARRONDI_DEBIT", "OD_PAIE", "Écarts d'arrondis débiteurs sur salaires");
+            createCompteIfAbsent("664100", "Charges sociales sur rémunérations du personnel national (CNSS)", "CLASSE_6", "DEBIT", "COTISATIONS_PATRONALES", "OD_PAIE", "Charges patronales CNSS (Prestations familiales, Risques pro, Retraite)");
+            createCompteIfAbsent("664200", "Charges patronales régimes complémentaires (CRRAE)", "CLASSE_6", "DEBIT", "CRRAE_PATRONALE", "OD_PAIE", "Charges patronales de retraite complémentaire CRRAE");
+            createCompteIfAbsent("641300", "Taxe Patronale d'Apprentissage (TPA - Charge)", "CLASSE_6", "DEBIT", "TPA", "OD_PAIE", "Taxe Patronale d'Apprentissage (TPA)");
+            createCompteIfAbsent("668000", "Autres charges de personnel", "CLASSE_6", "DEBIT", "AUTRE", "OD_PAIE", "Autres charges de personnel");
+            createCompteIfAbsent("421100", "Personnel - Rémunérations nettes dues (Virements)", "CLASSE_4", "CREDIT", "NET_A_PAYER", "OD_PAIE", "Salaires nets à verser aux employés de la banque");
+            createCompteIfAbsent("422000", "Personnel - Prêts, avances et précomptes récupérés", "CLASSE_4", "CREDIT", "PRECOMPTES", "OD_PAIE", "Précomptes et retenues sur prêts bancaires");
+            createCompteIfAbsent("425100", "Personnel - Avances et acomptes consentis", "CLASSE_4", "CREDIT", "ACOMPTES", "OD_PAIE", "Acomptes et avances consentis sur salaires");
             createCompteIfAbsent("428100", "Personnel - Dettes provisionnées pour congés à payer", "CLASSE_4", "CREDIT", "PROVISION_CONGES", "OD_PAIE", "Provisions congés payés de fin d'exercice");
-            createCompteIfAbsent("641800", "Indemnités de congés payés", "CLASSE_6", "DEBIT", "CONGES_PAYES", "OD_PAIE", "Charges sur indemnités de congés");
-            createCompteIfAbsent("428200", "Personnel - Autres régularisations et arrondis", "CLASSE_4", "CREDIT", "ARRONDI_CREDIT", "OD_PAIE", "Arrondis et régularisations diverses");
-            log.info("Comptes comptables de paie initialisés avec succès.");
+            createCompteIfAbsent("428200", "Personnel - Autres régularisations et arrondis", "CLASSE_4", "CREDIT", "ARRONDI_CREDIT", "OD_PAIE", "Arrondis et régularisations créditeuses diverses");
+            createCompteIfAbsent("428700", "Personnel - Trop-perçus à régulariser", "CLASSE_4", "CREDIT", "TROP_PERCUS", "OD_PAIE", "Régularisations et remboursements de trop-perçus");
+            createCompteIfAbsent("431100", "Sécurité Sociale (CNSS)", "CLASSE_4", "CREDIT", "CNSS", "OD_PAIE", "Cotisations CNSS part salariale (5.5%) et part patronale (16%)");
+            createCompteIfAbsent("431200", "Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)", "CLASSE_4", "CREDIT", "CRRAE", "OD_PAIE", "Cotisations prévoyance CRRAE salariale et patronale");
+            createCompteIfAbsent("447100", "État - Impôt Unique sur Traitements et Salaires (IUTS)", "CLASSE_4", "CREDIT", "IUTS", "OD_PAIE", "Retenues à la source IUTS selon barème progressif");
+            createCompteIfAbsent("447200", "État - Fonds de Soutien Patriotique (FSP 1%)", "CLASSE_4", "CREDIT", "FSP", "OD_PAIE", "Prélèvement obligatoire FSP sur rémunérations");
+            createCompteIfAbsent("447300", "État - Taxe Patronale d'Apprentissage à reverser (TPA)", "CLASSE_4", "CREDIT", "TPA_DETTE", "OD_PAIE", "Taxe patronale TPA à reverser");
+            log.info("Comptes comptables SYSCOHADA Révisé initialisés avec succès.");
         } catch (Exception e) {
             log.warn("Erreur lors de l'initialisation des comptes comptables: {}", e.getMessage());
         }

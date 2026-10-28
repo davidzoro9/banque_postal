@@ -143,9 +143,14 @@ public class BulletinPdfService {
 
             String codeBulletin = b.getCode() != null ? b.getCode() : ("BLT-" + b.getId());
             String periode = formatPeriode(b.getDateFrom(), b.getDateTo());
-            String sessionType = b.getSessionPaie() != null && b.getSessionPaie().getTypeSession() != null 
+            String rawType = b.getSessionPaie() != null && b.getSessionPaie().getTypeSession() != null 
                     ? b.getSessionPaie().getTypeSession() 
                     : (b.getTypeSession() != null ? b.getTypeSession() : "ORDINAIRE");
+            String rawNature = b.getNatureSession() != null 
+                    ? b.getNatureSession() 
+                    : (b.getSessionPaie() != null ? b.getSessionPaie().getNatureSession() : null);
+            String sessionName = b.getSessionPaie() != null ? b.getSessionPaie().getName() : null;
+            String sessionType = formatSessionTypeLabel(rawType, rawNature, sessionName);
             String dateDebutStr = b.getDateFrom() != null ? b.getDateFrom().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "01/07/2026";
             String dateFinStr = b.getDateTo() != null ? b.getDateTo().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "31/07/2026";
 
@@ -223,7 +228,9 @@ public class BulletinPdfService {
 
             String codeBulletin = dto.getCode() != null ? dto.getCode() : "PREVIEW";
             String periode = formatPeriode(dto.getDateFrom(), dto.getDateTo());
-            String sessionType = dto.getTypeSession() != null ? dto.getTypeSession() : "ORDINAIRE";
+            String rawType = dto.getTypeSession() != null ? dto.getTypeSession() : (dto.getSessionType() != null ? dto.getSessionType() : "ORDINAIRE");
+            String rawNature = dto.getNatureSession();
+            String sessionType = formatSessionTypeLabel(rawType, rawNature, null);
             String dateDebutStr = dto.getDateFrom() != null ? dto.getDateFrom().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "01/07/2026";
             String dateFinStr = dto.getDateTo() != null ? dto.getDateTo().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "31/07/2026";
 
@@ -253,6 +260,40 @@ public class BulletinPdfService {
         }
 
         return baos.toByteArray();
+    }
+
+    public static String formatSessionTypeLabel(String rawType, String rawNature, String sessionName) {
+        if (rawType == null || rawType.isBlank()) rawType = "ORDINAIRE";
+        String t = rawType.toUpperCase(Locale.ROOT).trim();
+        String n = (rawNature != null ? rawNature : "").toUpperCase(Locale.ROOT).trim();
+        String sName = (sessionName != null ? sessionName : "").toUpperCase(Locale.ROOT).trim();
+
+        boolean isExtra = t.contains("EXTRA") || t.contains("GRATIF") || !n.isBlank();
+        if (!isExtra) {
+            return "ORDINAIRE";
+        }
+
+        String natureLibelle = "";
+        if (n.contains("13") || n.contains("TREIZIEME") || sName.contains("13")) {
+            natureLibelle = "13EME MOIS";
+        } else if (n.contains("14") || n.contains("QUATORZIEME") || sName.contains("14")) {
+            natureLibelle = "14EME MOIS";
+        } else if (n.contains("CONGE") || sName.contains("CONGE") || sName.contains("CONGÉ")) {
+            natureLibelle = "CONGE PAYE";
+        } else if (n.contains("STC") || n.contains("SOLDE") || sName.contains("STC") || sName.contains("SOLDE")) {
+            natureLibelle = "SOLDE DE TOUT COMPTE";
+        } else if (n.contains("RETRAITE") || sName.contains("RETRAITE")) {
+            natureLibelle = "INDEMNITE DE DEPART A LA RETRAITE";
+        } else if (n.contains("RELIQUAT") || n.contains("MATERNITE") || sName.contains("RELIQUAT") || sName.contains("MATERNITE")) {
+            natureLibelle = "RELIQUAT";
+        } else if (!n.isBlank()) {
+            natureLibelle = n.replace("_", " ");
+        }
+
+        if (!natureLibelle.isBlank()) {
+            return "EXTRAORDINAIRE - " + natureLibelle;
+        }
+        return "EXTRAORDINAIRE";
     }
 
     private void addHeader(Document doc, String code, String periode, String sessionType, String dateDebut, String dateFin) throws DocumentException {
@@ -324,8 +365,8 @@ public class BulletinPdfService {
         pTitre.setAlignment(Element.ALIGN_CENTER);
         rightCell.addElement(pTitre);
 
-        Paragraph pPer = new Paragraph("PERIODE : " + (periode != null ? periode : "Juillet 2026"), FONT_SMALL);
-        Paragraph pSess = new Paragraph("SESSION : " + (sessionType != null ? sessionType.toUpperCase(Locale.ROOT) : "ORDINAIRE"), FONT_SMALL);
+        Paragraph pPer = new Paragraph("PERIODE : " + (periode != null ? periode.replaceAll("[()]", "").trim() : "Juillet 2026"), FONT_SMALL);
+        Paragraph pSess = new Paragraph("SESSION : " + (sessionType != null ? sessionType.toUpperCase(Locale.ROOT).replaceAll("[()]", "").trim() : "ORDINAIRE"), FONT_SMALL);
         Paragraph pDeb = new Paragraph("DEBUT : " + (dateDebut != null ? dateDebut : "01/07/2026"), FONT_SMALL);
         Paragraph pFin = new Paragraph("FIN : " + (dateFin != null ? dateFin : "31/07/2026"), FONT_SMALL);
 
@@ -458,6 +499,8 @@ public class BulletinPdfService {
         String classification = grp != null && !grp.isEmpty() && !grp.equals("—") 
                 ? grp 
                 : (dto != null && dto.getClassification() != null && !dto.getClassification().equals("—") ? dto.getClassification() : computeGradeCode(emp));
+        if (classification != null) classification = classification.replaceAll("[()]", "").trim();
+        if (emploi != null) emploi = emploi.replaceAll("[()]", "").trim();
 
         int anciennete = (emp != null && emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
         if (rawDateEmb != null && !rawDateEmb.isBlank()) {
@@ -610,11 +653,7 @@ public class BulletinPdfService {
         for (BulletinLine l : existingLines) {
             String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
             String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
-            boolean isGratOrProrata = code.contains("13") || code.contains("14") || code.contains("GRAT") || code.contains("PRORATA")
-                    || rawLib.toUpperCase(Locale.ROOT).contains("13") || rawLib.toUpperCase(Locale.ROOT).contains("14")
-                    || rawLib.toUpperCase(Locale.ROOT).contains("GRATIFICATION") || rawLib.toUpperCase(Locale.ROOT).contains("PRORATA")
-                    || rawLib.toUpperCase(Locale.ROOT).contains("AVOIR") || rawLib.toUpperCase(Locale.ROOT).contains("RAPPEL");
-            String lib = isGratOrProrata ? rawLib.replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT) : rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
+            String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
             if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 
@@ -859,12 +898,8 @@ public class BulletinPdfService {
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             for (com.bpbf.sirh_backend.dtos.BulletinLineDto l : dto.getLines()) {
                 String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
-                String rawLib = l.getLibelle() != null ? l.getLibelle() : (l.getName() != null ? l.getName() : code);
-                boolean isGratOrProrata = code.contains("13") || code.contains("14") || code.contains("GRAT") || code.contains("PRORATA")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("13") || rawLib.toUpperCase(Locale.ROOT).contains("14")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("GRATIFICATION") || rawLib.toUpperCase(Locale.ROOT).contains("PRORATA")
-                        || rawLib.toUpperCase(Locale.ROOT).contains("AVOIR") || rawLib.toUpperCase(Locale.ROOT).contains("RAPPEL");
-                String lib = isGratOrProrata ? rawLib.replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT) : rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
+                String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
+                String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
                 if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
 

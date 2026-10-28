@@ -34,4 +34,7 @@ public class ParametrageConge {
 
     @Column(nullable = false)
     private Boolean bloquerSiSoldeInsuffisant = false;
+
+    @Column(nullable = false)
+    private Integer quotaPermissionsAnnuel = 10; // Quota annuel de permissions exceptionnelles (jours ouvrés/ouvrables)
 }

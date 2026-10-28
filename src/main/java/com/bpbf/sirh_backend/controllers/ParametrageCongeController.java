@@ -35,6 +35,7 @@ public class ParametrageCongeController {
         existing.setDeduireJoursFeries(payload.getDeduireJoursFeries() != null ? payload.getDeduireJoursFeries() : true);
         existing.setPlafondReportJours(payload.getPlafondReportJours() != null ? payload.getPlafondReportJours() : 15);
         existing.setBloquerSiSoldeInsuffisant(payload.getBloquerSiSoldeInsuffisant() != null ? payload.getBloquerSiSoldeInsuffisant() : false);
+        existing.setQuotaPermissionsAnnuel(payload.getQuotaPermissionsAnnuel() != null ? payload.getQuotaPermissionsAnnuel() : 10);
 
         return ResponseEntity.ok(parametrageCongeRepository.save(existing));
     }

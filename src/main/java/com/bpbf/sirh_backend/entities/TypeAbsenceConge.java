@@ -18,6 +18,7 @@ public class TypeAbsenceConge {
     private Integer dureeMaxLegaleJours;
     private String categorie;
     private String sexeRequis;
+    private String typeJour;
     private Boolean remunere = true;
     private Double tauxRemuneration = 100.0;
     private Boolean justificatifRequis = false;
@@ -96,11 +97,21 @@ public class TypeAbsenceConge {
         if (code != null) {
             String c = code.toUpperCase();
             if (c.contains("MATERNITE")) return "FEMININ";
-            if (c.contains("PATERNITE")) return "MASCULIN";
         }
         return "TOUS";
     }
     public void setSexeRequis(String sexeRequis) { this.sexeRequis = sexeRequis; }
+
+    public String getTypeJour() {
+        if (typeJour != null && !typeJour.isBlank()) return typeJour;
+        if (code != null) {
+            String c = code.toUpperCase();
+            if (c.contains("MATERNITE") || c.contains("MALADIE")) return "CALENDAIRE";
+            if (c.contains("AUTORISEE")) return "OUVRE";
+        }
+        return "OUVRABLE";
+    }
+    public void setTypeJour(String typeJour) { this.typeJour = typeJour; }
 
     /**
      * Plafond légal ou conventionnel au Burkina Faso non déductible du solde de congé annuel.
@@ -113,7 +124,6 @@ public class TypeAbsenceConge {
             if (c.contains("MALADIE")) return Integer.MAX_VALUE; // Dépend de la prescription médicale (100% pris en charge)
             if (c.contains("FORCE_MAJEURE")) return 5;           // Cas de force majeure / Urgence familiale
             if (c.contains("MATERNITE")) return 98; // 14 semaines (3,5 mois) selon Art. 152 Code du travail BF
-            if (c.contains("PATERNITE")) return 3;  // 3 jours ouvrables conventionnels
             if (c.contains("MARIAGE")) return 3;    // 3 jours ouvrables
             if (c.contains("DECES")) return 5;      // 5 jours ouvrables
             if (c.contains("NAISSANCE")) return 3;  // 3 jours ouvrables

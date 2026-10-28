@@ -67,6 +67,9 @@ public class TypeAbsenceCongeService {
         if (typeAbsenceCongeDto.getSexeRequis() != null && !typeAbsenceCongeDto.getSexeRequis().isBlank()) {
             typeAbsenceConge.setSexeRequis(typeAbsenceCongeDto.getSexeRequis());
         }
+        if (typeAbsenceCongeDto.getTypeJour() != null && !typeAbsenceCongeDto.getTypeJour().isBlank()) {
+            typeAbsenceConge.setTypeJour(typeAbsenceCongeDto.getTypeJour());
+        }
         if (typeAbsenceCongeDto.getRemunere() != null) {
             typeAbsenceConge.setRemunere(typeAbsenceCongeDto.getRemunere());
         }

@@ -236,6 +236,20 @@ public class EtatSynthesePaieService {
                 rows.addAll(buildEtatOdComptableRows(bulletins, codeSession));
                 break;
 
+            case "ETAT_STC":
+            case "ETAT_SOLDE_TOUT_COMPTE":
+                titreEtat = "État du Solde de Tout Compte & Indemnités de Départ";
+                List<EtatStcRowDto> stcRows = buildEtatStcRows(bulletins, sessionPaieId, periodeFiltre);
+                rows.addAll(stcRows);
+                if (!stcRows.isEmpty()) {
+                    totalBrut = stcRows.stream().map(EtatStcRowDto::getTotalBrutStc).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    totalNet = stcRows.stream().map(EtatStcRowDto::getNetSoldeToutCompte).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    totalRetenues = stcRows.stream().map(EtatStcRowDto::getTotalRetenues).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    totalPatronales = BigDecimal.ZERO;
+                    totalMasseSalariale = totalBrut;
+                }
+                break;
+
             case "ETAT_BULLETIN":
             default:
                 titreEtat = "État Répertoire & Contrôle des Bulletins";
@@ -541,6 +555,146 @@ public class EtatSynthesePaieService {
     }
 
     // ─── CONSTRUCTEURS DES LIGNES PAR ÉTAT ──────────────────────────────────
+
+    private List<EtatStcRowDto> buildEtatStcRows(List<Bulletin> bulletins, Long sessionPaieId, String periodeFiltre) {
+        List<Bulletin> candidates = new ArrayList<>();
+        if (bulletins != null) {
+            candidates.addAll(bulletins);
+        }
+
+        // 1. Filtrer les bulletins STC dans la sélection courante
+        List<Bulletin> stcBulletins = candidates.stream()
+                .filter(this::isStcBulletin)
+                .collect(Collectors.toList());
+
+        // 2. Si aucun bulletin STC dans la sélection courante (ex: session ordinaire sélectionnée),
+        // on recherche automatiquement les sessions STC dans la base pour la même période ou globalement
+        if (stcBulletins.isEmpty()) {
+            List<SessionPaie> stcSessions = sessionPaieRepository.findAll().stream()
+                    .filter(BulletinService::isStc)
+                    .toList();
+            for (SessionPaie s : stcSessions) {
+                if (periodeFiltre == null || periodeFiltre.isBlank() || "TOUTES".equalsIgnoreCase(periodeFiltre) || isMatchingPeriode(s, periodeFiltre)) {
+                    List<Bulletin> bList = bulletinRepository.findBySessionPaieId(s.getId());
+                    stcBulletins.addAll(bList);
+                }
+            }
+            // Si toujours vide, chercher n'importe quel bulletin ayant des lignes STC
+            if (stcBulletins.isEmpty()) {
+                stcBulletins = bulletinRepository.findAll().stream()
+                        .filter(this::isStcBulletin)
+                        .collect(Collectors.toList());
+            }
+        }
+
+        List<EtatStcRowDto> rows = new ArrayList<>();
+        int ord = 1;
+
+        for (Bulletin b : stcBulletins) {
+            Employee e = b.getEmployee();
+            String mat = e != null && e.getMatricule() != null ? e.getMatricule() : "—";
+            String nom = e != null ? ((e.getPrenom() != null ? e.getPrenom() : "") + " " + (e.getNom() != null ? e.getNom() : "")).trim().toUpperCase(Locale.ROOT) : "—";
+            String poste = e != null && e.getFonction() != null ? (e.getFonction().getName() != null ? e.getFonction().getName() : e.getFonction().getCode()) : (e != null && e.getEmploi() != null ? e.getEmploi().getName() : "Agent");
+            String dir = e != null && e.getDirection() != null ? e.getDirection().getName() : "—";
+
+            BigDecimal ancienneteAns = BigDecimal.ZERO;
+            BigDecimal sgm = BigDecimal.ZERO;
+            BigDecimal smj = BigDecimal.ZERO;
+            BigDecimal joursCp = BigDecimal.ZERO;
+            BigDecimal indemCp = BigDecimal.ZERO;
+            BigDecimal indemLic = BigDecimal.ZERO;
+            int moisPreav = 0;
+            BigDecimal indemPreav = BigDecimal.ZERO;
+            BigDecimal prorataGrat = BigDecimal.ZERO;
+            BigDecimal pretsPrecomptes = BigDecimal.ZERO;
+            BigDecimal fiscSocial = BigDecimal.ZERO;
+            String motif = "Fin de contrat";
+
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    String typeL = l.getTypeLigne() != null ? l.getTypeLigne().toUpperCase(Locale.ROOT) : "";
+                    BigDecimal m = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+
+                    if (code.contains("CP_ACQUIS") || code.contains("ICCP") || code.contains("IND_CONGE") || lib.contains("CONGÉS ACQUIS") || lib.contains("CONGES ACQUIS")) {
+                        indemCp = indemCp.add(m);
+                        if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) joursCp = l.getTaux();
+                        if (l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0) smj = l.getBaseCalcul();
+                    } else if (code.contains("LICENC") || lib.contains("LICENCIEMENT")) {
+                        indemLic = indemLic.add(m);
+                        motif = "Licenciement";
+                        if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ancienneteAns = l.getTaux();
+                        if (l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0) sgm = l.getBaseCalcul();
+                    } else if (code.contains("RETRAITE") || lib.contains("RETRAITE")) {
+                        indemLic = indemLic.add(m);
+                        motif = "Départ à la Retraite";
+                        if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ancienneteAns = l.getTaux();
+                        if (l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0) sgm = l.getBaseCalcul();
+                    } else if (code.contains("PREAVIS") || lib.contains("PRÉAVIS") || lib.contains("PREAVIS")) {
+                        indemPreav = indemPreav.add(m);
+                        if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) moisPreav = l.getTaux().intValue();
+                        if (sgm.compareTo(BigDecimal.ZERO) == 0 && l.getBaseCalcul() != null) sgm = l.getBaseCalcul();
+                    } else if (code.contains("13EME") || code.contains("14EME") || lib.contains("13ÈME") || lib.contains("14ÈME") || lib.contains("PRORATA")) {
+                        prorataGrat = prorataGrat.add(m);
+                    } else if (code.contains("CNSS") || code.contains("IUTS") || code.contains("FSP") || lib.contains("CNSS") || lib.contains("IUTS") || lib.contains("FSP")) {
+                        fiscSocial = fiscSocial.add(m);
+                    } else if ("PRECOMPTE".equalsIgnoreCase(typeL) || code.startsWith("PREC_") || code.contains("PRET") || code.contains("SOLDE_PRET") || code.contains("AVANCE")) {
+                        pretsPrecomptes = pretsPrecomptes.add(m);
+                    }
+                }
+            }
+
+            BigDecimal totalBrut = b.getSalaireBrut() != null ? b.getSalaireBrut() : indemLic.add(indemPreav).add(indemCp).add(prorataGrat);
+            BigDecimal totalExon = b.getTotalExonerations() != null && b.getTotalExonerations().compareTo(BigDecimal.ZERO) > 0 ? b.getTotalExonerations() : indemLic;
+            BigDecimal totalRet = b.getTotalRetenues() != null ? b.getTotalRetenues() : fiscSocial.add(pretsPrecomptes);
+            BigDecimal netStc = b.getSalaireNet() != null ? b.getSalaireNet() : totalBrut.subtract(totalRet);
+
+            rows.add(EtatStcRowDto.builder()
+                    .numeroOrdre(ord++)
+                    .bulletinId(b.getId())
+                    .matricule(mat)
+                    .nomPrenom(nom)
+                    .emploi(poste)
+                    .direction(dir)
+                    .motifRupture(motif)
+                    .ancienneteAnnees(ancienneteAns)
+                    .salaireGlobalMoyen(sgm)
+                    .salaireMoyenJournalier(smj)
+                    .joursCongesAcquis(joursCp)
+                    .indemniteCongesAcquis(indemCp)
+                    .indemniteLicenciement(indemLic)
+                    .moisPreavis(moisPreav)
+                    .indemnitePreavis(indemPreav)
+                    .prorataGratifications(prorataGrat)
+                    .totalBrutStc(totalBrut)
+                    .totalExonerations(totalExon)
+                    .retenuesFiscalesSociales(fiscSocial)
+                    .retenuesPretsEtPrecomptes(pretsPrecomptes)
+                    .totalRetenues(totalRet)
+                    .netSoldeToutCompte(netStc)
+                    .build());
+        }
+
+        return rows;
+    }
+
+    private boolean isStcBulletin(Bulletin b) {
+        if (b == null) return false;
+        if (b.getSessionPaie() != null && BulletinService.isStc(b.getSessionPaie())) return true;
+        if (b.getNatureSession() != null && BulletinService.isStc(b.getNatureSession())) return true;
+        if (b.getLines() != null) {
+            for (BulletinLine l : b.getLines()) {
+                String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                if (c.contains("CP_ACQUIS") || c.contains("ICCP") || c.contains("LICENC") || c.contains("RETRAITE") || c.contains("PREAVIS")
+                        || lib.contains("LICENCIEMENT") || lib.contains("PRÉAVIS") || lib.contains("CONGÉS ACQUIS")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     private List<LivrePaieRowDto> buildLivrePaieRows(List<Bulletin> bulletins) {
         List<LivrePaieRowDto> rows = new ArrayList<>();
@@ -1089,8 +1243,8 @@ public class EtatSynthesePaieService {
         List<RecapitulatifGlobalRowDto> rows = new ArrayList<>();
         Map<String, CompteComptable> mapRubriques = loadComptesComptablesMap();
 
-        // Débit : Charges de personnel (Comptes 64)
-        CompteComptable cpSalBase = resolveCompte(mapRubriques, "SALAIRE_BASE", "642100", "Salaires de base du personnel", "DEBIT", "OD_PAIE");
+        // Débit : Charges de personnel et taxes (Comptes 66 et 64 - SYSCOHADA Révisé)
+        CompteComptable cpSalBase = resolveCompte(mapRubriques, "SALAIRE_BASE", "661100", "Salaires de base du personnel national", "DEBIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
                 .numeroCompte(cpSalBase.getNumeroCompte())
                 .intituleCompte(cpSalBase.getLibelle())
@@ -1101,79 +1255,79 @@ public class EtatSynthesePaieService {
                 .build());
 
         if (totalSurSal.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpSurSal = resolveCompte(mapRubriques, "SUR_SALAIRE", "642200", "Sur-salaires du personnel", "DEBIT", "OD_PAIE");
+            CompteComptable cpSurSal = resolveCompte(mapRubriques, "SUR_SALAIRE", "661200", "Sur-salaires du personnel", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpSurSal.getNumeroCompte())
-                    .intituleCompte(cpSurSal.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalSurSal)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("CHARGES_PERSONNEL")
-                    .build());
+                .numeroCompte(cpSurSal.getNumeroCompte())
+                .intituleCompte(cpSurSal.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalSurSal)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
         }
 
         if (totalIndemnites.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpIndem = resolveCompte(mapRubriques, "INDEMNITES", "642300", "Indemnités, primes et gratifications diverses", "DEBIT", "OD_PAIE");
+            CompteComptable cpIndem = resolveCompte(mapRubriques, "INDEMNITES", "661800", "Indemnités, primes et avantages divers", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpIndem.getNumeroCompte())
-                    .intituleCompte(cpIndem.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalIndemnites)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("CHARGES_PERSONNEL")
-                    .build());
+                .numeroCompte(cpIndem.getNumeroCompte())
+                .intituleCompte(cpIndem.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalIndemnites)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
         }
 
         if (totalRappels.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpRappels = resolveCompte(mapRubriques, "RAPPELS", "642500", "Rappels sur salaires antérieurs (Avoirs accordés)", "DEBIT", "OD_PAIE");
+            CompteComptable cpRappels = resolveCompte(mapRubriques, "RAPPELS", "661500", "Rappels sur salaires antérieurs (Avoirs accordés)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpRappels.getNumeroCompte())
-                    .intituleCompte(cpRappels.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalRappels)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("CHARGES_PERSONNEL")
-                    .build());
+                .numeroCompte(cpRappels.getNumeroCompte())
+                .intituleCompte(cpRappels.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalRappels)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
         }
 
         if (totalCnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCnssPat = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "641100", "Cotisations patronales de sécurité sociale (CNSS)", "DEBIT", "OD_PAIE");
+            CompteComptable cpCnssPat = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "664100", "Cotisations patronales de sécurité sociale (CNSS)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpCnssPat.getNumeroCompte())
-                    .intituleCompte(cpCnssPat.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalCnssPatronale)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("CHARGES_SOCIALES")
-                    .build());
+                .numeroCompte(cpCnssPat.getNumeroCompte())
+                .intituleCompte(cpCnssPat.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalCnssPatronale)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_SOCIALES")
+                .build());
         }
 
         if (totalCrraePatronale.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCrraePat = resolveCompte(mapRubriques, "CRRAE_PATRONALE", "641200", "Cotisations patronales régimes complémentaires (CRRAE)", "DEBIT", "OD_PAIE");
+            CompteComptable cpCrraePat = resolveCompte(mapRubriques, "CRRAE_PATRONALE", "664200", "Cotisations patronales régimes complémentaires (CRRAE)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpCrraePat.getNumeroCompte())
-                    .intituleCompte(cpCrraePat.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalCrraePatronale)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("CHARGES_SOCIALES")
-                    .build());
+                .numeroCompte(cpCrraePat.getNumeroCompte())
+                .intituleCompte(cpCrraePat.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalCrraePatronale)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_SOCIALES")
+                .build());
         }
 
         if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
             CompteComptable cpTpa = resolveCompte(mapRubriques, "TPA", "641300", "Taxe Patronale d'Apprentissage (TPA)", "DEBIT", "OD_PAIE");
             rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpTpa.getNumeroCompte())
-                    .intituleCompte(cpTpa.getLibelle())
-                    .sens("DEBIT")
-                    .montantDebit(totalTpa)
-                    .montantCredit(BigDecimal.ZERO)
-                    .categorieComptable("IMPOTS_TAXES")
-                    .build());
+                .numeroCompte(cpTpa.getNumeroCompte())
+                .intituleCompte(cpTpa.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalTpa)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("IMPOTS_TAXES")
+                .build());
         }
 
         // Crédit : Rémunérations nettes, Organismes et État
-        CompteComptable cpNet = resolveCompte(mapRubriques, "NET_A_PAYER", "352200", "Personnel - Rémunérations nettes à payer (Virements)", "CREDIT", "OD_PAIE");
+        CompteComptable cpNet = resolveCompte(mapRubriques, "NET_A_PAYER", "421100", "Personnel - Rémunérations nettes à payer (Virements)", "CREDIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
                 .numeroCompte(cpNet.getNumeroCompte())
                 .intituleCompte(cpNet.getLibelle())
@@ -1528,8 +1682,8 @@ public class EtatSynthesePaieService {
 
         Map<String, CompteComptable> mapRubriques = loadComptesComptablesMap();
 
-        // Écritures de Débit (Comptes 64x - Charges de Personnel SYSCOHADA)
-        CompteComptable cSalBaseOd = resolveCompte(mapRubriques, "SALAIRE_BASE", "641100", "Salaires de base du personnel permanent", "D", "OD_PAIE");
+        // Écritures de Débit (Comptes 66x et 64x - Charges de Personnel SYSCOHADA Révisé)
+        CompteComptable cSalBaseOd = resolveCompte(mapRubriques, "SALAIRE_BASE", "661100", "Salaires de base du personnel national", "D", "OD_PAIE");
         rows.add(EtatOdComptableRowDto.builder()
                 .codeJournal(cSalBaseOd.getCodeJournal() != null ? cSalBaseOd.getCodeJournal() : "OD_PAIE")
                 .numeroCompte(cSalBaseOd.getNumeroCompte())
@@ -1542,7 +1696,7 @@ public class EtatSynthesePaieService {
                 .build());
 
         if (totIndem.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cIndemOd = resolveCompte(mapRubriques, "INDEMNITES", "641200", "Primes et indemnités du personnel", "D", "OD_PAIE");
+            CompteComptable cIndemOd = resolveCompte(mapRubriques, "INDEMNITES", "661800", "Primes et indemnités du personnel", "D", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
                     .codeJournal(cIndemOd.getCodeJournal() != null ? cIndemOd.getCodeJournal() : "OD_PAIE")
                     .numeroCompte(cIndemOd.getNumeroCompte())
@@ -1556,7 +1710,7 @@ public class EtatSynthesePaieService {
         }
 
         if (totCnssPat.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cCnssPatOd = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "646100", "Charges patronales de sécurité sociale (CNSS 16%)", "D", "OD_PAIE");
+            CompteComptable cCnssPatOd = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "664100", "Charges patronales de sécurité sociale (CNSS 16%)", "D", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
                     .codeJournal(cCnssPatOd.getCodeJournal() != null ? cCnssPatOd.getCodeJournal() : "OD_PAIE")
                     .numeroCompte(cCnssPatOd.getNumeroCompte())
@@ -1569,7 +1723,7 @@ public class EtatSynthesePaieService {
                     .build());
         }
 
-        // Écritures de Crédit (Comptes 42x, 43x, 44x - Dettes et Rémunérations SYSCOHADA)
+        // Écritures de Crédit (Comptes 42x, 43x, 44x - Dettes et Rémunérations SYSCOHADA Révisé)
         CompteComptable cNetOd = resolveCompte(mapRubriques, "NET_A_PAYER", "421100", "Personnel - Rémunérations nettes dues (Virements)", "C", "OD_PAIE");
         rows.add(EtatOdComptableRowDto.builder()
                 .codeJournal(cNetOd.getCodeJournal() != null ? cNetOd.getCodeJournal() : "OD_PAIE")
@@ -1598,7 +1752,7 @@ public class EtatSynthesePaieService {
         }
 
         if (totIuts.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cIutsOd = resolveCompte(mapRubriques, "IUTS", "442100", "État - Impôts retenus à la source (IUTS DGI)", "C", "OD_PAIE");
+            CompteComptable cIutsOd = resolveCompte(mapRubriques, "IUTS", "447100", "État - Impôt Unique sur Traitements et Salaires (IUTS DGI)", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
                     .codeJournal(cIutsOd.getCodeJournal() != null ? cIutsOd.getCodeJournal() : "OD_PAIE")
                     .numeroCompte(cIutsOd.getNumeroCompte())
@@ -1612,7 +1766,7 @@ public class EtatSynthesePaieService {
         }
 
         if (totFsp.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cFspOd = resolveCompte(mapRubriques, "FSP", "442800", "État - Fonds de Soutien Patriotique (FSP 1%)", "C", "OD_PAIE");
+            CompteComptable cFspOd = resolveCompte(mapRubriques, "FSP", "447200", "État - Fonds de Soutien Patriotique (FSP 1%)", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
                     .codeJournal(cFspOd.getCodeJournal() != null ? cFspOd.getCodeJournal() : "OD_PAIE")
                     .numeroCompte(cFspOd.getNumeroCompte())
@@ -1626,7 +1780,7 @@ public class EtatSynthesePaieService {
         }
 
         if (totPrecompte.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cPrecompteOd = resolveCompte(mapRubriques, "PRECOMPTES", "428100", "Personnel - Prêts et avances apurés sur paie", "C", "OD_PAIE");
+            CompteComptable cPrecompteOd = resolveCompte(mapRubriques, "PRECOMPTES", "422000", "Personnel - Prêts et avances apurés sur paie", "C", "OD_PAIE");
             rows.add(EtatOdComptableRowDto.builder()
                     .codeJournal(cPrecompteOd.getCodeJournal() != null ? cPrecompteOd.getCodeJournal() : "OD_PAIE")
                     .numeroCompte(cPrecompteOd.getNumeroCompte())
@@ -1658,7 +1812,7 @@ public class EtatSynthesePaieService {
                         .libelleEcriture("Régularisation centimes/arrondis")
                         .build());
             } else {
-                CompteComptable cArrondiDeb = resolveCompte(mapRubriques, "ARRONDI_DEBIT", "641800", "Charges de personnel - Ajustement d'arrondis", "D", "OD_PAIE");
+                CompteComptable cArrondiDeb = resolveCompte(mapRubriques, "ARRONDI_DEBIT", "661900", "Charges de personnel - Ajustement d'arrondis", "D", "OD_PAIE");
                 rows.add(EtatOdComptableRowDto.builder()
                         .codeJournal(cArrondiDeb.getCodeJournal() != null ? cArrondiDeb.getCodeJournal() : "OD_PAIE")
                         .numeroCompte(cArrondiDeb.getNumeroCompte())
@@ -1775,10 +1929,74 @@ public class EtatSynthesePaieService {
             addTableTypeEmploye(doc, data);
         } else if ("ETAT_OD_COMPTABLE".equalsIgnoreCase(type)) {
             addTableOdComptable(doc, data);
+        } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
+            addTableStc(doc, data);
         } else {
             // LIVRE_PAIE par défaut
             addTableLivrePaie(doc, data);
         }
+    }
+
+    private void addTableStc(Document doc, List<Object> data) throws DocumentException {
+        // État du Solde de Tout Compte & Indemnités de Départ (Modèle Officiel A4 Paysage)
+        PdfPTable table = new PdfPTable(12);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{5, 13, 10, 8, 7, 7, 9, 10, 7, 9, 7, 8});
+        table.setSpacingAfter(8f);
+
+        addThMini(table, "Mle");
+        addThMini(table, "Nom et Prénoms");
+        addThMini(table, "Emploi");
+        addThMini(table, "Motif");
+        addThMini(table, "Anc.");
+        addThMini(table, "Congés");
+        addThMini(table, "Ind. Congés");
+        addThMini(table, "Ind. Licenc.");
+        addThMini(table, "Préavis");
+        addThMini(table, "Total Brut STC");
+        addThMini(table, "Retenues");
+        addThMini(table, "Net STC");
+
+        BigDecimal totCp = BigDecimal.ZERO;
+        BigDecimal totLic = BigDecimal.ZERO;
+        BigDecimal totBrut = BigDecimal.ZERO;
+        BigDecimal totRet = BigDecimal.ZERO;
+        BigDecimal totNet = BigDecimal.ZERO;
+
+        for (Object obj : data) {
+            if (obj instanceof EtatStcRowDto row) {
+                addTdMini(table, row.getMatricule(), Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getEmploi() != null ? row.getEmploi() : "—", Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getMotifRupture() != null ? row.getMotifRupture() : "Rupture", Element.ALIGN_LEFT, false);
+                addTdMini(table, row.getAncienneteAnnees() != null ? String.format(Locale.US, "%.1f a", row.getAncienneteAnnees()) : "—", Element.ALIGN_CENTER, false);
+                addTdMini(table, row.getJoursCongesAcquis() != null ? String.format(Locale.US, "%.1f j", row.getJoursCongesAcquis()) : "—", Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getIndemniteCongesAcquis()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getIndemniteLicenciement()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, row.getMoisPreavis() != null && row.getMoisPreavis() > 0 ? row.getMoisPreavis() + " m" : "—", Element.ALIGN_CENTER, false);
+                addTdMini(table, formatMoney(row.getTotalBrutStc()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, formatMoney(row.getTotalRetenues()), Element.ALIGN_RIGHT, false);
+                addTdMini(table, formatMoney(row.getNetSoldeToutCompte()), Element.ALIGN_RIGHT, true);
+
+                if (row.getIndemniteCongesAcquis() != null) totCp = totCp.add(row.getIndemniteCongesAcquis());
+                if (row.getIndemniteLicenciement() != null) totLic = totLic.add(row.getIndemniteLicenciement());
+                if (row.getTotalBrutStc() != null) totBrut = totBrut.add(row.getTotalBrutStc());
+                if (row.getTotalRetenues() != null) totRet = totRet.add(row.getTotalRetenues());
+                if (row.getNetSoldeToutCompte() != null) totNet = totNet.add(row.getNetSoldeToutCompte());
+            }
+        }
+
+        // Ligne de Totaux Globaux
+        addTotMini(table, "TOTAUX SOLDE DE TOUT COMPTE", 5, Element.ALIGN_LEFT);
+        addTotMini(table, "—", 1, Element.ALIGN_CENTER);
+        addTotMini(table, formatMoney(totCp), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totLic), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, "—", 1, Element.ALIGN_CENTER);
+        addTotMini(table, formatMoney(totBrut), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totRet), 1, Element.ALIGN_RIGHT);
+        addTotMini(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
+
+        doc.add(table);
     }
 
 
@@ -1790,8 +2008,8 @@ public class EtatSynthesePaieService {
 
         addTh(table, "COMPTE", Element.ALIGN_LEFT);
         addTh(table, "LIBELLÉ DU COMPTE", Element.ALIGN_LEFT);
-        addTh(table, "DÉBIT (FCFA)", Element.ALIGN_RIGHT);
-        addTh(table, "CRÉDIT (FCFA)", Element.ALIGN_RIGHT);
+        addTh(table, "DÉBIT FCFA", Element.ALIGN_RIGHT);
+        addTh(table, "CRÉDIT FCFA", Element.ALIGN_RIGHT);
 
         BigDecimal totDebit = BigDecimal.ZERO;
         BigDecimal totCredit = BigDecimal.ZERO;
@@ -1808,7 +2026,7 @@ public class EtatSynthesePaieService {
             }
         }
 
-        addTot(table, "TOTAL DE L'ÉTAT (BALANCE ÉQUILIBRÉE)", 2, Element.ALIGN_LEFT);
+        addTot(table, "TOTAL DE L'ÉTAT - BALANCE ÉQUILIBRÉE", 2, Element.ALIGN_LEFT);
         addTot(table, formatMoney(totDebit), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totCredit), 1, Element.ALIGN_RIGHT);
 
@@ -1825,8 +2043,8 @@ public class EtatSynthesePaieService {
         addTh(table, "N° COMPTE", Element.ALIGN_CENTER);
         addTh(table, "INTITULÉ DU COMPTE", Element.ALIGN_LEFT);
         addTh(table, "SENS", Element.ALIGN_CENTER);
-        addTh(table, "DÉBIT (FCFA)", Element.ALIGN_RIGHT);
-        addTh(table, "CRÉDIT (FCFA)", Element.ALIGN_RIGHT);
+        addTh(table, "DÉBIT FCFA", Element.ALIGN_RIGHT);
+        addTh(table, "CRÉDIT FCFA", Element.ALIGN_RIGHT);
 
         BigDecimal totDeb = BigDecimal.ZERO;
         BigDecimal totCrd = BigDecimal.ZERO;
@@ -2009,7 +2227,7 @@ public class EtatSynthesePaieService {
                 table.setSpacingAfter(6f);
 
                 addTh(table, "MATRICULE", Element.ALIGN_LEFT);
-                addTh(table, "NOM & PRENOM(S)", Element.ALIGN_LEFT);
+                addTh(table, "NOM & PRÉNOMS", Element.ALIGN_LEFT);
                 addTh(table, "CODE BANQUE", Element.ALIGN_CENTER);
                 addTh(table, "CODE GUICHET", Element.ALIGN_CENTER);
                 addTh(table, "COMPTE A CREDITER", Element.ALIGN_LEFT);
@@ -2028,7 +2246,7 @@ public class EtatSynthesePaieService {
                     }
                 }
 
-                addTot(table, "TOTAL DE L'ORDRE DE VIREMENT (" + bq.getNombreBeneficiaires() + " Bénéficiaires)", 6, Element.ALIGN_LEFT);
+                addTot(table, "TOTAL DE L'ORDRE DE VIREMENT - " + bq.getNombreBeneficiaires() + " Bénéficiaires", 6, Element.ALIGN_LEFT);
                 addTot(table, formatMoney(bq.getTotalNet()), 1, Element.ALIGN_RIGHT);
                 doc.add(table);
 
@@ -2051,9 +2269,9 @@ public class EtatSynthesePaieService {
         addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
         addTh(table, "N° CNSS", Element.ALIGN_CENTER);
         addTh(table, "ASSIETTE CNSS", Element.ALIGN_RIGHT);
-        addTh(table, "PART SAL. (5.5%)", Element.ALIGN_RIGHT);
-        addTh(table, "PREST. FAM. (7%)", Element.ALIGN_RIGHT);
-        addTh(table, "RISQUES (3.5%)", Element.ALIGN_RIGHT);
+        addTh(table, "PART SAL. 5.5%", Element.ALIGN_RIGHT);
+        addTh(table, "PREST. FAM. 7%", Element.ALIGN_RIGHT);
+        addTh(table, "RISQUES 3.5%", Element.ALIGN_RIGHT);
         addTh(table, "TOTAL CNSS", Element.ALIGN_RIGHT);
 
         BigDecimal totAss = BigDecimal.ZERO;
@@ -2471,6 +2689,67 @@ public class EtatSynthesePaieService {
                 }
             }
             pw.println("TOTAL ORDRE DE DÉBIT COMPTABLE (OD DE PAIE);;;;" + formatCsvMontant(totDeb) + ";" + formatCsvMontant(totCrd) + ";;");
+
+        } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
+            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Motif Rupture;Ancienneté (ans);Base SGM (FCFA);Base SMJ (FCFA);Jours Congés Acquis;Indemnité Congés Acquis (FCFA);Indemnité Licenciement (FCFA);Préavis (mois);Indemnité Préavis (FCFA);Prorata Gratifications (FCFA);Total Brut STC (FCFA);Total Exonérations (FCFA);Retenues Fiscales & Sociales (FCFA);Solde Prêts & Précomptes (FCFA);Total Retenues (FCFA);Net Solde de Tout Compte (FCFA)");
+            BigDecimal totCp = BigDecimal.ZERO;
+            BigDecimal totLic = BigDecimal.ZERO;
+            BigDecimal totPreav = BigDecimal.ZERO;
+            BigDecimal totGrat = BigDecimal.ZERO;
+            BigDecimal totBrut = BigDecimal.ZERO;
+            BigDecimal totExon = BigDecimal.ZERO;
+            BigDecimal totFiscSoc = BigDecimal.ZERO;
+            BigDecimal totPrets = BigDecimal.ZERO;
+            BigDecimal totRet = BigDecimal.ZERO;
+            BigDecimal totNet = BigDecimal.ZERO;
+
+            for (Object o : data) {
+                if (o instanceof EtatStcRowDto s) {
+                    pw.println((s.getNumeroOrdre() != null ? s.getNumeroOrdre().toString() : "—") + ";" +
+                               escape(s.getMatricule()) + ";" +
+                               escape(s.getNomPrenom()) + ";" +
+                               escape(s.getEmploi()) + ";" +
+                               escape(s.getDirection()) + ";" +
+                               escape(s.getMotifRupture()) + ";" +
+                               (s.getAncienneteAnnees() != null ? s.getAncienneteAnnees().toString() : "0") + ";" +
+                               formatCsvMontant(s.getSalaireGlobalMoyen()) + ";" +
+                               formatCsvMontant(s.getSalaireMoyenJournalier()) + ";" +
+                               (s.getJoursCongesAcquis() != null ? s.getJoursCongesAcquis().toString() : "0") + ";" +
+                               formatCsvMontant(s.getIndemniteCongesAcquis()) + ";" +
+                               formatCsvMontant(s.getIndemniteLicenciement()) + ";" +
+                               (s.getMoisPreavis() != null ? s.getMoisPreavis().toString() : "0") + ";" +
+                               formatCsvMontant(s.getIndemnitePreavis()) + ";" +
+                               formatCsvMontant(s.getProrataGratifications()) + ";" +
+                               formatCsvMontant(s.getTotalBrutStc()) + ";" +
+                               formatCsvMontant(s.getTotalExonerations()) + ";" +
+                               formatCsvMontant(s.getRetenuesFiscalesSociales()) + ";" +
+                               formatCsvMontant(s.getRetenuesPretsEtPrecomptes()) + ";" +
+                               formatCsvMontant(s.getTotalRetenues()) + ";" +
+                               formatCsvMontant(s.getNetSoldeToutCompte()));
+
+                    if (s.getIndemniteCongesAcquis() != null) totCp = totCp.add(s.getIndemniteCongesAcquis());
+                    if (s.getIndemniteLicenciement() != null) totLic = totLic.add(s.getIndemniteLicenciement());
+                    if (s.getIndemnitePreavis() != null) totPreav = totPreav.add(s.getIndemnitePreavis());
+                    if (s.getProrataGratifications() != null) totGrat = totGrat.add(s.getProrataGratifications());
+                    if (s.getTotalBrutStc() != null) totBrut = totBrut.add(s.getTotalBrutStc());
+                    if (s.getTotalExonerations() != null) totExon = totExon.add(s.getTotalExonerations());
+                    if (s.getRetenuesFiscalesSociales() != null) totFiscSoc = totFiscSoc.add(s.getRetenuesFiscalesSociales());
+                    if (s.getRetenuesPretsEtPrecomptes() != null) totPrets = totPrets.add(s.getRetenuesPretsEtPrecomptes());
+                    if (s.getTotalRetenues() != null) totRet = totRet.add(s.getTotalRetenues());
+                    if (s.getNetSoldeToutCompte() != null) totNet = totNet.add(s.getNetSoldeToutCompte());
+                }
+            }
+            pw.println("TOTAL DU SOLDE DE TOUT COMPTE;;;;;;;;;;" +
+                       formatCsvMontant(totCp) + ";" +
+                       formatCsvMontant(totLic) + ";;" +
+                       formatCsvMontant(totPreav) + ";" +
+                       formatCsvMontant(totGrat) + ";" +
+                       formatCsvMontant(totBrut) + ";" +
+                       formatCsvMontant(totExon) + ";" +
+                       formatCsvMontant(totFiscSoc) + ";" +
+                       formatCsvMontant(totPrets) + ";" +
+                       formatCsvMontant(totRet) + ";" +
+                       formatCsvMontant(totNet));
 
         } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type) || type.toUpperCase(Locale.ROOT).contains("CRRAE")) {
 
@@ -3051,6 +3330,78 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 3, totDebit, totalNumStyle);
                 createCell(totRow, 4, totCredit, totalNumStyle);
 
+            } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
+                String[] headers = {"N°", "Matricule", "Nom et Prénoms", "Emploi", "Direction", "Motif Rupture", "Ancienneté (ans)", "Base SGM (FCFA)", "Base SMJ (FCFA)", "Congés (j)", "Ind. Congés (FCFA)", "Ind. Licenciement (FCFA)", "Préavis (mois)", "Ind. Préavis (FCFA)", "Prorata 13è/14è (FCFA)", "Total Brut STC (FCFA)", "Exonérations (FCFA)", "Retenues Fisc./Soc. (FCFA)", "Solde Prêts (FCFA)", "Total Retenues (FCFA)", "Net STC à Payer (FCFA)"};
+                colCount = headers.length;
+                for (int i = 0; i < headers.length; i++) {
+                    createCell(headerRow, i, headers[i], (i >= 6) ? thNumStyle : thStyle);
+                }
+                BigDecimal totCp = BigDecimal.ZERO;
+                BigDecimal totLic = BigDecimal.ZERO;
+                BigDecimal totPreav = BigDecimal.ZERO;
+                BigDecimal totGrat = BigDecimal.ZERO;
+                BigDecimal totBrut = BigDecimal.ZERO;
+                BigDecimal totExon = BigDecimal.ZERO;
+                BigDecimal totFiscSoc = BigDecimal.ZERO;
+                BigDecimal totPrets = BigDecimal.ZERO;
+                BigDecimal totRet = BigDecimal.ZERO;
+                BigDecimal totNet = BigDecimal.ZERO;
+
+                for (Object o : data) {
+                    if (o instanceof EtatStcRowDto s) {
+                        Row row = sheet.createRow(rowIndex++);
+                        createCell(row, 0, s.getNumeroOrdre() != null ? s.getNumeroOrdre().toString() : "—", tdCenterStyle);
+                        createCell(row, 1, s.getMatricule(), tdCenterStyle);
+                        createCell(row, 2, s.getNomPrenom(), tdTextStyle);
+                        createCell(row, 3, s.getEmploi(), tdTextStyle);
+                        createCell(row, 4, s.getDirection(), tdTextStyle);
+                        createCell(row, 5, s.getMotifRupture(), tdTextStyle);
+                        createCell(row, 6, s.getAncienneteAnnees(), tdNumStyle);
+                        createCell(row, 7, s.getSalaireGlobalMoyen(), tdNumStyle);
+                        createCell(row, 8, s.getSalaireMoyenJournalier(), tdNumStyle);
+                        createCell(row, 9, s.getJoursCongesAcquis(), tdNumStyle);
+                        createCell(row, 10, s.getIndemniteCongesAcquis(), tdNumStyle);
+                        createCell(row, 11, s.getIndemniteLicenciement(), tdNumStyle);
+                        createCell(row, 12, s.getMoisPreavis() != null ? s.getMoisPreavis().toString() : "0", tdCenterStyle);
+                        createCell(row, 13, s.getIndemnitePreavis(), tdNumStyle);
+                        createCell(row, 14, s.getProrataGratifications(), tdNumStyle);
+                        createCell(row, 15, s.getTotalBrutStc(), tdNumStyle);
+                        createCell(row, 16, s.getTotalExonerations(), tdNumStyle);
+                        createCell(row, 17, s.getRetenuesFiscalesSociales(), tdNumStyle);
+                        createCell(row, 18, s.getRetenuesPretsEtPrecomptes(), tdNumStyle);
+                        createCell(row, 19, s.getTotalRetenues(), tdNumStyle);
+                        createCell(row, 20, s.getNetSoldeToutCompte(), tdNumStyle);
+
+                        if (s.getIndemniteCongesAcquis() != null) totCp = totCp.add(s.getIndemniteCongesAcquis());
+                        if (s.getIndemniteLicenciement() != null) totLic = totLic.add(s.getIndemniteLicenciement());
+                        if (s.getIndemnitePreavis() != null) totPreav = totPreav.add(s.getIndemnitePreavis());
+                        if (s.getProrataGratifications() != null) totGrat = totGrat.add(s.getProrataGratifications());
+                        if (s.getTotalBrutStc() != null) totBrut = totBrut.add(s.getTotalBrutStc());
+                        if (s.getTotalExonerations() != null) totExon = totExon.add(s.getTotalExonerations());
+                        if (s.getRetenuesFiscalesSociales() != null) totFiscSoc = totFiscSoc.add(s.getRetenuesFiscalesSociales());
+                        if (s.getRetenuesPretsEtPrecomptes() != null) totPrets = totPrets.add(s.getRetenuesPretsEtPrecomptes());
+                        if (s.getTotalRetenues() != null) totRet = totRet.add(s.getTotalRetenues());
+                        if (s.getNetSoldeToutCompte() != null) totNet = totNet.add(s.getNetSoldeToutCompte());
+                    }
+                }
+
+                Row totRow = sheet.createRow(rowIndex++);
+                totRow.setHeightInPoints(20);
+                createCell(totRow, 0, "TOTAL DU SOLDE DE TOUT COMPTE", totalLabelStyle);
+                for (int i = 1; i <= 9; i++) createCell(totRow, i, "", totalLabelStyle);
+                sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 9));
+                createCell(totRow, 10, totCp, totalNumStyle);
+                createCell(totRow, 11, totLic, totalNumStyle);
+                createCell(totRow, 12, "", totalLabelStyle);
+                createCell(totRow, 13, totPreav, totalNumStyle);
+                createCell(totRow, 14, totGrat, totalNumStyle);
+                createCell(totRow, 15, totBrut, totalNumStyle);
+                createCell(totRow, 16, totExon, totalNumStyle);
+                createCell(totRow, 17, totFiscSoc, totalNumStyle);
+                createCell(totRow, 18, totPrets, totalNumStyle);
+                createCell(totRow, 19, totRet, totalNumStyle);
+                createCell(totRow, 20, totNet, totalNumStyle);
+
             } else if ("ETAT_CRRAE_RRPC".equalsIgnoreCase(type) || "ETAT_CRRAE_RCPNC".equalsIgnoreCase(type) || "ETAT_CRRAE_FAAM".equalsIgnoreCase(type) || "ETAT_CRRAE".equalsIgnoreCase(type) || (type != null && type.toUpperCase(Locale.ROOT).contains("CRRAE"))) {
                 String[] headers = {"N° d'Ordre", "Matricule", "Nom et Prénoms", "Salaire Soumis (FCFA)", "Part Employeur (FCFA)", "Part Salariale (FCFA)", "Total Cotisations (FCFA)"};
                 colCount = headers.length;
@@ -3254,7 +3605,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 5, totFsp, totalNumStyle);
 
             } else if ("ETAT_SALAIRE".equalsIgnoreCase(type)) {
-                String[] headers = {"Direction", "Département", "Effectif", "Salaire Base (FCFA)", "Indemnités (FCFA)", "Salaire Brut (FCFA)", "Charges Patronales (FCFA)", "Masse Salariale Totale (FCFA)", "Retenues (FCFA)", "Net Payé (FCFA)"};
+                String[] headers = {"Direction", "Département", "Effectif", "Salaire Base FCFA", "Indemnités FCFA", "Salaire Brut FCFA", "Charges Patronales FCFA", "Masse Salariale Totale FCFA", "Retenues FCFA", "Net Payé FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 2) ? thNumStyle : thStyle);
@@ -3307,7 +3658,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 9, totNet, totalNumStyle);
 
             } else if ("ETAT_NOMINATIF".equalsIgnoreCase(type)) {
-                String[] headers = {"Matricule", "Nom et Prénoms", "Poste / Classification", "Direction", "Salaire Base (FCFA)", "Sal. Brut (FCFA)", "Total Ret. (FCFA)", "Net Payé (FCFA)"};
+                String[] headers = {"Matricule", "Nom et Prénoms", "Poste / Classification", "Direction", "Salaire Base FCFA", "Sal. Brut FCFA", "Total Ret. FCFA", "Net Payé FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
@@ -3322,7 +3673,7 @@ public class EtatSynthesePaieService {
                         Row row = sheet.createRow(rowIndex++);
                         createCell(row, 0, n.getMatricule(), tdCenterStyle);
                         createCell(row, 1, n.getNomPrenom(), tdTextStyle);
-                        String posteClass = (n.getPoste() != null ? n.getPoste() : "") + (n.getClassification() != null ? " (" + n.getClassification() + ")" : "");
+                        String posteClass = (n.getPoste() != null ? n.getPoste() : "") + (n.getClassification() != null ? " - " + n.getClassification() : "");
                         createCell(row, 2, posteClass, tdTextStyle);
                         createCell(row, 3, n.getDirection(), tdTextStyle);
                         createCell(row, 4, n.getSalaireBase(), tdNumStyle);
@@ -3347,7 +3698,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 7, totNet, totalNumStyle);
 
             } else if ("ETAT_PRECOMPTE".equalsIgnoreCase(type)) {
-                String[] headers = {"Matricule", "Nom et Prénoms", "Type de Précompte / Prêt", "Organisme Bénéficiaire", "Montant Initial (FCFA)", "Retenue Période (FCFA)", "Solde Restant Dû (FCFA)"};
+                String[] headers = {"Matricule", "Nom et Prénoms", "Type de Précompte / Prêt", "Organisme Bénéficiaire", "Montant Initial FCFA", "Retenue Période FCFA", "Solde Restant Dû FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
@@ -3382,7 +3733,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 6, totSolde, totalNumStyle);
 
             } else if ("ETAT_MUTUELLE".equalsIgnoreCase(type)) {
-                String[] headers = {"Matricule", "Nom et Prénoms", "Direction", "Formule / Régime", "Part Salariale (FCFA)", "Part Patronale (FCFA)", "Total Cotisation Mutuelle (FCFA)"};
+                String[] headers = {"Matricule", "Nom et Prénoms", "Direction", "Formule / Régime", "Part Salariale FCFA", "Part Patronale FCFA", "Total Cotisation Mutuelle FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 4) ? thNumStyle : thStyle);
@@ -3417,7 +3768,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 6, totCot, totalNumStyle);
 
             } else if ("ETAT_TYPE_EMPLOYE".equalsIgnoreCase(type)) {
-                String[] headers = {"Statut / Type d'Employé", "Effectif", "Salaire Base (FCFA)", "Indemnités (FCFA)", "Salaire Brut (FCFA)", "Charges Patronales (FCFA)", "Retenues (FCFA)", "Net Global (FCFA)", "Net Moyen (FCFA)"};
+                String[] headers = {"Statut / Type d'Employé", "Effectif", "Salaire Base FCFA", "Indemnités FCFA", "Salaire Brut FCFA", "Charges Patronales FCFA", "Retenues FCFA", "Net Global FCFA", "Net Moyen FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 1) ? thNumStyle : thStyle);
@@ -3466,7 +3817,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 8, moyNet, totalNumStyle);
 
             } else if ("ETAT_ELEMENTS_SALAIRE".equalsIgnoreCase(type) || "ETAT_ELEMENT_SALAIRE".equalsIgnoreCase(type)) {
-                String[] headers = {"Code Rubrique", "Libellé de l'Élément", "Nature / Type", "Nombre Bénéficiaires", "Part Salariale (FCFA)", "Part Patronale (FCFA)", "Total Général (FCFA)"};
+                String[] headers = {"Code Rubrique", "Libellé de l'Élément", "Nature / Type", "Nombre Bénéficiaires", "Part Salariale FCFA", "Part Patronale FCFA", "Total Général FCFA"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 3) ? thNumStyle : thStyle);
@@ -3505,7 +3856,7 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 6, totGlob, totalNumStyle);
 
             } else if ("ETAT_OD_COMPTABLE".equalsIgnoreCase(type)) {
-                String[] headers = {"Journal", "N° Compte", "Intitulé du Compte", "Sens", "Débit (FCFA)", "Crédit (FCFA)", "N° Pièce", "Libellé de l'Écriture"};
+                String[] headers = {"Journal", "N° Compte", "Intitulé du Compte", "Sens", "Débit FCFA", "Crédit FCFA", "N° Pièce", "Libellé de l'Écriture"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i == 4 || i == 5) ? thNumStyle : thStyle);
@@ -3530,17 +3881,17 @@ public class EtatSynthesePaieService {
                 }
                 Row totRow = sheet.createRow(rowIndex++);
                 totRow.setHeightInPoints(20);
-                createCell(totRow, 0, "TOTAL ORDRE DE DÉBIT COMPTABLE (OD DE PAIE)", totalLabelStyle);
+                createCell(totRow, 0, "TOTAL ORDRE DE DÉBIT COMPTABLE - OD DE PAIE", totalLabelStyle);
                 for (int i = 1; i <= 3; i++) createCell(totRow, i, "", totalLabelStyle);
                 sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 3));
                 createCell(totRow, 4, totDeb, totalNumStyle);
                 createCell(totRow, 5, totCrd, totalNumStyle);
                 createCell(totRow, 6, "ÉCART: " + totDeb.subtract(totCrd).stripTrailingZeros().toPlainString() + " F", totalLabelStyle);
-                createCell(totRow, 7, (totDeb.compareTo(totCrd) == 0 ? "ÉQUILIBRÉ (0.00 FCFA)" : "ATTENTION ÉCART"), totalLabelStyle);
+                createCell(totRow, 7, (totDeb.compareTo(totCrd) == 0 ? "ÉQUILIBRÉ - 0.00 FCFA" : "ATTENTION ÉCART"), totalLabelStyle);
 
             } else if ("ETAT_BULLETIN".equalsIgnoreCase(type)) {
 
-                String[] headers = {"Code Bulletin", "Matricule", "Nom et Prénoms", "Direction", "Type Session", "Statut", "Salaire Brut (FCFA)", "Total Retenues (FCFA)", "Net à Payer (FCFA)", "Justification Écart"};
+                String[] headers = {"Code Bulletin", "Matricule", "Nom et Prénoms", "Direction", "Type Session", "Statut", "Salaire Brut FCFA", "Total Retenues FCFA", "Net à Payer FCFA", "Justification Écart"};
                 colCount = headers.length;
                 for (int i = 0; i < headers.length; i++) {
                     createCell(headerRow, i, headers[i], (i >= 6 && i <= 8) ? thNumStyle : thStyle);
