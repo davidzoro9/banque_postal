@@ -169,7 +169,7 @@ UPDATE etat_synthese_config SET ordre = 6, actif = TRUE, libelle = 'État Nomina
 UPDATE etat_synthese_config SET ordre = 7, actif = TRUE, libelle = 'État des Retenues IUTS' WHERE code = 'ETAT_IUTS';
 UPDATE etat_synthese_config SET ordre = 8, actif = TRUE, libelle = 'État des Retenues - Retenue Fonds de Solidarité' WHERE code = 'ETAT_FSP';
 
-INSERT INTO etat_synthese_config (code, libelle, categorie, description, icon, ordre, actif, personnalisable)
+INSERT INTO etat_synthese_config (code, libelle, categorie, description, icon, ordre, actif, is_system)
 SELECT 'ETAT_STC', 'État du Solde de Tout Compte', 'Indemnités de Rupture', 'Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.', 'gavel', 9, TRUE, TRUE
 WHERE NOT EXISTS (SELECT 1 FROM etat_synthese_config WHERE code = 'ETAT_STC');
 
