@@ -712,7 +712,7 @@ public class EtatSynthesePaieService {
             BigDecimal indem = b.getTotalIndemnites() != null ? b.getTotalIndemnites() : BigDecimal.ZERO;
             BigDecimal sBrut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
             BigDecimal cnss = b.getCotisationCnss() != null ? b.getCotisationCnss() : BigDecimal.ZERO;
-            BigDecimal partPat = b.getTotalCotisationsPatronales() != null ? b.getTotalCotisationsPatronales() : BigDecimal.ZERO;
+            BigDecimal partPat = BigDecimal.ZERO;
             BigDecimal baseImp = b.getBaseImposable() != null ? b.getBaseImposable() : BigDecimal.ZERO;
             int charges = 0;
             if (b.getLines() != null) {
@@ -730,6 +730,9 @@ public class EtatSynthesePaieService {
                 for (BulletinLine l : b.getLines()) {
                     String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
                     String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
+                        partPat = partPat.add(l.getPartPatronale());
+                    }
                     if (code.contains("TPA") || lib.contains("TPA") || lib.contains("APPRENTISSAGE")) {
                         if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
                             tpa = tpa.add(l.getPartPatronale());
@@ -739,8 +742,8 @@ public class EtatSynthesePaieService {
                     }
                 }
             }
-            if (tpa.compareTo(BigDecimal.ZERO) == 0 && sBrut.compareTo(BigDecimal.ZERO) > 0) {
-                tpa = sBrut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+            if (partPat.compareTo(BigDecimal.ZERO) == 0 && b.getTotalCotisationsPatronales() != null) {
+                partPat = b.getTotalCotisationsPatronales();
             }
             BigDecimal masseSal = sBrut.add(partPat);
 
@@ -978,16 +981,38 @@ public class EtatSynthesePaieService {
             BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
             BigDecimal assiette = brut.min(plafondCnss);
 
-            // Part Salariale 5.5%
-            BigDecimal partSal = b.getCotisationCnss() != null && b.getCotisationCnss().compareTo(BigDecimal.ZERO) > 0
-                    ? b.getCotisationCnss()
-                    : assiette.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal partSal = BigDecimal.ZERO;
+            BigDecimal totalPat = BigDecimal.ZERO;
 
-            // Parts Patronales : PF 7.0%, Risques Pro 3.5%, Retraite 5.5% = 16.0%
-            BigDecimal pf = assiette.multiply(new BigDecimal("0.070")).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal at = assiette.multiply(new BigDecimal("0.035")).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal ret = assiette.multiply(new BigDecimal("0.055")).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal totalPat = pf.add(at).add(ret);
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (code.contains("CNSS") || lib.contains("CNSS")) {
+                        if (l.getMontant() != null && l.getMontant().compareTo(BigDecimal.ZERO) > 0) {
+                            partSal = partSal.add(l.getMontant());
+                        }
+                        if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
+                            totalPat = totalPat.add(l.getPartPatronale());
+                        }
+                        if (l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0) {
+                            assiette = l.getBaseCalcul();
+                        }
+                    }
+                }
+            }
+
+            if (partSal.compareTo(BigDecimal.ZERO) == 0 && b.getCotisationCnss() != null) {
+                partSal = b.getCotisationCnss();
+            }
+            if (totalPat.compareTo(BigDecimal.ZERO) == 0 && b.getTotalCotisationsPatronales() != null) {
+                totalPat = b.getTotalCotisationsPatronales();
+            }
+
+            // Répartition légale des parts patronales CNSS (PF 7/16, Risques Pro 3.5/16, Retraite 5.5/16)
+            BigDecimal pf = totalPat.multiply(new BigDecimal("7.0")).divide(new BigDecimal("16.0"), 0, RoundingMode.HALF_UP);
+            BigDecimal at = totalPat.multiply(new BigDecimal("3.5")).divide(new BigDecimal("16.0"), 0, RoundingMode.HALF_UP);
+            BigDecimal ret = totalPat.subtract(pf).subtract(at);
 
             rows.add(EtatCnssRowDto.builder()
                     .matricule(mat)
@@ -1283,13 +1308,12 @@ public class EtatSynthesePaieService {
             totalPrimesEtGratifications = totalPrimesEtGratifications.add(bPrimes);
         }
 
-        // Si le bulletin stockait totalCotisationsPatronales mais que les lignes étaient vides (cas d'anciens bulletins non migrés)
+        // Lecture stricte depuis les données réelles stockées dans bulletin_line
         if (totalCnssPatronale.compareTo(BigDecimal.ZERO) == 0 && totalTpaBurkinabe.compareTo(BigDecimal.ZERO) == 0) {
             for (Bulletin b : bulletins) {
-                BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
-                BigDecimal baseCnss = brut.min(new BigDecimal("800000.00"));
-                totalCnssPatronale = totalCnssPatronale.add(baseCnss.multiply(new BigDecimal("0.16")).setScale(0, RoundingMode.HALF_UP));
-                totalTpaBurkinabe = totalTpaBurkinabe.add(brut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP));
+                if (b.getTotalCotisationsPatronales() != null) {
+                    totalCnssPatronale = totalCnssPatronale.add(b.getTotalCotisationsPatronales());
+                }
             }
         }
 
@@ -1709,11 +1733,16 @@ public class EtatSynthesePaieService {
             if (b.getSalaireBase() != null) totBase = totBase.add(b.getSalaireBase());
             if (b.getTotalIndemnites() != null) totIndem = totIndem.add(b.getTotalIndemnites());
             if (b.getCotisationCnss() != null) totCnssSal = totCnssSal.add(b.getCotisationCnss());
-            if (b.getTotalCotisationsPatronales() != null) {
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if ((c.contains("CNSS") || lib.contains("CNSS")) && l.getPartPatronale() != null) {
+                        totCnssPat = totCnssPat.add(l.getPartPatronale());
+                    }
+                }
+            } else if (b.getTotalCotisationsPatronales() != null) {
                 totCnssPat = totCnssPat.add(b.getTotalCotisationsPatronales());
-            } else if (b.getSalaireBrut() != null) {
-                BigDecimal assiette = b.getSalaireBrut().min(BigDecimal.valueOf(800000));
-                totCnssPat = totCnssPat.add(assiette.multiply(BigDecimal.valueOf(0.16)).setScale(0, RoundingMode.HALF_UP));
             }
             if (b.getImpotIuts() != null) totIuts = totIuts.add(b.getImpotIuts());
             if (b.getLines() != null) {

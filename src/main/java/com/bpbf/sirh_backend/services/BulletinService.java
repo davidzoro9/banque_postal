@@ -2306,7 +2306,7 @@ public class BulletinService {
             totalRetenuesSociales = totalRetenuesSociales.add(montantSol);
 
             BulletinLine solLine = new BulletinLine();
-            solLine.setCode("RET_SOLIDARITE");
+            solLine.setCode("FSP");
             solLine.setLibelle("RETENUE FONDS DE SOLIDARITE");
             solLine.setTypeLigne("RETENUE_SOCIALE");
             solLine.setBaseCalcul(baseSolidarite);

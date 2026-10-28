@@ -40,21 +40,40 @@ BEGIN
     END IF;
 END $$;
 
--- 3. Rétro-remplissage de la part patronale CNSS (16% plafonné à 800 000 FCFA) sur les lignes existantes
-UPDATE bulletin_line
-SET part_patronale = ROUND(LEAST(COALESCE(base_calcul, 0), 800000.00) * 0.16, 2)
-WHERE (code ILIKE '%CNSS%' OR libelle ILIKE '%CNSS%')
-  AND (part_patronale IS NULL OR part_patronale = 0)
-  AND COALESCE(base_calcul, 0) > 0;
+-- 3. Rétro-remplissage et fiabilisation de la part patronale CNSS (16% plafonné à 800 000 FCFA) sur les lignes existantes
+UPDATE bulletin_line bl
+SET base_calcul = LEAST(COALESCE(bl.base_calcul, b.salaire_brut, 0), 800000.00),
+    part_patronale = ROUND(LEAST(COALESCE(bl.base_calcul, b.salaire_brut, 0), 800000.00) * 0.16, 2),
+    taux = COALESCE(bl.taux, 5.50)
+FROM bulletin b
+WHERE bl.bulletin_id = b.id
+  AND (bl.code ILIKE '%CNSS%' OR bl.libelle ILIKE '%CNSS%')
+  AND (bl.part_patronale IS NULL OR bl.part_patronale = 0);
 
--- 4. Rétro-remplissage de la part patronale CRRAE / RCPNC (6%) sur les lignes existantes
-UPDATE bulletin_line
-SET part_patronale = ROUND(COALESCE(base_calcul, 0) * 0.06, 2)
-WHERE (code ILIKE '%CRRAE%' OR libelle ILIKE '%CRRAE%')
-  AND (part_patronale IS NULL OR part_patronale = 0)
-  AND COALESCE(base_calcul, 0) > 0;
+-- 4. Rétro-remplissage et fiabilisation de la part patronale CRRAE / RCPNC (6%) sur les lignes existantes
+UPDATE bulletin_line bl
+SET base_calcul = COALESCE(bl.base_calcul, b.salaire_brut, 0),
+    part_patronale = ROUND(COALESCE(bl.base_calcul, b.salaire_brut, 0) * 0.06, 2),
+    taux = COALESCE(bl.taux, 6.00)
+FROM bulletin b
+WHERE bl.bulletin_id = b.id
+  AND (bl.code ILIKE '%CRRAE%' OR bl.libelle ILIKE '%CRRAE%')
+  AND (bl.part_patronale IS NULL OR bl.part_patronale = 0);
 
--- 5. Insertion de la ligne TPA (Taxe Patronale d'Apprentissage 3% sur Salaire Brut) pour les bulletins existants
+-- 5. Harmonisation et normalisation de la retenue Fonds de Solidarité (FSP)
+UPDATE bulletin_line bl
+SET code = 'FSP',
+    taux = COALESCE(bl.taux, 1.00),
+    base_calcul = CASE 
+        WHEN bl.base_calcul IS NULL OR bl.base_calcul = 0 THEN ROUND(COALESCE(bl.montant, 0) * 100.00, 2)
+        ELSE bl.base_calcul 
+    END,
+    libelle = 'RETENUE FONDS DE SOLIDARITE'
+FROM bulletin b
+WHERE bl.bulletin_id = b.id
+  AND (bl.code ILIKE '%FSP%' OR bl.code ILIKE '%SOLIDAR%' OR bl.libelle ILIKE '%SOLIDAR%' OR bl.libelle ILIKE '%FSP%');
+
+-- 6. Insertion de la ligne TPA (Taxe Patronale d'Apprentissage 3% sur Salaire Brut) pour tous les bulletins existants
 INSERT INTO bulletin_line (bulletin_id, code, libelle, type_ligne, base_calcul, taux, montant, part_patronale, ordre)
 SELECT 
     b.id,
@@ -74,7 +93,7 @@ WHERE b.salaire_brut > 0
         AND (bl.code ILIKE '%TPA%' OR bl.libelle ILIKE '%TPA%' OR bl.libelle ILIKE '%APPRENTISSAGE%')
   );
 
--- 6. Mise à jour de total_cotisations_patronales sur chaque bulletin
+-- 7. Mise à jour de total_cotisations_patronales sur chaque bulletin
 UPDATE bulletin b
 SET total_cotisations_patronales = COALESCE((
     SELECT SUM(COALESCE(bl.part_patronale, 0))
@@ -82,7 +101,7 @@ SET total_cotisations_patronales = COALESCE((
     WHERE bl.bulletin_id = b.id
 ), 0);
 
--- 7. Mise à jour des totaux de cotisations patronales et masse salariale sur session_paie
+-- 8. Mise à jour des totaux de cotisations patronales et masse salariale sur session_paie
 UPDATE session_paie s
 SET total_cotisations_patronales = COALESCE((
     SELECT SUM(COALESCE(b.total_cotisations_patronales, 0))
@@ -95,7 +114,7 @@ total_masse_salariale = COALESCE(s.total_brut, 0) + COALESCE((
     WHERE b.session_paie_id = s.id
 ), 0);
 
--- 8. Mise à niveau de la contrainte unique sur compte_comptable
+-- 9. Mise à niveau de la contrainte unique sur compte_comptable
 -- Dans le Plan Comptable Bancaire BPBF, le compte 6420000001 est partagé entre CNSS et TPA
 DO $$
 BEGIN
@@ -112,7 +131,7 @@ BEGIN
     END IF;
 END $$;
 
--- 9. Insertion des comptes BPBF Plan Comptable Bancaire (PCB SFD/UMOA à 10 chiffres)
+-- 10. Insertion des comptes BPBF Plan Comptable Bancaire (PCB SFD/UMOA à 10 chiffres)
 INSERT INTO compte_comptable (numero_compte, libelle, classe_compte, sens_par_defaut, type_rubrique_associee, code_journal, description, actif)
 VALUES
     ('6420000004', 'CHARGE PATRONALE CRRAE/RCPNC', 'CLASSE_6', 'DEBIT', 'CRRAE_PATRONALE', 'OD_PAIE', 'Charge patronale retraite complémentaire CRRAE/RCPNC', TRUE),
@@ -138,7 +157,7 @@ SET libelle = EXCLUDED.libelle,
     description = EXCLUDED.description,
     actif = EXCLUDED.actif;
 
--- 10. Harmonisation des titres officiels des états de synthèse selon Modeles des états.pdf
+-- 11. Harmonisation des titres officiels des états de synthèse selon Modeles des états.pdf
 UPDATE etat_synthese_config SET libelle = 'Récapitulatif Global de la Paie' WHERE code = 'RECAPITULATIF_GLOBAL';
 UPDATE etat_synthese_config SET libelle = 'Registre de Paie' WHERE code = 'LIVRE_PAIE';
 UPDATE etat_synthese_config SET libelle = 'État de Virement des Salaires' WHERE code = 'ETAT_BANQUE';
@@ -148,7 +167,7 @@ UPDATE etat_synthese_config SET libelle = 'État Nominatif Mensuel de Déclarati
 UPDATE etat_synthese_config SET libelle = 'État des Retenues IUTS' WHERE code = 'ETAT_IUTS';
 UPDATE etat_synthese_config SET libelle = 'État des Retenues - Retenue Fonds de Solidarité' WHERE code = 'ETAT_FSP';
 
--- 11. Harmonisation des signataires officiels de la Banque selon Modeles des états.pdf
+-- 12. Harmonisation des signataires officiels de la Banque selon Modeles des états.pdf
 UPDATE signataire_config 
 SET titre_signataire1 = 'Directeur Administratif et Moyens Généraux',
     nom_signataire1 = 'Ahadi Ismaël YONLI',
