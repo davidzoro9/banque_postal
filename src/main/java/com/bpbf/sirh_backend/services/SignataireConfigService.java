@@ -17,9 +17,9 @@ import java.time.LocalDateTime;
 public class SignataireConfigService {
 
     public static final String CODE_ETAT_SYNTHESE = "ETAT_SYNTHESE_SIGNATAIRES";
-    public static final String DEFAULT_TITRE_1 = "Le Comptable";
+    public static final String DEFAULT_TITRE_1 = "Directeur Administratif et Moyens Généraux";
     public static final String DEFAULT_NOM_1 = "Ahadi Ismaël YONLI";
-    public static final String DEFAULT_TITRE_2 = "Le Directeur Financier et Comptable";
+    public static final String DEFAULT_TITRE_2 = "Directeur Général /PI";
     public static final String DEFAULT_NOM_2 = "Inoussa SANOUIDI";
 
     private final SignataireConfigRepository repository;
@@ -35,7 +35,15 @@ public class SignataireConfigService {
 
     @Transactional
     public SignataireConfig ensureDefaultSignataires() {
-        return repository.findByCode(CODE_ETAT_SYNTHESE).orElseGet(() -> {
+        return repository.findByCode(CODE_ETAT_SYNTHESE).map(existing -> {
+            if ("Le Comptable".equalsIgnoreCase(existing.getTitreSignataire1()) || existing.getTitreSignataire1() == null) {
+                existing.setTitreSignataire1(DEFAULT_TITRE_1);
+            }
+            if ("Le Directeur Financier et Comptable".equalsIgnoreCase(existing.getTitreSignataire2()) || existing.getTitreSignataire2() == null) {
+                existing.setTitreSignataire2(DEFAULT_TITRE_2);
+            }
+            return repository.save(existing);
+        }).orElseGet(() -> {
             SignataireConfig c = SignataireConfig.builder()
                     .code(CODE_ETAT_SYNTHESE)
                     .titreSignataire1(DEFAULT_TITRE_1)

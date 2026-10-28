@@ -155,28 +155,28 @@ public class EtatSynthesePaieService {
 
         switch (type) {
             case "RECAPITULATIF_GLOBAL":
-                titreEtat = "Récapitulatif Global de la Paie (Journal Débit / Crédit)";
+                titreEtat = "RECAPITULATIF GLOBAL DE LA PAIE";
                 rows.addAll(buildRecapitulatifGlobalRows(bulletins));
                 break;
 
             case "ETAT_CRRAE":
             case "ETAT_CRRAE_RRPC":
-                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations RRPC (19%)";
+                titreEtat = "ETAT NOMINATIF MENSUEL DE DECLARATION DES COTISATIONS RRPC";
                 rows.addAll(buildEtatCrraeRows(bulletins, "RRPC"));
                 break;
 
             case "ETAT_CRRAE_RCPNC":
-                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations RCPNC (12%)";
+                titreEtat = "ETAT NOMINATIF MENSUEL DE DECLARATION DES COTISATIONS RCPNC";
                 rows.addAll(buildEtatCrraeRows(bulletins, "RCPNC"));
                 break;
 
             case "ETAT_CRRAE_FAAM":
-                titreEtat = "État Nominatif Mensuel de Déclaration des Cotisations FAAM (1.5%)";
+                titreEtat = "ETAT NOMINATIF MENSUEL DE DECLARATION DES COTISATIONS FAAM";
                 rows.addAll(buildEtatCrraeRows(bulletins, "FAAM"));
                 break;
 
             case "LIVRE_PAIE":
-                titreEtat = "Livre de Paie (Registre Général)";
+                titreEtat = "REGISTRE DE PAIE";
                 rows.addAll(buildLivrePaieRows(bulletins));
                 break;
 
@@ -191,7 +191,7 @@ public class EtatSynthesePaieService {
                 break;
 
             case "ETAT_BANQUE":
-                titreEtat = "État des Virements par Banque";
+                titreEtat = "ETAT DE VIREMENT DES SALAIRES";
                 rows.addAll(buildEtatBanqueRows(bulletins));
                 break;
 
@@ -201,7 +201,7 @@ public class EtatSynthesePaieService {
                 break;
 
             case "ETAT_IUTS":
-                titreEtat = "État Déclaratif Fiscal de l'IUTS";
+                titreEtat = "ETAT DES RETENUES IUTS";
                 rows.addAll(buildEtatIutsRows(bulletins));
                 break;
 
@@ -211,7 +211,7 @@ public class EtatSynthesePaieService {
                 break;
 
             case "ETAT_FSP":
-                titreEtat = "État du Fonds de Soutien Patriotique (FSP)";
+                titreEtat = "ETAT DES RETENUES - RETENUE FONDS DE SOLIDARITE";
                 rows.addAll(buildEtatFspRows(bulletins));
                 break;
 
@@ -725,7 +725,23 @@ public class EtatSynthesePaieService {
             BigDecimal sNet = b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO;
             BigDecimal totRet = b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO;
             BigDecimal netAPayer = sNet;
-            BigDecimal tpa = sBrut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal tpa = BigDecimal.ZERO;
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (code.contains("TPA") || lib.contains("TPA") || lib.contains("APPRENTISSAGE")) {
+                        if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
+                            tpa = tpa.add(l.getPartPatronale());
+                        } else if (l.getMontant() != null && l.getMontant().compareTo(BigDecimal.ZERO) > 0) {
+                            tpa = tpa.add(l.getMontant());
+                        }
+                    }
+                }
+            }
+            if (tpa.compareTo(BigDecimal.ZERO) == 0 && sBrut.compareTo(BigDecimal.ZERO) > 0) {
+                tpa = sBrut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+            }
             BigDecimal masseSal = sBrut.add(partPat);
 
             BigDecimal rappels = BigDecimal.ZERO;
@@ -1117,7 +1133,9 @@ public class EtatSynthesePaieService {
 
             if (b.getLines() != null) {
                 for (BulletinLine l : b.getLines()) {
-                    if (l.getCode() != null && (l.getCode().contains("FSP") || l.getCode().contains("SOLIDAR"))) {
+                    String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (c.contains("FSP") || c.contains("SOLIDAR") || lib.contains("FSP") || lib.contains("SOLIDAR")) {
                         fspMontant = fspMontant.add(l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO);
                         if (l.getBaseCalcul() != null) fspBase = l.getBaseCalcul();
                         if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) fspTaux = l.getTaux();
@@ -1179,31 +1197,35 @@ public class EtatSynthesePaieService {
     }
 
     private List<RecapitulatifGlobalRowDto> buildRecapitulatifGlobalRows(List<Bulletin> bulletins) {
-        BigDecimal totalSalBase = BigDecimal.ZERO;
-        BigDecimal totalSurSal = BigDecimal.ZERO;
-        BigDecimal totalIndemnites = BigDecimal.ZERO;
-        BigDecimal totalCnssPatronale = BigDecimal.ZERO;
-        BigDecimal totalCrraePatronale = BigDecimal.ZERO;
-        BigDecimal totalTpa = BigDecimal.ZERO;
+        BigDecimal totalPersonnelNational = BigDecimal.ZERO; // 6410000001 (Salaire de base + Sursalaire)
+        BigDecimal totalPrimesEtGratifications = BigDecimal.ZERO; // 6410000010 (Primes, Gratifications, 13è/14è mois)
+        BigDecimal totalIndemnitesLogement = BigDecimal.ZERO; // 6411000005 (Indemnités de logement)
+        BigDecimal totalIndemnitesDiverses = BigDecimal.ZERO; // 6411000006 (Autres indemnités)
+        BigDecimal totalCnssPatronale = BigDecimal.ZERO; // 6420000001 (Charge patronale CNSS 16%)
+        BigDecimal totalCrraePatronale = BigDecimal.ZERO; // 6420000004 (Charge patronale CRRAE/RCPNC 6%)
+        BigDecimal totalTpaBurkinabe = BigDecimal.ZERO; // 6420000001 (TPA 3% sur salaires nationaux)
+        BigDecimal totalTpaEtrangers = BigDecimal.ZERO; // 6420000002 (TPA 4% sur salaires étrangers)
 
-        BigDecimal totalNet = BigDecimal.ZERO;
-        BigDecimal totalCnssSal = BigDecimal.ZERO;
-        BigDecimal totalCrraeSal = BigDecimal.ZERO;
-        BigDecimal totalIuts = BigDecimal.ZERO;
-        BigDecimal totalFsp = BigDecimal.ZERO;
-        BigDecimal totalPrecomptes = BigDecimal.ZERO;
-
-        BigDecimal totalRappels = BigDecimal.ZERO;
-        BigDecimal totalTropPercus = BigDecimal.ZERO;
+        BigDecimal totalNetRemunerationsDues = BigDecimal.ZERO; // 3522040001 (Rémunérations nettes dues)
+        BigDecimal totalCnssSal = BigDecimal.ZERO; // Part salariale pour 3522020001
+        BigDecimal totalCrraeSal = BigDecimal.ZERO; // Part salariale pour 3522020002
+        BigDecimal totalIuts = BigDecimal.ZERO; // 3522000016 (IUTS)
+        BigDecimal totalFsp = BigDecimal.ZERO; // 3522040004 (Retenue Fonds Pat.)
+        BigDecimal totalPrecomptesCarPlan = BigDecimal.ZERO; // 3522040003 (RETENUE CAR PLAN / Précomptes)
 
         for (Bulletin b : bulletins) {
-            if (b.getSalaireBase() != null) totalSalBase = totalSalBase.add(b.getSalaireBase());
-            if (b.getSurSalaire() != null) totalSurSal = totalSurSal.add(b.getSurSalaire());
-            if (b.getTotalIndemnites() != null) totalIndemnites = totalIndemnites.add(b.getTotalIndemnites());
-            if (b.getSalaireNet() != null) totalNet = totalNet.add(b.getSalaireNet());
+            BigDecimal base = b.getSalaireBase() != null ? b.getSalaireBase() : BigDecimal.ZERO;
+            BigDecimal surSal = b.getSurSalaire() != null ? b.getSurSalaire() : BigDecimal.ZERO;
+            totalPersonnelNational = totalPersonnelNational.add(base).add(surSal);
+
+            if (b.getSalaireNet() != null) totalNetRemunerationsDues = totalNetRemunerationsDues.add(b.getSalaireNet());
             if (b.getCotisationCnss() != null) totalCnssSal = totalCnssSal.add(b.getCotisationCnss());
             if (b.getImpotIuts() != null) totalIuts = totalIuts.add(b.getImpotIuts());
-            if (b.getTotalPrecomptes() != null) totalPrecomptes = totalPrecomptes.add(b.getTotalPrecomptes());
+            if (b.getTotalPrecomptes() != null) totalPrecomptesCarPlan = totalPrecomptesCarPlan.add(b.getTotalPrecomptes());
+
+            BigDecimal bIndemLogement = BigDecimal.ZERO;
+            BigDecimal bIndemDiverses = BigDecimal.ZERO;
+            BigDecimal bPrimes = BigDecimal.ZERO;
 
             if (b.getLines() != null) {
                 for (BulletinLine l : b.getLines()) {
@@ -1212,99 +1234,76 @@ public class EtatSynthesePaieService {
                     String typeL = l.getTypeLigne() != null ? l.getTypeLigne().toUpperCase(Locale.ROOT) : "";
                     BigDecimal m = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
 
-                    if (c.contains("CRRAE") || lib.contains("CRRAE")) {
-                        if (l.getMontant() != null) totalCrraeSal = totalCrraeSal.add(l.getMontant());
-                        if (l.getPartPatronale() != null) totalCrraePatronale = totalCrraePatronale.add(l.getPartPatronale());
+                    // Charges patronales persistées (RÈGLE V3 : Lecture directe SANS calcul à la volée)
+                    if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
+                        if (c.contains("CNSS") || lib.contains("CNSS")) {
+                            totalCnssPatronale = totalCnssPatronale.add(l.getPartPatronale());
+                        } else if (c.contains("CRRAE") || c.contains("RCPNC") || c.contains("RRPC") || c.contains("FAAM")
+                                || lib.contains("CRRAE") || lib.contains("RCPNC") || lib.contains("RRPC") || lib.contains("FAAM")) {
+                            totalCrraePatronale = totalCrraePatronale.add(l.getPartPatronale());
+                        } else if (c.contains("TPA") || lib.contains("TPA") || lib.contains("APPRENTISSAGE")) {
+                            totalTpaBurkinabe = totalTpaBurkinabe.add(l.getPartPatronale());
+                        }
                     }
-                    if (c.contains("FSP") || c.contains("SOLIDAR") || lib.contains("SOLIDAR")) {
-                        if (l.getMontant() != null) totalFsp = totalFsp.add(l.getMontant());
+
+                    // CRRAE Salariale
+                    if (c.contains("CRRAE") || lib.contains("CRRAE") || c.contains("RCPNC") || lib.contains("RCPNC")) {
+                        if (m.compareTo(BigDecimal.ZERO) > 0) {
+                            totalCrraeSal = totalCrraeSal.add(m);
+                        }
                     }
-                    if (c.contains("RAPPEL") || c.contains("AVOIR") || lib.contains("RAPPEL") || lib.contains("AVOIR")) {
-                        totalRappels = totalRappels.add(m);
+
+                    // FSP (Fonds de Soutien Patriotique)
+                    if (c.contains("FSP") || c.contains("SOLIDAR") || lib.contains("SOLIDAR") || lib.contains("FSP")) {
+                        if (m.compareTo(BigDecimal.ZERO) > 0) {
+                            totalFsp = totalFsp.add(m);
+                        }
                     }
-                    if (c.contains("TROP") || lib.contains("TROP") || lib.contains("PERCU")) {
-                        totalTropPercus = totalTropPercus.add(m);
-                    }
-                    if ("PRECOMPTE".equals(typeL) || c.startsWith("PREC_") || c.contains("PRET") || c.contains("AVANCE")) {
-                        totalPrecomptes = totalPrecomptes.add(m);
+
+                    // Indemnités et Primes détaillées
+                    if ("GAIN".equals(typeL) || "AVOIR".equals(typeL) || "INDEMNITE".equals(typeL) || "PRIME".equals(typeL)) {
+                        if (c.contains("LOG") || lib.contains("LOGEMENT")) {
+                            bIndemLogement = bIndemLogement.add(m);
+                        } else if (c.contains("PRIME") || c.contains("GRAT") || c.contains("RENDEMENT") || c.contains("BILAN")
+                                || c.contains("13") || c.contains("14") || lib.contains("PRIME") || lib.contains("GRATIFICATION")) {
+                            bPrimes = bPrimes.add(m);
+                        } else if (!c.contains("BASE") && !c.contains("SUR_SAL") && !c.contains("SURSAL") && !lib.contains("SUR-SALAIRE")) {
+                            bIndemDiverses = bIndemDiverses.add(m);
+                        }
                     }
                 }
             }
 
-            BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
-            BigDecimal baseCnss = brut.min(new BigDecimal("800000.00"));
-            totalCnssPatronale = totalCnssPatronale.add(baseCnss.multiply(new BigDecimal("0.16")).setScale(0, RoundingMode.HALF_UP));
-            totalTpa = totalTpa.add(brut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP));
+            // Fallback si pas de ventilation détaillée des indemnités
+            if (bIndemLogement.add(bIndemDiverses).compareTo(BigDecimal.ZERO) == 0 && b.getTotalIndemnites() != null && b.getTotalIndemnites().compareTo(BigDecimal.ZERO) > 0) {
+                bIndemDiverses = b.getTotalIndemnites();
+            }
+            totalIndemnitesLogement = totalIndemnitesLogement.add(bIndemLogement);
+            totalIndemnitesDiverses = totalIndemnitesDiverses.add(bIndemDiverses);
+            totalPrimesEtGratifications = totalPrimesEtGratifications.add(bPrimes);
         }
 
-        BigDecimal totalCnssGlobal = totalCnssSal.add(totalCnssPatronale);
-        BigDecimal totalCrraeGlobal = totalCrraeSal.add(totalCrraePatronale);
+        // Si le bulletin stockait totalCotisationsPatronales mais que les lignes étaient vides (cas d'anciens bulletins non migrés)
+        if (totalCnssPatronale.compareTo(BigDecimal.ZERO) == 0 && totalTpaBurkinabe.compareTo(BigDecimal.ZERO) == 0) {
+            for (Bulletin b : bulletins) {
+                BigDecimal brut = b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO;
+                BigDecimal baseCnss = brut.min(new BigDecimal("800000.00"));
+                totalCnssPatronale = totalCnssPatronale.add(baseCnss.multiply(new BigDecimal("0.16")).setScale(0, RoundingMode.HALF_UP));
+                totalTpaBurkinabe = totalTpaBurkinabe.add(brut.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP));
+            }
+        }
+
+        BigDecimal totalCnssReverser = totalCnssSal.add(totalCnssPatronale);
+        BigDecimal totalCrraeReverser = totalCrraeSal.add(totalCrraePatronale);
+        BigDecimal totalTpaReverser = totalTpaBurkinabe.add(totalTpaEtrangers);
 
         List<RecapitulatifGlobalRowDto> rows = new ArrayList<>();
         Map<String, CompteComptable> mapRubriques = loadComptesComptablesMap();
 
-        // Débit : Charges de personnel et taxes (Comptes 66 et 64 - SYSCOHADA Révisé)
-        CompteComptable cpSalBase = resolveCompte(mapRubriques, "SALAIRE_BASE", "661100", "Salaires de base du personnel national", "DEBIT", "OD_PAIE");
+        // 1. DÉBIT (Comptes 64 - Plan Comptable Bancaire SFD/UMOA BPBF)
+        // 6420000004 : CHARGE PATRONALE CRRAE/RCPNC
+        CompteComptable cpCrraePat = resolveCompte(mapRubriques, "CRRAE_PATRONALE", "6420000004", "CHARGE PATRONALE CRRAE/RCPNC", "DEBIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpSalBase.getNumeroCompte())
-                .intituleCompte(cpSalBase.getLibelle())
-                .sens("DEBIT")
-                .montantDebit(totalSalBase)
-                .montantCredit(BigDecimal.ZERO)
-                .categorieComptable("CHARGES_PERSONNEL")
-                .build());
-
-        if (totalSurSal.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpSurSal = resolveCompte(mapRubriques, "SUR_SALAIRE", "661200", "Sur-salaires du personnel", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpSurSal.getNumeroCompte())
-                .intituleCompte(cpSurSal.getLibelle())
-                .sens("DEBIT")
-                .montantDebit(totalSurSal)
-                .montantCredit(BigDecimal.ZERO)
-                .categorieComptable("CHARGES_PERSONNEL")
-                .build());
-        }
-
-        if (totalIndemnites.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpIndem = resolveCompte(mapRubriques, "INDEMNITES", "661800", "Indemnités, primes et avantages divers", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpIndem.getNumeroCompte())
-                .intituleCompte(cpIndem.getLibelle())
-                .sens("DEBIT")
-                .montantDebit(totalIndemnites)
-                .montantCredit(BigDecimal.ZERO)
-                .categorieComptable("CHARGES_PERSONNEL")
-                .build());
-        }
-
-        if (totalRappels.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpRappels = resolveCompte(mapRubriques, "RAPPELS", "661500", "Rappels sur salaires antérieurs (Avoirs accordés)", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpRappels.getNumeroCompte())
-                .intituleCompte(cpRappels.getLibelle())
-                .sens("DEBIT")
-                .montantDebit(totalRappels)
-                .montantCredit(BigDecimal.ZERO)
-                .categorieComptable("CHARGES_PERSONNEL")
-                .build());
-        }
-
-        if (totalCnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCnssPat = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "664100", "Cotisations patronales de sécurité sociale (CNSS)", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpCnssPat.getNumeroCompte())
-                .intituleCompte(cpCnssPat.getLibelle())
-                .sens("DEBIT")
-                .montantDebit(totalCnssPatronale)
-                .montantCredit(BigDecimal.ZERO)
-                .categorieComptable("CHARGES_SOCIALES")
-                .build());
-        }
-
-        if (totalCrraePatronale.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCrraePat = resolveCompte(mapRubriques, "CRRAE_PATRONALE", "664200", "Cotisations patronales régimes complémentaires (CRRAE)", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
                 .numeroCompte(cpCrraePat.getNumeroCompte())
                 .intituleCompte(cpCrraePat.getLibelle())
                 .sens("DEBIT")
@@ -1312,114 +1311,163 @@ public class EtatSynthesePaieService {
                 .montantCredit(BigDecimal.ZERO)
                 .categorieComptable("CHARGES_SOCIALES")
                 .build());
-        }
 
-        if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpTpa = resolveCompte(mapRubriques, "TPA", "641300", "Taxe Patronale d'Apprentissage (TPA)", "DEBIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                .numeroCompte(cpTpa.getNumeroCompte())
-                .intituleCompte(cpTpa.getLibelle())
+        // 6410000001 : SALAIRE PERSONNEL NATIONAL
+        CompteComptable cpSalBase = resolveCompte(mapRubriques, "SALAIRE_BASE", "6410000001", "SALAIRE PERSONNEL NATIONAL", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpSalBase.getNumeroCompte())
+                .intituleCompte(cpSalBase.getLibelle())
                 .sens("DEBIT")
-                .montantDebit(totalTpa)
+                .montantDebit(totalPersonnelNational)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
+
+        // 6410000010 : PRIMES ET GRATIFICATIONS
+        CompteComptable cpPrimes = resolveCompte(mapRubriques, "PRIMES", "6410000010", "PRIMES ET GRATIFICATIONS", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpPrimes.getNumeroCompte())
+                .intituleCompte(cpPrimes.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalPrimesEtGratifications)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
+
+        // 6411000005 : INDEMNITES DE LOGEMENT
+        CompteComptable cpLog = resolveCompte(mapRubriques, "INDEMNITE_LOGEMENT", "6411000005", "INDEMNITES DE LOGEMENT", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpLog.getNumeroCompte())
+                .intituleCompte(cpLog.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalIndemnitesLogement)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
+
+        // 6411000006 : INDEMNITES DIVERSES
+        CompteComptable cpIndemDiv = resolveCompte(mapRubriques, "INDEMNITES", "6411000006", "INDEMNITES DIVERSES", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpIndemDiv.getNumeroCompte())
+                .intituleCompte(cpIndemDiv.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalIndemnitesDiverses)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_PERSONNEL")
+                .build());
+
+        // 6420000001 : CHARGE PATRONALE CNSS
+        CompteComptable cpCnssPat = resolveCompte(mapRubriques, "COTISATIONS_PATRONALES", "6420000001", "CHARGE PATRONALE CNSS", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpCnssPat.getNumeroCompte())
+                .intituleCompte(cpCnssPat.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalCnssPatronale)
+                .montantCredit(BigDecimal.ZERO)
+                .categorieComptable("CHARGES_SOCIALES")
+                .build());
+
+        // 6420000001 : TPA / SALAIRES BURKINABE
+        CompteComptable cpTpaBurk = resolveCompte(mapRubriques, "TPA", "6420000001", "TPA / SALAIRES BURKINABE", "DEBIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpTpaBurk.getNumeroCompte())
+                .intituleCompte(cpTpaBurk.getLibelle())
+                .sens("DEBIT")
+                .montantDebit(totalTpaBurkinabe)
                 .montantCredit(BigDecimal.ZERO)
                 .categorieComptable("IMPOTS_TAXES")
                 .build());
+
+        // 6420000002 : TPA / SALAIRES (ETRANGERS) (si existant)
+        if (totalTpaEtrangers.compareTo(BigDecimal.ZERO) > 0) {
+            CompteComptable cpTpaEtr = resolveCompte(mapRubriques, "TPA_ETRANGERS", "6420000002", "TPA / SALAIRES (ETRANGERS)", "DEBIT", "OD_PAIE");
+            rows.add(RecapitulatifGlobalRowDto.builder()
+                    .numeroCompte(cpTpaEtr.getNumeroCompte())
+                    .intituleCompte(cpTpaEtr.getLibelle())
+                    .sens("DEBIT")
+                    .montantDebit(totalTpaEtrangers)
+                    .montantCredit(BigDecimal.ZERO)
+                    .categorieComptable("IMPOTS_TAXES")
+                    .build());
         }
 
-        // Crédit : Rémunérations nettes, Organismes et État
-        CompteComptable cpNet = resolveCompte(mapRubriques, "NET_A_PAYER", "421100", "Personnel - Rémunérations nettes à payer (Virements)", "CREDIT", "OD_PAIE");
+        // 2. CRÉDIT (Comptes 3522 - Dettes sociales, fiscales & rémunérations dues)
+        // 3522040004 : Retenue Fonds Pat.
+        CompteComptable cpFsp = resolveCompte(mapRubriques, "FSP", "3522040004", "Retenue Fonds Pat.", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpFsp.getNumeroCompte())
+                .intituleCompte(cpFsp.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalFsp)
+                .categorieComptable("DETTES_FISCALES")
+                .build());
+
+        // 3522040003 : RETENUE CAR PLAN
+        CompteComptable cpPrecomptes = resolveCompte(mapRubriques, "PRECOMPTES", "3522040003", "RETENUE CAR PLAN", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpPrecomptes.getNumeroCompte())
+                .intituleCompte(cpPrecomptes.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalPrecomptesCarPlan)
+                .categorieComptable("CREANCES_PERSONNEL")
+                .build());
+
+        // 3522000015 : TPA A REVERSER
+        CompteComptable cpTpaDette = resolveCompte(mapRubriques, "TPA_DETTE", "3522000015", "TPA A REVERSER", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpTpaDette.getNumeroCompte())
+                .intituleCompte(cpTpaDette.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalTpaReverser)
+                .categorieComptable("DETTES_FISCALES")
+                .build());
+
+        // 3522020001 : CNSS A REVERSER
+        CompteComptable cpCnss = resolveCompte(mapRubriques, "CNSS", "3522020001", "CNSS A REVERSER", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpCnss.getNumeroCompte())
+                .intituleCompte(cpCnss.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalCnssReverser)
+                .categorieComptable("ORGANISMES_SOCIAUX")
+                .build());
+
+        // 3522020002 : CAISSE RETRAITE FACULTATIVE
+        CompteComptable cpCrrae = resolveCompte(mapRubriques, "CRRAE", "3522020002", "CAISSE RETRAITE FACULTATIVE", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpCrrae.getNumeroCompte())
+                .intituleCompte(cpCrrae.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalCrraeReverser)
+                .categorieComptable("ORGANISMES_SOCIAUX")
+                .build());
+
+        // 3522000016 : IUTS
+        CompteComptable cpIuts = resolveCompte(mapRubriques, "IUTS", "3522000016", "IUTS", "CREDIT", "OD_PAIE");
+        rows.add(RecapitulatifGlobalRowDto.builder()
+                .numeroCompte(cpIuts.getNumeroCompte())
+                .intituleCompte(cpIuts.getLibelle())
+                .sens("CREDIT")
+                .montantDebit(BigDecimal.ZERO)
+                .montantCredit(totalIuts)
+                .categorieComptable("DETTES_FISCALES")
+                .build());
+
+        // 3522040001 : REMUNERATIONS DUES
+        CompteComptable cpNet = resolveCompte(mapRubriques, "NET_A_PAYER", "3522040001", "REMUNERATIONS DUES", "CREDIT", "OD_PAIE");
         rows.add(RecapitulatifGlobalRowDto.builder()
                 .numeroCompte(cpNet.getNumeroCompte())
                 .intituleCompte(cpNet.getLibelle())
                 .sens("CREDIT")
                 .montantDebit(BigDecimal.ZERO)
-                .montantCredit(totalNet)
+                .montantCredit(totalNetRemunerationsDues)
                 .categorieComptable("DETTES_PERSONNEL")
                 .build());
-
-        if (totalCnssGlobal.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCnss = resolveCompte(mapRubriques, "CNSS", "431100", "Sécurité Sociale (CNSS Part Salariale + Patronale)", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpCnss.getNumeroCompte())
-                    .intituleCompte(cpCnss.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalCnssGlobal)
-                    .categorieComptable("ORGANISMES_SOCIAUX")
-                    .build());
-        }
-
-        if (totalCrraeGlobal.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpCrrae = resolveCompte(mapRubriques, "CRRAE", "431200", "Organismes de Prévoyance (CRRAE RRPC/RCPNC/FAAM)", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpCrrae.getNumeroCompte())
-                    .intituleCompte(cpCrrae.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalCrraeGlobal)
-                    .categorieComptable("ORGANISMES_SOCIAUX")
-                    .build());
-        }
-
-        if (totalIuts.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpIuts = resolveCompte(mapRubriques, "IUTS", "447100", "État - Impôt Unique sur Traitements & Salaires (IUTS)", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpIuts.getNumeroCompte())
-                    .intituleCompte(cpIuts.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalIuts)
-                    .categorieComptable("DETTES_FISCALES")
-                    .build());
-        }
-
-        if (totalFsp.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpFsp = resolveCompte(mapRubriques, "FSP", "447200", "État - Fonds de Soutien Patriotique (FSP)", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpFsp.getNumeroCompte())
-                    .intituleCompte(cpFsp.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalFsp)
-                    .categorieComptable("DETTES_FISCALES")
-                    .build());
-        }
-
-        if (totalTpa.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpTpaDette = resolveCompte(mapRubriques, "TPA_DETTE", "447300", "État - Taxe Patronale d'Apprentissage à reverser (TPA)", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpTpaDette.getNumeroCompte())
-                    .intituleCompte(cpTpaDette.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalTpa)
-                    .categorieComptable("DETTES_FISCALES")
-                    .build());
-        }
-
-        if (totalPrecomptes.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpPrecomptes = resolveCompte(mapRubriques, "PRECOMPTES", "422000", "Personnel - Prêts, avances et précomptes récupérés", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpPrecomptes.getNumeroCompte())
-                    .intituleCompte(cpPrecomptes.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalPrecomptes)
-                    .categorieComptable("CREANCES_PERSONNEL")
-                    .build());
-        }
-
-        if (totalTropPercus.compareTo(BigDecimal.ZERO) > 0) {
-            CompteComptable cpTropPercus = resolveCompte(mapRubriques, "TROP_PERCUS", "428700", "Personnel - Trop-perçus régularisés sur salaires antérieurs", "CREDIT", "OD_PAIE");
-            rows.add(RecapitulatifGlobalRowDto.builder()
-                    .numeroCompte(cpTropPercus.getNumeroCompte())
-                    .intituleCompte(cpTropPercus.getLibelle())
-                    .sens("CREDIT")
-                    .montantDebit(BigDecimal.ZERO)
-                    .montantCredit(totalTropPercus)
-                    .categorieComptable("CREANCES_PERSONNEL")
-                    .build());
-        }
 
         return rows;
     }
@@ -1864,41 +1912,89 @@ public class EtatSynthesePaieService {
     }
 
     private void addReportHeader(Document doc, EtatSyntheseWrapperDto etat) throws DocumentException {
+        String type = etat.getTypeEtat() != null ? etat.getTypeEtat().toUpperCase(Locale.ROOT) : "";
+
+        if (type.contains("CRRAE")) {
+            // Modèles Pages 4, 5, 6 - Déclaration CRRAE (RRPC, RCPNC, FAAM)
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{65, 35});
+            table.setSpacingAfter(8f);
+
+            PdfPCell left = new PdfPCell();
+            left.setBorder(Rectangle.NO_BORDER);
+            left.addElement(new Paragraph("ADHERENT: BANQUE POSTALE DU BURKINA FASO", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, TEXT_DARK)));
+            left.addElement(new Paragraph("BP 1366 OUAGADOUGOU CNTC", FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK)));
+            left.addElement(new Paragraph("DESTINATAIRE: CAISSE DE RETRAITE PAR REPARTITION AVEC EPARGNE DE L'UNION MONETAIRE OUEST AFRICAINE", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BPBF_BLUE)));
+
+            PdfPCell right = new PdfPCell();
+            right.setBorder(Rectangle.NO_BORDER);
+            right.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            Paragraph pEx = new Paragraph("Exercice : " + (etat.getAnnee() != null ? etat.getAnnee() : "2026"), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXT_DARK));
+            pEx.setAlignment(Element.ALIGN_RIGHT);
+            Paragraph pPer = new Paragraph("Période : " + etat.getPeriode(), FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK));
+            pPer.setAlignment(Element.ALIGN_RIGHT);
+            right.addElement(pEx);
+            right.addElement(pPer);
+
+            table.addCell(left);
+            table.addCell(right);
+            doc.add(table);
+
+            Paragraph title = new Paragraph(etat.getTitreEtat().toUpperCase(Locale.ROOT), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, TEXT_DARK));
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(10f);
+            doc.add(title);
+            return;
+        }
+
+        // Modèles Pages 1, 2, 3, 7, 8 - En-tête officiel BPBF
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         table.setWidths(new float[]{60, 40});
-        table.setSpacingAfter(10f);
+        table.setSpacingAfter(6f);
 
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
 
-        Paragraph pBank = new Paragraph("BANQUE POSTALE DU BURKINA FASO", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, BPBF_NAVY));
-        Paragraph pSub = new Paragraph("DIRECTION DU CAPITAL HUMAIN & DE LA PAIE", FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY));
-        Paragraph pTitle = new Paragraph(etat.getTitreEtat().toUpperCase(Locale.ROOT), FONT_TITLE);
-        pTitle.setSpacingBefore(4f);
-
+        Paragraph pBank = new Paragraph("BANQUE POSTALE DU BURKINA FASO", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, BPBF_NAVY));
+        Paragraph pBp = new Paragraph("BP 1366\nOUAGADOUGOU CNTC", FontFactory.getFont(FontFactory.HELVETICA, 7.5f, TEXT_DARK));
         leftCell.addElement(pBank);
-        leftCell.addElement(pSub);
-        leftCell.addElement(pTitle);
+        leftCell.addElement(pBp);
+
+        if ("ETAT_IUTS".equals(type)) {
+            Paragraph pIfu = new Paragraph("IFU: 00164311Z", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BPBF_BLUE));
+            pIfu.setSpacingBefore(3f);
+            leftCell.addElement(pIfu);
+        }
 
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
         rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
-        Paragraph pSess = new Paragraph("SESSION : " + etat.getCodeSession(), FONT_SUBTITLE);
-        pSess.setAlignment(Element.ALIGN_RIGHT);
-        Paragraph pPer = new Paragraph("Période : " + etat.getPeriode(), FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK));
+        Paragraph pPer = new Paragraph("PERIODE : " + etat.getPeriode(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXT_DARK));
         pPer.setAlignment(Element.ALIGN_RIGHT);
-        Paragraph pEff = new Paragraph("Effectif traité : " + etat.getNombreBulletins() + " agents", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BPBF_BLUE));
-        pEff.setAlignment(Element.ALIGN_RIGHT);
+        Paragraph pSess = new Paragraph("[ " + (etat.getTypeSession() != null ? etat.getTypeSession().toUpperCase(Locale.ROOT) : "ORDINAIRE") + " ]", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXT_DARK));
+        pSess.setAlignment(Element.ALIGN_RIGHT);
 
-        rightCell.addElement(pSess);
         rightCell.addElement(pPer);
-        rightCell.addElement(pEff);
+        rightCell.addElement(pSess);
 
         table.addCell(leftCell);
         table.addCell(rightCell);
         doc.add(table);
+
+        Paragraph pTitle = new Paragraph(etat.getTitreEtat().toUpperCase(Locale.ROOT), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, TEXT_DARK));
+        pTitle.setAlignment(Element.ALIGN_CENTER);
+        pTitle.setSpacingAfter("RECAPITULATIF_GLOBAL".equals(type) ? 2f : 8f);
+        doc.add(pTitle);
+
+        if ("RECAPITULATIF_GLOBAL".equals(type)) {
+            Paragraph pSub = new Paragraph("TOUTES DIRECTIONS CONFONDUES", FontFactory.getFont(FontFactory.HELVETICA, 8, TEXT_DARK));
+            pSub.setAlignment(Element.ALIGN_CENTER);
+            pSub.setSpacingAfter(8f);
+            doc.add(pSub);
+        }
     }
 
     private void addReportTable(Document doc, EtatSyntheseWrapperDto etat) throws DocumentException {
@@ -2007,9 +2103,9 @@ public class EtatSynthesePaieService {
         table.setSpacingAfter(8f);
 
         addTh(table, "COMPTE", Element.ALIGN_LEFT);
-        addTh(table, "LIBELLÉ DU COMPTE", Element.ALIGN_LEFT);
-        addTh(table, "DÉBIT FCFA", Element.ALIGN_RIGHT);
-        addTh(table, "CRÉDIT FCFA", Element.ALIGN_RIGHT);
+        addTh(table, "LIBELLE", Element.ALIGN_LEFT);
+        addTh(table, "DEBIT", Element.ALIGN_RIGHT);
+        addTh(table, "CREDIT", Element.ALIGN_RIGHT);
 
         BigDecimal totDebit = BigDecimal.ZERO;
         BigDecimal totCredit = BigDecimal.ZERO;
@@ -2026,7 +2122,7 @@ public class EtatSynthesePaieService {
             }
         }
 
-        addTot(table, "TOTAL DE L'ÉTAT - BALANCE ÉQUILIBRÉE", 2, Element.ALIGN_LEFT);
+        addTot(table, "BALANCE", 2, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totDebit), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totCredit), 1, Element.ALIGN_RIGHT);
 
@@ -2072,19 +2168,32 @@ public class EtatSynthesePaieService {
     }
 
     private void addTableCrrae(Document doc, List<Object> data, String titre) throws DocumentException {
-
         PdfPTable table = new PdfPTable(7);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{8, 12, 34, 14, 11, 10, 11});
+        table.setWidths(new float[]{8, 30, 14, 14, 12, 11, 11});
         table.setSpacingAfter(8f);
 
-        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
-        addTh(table, "MATRICULE", Element.ALIGN_LEFT);
-        addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "SALAIRE SOUMIS", Element.ALIGN_RIGHT);
-        addTh(table, "PART EMPLOY.", Element.ALIGN_RIGHT);
-        addTh(table, "PART SALAR.", Element.ALIGN_RIGHT);
-        addTh(table, "TOTAL COTIS.", Element.ALIGN_RIGHT);
+        String libPat = "Part Employeur (6%)";
+        String libSal = "Part Employé (6%)";
+        String libTot = "Total (12%)";
+
+        if (titre != null && titre.toUpperCase(Locale.ROOT).contains("RRPC")) {
+            libPat = "Part Employeur (12,67%)";
+            libSal = "Part Employé (6,33%)";
+            libTot = "Total (19%)";
+        } else if (titre != null && titre.toUpperCase(Locale.ROOT).contains("FAAM")) {
+            libPat = "Part Employeur (1%)";
+            libSal = "Part Employé (0,5%)";
+            libTot = "Total (1,5%)";
+        }
+
+        addTh(table, "N° d'ordre", Element.ALIGN_CENTER);
+        addTh(table, "Nom et Prénoms", Element.ALIGN_LEFT);
+        addTh(table, "Numero Matricule", Element.ALIGN_LEFT);
+        addTh(table, "Assiette", Element.ALIGN_RIGHT);
+        addTh(table, libPat, Element.ALIGN_RIGHT);
+        addTh(table, libSal, Element.ALIGN_RIGHT);
+        addTh(table, libTot, Element.ALIGN_RIGHT);
 
         BigDecimal totBase = BigDecimal.ZERO;
         BigDecimal totPat = BigDecimal.ZERO;
@@ -2094,8 +2203,8 @@ public class EtatSynthesePaieService {
         for (Object obj : data) {
             if (obj instanceof EtatCrraeRowDto row) {
                 addTd(table, String.valueOf(row.getNumeroOrdre() != null ? row.getNumeroOrdre() : "—"), Element.ALIGN_CENTER, false);
-                addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
                 addTd(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
+                addTd(table, row.getMatricule(), Element.ALIGN_LEFT, false);
                 addTd(table, formatMoney(row.getSalaireSoumisCotisation()), Element.ALIGN_RIGHT, false);
                 addTd(table, formatMoney(row.getCotisationPatronale()), Element.ALIGN_RIGHT, false);
                 addTd(table, formatMoney(row.getCotisationSalariale()), Element.ALIGN_RIGHT, false);
@@ -2108,13 +2217,18 @@ public class EtatSynthesePaieService {
             }
         }
 
-        addTot(table, "TOTAL DÉCLARATION COTISATIONS", 3, Element.ALIGN_LEFT);
+        addTot(table, "TOTAL", 3, Element.ALIGN_LEFT);
         addTot(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totPat), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totSal), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totCotis), 1, Element.ALIGN_RIGHT);
 
         doc.add(table);
+
+        Paragraph pSign = new Paragraph("Signature et Cachet de l'Adhérent", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXT_DARK));
+        pSign.setAlignment(Element.ALIGN_RIGHT);
+        pSign.setSpacingBefore(18f);
+        doc.add(pSign);
     }
 
     private void addTableLivrePaie(Document doc, List<Object> data) throws DocumentException {
@@ -2311,21 +2425,17 @@ public class EtatSynthesePaieService {
 
     private void addTableIuts(Document doc, List<Object> data) throws DocumentException {
         // Page 7 - ÉTAT DES RETENUES IUTS (IFU: 00164311Z)
-        Paragraph pIfu = new Paragraph("N° IFU DE LA BANQUE : 00164311Z", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, BPBF_BLUE));
-        pIfu.setSpacingAfter(4f);
-        doc.add(pIfu);
-
         PdfPTable table = new PdfPTable(6);
         table.setWidthPercentage(100);
         table.setWidths(new float[]{8, 38, 14, 14, 10, 16});
         table.setSpacingAfter(8f);
 
-        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
-        addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "SALAIRE BRUT", Element.ALIGN_RIGHT);
-        addTh(table, "BASE IMPOSABLE", Element.ALIGN_RIGHT);
-        addTh(table, "NB CHARGES", Element.ALIGN_CENTER);
-        addTh(table, "IUTS À REVERSER", Element.ALIGN_RIGHT);
+        addTh(table, "N° d'ordre", Element.ALIGN_CENTER);
+        addTh(table, "Nom et Prénoms", Element.ALIGN_LEFT);
+        addTh(table, "Salaire Bruts", Element.ALIGN_RIGHT);
+        addTh(table, "Base imposable", Element.ALIGN_RIGHT);
+        addTh(table, "Nb de charges", Element.ALIGN_CENTER);
+        addTh(table, "IUTS à reverser", Element.ALIGN_RIGHT);
 
         BigDecimal totBrut = BigDecimal.ZERO;
         BigDecimal totBase = BigDecimal.ZERO;
@@ -2351,7 +2461,7 @@ public class EtatSynthesePaieService {
             }
         }
 
-        addTot(table, "TOTAL DE L'ÉTAT IUTS À REVERSER", 2, Element.ALIGN_LEFT);
+        addTot(table, "TOTAL", 2, Element.ALIGN_LEFT);
         addTot(table, formatMoney(totBrut), 1, Element.ALIGN_RIGHT);
         addTot(table, formatMoney(totBase), 1, Element.ALIGN_RIGHT);
         addTot(table, "—", 1, Element.ALIGN_CENTER);
@@ -2454,12 +2564,12 @@ public class EtatSynthesePaieService {
         table.setWidths(new float[]{8, 14, 38, 16, 8, 16});
         table.setSpacingAfter(8f);
 
-        addTh(table, "N° D'ORDRE", Element.ALIGN_CENTER);
-        addTh(table, "MATRICULE", Element.ALIGN_LEFT);
-        addTh(table, "NOM ET PRÉNOMS", Element.ALIGN_LEFT);
-        addTh(table, "SALAIRE NET", Element.ALIGN_RIGHT);
-        addTh(table, "TAUX", Element.ALIGN_CENTER);
-        addTh(table, "MONTANT", Element.ALIGN_RIGHT);
+        addTh(table, "N° d'ordre", Element.ALIGN_CENTER);
+        addTh(table, "Numero Matricule", Element.ALIGN_LEFT);
+        addTh(table, "Nom et Prénoms", Element.ALIGN_LEFT);
+        addTh(table, "Salaire Net", Element.ALIGN_RIGHT);
+        addTh(table, "Taux", Element.ALIGN_CENTER);
+        addTh(table, "Montant", Element.ALIGN_RIGHT);
 
         BigDecimal totNet = BigDecimal.ZERO;
         BigDecimal totFsp = BigDecimal.ZERO;
@@ -2481,7 +2591,7 @@ public class EtatSynthesePaieService {
             }
         }
 
-        addTot(table, "TOTAL DE L'ÉTAT DU FONDS DE SOLIDARITÉ", 3, Element.ALIGN_LEFT);
+        addTot(table, "TOTAL RETENUE FONDS DE SOLIDARITE", 3, Element.ALIGN_LEFT);
         addTot(table, formatMoney(totNet), 1, Element.ALIGN_RIGHT);
         addTot(table, "1%", 1, Element.ALIGN_CENTER);
         addTot(table, formatMoney(totFsp), 1, Element.ALIGN_RIGHT);
@@ -2610,17 +2720,23 @@ public class EtatSynthesePaieService {
     }
 
     private void addReportFooter(Document doc, EtatSyntheseWrapperDto etat) throws DocumentException {
+        String type = etat != null && etat.getTypeEtat() != null ? etat.getTypeEtat().toUpperCase(Locale.ROOT) : "";
+        if (type.contains("CRRAE")) {
+            // Modèles CRRAE : Déjà pourvu du pavé "Signature et Cachet de l'Adhérent"
+            return;
+        }
+
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
         table.setWidths(new float[]{50, 50});
         table.setSpacingBefore(18f);
 
         String t1 = (etat != null && etat.getTitreSignataire1() != null && !etat.getTitreSignataire1().isBlank()) 
-                ? etat.getTitreSignataire1() : "Le Comptable";
+                ? etat.getTitreSignataire1() : "Directeur Administratif et Moyens Généraux";
         String n1 = (etat != null && etat.getNomSignataire1() != null && !etat.getNomSignataire1().isBlank()) 
                 ? etat.getNomSignataire1() : "Ahadi Ismaël YONLI";
         String t2 = (etat != null && etat.getTitreSignataire2() != null && !etat.getTitreSignataire2().isBlank()) 
-                ? etat.getTitreSignataire2() : "Le Directeur Financier et Comptable";
+                ? etat.getTitreSignataire2() : "Directeur Général /PI";
         String n2 = (etat != null && etat.getNomSignataire2() != null && !etat.getNomSignataire2().isBlank()) 
                 ? etat.getNomSignataire2() : "Inoussa SANOUIDI";
 

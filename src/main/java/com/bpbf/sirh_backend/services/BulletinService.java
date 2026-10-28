@@ -1036,15 +1036,17 @@ public class BulletinService {
             bulletin.setImpotIuts(impotIuts);
             bulletin.setTotalRetenuesSociales(cnssEmploye);
             bulletin.setTotalPrecomptes(BigDecimal.ZERO);
+            BigDecimal tpaConge = money(montantConge.multiply(new BigDecimal("0.03")));
+            BigDecimal totalPatronaleConge = cnssPatronale.add(tpaConge);
             bulletin.setTotalRetenues(totalRetenues);
-            bulletin.setTotalCotisationsPatronales(cnssPatronale);
+            bulletin.setTotalCotisationsPatronales(totalPatronaleConge);
             bulletin.setSalaireNet(salaireNet);
             bulletin.setStatut("GENERE");
             bulletin.setDateCalcul(LocalDateTime.now());
 
             bulletin.addLine(cpLine);
 
-            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
+            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0 || cnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
                 cnssLine.setCode("COT_CNSS");
                 cnssLine.setLibelle("Cotisation CNSS 5.5%");
@@ -1052,8 +1054,22 @@ public class BulletinService {
                 cnssLine.setBaseCalcul(baseCnss);
                 cnssLine.setTaux(new BigDecimal("5.50"));
                 cnssLine.setMontant(cnssEmploye);
+                cnssLine.setPartPatronale(cnssPatronale);
                 cnssLine.setOrdre(20);
                 bulletin.addLine(cnssLine);
+            }
+
+            if (tpaConge.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine tpaLine = new BulletinLine();
+                tpaLine.setCode("TPA_PAT");
+                tpaLine.setLibelle("TAXE PATRONALE D'APPRENTISSAGE (TPA 3%)");
+                tpaLine.setTypeLigne("COTISATION_PATRONALE");
+                tpaLine.setBaseCalcul(montantConge);
+                tpaLine.setTaux(new BigDecimal("3.00"));
+                tpaLine.setMontant(BigDecimal.ZERO);
+                tpaLine.setPartPatronale(tpaConge);
+                tpaLine.setOrdre(22);
+                bulletin.addLine(tpaLine);
             }
 
             if (impotIuts.compareTo(BigDecimal.ZERO) > 0) {
@@ -1511,7 +1527,7 @@ public class BulletinService {
             }
 
             // Cotisations & Impôts
-            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
+            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0 || cnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
                 cnssLine.setCode("COT_CNSS");
                 cnssLine.setLibelle("Cotisation CNSS 5.5%");
@@ -1519,8 +1535,24 @@ public class BulletinService {
                 cnssLine.setBaseCalcul(baseCnss);
                 cnssLine.setTaux(new BigDecimal("5.50"));
                 cnssLine.setMontant(cnssEmploye);
+                cnssLine.setPartPatronale(cnssPatronale);
                 cnssLine.setOrdre(ordre++);
                 lines.add(cnssLine);
+            }
+
+            BigDecimal baseTpaStc = brutSoumis != null && brutSoumis.compareTo(BigDecimal.ZERO) > 0 ? brutSoumis : totalBrutStc;
+            BigDecimal tpaPatronale = money(baseTpaStc.multiply(new BigDecimal("0.03")));
+            if (tpaPatronale.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine tpaLine = new BulletinLine();
+                tpaLine.setCode("TPA_PAT");
+                tpaLine.setLibelle("TAXE PATRONALE D'APPRENTISSAGE (TPA 3%)");
+                tpaLine.setTypeLigne("COTISATION_PATRONALE");
+                tpaLine.setBaseCalcul(baseTpaStc);
+                tpaLine.setTaux(new BigDecimal("3.00"));
+                tpaLine.setMontant(BigDecimal.ZERO);
+                tpaLine.setPartPatronale(tpaPatronale);
+                tpaLine.setOrdre(ordre++);
+                lines.add(tpaLine);
             }
 
             if (impotIuts.compareTo(BigDecimal.ZERO) > 0) {
@@ -1656,7 +1688,7 @@ public class BulletinService {
             bulletin.setTotalRetenuesSociales(money(cnssEmploye.add(fspMontant)));
             bulletin.setTotalPrecomptes(money(totalPrecomptesStc.add(retenuePreavis)));
             bulletin.setTotalRetenues(totalRetenues);
-            bulletin.setTotalCotisationsPatronales(cnssPatronale);
+            bulletin.setTotalCotisationsPatronales(cnssPatronale.add(tpaPatronale));
             bulletin.setSalaireNet(salaireNet);
             bulletin.setStatut("GENERE");
             bulletin.setDateCalcul(LocalDateTime.now());
@@ -2160,6 +2192,11 @@ public class BulletinService {
             retLine.setTaux(taux);
 
             if (employeur) {
+                retLine.setTypeLigne("COTISATION_PATRONALE");
+                retLine.setMontant(BigDecimal.ZERO);
+                retLine.setPartPatronale(montant);
+                retLine.setOrdre(ordre++);
+                lines.add(retLine);
                 totalCotisationsPatronales = totalCotisationsPatronales.add(montant);
             } else {
                 totalRetenuesSociales = totalRetenuesSociales.add(montant);
@@ -2170,10 +2207,12 @@ public class BulletinService {
             }
         }
 
-        // Vérifier et garantir la présence de la CNSS (5.5% plafonné à 800 000 FCFA sur Salaire Brut)
+        // Vérifier et garantir la présence de la CNSS (5.5% salarié plafonné à 800 000 FCFA sur Salaire Brut, et 16% part patronale)
         boolean hasCnss = lines.stream().anyMatch(l -> l.getCode() != null && (l.getCode().contains("CNSS") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CNSS"))));
+        BigDecimal cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
         if (!hasCnss && !is13Ou14eme && !(isExtra && cnssPlafondAtteint) && cotisationCnss.compareTo(BigDecimal.ZERO) > 0) {
             totalRetenuesSociales = totalRetenuesSociales.add(cotisationCnss);
+            totalCotisationsPatronales = totalCotisationsPatronales.add(cnssPatronale);
 
             BulletinLine cnssLine = new BulletinLine();
             cnssLine.setCode("COTIS_CNSS");
@@ -2182,8 +2221,18 @@ public class BulletinService {
             cnssLine.setBaseCalcul(baseCnss);
             cnssLine.setTaux(new BigDecimal("5.50"));
             cnssLine.setMontant(cotisationCnss);
+            cnssLine.setPartPatronale(cnssPatronale);
             cnssLine.setOrdre(ordre++);
             lines.add(cnssLine);
+        } else if (hasCnss && !is13Ou14eme) {
+            for (BulletinLine l : lines) {
+                if (l.getCode() != null && (l.getCode().contains("CNSS") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CNSS")))) {
+                    if (l.getPartPatronale() == null || l.getPartPatronale().compareTo(BigDecimal.ZERO) == 0) {
+                        l.setPartPatronale(cnssPatronale);
+                        totalCotisationsPatronales = totalCotisationsPatronales.add(cnssPatronale);
+                    }
+                }
+            }
         }
 
         // Vérifier et garantir la présence de la CRRAE (Salarié 6%, Patronale 6%) pour session ordinaire
@@ -2191,7 +2240,9 @@ public class BulletinService {
         if (!isExtra && !hasCrrae && baseCrrae.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal tauxCrrae = new BigDecimal("6.00");
             BigDecimal montantCrrae = money(calculatePercentage(baseCrrae, tauxCrrae));
+            BigDecimal crraePatronale = money(calculatePercentage(baseCrrae, new BigDecimal("6.00")));
             totalRetenuesSociales = totalRetenuesSociales.add(montantCrrae);
+            totalCotisationsPatronales = totalCotisationsPatronales.add(crraePatronale);
 
             BulletinLine crraeLine = new BulletinLine();
             crraeLine.setCode("COTIS_CRRAE");
@@ -2200,11 +2251,38 @@ public class BulletinService {
             crraeLine.setBaseCalcul(baseCrrae);
             crraeLine.setTaux(tauxCrrae);
             crraeLine.setMontant(montantCrrae);
-            crraeLine.setPartPatronale(money(calculatePercentage(baseCrrae, new BigDecimal("6.00"))));
+            crraeLine.setPartPatronale(crraePatronale);
             crraeLine.setOrdre(ordre++);
             lines.add(crraeLine);
+        } else if (!isExtra && hasCrrae) {
+            for (BulletinLine l : lines) {
+                if (l.getCode() != null && (l.getCode().contains("CRRAE") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CRRAE")))) {
+                    if (l.getPartPatronale() == null || l.getPartPatronale().compareTo(BigDecimal.ZERO) == 0) {
+                        BigDecimal crraePatronale = money(calculatePercentage(baseCrrae, new BigDecimal("6.00")));
+                        l.setPartPatronale(crraePatronale);
+                        totalCotisationsPatronales = totalCotisationsPatronales.add(crraePatronale);
+                    }
+                }
+            }
+        }
 
-            totalCotisationsPatronales = totalCotisationsPatronales.add(money(calculatePercentage(baseCrrae, new BigDecimal("6.00"))));
+        // Taxe Patronale d'Apprentissage (TPA 3% sur Rémunération Brute)
+        boolean hasTpa = lines.stream().anyMatch(l -> l.getCode() != null && (l.getCode().contains("TPA") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("TPA"))));
+        if (!hasTpa && !is13Ou14eme && remunerationBrute.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal tauxTpa = new BigDecimal("3.00");
+            BigDecimal montantTpa = money(calculatePercentage(remunerationBrute, tauxTpa));
+            BulletinLine tpaLine = new BulletinLine();
+            tpaLine.setCode("TPA_PAT");
+            tpaLine.setLibelle("TAXE PATRONALE D'APPRENTISSAGE (TPA 3%)");
+            tpaLine.setTypeLigne("COTISATION_PATRONALE");
+            tpaLine.setBaseCalcul(remunerationBrute);
+            tpaLine.setTaux(tauxTpa);
+            tpaLine.setMontant(BigDecimal.ZERO);
+            tpaLine.setPartPatronale(montantTpa);
+            tpaLine.setOrdre(ordre++);
+            lines.add(tpaLine);
+
+            totalCotisationsPatronales = totalCotisationsPatronales.add(montantTpa);
         }
 
         // Ligne IUTS
@@ -2360,7 +2438,8 @@ public class BulletinService {
         bulletin.setDateCalcul(LocalDateTime.now());
         bulletin.setNatureSession(session != null ? session.getNatureSession() : null);
 
-        lines.removeIf(l -> l.getMontant() == null || l.getMontant().compareTo(BigDecimal.ZERO) <= 0);
+        lines.removeIf(l -> (l.getMontant() == null || l.getMontant().compareTo(BigDecimal.ZERO) <= 0)
+                && (l.getPartPatronale() == null || l.getPartPatronale().compareTo(BigDecimal.ZERO) <= 0));
         lines.sort(Comparator.comparingInt(l -> getOverallLineSortWeight(l.getCode(), l.getLibelle(), l.getTypeLigne())));
         int seq = 1;
         for (BulletinLine line : lines) {
@@ -3015,7 +3094,8 @@ public class BulletinService {
         }
         lineDtos.removeIf(ld -> (ld.getMontant() == null || ld.getMontant().compareTo(BigDecimal.ZERO) <= 0)
                 && (ld.getGain() == null || ld.getGain().compareTo(BigDecimal.ZERO) <= 0)
-                && (ld.getRetenue() == null || ld.getRetenue().compareTo(BigDecimal.ZERO) <= 0));
+                && (ld.getRetenue() == null || ld.getRetenue().compareTo(BigDecimal.ZERO) <= 0)
+                && (ld.getPartPatronale() == null || ld.getPartPatronale().compareTo(BigDecimal.ZERO) <= 0));
         lineDtos.sort(Comparator.comparingInt(ld -> getOverallLineSortWeight(ld.getCode(), ld.getLibelle(), ld.getTypeLigne())));
 
         BulletinDto dto = new BulletinDto();

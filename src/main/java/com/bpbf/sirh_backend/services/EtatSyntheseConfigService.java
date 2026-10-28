@@ -152,25 +152,25 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("RECAPITULATIF_GLOBAL", "Récapitulatif Global de la Paie", "Comptabilité & Paie",
                 "Journal comptable officiel des charges (comptes 642, 641) et retenues/salaires nets (compte 3522).", "account_balance_wallet", 1, true, true));
 
-        defaults.add(createEntity("LIVRE_PAIE", "Livre de Paie", "Paie Globale", 
+        defaults.add(createEntity("LIVRE_PAIE", "Registre de Paie", "Paie Globale", 
                 "Registre officiel de paie (format paysage 17 colonnes réglementaires : SB, Sursalaire, Indemnités, CNSS, IUTS, Net, TPA, Masse salariale).", "menu_book", 2, true, true));
 
-        defaults.add(createEntity("ETAT_BANQUE", "État par banque", "Bancaire", 
+        defaults.add(createEntity("ETAT_BANQUE", "État de Virement des Salaires", "Bancaire", 
                 "Ordres et récapitulatif des virements bancaires par établissement financier avec code guichet, compte et clé RIB.", "account_balance", 3, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_RRPC", "Cotisations RRPC", "Charges Sociales", 
+        defaults.add(createEntity("ETAT_CRRAE_RRPC", "État Nominatif Mensuel de Déclaration des Cotisations RRPC", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Régime de Retraite Professionnelle Complémentaire (12,67% patronal, 6,33% salarié).", "security", 4, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_RCPNC", "Cotisations RCPNC", "Charges Sociales", 
+        defaults.add(createEntity("ETAT_CRRAE_RCPNC", "État Nominatif Mensuel de Déclaration des Cotisations RCPNC", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Régime Complémentaire de Pension Non Cadre (6% patronal, 6% salarié).", "security", 5, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_FAAM", "Cotisations FAAM", "Charges Sociales", 
+        defaults.add(createEntity("ETAT_CRRAE_FAAM", "État Nominatif Mensuel de Déclaration des Cotisations FAAM", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Fonds d'Action et d'Assistance Médicale (1% patronal, 0,5% salarié).", "health_and_safety", 6, true, true));
 
-        defaults.add(createEntity("ETAT_IUTS", "État IUTS", "Fiscalité", 
+        defaults.add(createEntity("ETAT_IUTS", "État des Retenues IUTS", "Fiscalité", 
                 "État déclaratif fiscal officiel de l'IUTS (IFU 00164311Z) : salaires bruts, base imposable, charges de famille et IUTS à reverser.", "receipt_long", 7, true, true));
 
-        defaults.add(createEntity("ETAT_FSP", "État FSP", "Cotisations Légales", 
+        defaults.add(createEntity("ETAT_FSP", "État des Retenues - Retenue Fonds de Solidarité", "Cotisations Légales", 
                 "État officiel du prélèvement légal obligatoire de 1% au titre du Fonds de Soutien Patriotique.", "shield", 8, true, true));
 
         defaults.add(createEntity("ETAT_NOMINATIF", "État nominatif de paie", "Salaires", 
@@ -204,15 +204,17 @@ public class EtatSyntheseConfigService {
                 "Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.", "gavel", 18, true, true));
 
         for (EtatSyntheseConfig def : defaults) {
-
             EtatSyntheseConfig existing = repository.findByCode(def.getCode()).orElse(null);
             if (existing == null) {
                 repository.save(def);
                 log.info("État de synthèse ajouté dans PostgreSQL : code={}, libelle={}", def.getCode(), def.getLibelle());
-            } else if (existing.getLibelle() != null && existing.getLibelle().contains("(")) {
+            } else {
                 existing.setLibelle(def.getLibelle());
+                existing.setCategorie(def.getCategorie());
+                existing.setDescription(def.getDescription());
+                existing.setIcon(def.getIcon());
+                existing.setOrdre(def.getOrdre());
                 repository.save(existing);
-                log.info("Libellé de l'état mis à jour sans parenthèse : code={}, libelle={}", def.getCode(), def.getLibelle());
             }
         }
         log.info("Synchronisation des états de synthèse terminée.");

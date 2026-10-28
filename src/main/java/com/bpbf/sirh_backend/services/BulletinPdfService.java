@@ -656,6 +656,11 @@ public class BulletinPdfService {
             String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
             if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
+            if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                    || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                    || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
+                continue;
+            }
 
             if (lib.contains("INDEMNIT") && lib.contains("TOTAL")) {
                 hasAggregatedIndemnites = true;
@@ -902,6 +907,11 @@ public class BulletinPdfService {
                 String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
                 if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
+                if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                        || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
+                    continue;
+                }
 
                 if (lib.contains("INDEMNIT") && lib.contains("TOTAL")) {
                     hasAggregatedIndemnites = true;
