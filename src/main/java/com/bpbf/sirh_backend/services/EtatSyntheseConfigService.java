@@ -149,22 +149,23 @@ public class EtatSyntheseConfigService {
 
         List<EtatSyntheseConfig> defaults = new ArrayList<>();
 
+        // ── 8 ÉTATS OFFICIELS ISSUS STRICTEMENT DU DOCUMENT 'MODELES DES ÉTATS.PDF' ──
         defaults.add(createEntity("RECAPITULATIF_GLOBAL", "Récapitulatif Global de la Paie", "Comptabilité & Paie",
                 "Journal comptable officiel des charges (comptes 642, 641) et retenues/salaires nets (compte 3522).", "account_balance_wallet", 1, true, true));
 
-        defaults.add(createEntity("LIVRE_PAIE", "Registre de Paie", "Paie Globale", 
-                "Registre officiel de paie (format paysage 17 colonnes réglementaires : SB, Sursalaire, Indemnités, CNSS, IUTS, Net, TPA, Masse salariale).", "menu_book", 2, true, true));
-
         defaults.add(createEntity("ETAT_BANQUE", "État de Virement des Salaires", "Bancaire", 
-                "Ordres et récapitulatif des virements bancaires par établissement financier avec code guichet, compte et clé RIB.", "account_balance", 3, true, true));
+                "Ordres et récapitulatif des virements bancaires par établissement financier avec code guichet, compte et clé RIB.", "account_balance", 2, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_RRPC", "État Nominatif Mensuel de Déclaration des Cotisations RRPC", "Charges Sociales", 
+        defaults.add(createEntity("LIVRE_PAIE", "Registre de Paie", "Paie Globale", 
+                "Registre officiel de paie (format paysage 17 colonnes réglementaires : SB, Sursalaire, Indemnités, CNSS, IUTS, Net, TPA, Masse salariale).", "menu_book", 3, true, true));
+
+        defaults.add(createEntity("ETAT_CRRAE_RRPC", "Cotisations RRPC", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Régime de Retraite Professionnelle Complémentaire (12,67% patronal, 6,33% salarié).", "security", 4, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_RCPNC", "État Nominatif Mensuel de Déclaration des Cotisations RCPNC", "Charges Sociales", 
+        defaults.add(createEntity("ETAT_CRRAE_RCPNC", "Cotisations RCPNC", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Régime Complémentaire de Pension Non Cadre (6% patronal, 6% salarié).", "security", 5, true, true));
 
-        defaults.add(createEntity("ETAT_CRRAE_FAAM", "État Nominatif Mensuel de Déclaration des Cotisations FAAM", "Charges Sociales", 
+        defaults.add(createEntity("ETAT_CRRAE_FAAM", "Cotisations FAAM", "Charges Sociales", 
                 "État nominatif mensuel de déclaration des cotisations Fonds d'Action et d'Assistance Médicale (1% patronal, 0,5% salarié).", "health_and_safety", 6, true, true));
 
         defaults.add(createEntity("ETAT_IUTS", "État des Retenues IUTS", "Fiscalité", 
@@ -173,35 +174,37 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("ETAT_FSP", "État des Retenues - Retenue Fonds de Solidarité", "Cotisations Légales", 
                 "État officiel du prélèvement légal obligatoire de 1% au titre du Fonds de Soutien Patriotique.", "shield", 8, true, true));
 
+        // ── ÉTAT DU SOLDE DE TOUT COMPTE (CONSERVÉ ET PROTÉGÉ EN POSITION 9) ──
+        defaults.add(createEntity("ETAT_STC", "État du Solde de Tout Compte", "Indemnités de Rupture",
+                "Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.", "gavel", 9, true, true));
+
+        // ── ÉTATS INTERNES COMPLÉMENTAIRES (DÉSACTIVÉS DU MENU LATÉRAL PAR DÉFAUT) ──
         defaults.add(createEntity("ETAT_NOMINATIF", "État nominatif de paie", "Salaires", 
-                "Détail individuel nominatif par collaborateur avec matricule, emploi et rémunération brute/nette.", "badge", 9, true, true));
+                "Détail individuel nominatif par collaborateur avec matricule, emploi et rémunération brute/nette.", "badge", 10, false, true));
 
         defaults.add(createEntity("ETAT_SALAIRE", "État salaire par direction", "Analytique", 
-                "Consolidation de la masse salariale et ventilation par Direction et Service.", "payments", 10, true, true));
+                "Consolidation de la masse salariale et ventilation par Direction et Service.", "payments", 11, false, true));
 
         defaults.add(createEntity("ETAT_CNSS", "État Cotisation CNSS", "Charges Sociales", 
-                "Déclaration sociale CNSS : base plafonnée à 800 000 FCFA, part salariale (5.5%), part patronale (16%).", "security", 11, true, true));
+                "Déclaration sociale CNSS : base plafonnée à 800 000 FCFA, part salariale (5.5%), part patronale (16%).", "security", 12, false, true));
 
         defaults.add(createEntity("ETAT_PRECOMPTE", "État Précompte", "Retenues", 
-                "Synthèse des retenues à la source, acomptes, saisies-arrêts et prêts du personnel.", "credit_card_off", 12, true, true));
+                "Synthèse des retenues à la source, acomptes, saisies-arrêts et prêts du personnel.", "credit_card_off", 13, false, true));
 
         defaults.add(createEntity("ETAT_MUTUELLE", "État Mutuelle", "Assurance & Santé", 
-                "Cotisations à la mutuelle de santé et prévoyance santé des salariés.", "health_and_safety", 13, true, true));
+                "Cotisations à la mutuelle de santé et prévoyance santé des salariés.", "health_and_safety", 14, false, true));
 
         defaults.add(createEntity("ETAT_TYPE_EMPLOYE", "État élément type employé", "Analytique", 
-                "Répartition des charges salariales par catégorie socio-professionnelle et type de contrat.", "people", 14, true, true));
+                "Répartition des charges salariales par catégorie socio-professionnelle et type de contrat.", "people", 15, false, true));
 
         defaults.add(createEntity("ETAT_ELEMENT_SALAIRE", "État Éléments De Salaire", "Rubriques & Primes", 
-                "Ventilation analytique détaillée par rubrique de salaire (indemnités, primes, sursalaire).", "pie_chart", 15, true, true));
+                "Ventilation analytique détaillée par rubrique de salaire (indemnités, primes, sursalaire).", "pie_chart", 16, false, true));
 
         defaults.add(createEntity("ETAT_BULLETIN", "État Bulletin", "Audit & Contrôle", 
-                "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 16, true, true));
+                "Contrôle exhaustif ligne par ligne de tous les bulletins de paie émis lors de la session.", "rule", 17, false, true));
 
         defaults.add(createEntity("ETAT_OD_COMPTABLE", "Ordre de Débit Comptable OD de Paie", "Comptabilité & Paie", 
-                "Écritures comptables équilibrées SYSCOHADA (Débit 64x / Crédit 42x, 43x, 44x) pour import DAF.", "receipt", 17, true, true));
-
-        defaults.add(createEntity("ETAT_STC", "État du Solde de Tout Compte", "Indemnités de Rupture",
-                "Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.", "gavel", 18, true, true));
+                "Écritures comptables équilibrées SYSCOHADA (Débit 64x / Crédit 42x, 43x, 44x) pour import DAF.", "receipt", 18, false, true));
 
         for (EtatSyntheseConfig def : defaults) {
             EtatSyntheseConfig existing = repository.findByCode(def.getCode()).orElse(null);
@@ -214,6 +217,7 @@ public class EtatSyntheseConfigService {
                 existing.setDescription(def.getDescription());
                 existing.setIcon(def.getIcon());
                 existing.setOrdre(def.getOrdre());
+                existing.setActif(def.isActif());
                 repository.save(existing);
             }
         }

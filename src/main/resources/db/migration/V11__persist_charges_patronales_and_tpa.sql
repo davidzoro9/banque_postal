@@ -157,15 +157,23 @@ SET libelle = EXCLUDED.libelle,
     description = EXCLUDED.description,
     actif = EXCLUDED.actif;
 
--- 11. Harmonisation des titres officiels des états de synthèse selon Modeles des états.pdf
-UPDATE etat_synthese_config SET libelle = 'Récapitulatif Global de la Paie' WHERE code = 'RECAPITULATIF_GLOBAL';
-UPDATE etat_synthese_config SET libelle = 'Registre de Paie' WHERE code = 'LIVRE_PAIE';
-UPDATE etat_synthese_config SET libelle = 'État de Virement des Salaires' WHERE code = 'ETAT_BANQUE';
-UPDATE etat_synthese_config SET libelle = 'État Nominatif Mensuel de Déclaration des Cotisations RRPC' WHERE code = 'ETAT_CRRAE_RRPC';
-UPDATE etat_synthese_config SET libelle = 'État Nominatif Mensuel de Déclaration des Cotisations RCPNC' WHERE code = 'ETAT_CRRAE_RCPNC';
-UPDATE etat_synthese_config SET libelle = 'État Nominatif Mensuel de Déclaration des Cotisations FAAM' WHERE code = 'ETAT_CRRAE_FAAM';
-UPDATE etat_synthese_config SET libelle = 'État des Retenues IUTS' WHERE code = 'ETAT_IUTS';
-UPDATE etat_synthese_config SET libelle = 'État des Retenues - Retenue Fonds de Solidarité' WHERE code = 'ETAT_FSP';
+-- 11. Harmonisation des ordres et visibilité des 8 états du PDF + Solde de Tout Compte
+UPDATE etat_synthese_config SET actif = FALSE;
+
+UPDATE etat_synthese_config SET ordre = 1, actif = TRUE, libelle = 'Récapitulatif Global de la Paie' WHERE code = 'RECAPITULATIF_GLOBAL';
+UPDATE etat_synthese_config SET ordre = 2, actif = TRUE, libelle = 'État de Virement des Salaires' WHERE code = 'ETAT_BANQUE';
+UPDATE etat_synthese_config SET ordre = 3, actif = TRUE, libelle = 'Registre de Paie' WHERE code = 'LIVRE_PAIE';
+UPDATE etat_synthese_config SET ordre = 4, actif = TRUE, libelle = 'État Nominatif Mensuel de Déclaration des Cotisations RRPC' WHERE code = 'ETAT_CRRAE_RRPC';
+UPDATE etat_synthese_config SET ordre = 5, actif = TRUE, libelle = 'État Nominatif Mensuel de Déclaration des Cotisations RCPNC' WHERE code = 'ETAT_CRRAE_RCPNC';
+UPDATE etat_synthese_config SET ordre = 6, actif = TRUE, libelle = 'État Nominatif Mensuel de Déclaration des Cotisations FAAM' WHERE code = 'ETAT_CRRAE_FAAM';
+UPDATE etat_synthese_config SET ordre = 7, actif = TRUE, libelle = 'État des Retenues IUTS' WHERE code = 'ETAT_IUTS';
+UPDATE etat_synthese_config SET ordre = 8, actif = TRUE, libelle = 'État des Retenues - Retenue Fonds de Solidarité' WHERE code = 'ETAT_FSP';
+
+INSERT INTO etat_synthese_config (code, libelle, categorie, description, icon, ordre, actif, personnalisable)
+SELECT 'ETAT_STC', 'État du Solde de Tout Compte', 'Indemnités de Rupture', 'Récapitulatif officiel des indemnités de rupture de contrat : indemnité compensatrice de congés acquis, indemnité de licenciement ou retraite, préavis et solde des créances.', 'gavel', 9, TRUE, TRUE
+WHERE NOT EXISTS (SELECT 1 FROM etat_synthese_config WHERE code = 'ETAT_STC');
+
+UPDATE etat_synthese_config SET ordre = 9, actif = TRUE, libelle = 'État du Solde de Tout Compte' WHERE code = 'ETAT_STC';
 
 -- 12. Harmonisation des signataires officiels de la Banque selon Modeles des états.pdf
 UPDATE signataire_config 
