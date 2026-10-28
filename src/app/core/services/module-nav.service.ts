@@ -109,23 +109,15 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       label: 'États de synthèse',
       icon: 'assessment',
       children: [
-        { id: 'etat-recapitulatif-global', label: 'Récapitulatif Global de la Paie', icon: 'account_balance', route: '/paie/etats-synthese/recapitulatif-global' },
-        { id: 'etat-banque', label: 'État par banque', icon: 'payments', route: '/paie/etats-synthese/banque' },
-        { id: 'etat-livre-paie', label: 'Livre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
+        { id: 'etat-recapitulatif-global', label: 'Récapitulatif Global de la Paie', icon: 'account_balance_wallet', route: '/paie/etats-synthese/recapitulatif-global' },
+        { id: 'etat-banque', label: 'État de Virement des Salaires', icon: 'account_balance', route: '/paie/etats-synthese/banque' },
+        { id: 'etat-livre-paie', label: 'Registre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
         { id: 'etat-crrae-rrpc', label: 'Cotisations RRPC', icon: 'security', route: '/paie/etats-synthese/crrae-rrpc' },
         { id: 'etat-crrae-rcpnc', label: 'Cotisations RCPNC', icon: 'security', route: '/paie/etats-synthese/crrae-rcpnc' },
-        { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'security', route: '/paie/etats-synthese/crrae-faam' },
-        { id: 'etat-iuts', label: 'État IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
-        { id: 'etat-fsp', label: 'État FSP', icon: 'shield', route: '/paie/etats-synthese/fsp' },
-        { id: 'etat-cnss', label: 'État Cotisation CNSS', icon: 'security', route: '/paie/etats-synthese/cnss' },
-        { id: 'etat-nominatif', label: 'État nominatif de paie', icon: 'badge', route: '/paie/etats-synthese/nominatif' },
-        { id: 'etat-direction', label: 'État salaire par direction', icon: 'payments', route: '/paie/etats-synthese/direction' },
-        { id: 'etat-precompte', label: 'État Précompte', icon: 'credit_card_off', route: '/paie/etats-synthese/precompte' },
-        { id: 'etat-mutuelle', label: 'État Mutuelle', icon: 'health_and_safety', route: '/paie/etats-synthese/mutuelle' },
-        { id: 'etat-type-employe', label: 'État élément type employé', icon: 'people', route: '/paie/etats-synthese/type-employe' },
-        { id: 'etat-elements-salaire', label: 'État Éléments De Salaire', icon: 'pie_chart', route: '/paie/etats-synthese/elements-salaire' },
-        { id: 'etat-bulletin', label: 'État Bulletin', icon: 'rule', route: '/paie/etats-synthese/bulletin' },
-        { id: 'etat-stc', label: 'État Solde de Tout Compte', icon: 'gavel', route: '/paie/etats-synthese/stc' }
+        { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'health_and_safety', route: '/paie/etats-synthese/crrae-faam' },
+        { id: 'etat-iuts', label: 'État des Retenues IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
+        { id: 'etat-fsp', label: 'État des Retenues - Retenue Fonds de Solidarité', icon: 'shield', route: '/paie/etats-synthese/fsp' },
+        { id: 'etat-stc', label: 'État du Solde de Tout Compte', icon: 'gavel', route: '/paie/etats-synthese/stc' }
       ]
     },
     {
