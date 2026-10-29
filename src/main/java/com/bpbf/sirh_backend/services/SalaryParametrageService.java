@@ -29,9 +29,23 @@ public class SalaryParametrageService {
     public List<AdminReferenceCodeDto> getAdminReferenceCodes() {
         java.util.Map<String, AdminReferenceCodeDto> map = new java.util.LinkedHashMap<>();
 
-        // 1. Éléments contractuels de base de Gestion Admin
-        map.put("sal_base", new AdminReferenceCodeDto("sal_base", "Salaire de base (Contrat)", "CONTRAT", "GESTION_ADMIN"));
-        map.put("sursalaire", new AdminReferenceCodeDto("sursalaire", "Sursalaire (Contrat)", "CONTRAT", "GESTION_ADMIN"));
+        // 1. Champs exacts de la table PostgreSQL information_salariale (Gestion Admin)
+        map.put("salaire_base", new AdminReferenceCodeDto("salaire_base", "Salaire de base (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("sur_salaire", new AdminReferenceCodeDto("sur_salaire", "Sur-salaire (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("total_indemnites", new AdminReferenceCodeDto("total_indemnites", "Total indemnités (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("remuneration_brute", new AdminReferenceCodeDto("remuneration_brute", "Rémunération brute (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("total_exonerations", new AdminReferenceCodeDto("total_exonerations", "Total exonérations fiscales (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("abattement_forfaitaire", new AdminReferenceCodeDto("abattement_forfaitaire", "Abattement forfaitaire légal (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("base_imposable", new AdminReferenceCodeDto("base_imposable", "Base imposable IUTS (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("total_retenues_agent", new AdminReferenceCodeDto("total_retenues_agent", "Total retenues part agent (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("total_retenues_employeur", new AdminReferenceCodeDto("total_retenues_employeur", "Total retenues employeur (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("nombre_personnes_charge", new AdminReferenceCodeDto("nombre_personnes_charge", "Nombre personnes à charge (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("iuts_sans_charge", new AdminReferenceCodeDto("iuts_sans_charge", "IUTS sans charge (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("taux_reduction_charge", new AdminReferenceCodeDto("taux_reduction_charge", "Taux réduction pour charges (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("reduction_iuts_charge", new AdminReferenceCodeDto("reduction_iuts_charge", "Réduction IUTS charges (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("iuts_avec_charge", new AdminReferenceCodeDto("iuts_avec_charge", "IUTS avec charge net (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("total_deduit_employe", new AdminReferenceCodeDto("total_deduit_employe", "Total déduit à l'employé (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
+        map.put("salaire_net", new AdminReferenceCodeDto("salaire_net", "Salaire net à payer (Table information_salariale)", "TABLE_INFORMATION_SALARIALE", "GESTION_ADMIN"));
 
         // 2. Indemnités issues de type_indemnite (Catalogue Gestion Admin)
         if (typeIndemniteRepository != null) {
@@ -49,7 +63,7 @@ public class SalaryParametrageService {
             }
         }
 
-        // 3. Fallbacks courants si non présents
+        // 3. Fallbacks courants des indemnités
         map.putIfAbsent("ind-log", new AdminReferenceCodeDto("ind-log", "Indemnité de Logement", "INDEMNITE", "GESTION_ADMIN"));
         map.putIfAbsent("ind-trp", new AdminReferenceCodeDto("ind-trp", "Indemnité de Transport", "INDEMNITE", "GESTION_ADMIN"));
         map.putIfAbsent("ind-fonc", new AdminReferenceCodeDto("ind-fonc", "Indemnité de Fonction", "INDEMNITE", "GESTION_ADMIN"));
@@ -134,7 +148,13 @@ public class SalaryParametrageService {
         SalaryElement el = new SalaryElement();
         // Règle V3 : Codes obligatoirement en minuscules, Noms en majuscules
         el.setCode(dto.getCode() != null ? dto.getCode().trim().toLowerCase() : "");
-        el.setCodeCorrespondant(dto.getCodeCorrespondant() != null ? dto.getCodeCorrespondant().trim().toLowerCase() : null);
+        String codeCorrespondant = dto.getCodeCorrespondant() != null ? dto.getCodeCorrespondant().trim().toLowerCase() : null;
+        if ("sal_base".equals(codeCorrespondant) || "sal_mensuel".equals(codeCorrespondant) || "salbase".equals(codeCorrespondant)) {
+            codeCorrespondant = "salaire_base";
+        } else if ("sursalaire".equals(codeCorrespondant)) {
+            codeCorrespondant = "sur_salaire";
+        }
+        el.setCodeCorrespondant(codeCorrespondant);
         el.setName(dto.getName() != null ? dto.getName().trim().toUpperCase() : "");
         el.setSalaryCategory(category);
         el.setRate(dto.getRate());
@@ -180,7 +200,13 @@ public class SalaryParametrageService {
             el.setCode(dto.getCode().trim().toLowerCase());
         }
         if (dto.getCodeCorrespondant() != null && !dto.getCodeCorrespondant().trim().isEmpty()) {
-            el.setCodeCorrespondant(dto.getCodeCorrespondant().trim().toLowerCase());
+            String cc = dto.getCodeCorrespondant().trim().toLowerCase();
+            if ("sal_base".equals(cc) || "sal_mensuel".equals(cc) || "salbase".equals(cc)) {
+                cc = "salaire_base";
+            } else if ("sursalaire".equals(cc)) {
+                cc = "sur_salaire";
+            }
+            el.setCodeCorrespondant(cc);
         }
         if (dto.getName() != null && !dto.getName().trim().isEmpty()) {
             el.setName(dto.getName().trim().toUpperCase());

@@ -16,7 +16,7 @@ class BulletinServiceProrataTest {
                 null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null
+                null, null, null, null, null
         );
     }
 

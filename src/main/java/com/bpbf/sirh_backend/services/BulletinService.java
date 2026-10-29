@@ -54,6 +54,7 @@ public class BulletinService {
     private final CongeWorkflowService congeWorkflowService;
     private final TypeIndemniteRepository typeIndemniteRepository;
     private final SalaryElementRepository salaryElementRepository;
+    private final InformationSalarialeRepository informationSalarialeRepository;
 
     /**
      * Garde-fou d'intégrité V3 : interdit toute modification sur un bulletin ou une session validée/clôturée.
@@ -563,9 +564,15 @@ public class BulletinService {
             customScheduledDays = existingBulletin.getScheduledWorkingDays();
         }
 
+        InformationSalariale infoSalariale = informationSalarialeRepository != null 
+                ? informationSalarialeRepository.findByEmployeeId(emp.getId()).orElse(null) 
+                : null;
         SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
+
         BigDecimal salaireBase = BigDecimal.ZERO;
-        if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+        if (infoSalariale != null && infoSalariale.getSalaireBase() != null && infoSalariale.getSalaireBase().compareTo(BigDecimal.ZERO) > 0) {
+            salaireBase = money(infoSalariale.getSalaireBase());
+        } else if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
             salaireBase = money(new BigDecimal(situation.getSalaireBase()));
         } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
             salaireBase = money(situation.getGrilleSalariale().getBasicSalary());
@@ -574,7 +581,9 @@ public class BulletinService {
         }
 
         BigDecimal surSalaire = BigDecimal.ZERO;
-        if (situation != null && situation.getSurSalaire() != null && situation.getSurSalaire() > 0) {
+        if (infoSalariale != null && infoSalariale.getSurSalaire() != null && infoSalariale.getSurSalaire().compareTo(BigDecimal.ZERO) > 0) {
+            surSalaire = money(infoSalariale.getSurSalaire());
+        } else if (situation != null && situation.getSurSalaire() != null && situation.getSurSalaire() > 0) {
             surSalaire = money(new BigDecimal(situation.getSurSalaire()));
         } else if (emp.getSurSalaire() != null && emp.getSurSalaire() > 0) {
             surSalaire = money(new BigDecimal(emp.getSurSalaire()));
@@ -2005,7 +2014,7 @@ public class BulletinService {
         int ordre = 1;
 
         // Ligne Salaire de Base : résolution dynamique depuis salary_element (stocké en base)
-        SalaryElement salBaseElem = findSalaryElement("CAT_SAL_BASE", "BASE", "sal_base", "salaire_base", "sal_mensuel", "salbase");
+        SalaryElement salBaseElem = findSalaryElement("CAT_SAL_BASE", "BASE", "salaire_base", "sal_base", "sal_mensuel", "salbase");
         String salBaseCode = (salBaseElem != null && salBaseElem.getCode() != null) ? salBaseElem.getCode() : "sal_base";
         String salBaseLibelle = (salBaseElem != null && salBaseElem.getName() != null && !salBaseElem.getName().isBlank())
                 ? salBaseElem.getName()
@@ -2023,8 +2032,8 @@ public class BulletinService {
         lines.add(salBaseLine);
 
         // Ligne Sur-salaire : résolution dynamique depuis salary_element
-        SalaryElement surSalElem = findSalaryElement(null, "SURSALAIRE", "SUR_SALAIRE", "SURSALAIRE");
-        String surSalCode = (surSalElem != null && surSalElem.getCode() != null) ? surSalElem.getCode() : "SUR_SALAIRE";
+        SalaryElement surSalElem = findSalaryElement(null, "SURSALAIRE", "sur_salaire", "sursalaire", "SUR_SALAIRE", "SURSALAIRE");
+        String surSalCode = (surSalElem != null && surSalElem.getCode() != null) ? surSalElem.getCode() : "sur_salaire";
         String surSalLibelle = (surSalElem != null && surSalElem.getName() != null && !surSalElem.getName().isBlank())
                 ? surSalElem.getName()
                 : "Sur-salaire";

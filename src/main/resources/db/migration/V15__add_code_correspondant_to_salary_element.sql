@@ -15,11 +15,11 @@ SET code = LOWER(TRIM(code));
 UPDATE salary_element
 SET name = UPPER(TRIM(name));
 
--- 4. Initialisation des codes correspondants Gestion Admin pour les éléments de base
+-- 4. Initialisation des codes correspondants Gestion Admin (noms exacts des colonnes table information_salariale)
 UPDATE salary_element
 SET code_correspondant = CASE
-    WHEN LOWER(code) IN ('sal_base', 'sal_mensuel') THEN 'sal_base'
-    WHEN LOWER(code) IN ('sursalaire', 'sur_salaire') THEN 'sursalaire'
+    WHEN LOWER(code) IN ('sal_base', 'sal_mensuel', 'salaire_base', 'salbase') THEN 'salaire_base'
+    WHEN LOWER(code) IN ('sursalaire', 'sur_salaire') THEN 'sur_salaire'
     WHEN LOWER(code) LIKE '%logement%' OR LOWER(code) LIKE '%log%' THEN 'ind-log'
     WHEN LOWER(code) LIKE '%transport%' OR LOWER(code) LIKE '%trp%' THEN 'ind-trp'
     WHEN LOWER(code) LIKE '%fonction%' OR LOWER(code) LIKE '%fonc%' THEN 'ind-fonc'
@@ -27,7 +27,7 @@ SET code_correspondant = CASE
     WHEN LOWER(code) LIKE '%suj%' THEN 'ind-suj'
     ELSE LOWER(code)
 END
-WHERE code_correspondant IS NULL;
+WHERE code_correspondant IS NULL OR code_correspondant IN ('sal_base', 'sursalaire');
 
 -- 5. Harmonisation des méthodes de calcul vers MONTANT_FIXE ou FORMULE_COMPLEXE
 UPDATE salary_element
