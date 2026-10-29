@@ -877,6 +877,16 @@ public class BulletinService {
                         String rawLib = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
                         String indLib = rawLib.toUpperCase(Locale.ROOT).trim();
 
+                        SalaryElement indElem = findSalaryElement("CAT_INDEMNITES", rawLib, indCode);
+                        if (indElem != null) {
+                            if (indElem.getCode() != null && !indElem.getCode().isBlank()) {
+                                indCode = indElem.getCode();
+                            }
+                            if (indElem.getName() != null && !indElem.getName().isBlank()) {
+                                indLib = indElem.getName();
+                            }
+                        }
+
                         BulletinLine indLine = new BulletinLine();
                         indLine.setCode(indCode);
                         indLine.setLibelle(indLib);
