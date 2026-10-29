@@ -111,12 +111,12 @@
                 </span>
               </td>
               <td>
-                <span class="method-chip" [class.fixed]="el.calculationMethod === 'MONTANT_FIXE'" [class.complex]="el.calculationMethod === 'FORMULE_COMPLEXE'">
-                  {{ el.calculationMethod === 'FORMULE_COMPLEXE' ? 'Formule Complexe' : 'Montant Fixe' }}
+                <span class="method-chip" [class.fixed]="el.calculationMethod === 'MONTANT_FIXE'" [class.complex]="el.calculationMethod === 'FORMULE_COMPLEXE'" [class.none]="el.calculationMethod === 'RIEN'">
+                  {{ el.calculationMethod === 'FORMULE_COMPLEXE' ? 'Formule Complexe' : (el.calculationMethod === 'RIEN' ? 'RIEN' : 'Montant Fixe') }}
                 </span>
               </td>
               <td>
-                <code class="formula-code">{{ el.formule || '—' }}</code>
+                <code class="formula-code">{{ el.calculationMethod === 'RIEN' ? '—' : (el.formule || '—') }}</code>
               </td>
               <td style="text-align: center;">
                 <mat-icon [style.color]="el.isCotisable ? '#4ade80' : '#475569'" style="font-size: 18px; width: 18px; height: 18px;">
@@ -206,6 +206,7 @@
                 <mat-select [(ngModel)]="formModel.calculationMethod" (selectionChange)="onMethodChange($event.value)">
                   <mat-option value="MONTANT_FIXE">Montant Fixe</mat-option>
                   <mat-option value="FORMULE_COMPLEXE">Formule Complexe</mat-option>
+                  <mat-option value="RIEN">RIEN (Aucun calcul)</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>
@@ -235,6 +236,14 @@
                   <mat-label>Formule de Calcul</mat-label>
                   <textarea matInput rows="2" [(ngModel)]="formModel.formule" placeholder="Ex: SUM(CAT_SAL_BASE) * 0.10 ou sal_base + sursalaire"></textarea>
                 </mat-form-field>
+              </div>
+            }
+
+            <!-- CAS 3 : RIEN (Aucune méthode de calcul) -->
+            @if (formModel.calculationMethod === 'RIEN') {
+              <div class="full-col" style="padding: 10px 14px; background: rgba(148, 163, 184, 0.08); border: 1px dashed rgba(148, 163, 184, 0.3); border-radius: 8px; color: var(--on-surface-2); font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px; color: #94a3b8;">info</mat-icon>
+                <span>Cet élément n'utilise <strong>aucune méthode de calcul automatique</strong> (ni montant fixe, ni formule).</span>
               </div>
             }
 

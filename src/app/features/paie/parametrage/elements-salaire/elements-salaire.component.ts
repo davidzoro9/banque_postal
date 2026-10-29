@@ -14,7 +14,7 @@ export interface SalaryElementModel {
   rate?: number;
   formula: string;
   formule?: string;
-  calculationMethod: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | string;
+  calculationMethod: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | 'RIEN' | string;
   calculMethod?: string;
   methodCalcul?: string;
   isCotisable: boolean;
@@ -104,9 +104,15 @@ export class ElementsSalaireComponent implements OnInit {
             const catCode = r.categoryCode || (matchingCat ? matchingCat.code : '');
             const elType = (r.type || (matchingCat ? matchingCat.type : 'GAIN')) as 'GAIN' | 'RETENUE' | 'PATRONALE';
 
-            const method = (r.methodCalcul === 'FORMULE_COMPLEXE' || (r.methodCalcul && r.methodCalcul.includes('FORMULE')))
-              ? 'FORMULE_COMPLEXE'
-              : 'MONTANT_FIXE';
+            let method: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | 'RIEN' = 'MONTANT_FIXE';
+            const mc = (r.methodCalcul || '').toUpperCase();
+            if (mc.includes('FORMULE') || mc.includes('POURCENTAGE')) {
+              method = 'FORMULE_COMPLEXE';
+            } else if (mc.includes('RIEN') || mc.includes('AUCUN') || mc.includes('NONE')) {
+              method = 'RIEN';
+            } else {
+              method = 'MONTANT_FIXE';
+            }
 
             return {
               id: Number(r.id),
@@ -204,7 +210,15 @@ export class ElementsSalaireComponent implements OnInit {
   }
 
   onMethodChange(val: string): void {
-    this.formModel.calculationMethod = val === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
+    if (val === 'FORMULE_COMPLEXE') {
+      this.formModel.calculationMethod = 'FORMULE_COMPLEXE';
+    } else if (val === 'RIEN') {
+      this.formModel.calculationMethod = 'RIEN';
+      this.formModel.formule = '';
+      this.formModel.formula = '';
+    } else {
+      this.formModel.calculationMethod = 'MONTANT_FIXE';
+    }
     this.formModel.methodCalcul = this.formModel.calculationMethod;
     if (this.formModel.calculationMethod === 'MONTANT_FIXE' && !this.formModel.codeCorrespondant) {
       this.formModel.codeCorrespondant = this.formModel.code;
@@ -233,9 +247,15 @@ export class ElementsSalaireComponent implements OnInit {
     const catName = matchingCat ? matchingCat.name : el.categoryName;
     const resolvedType = el.type || (matchingCat ? matchingCat.type : 'GAIN');
 
-    const method = (el.calculationMethod === 'FORMULE_COMPLEXE' || (el.methodCalcul && el.methodCalcul.includes('FORMULE')))
-      ? 'FORMULE_COMPLEXE'
-      : 'MONTANT_FIXE';
+    let method: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | 'RIEN' = 'MONTANT_FIXE';
+    const mc = (el.calculationMethod || el.methodCalcul || '').toUpperCase();
+    if (mc.includes('FORMULE') || mc.includes('POURCENTAGE')) {
+      method = 'FORMULE_COMPLEXE';
+    } else if (mc.includes('RIEN') || mc.includes('AUCUN') || mc.includes('NONE')) {
+      method = 'RIEN';
+    } else {
+      method = 'MONTANT_FIXE';
+    }
 
     this.formModel = {
       ...el,
@@ -266,7 +286,12 @@ export class ElementsSalaireComponent implements OnInit {
     const catName = cat ? cat.name : this.formModel.categoryName;
     const catType = cat ? cat.type : (this.formModel.type || 'GAIN');
 
-    const finalMethod = this.formModel.calculationMethod === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
+    let finalMethod = 'MONTANT_FIXE';
+    if (this.formModel.calculationMethod === 'FORMULE_COMPLEXE') {
+      finalMethod = 'FORMULE_COMPLEXE';
+    } else if (this.formModel.calculationMethod === 'RIEN') {
+      finalMethod = 'RIEN';
+    }
     const finalCode = this.formModel.code.toLowerCase().trim();
     let finalCodeCorrespondant = this.formModel.codeCorrespondant
       ? this.formModel.codeCorrespondant.toLowerCase().trim()
@@ -332,7 +357,12 @@ export class ElementsSalaireComponent implements OnInit {
 
   toggleStatut(el: SalaryElementModel): void {
     const newStatut = !el.statut;
-    const methodCalculVal = el.calculationMethod === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
+    let methodCalculVal = 'MONTANT_FIXE';
+    if (el.calculationMethod === 'FORMULE_COMPLEXE') {
+      methodCalculVal = 'FORMULE_COMPLEXE';
+    } else if (el.calculationMethod === 'RIEN') {
+      methodCalculVal = 'RIEN';
+    }
     const payload: SalaryElementDto = {
       code: el.code.toLowerCase().trim(),
       codeCorrespondant: el.codeCorrespondant ? el.codeCorrespondant.toLowerCase().trim() : el.code.toLowerCase().trim(),
