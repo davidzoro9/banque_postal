@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class SalaryElementResponseDto {
     private Long id;
     private String code;
+    private String codeCorrespondant;
     private String name;
     private Long categoryId;
     private String categoryName;
@@ -27,6 +28,7 @@ public class SalaryElementResponseDto {
     public static class Builder {
         private Long id;
         private String code;
+        private String codeCorrespondant;
         private String name;
         private Long categoryId;
         private String categoryName;
@@ -42,6 +44,7 @@ public class SalaryElementResponseDto {
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder code(String code) { this.code = code; return this; }
+        public Builder codeCorrespondant(String codeCorrespondant) { this.codeCorrespondant = codeCorrespondant; return this; }
         public Builder name(String name) { this.name = name; return this; }
         public Builder categoryId(Long categoryId) { this.categoryId = categoryId; return this; }
         public Builder categoryName(String categoryName) { this.categoryName = categoryName; return this; }
@@ -59,6 +62,7 @@ public class SalaryElementResponseDto {
             SalaryElementResponseDto dto = new SalaryElementResponseDto();
             dto.id = this.id;
             dto.code = this.code;
+            dto.codeCorrespondant = this.codeCorrespondant;
             dto.name = this.name;
             dto.categoryId = this.categoryId;
             dto.categoryName = this.categoryName;
@@ -80,6 +84,9 @@ public class SalaryElementResponseDto {
 
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
+
+    public String getCodeCorrespondant() { return codeCorrespondant; }
+    public void setCodeCorrespondant(String codeCorrespondant) { this.codeCorrespondant = codeCorrespondant; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

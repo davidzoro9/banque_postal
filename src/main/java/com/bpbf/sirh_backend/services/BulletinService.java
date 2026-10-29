@@ -18,10 +18,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -753,11 +757,11 @@ public class BulletinService {
             int ordreLigne = 1;
 
             // A. Composante 1 : Salaire de Base (au prorata temporis)
-            SalaryElement salBaseElemGrat = findSalaryElement("CAT_SAL_BASE", "BASE", "SAL_BASE", "SAL_MENSUEL");
-            String salBaseCodeGrat = (salBaseElemGrat != null && salBaseElemGrat.getCode() != null) ? salBaseElemGrat.getCode() : "SAL_BASE";
+            SalaryElement salBaseElemGrat = findSalaryElement("CAT_SAL_BASE", "BASE", "sal_base", "salaire_base", "sal_mensuel", "salbase");
+            String salBaseCodeGrat = (salBaseElemGrat != null && salBaseElemGrat.getCode() != null) ? salBaseElemGrat.getCode() : "sal_base";
             String salBaseLibelleGrat = (salBaseElemGrat != null && salBaseElemGrat.getName() != null && !salBaseElemGrat.getName().isBlank())
                     ? salBaseElemGrat.getName()
-                    : "Salaire de Base";
+                    : "SALAIRE DE BASE";
             Integer salBaseOrdreGrat = (salBaseElemGrat != null && salBaseElemGrat.getOrdre() != null) ? salBaseElemGrat.getOrdre() : ordreLigne++;
 
             BigDecimal montantSalaireBaseProratise = money(salaireBasePlein.multiply(ratioProrata));
@@ -1991,11 +1995,11 @@ public class BulletinService {
         int ordre = 1;
 
         // Ligne Salaire de Base : résolution dynamique depuis salary_element (stocké en base)
-        SalaryElement salBaseElem = findSalaryElement("CAT_SAL_BASE", "BASE", "SAL_BASE", "SAL_MENSUEL");
-        String salBaseCode = (salBaseElem != null && salBaseElem.getCode() != null) ? salBaseElem.getCode() : "SAL_BASE";
+        SalaryElement salBaseElem = findSalaryElement("CAT_SAL_BASE", "BASE", "sal_base", "salaire_base", "sal_mensuel", "salbase");
+        String salBaseCode = (salBaseElem != null && salBaseElem.getCode() != null) ? salBaseElem.getCode() : "sal_base";
         String salBaseLibelle = (salBaseElem != null && salBaseElem.getName() != null && !salBaseElem.getName().isBlank())
                 ? salBaseElem.getName()
-                : "Salaire de Base";
+                : "SALAIRE DE BASE";
         Integer salBaseOrdre = (salBaseElem != null && salBaseElem.getOrdre() != null) ? salBaseElem.getOrdre() : ordre++;
 
         BulletinLine salBaseLine = new BulletinLine();
@@ -3609,29 +3613,126 @@ public class BulletinService {
     }
 
     /**
-     * Évalue dynamiquement une formule de calcul d'élément de salaire (ex: (SAL_BASE + SUR_SALAIRE)*0,1)
+     * Évalue dynamiquement une formule de calcul d'élément de salaire
+     * Supporte SUM(...), AVG(...), MIN(...), MAX(...), les catégories parentes (ex: CAT_SAL_BASE)
+     * et les codes des éléments de salaire (ex: sal_base, sursalaire, etc.)
      */
     public static BigDecimal evaluateComplexFormula(String formula, BigDecimal salBase, BigDecimal surSalaire, BigDecimal primeAnc, BigDecimal brut) {
         if (formula == null || formula.isBlank()) return BigDecimal.ZERO;
-        try {
-            BigDecimal sb = salBase != null ? salBase : BigDecimal.ZERO;
-            BigDecimal ss = surSalaire != null ? surSalaire : BigDecimal.ZERO;
-            BigDecimal pa = primeAnc != null ? primeAnc : BigDecimal.ZERO;
-            BigDecimal rb = brut != null ? brut : BigDecimal.ZERO;
 
-            String expr = formula.replace(',', '.')
-                    .replaceAll("(?i)SAL_BASE|SALAIRE_BASE", sb.toPlainString())
-                    .replaceAll("(?i)SUR_SALAIRE|SURSALAIRE", ss.toPlainString())
-                    .replaceAll("(?i)PRIME_ANC|ANCIENNETE", pa.toPlainString())
-                    .replaceAll("(?i)REMUNERATION_BRUTE|BRUT_COTISABLE|BRUT", rb.toPlainString());
+        Map<String, BigDecimal> elements = new HashMap<>();
+        elements.put("sal_base", salBase != null ? salBase : BigDecimal.ZERO);
+        elements.put("salaire_base", salBase != null ? salBase : BigDecimal.ZERO);
+        elements.put("sursalaire", surSalaire != null ? surSalaire : BigDecimal.ZERO);
+        elements.put("sur_salaire", surSalaire != null ? surSalaire : BigDecimal.ZERO);
+        elements.put("prime_anc", primeAnc != null ? primeAnc : BigDecimal.ZERO);
+        elements.put("anciennete", primeAnc != null ? primeAnc : BigDecimal.ZERO);
+        elements.put("remuneration_brute", brut != null ? brut : BigDecimal.ZERO);
+        elements.put("brut_cotisable", brut != null ? brut : BigDecimal.ZERO);
+        elements.put("brut", brut != null ? brut : BigDecimal.ZERO);
+
+        Map<String, List<BigDecimal>> categories = new HashMap<>();
+        List<BigDecimal> catSalBase = new ArrayList<>();
+        if (salBase != null) catSalBase.add(salBase);
+        if (surSalaire != null) catSalBase.add(surSalaire);
+        categories.put("cat_sal_base", catSalBase);
+        categories.put("cat_remuneration_due", catSalBase);
+
+        return evaluateComplexFormula(formula, elements, categories);
+    }
+
+    public static BigDecimal evaluateComplexFormula(String formula, Map<String, BigDecimal> elementValues, Map<String, List<BigDecimal>> categoryValues) {
+        if (formula == null || formula.isBlank()) return BigDecimal.ZERO;
+        try {
+            String expr = formula.replace(',', '.').trim();
+
+            // 1. Remplacement des fonctions agrégatives SUM(CAT_...), AVG(CAT_...), MIN(...), MAX(...)
+            expr = resolveAggregateFunctions(expr, categoryValues, elementValues);
+
+            // 2. Remplacement des catégories directes (ex: CAT_SAL_BASE -> total de la catégorie)
+            if (categoryValues != null) {
+                for (Map.Entry<String, List<BigDecimal>> entry : categoryValues.entrySet()) {
+                    String catCode = entry.getKey();
+                    BigDecimal sum = entry.getValue() != null
+                            ? entry.getValue().stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add)
+                            : BigDecimal.ZERO;
+                    expr = expr.replaceAll("(?i)\\b" + Pattern.quote(catCode) + "\\b", sum.toPlainString());
+                }
+            }
+
+            // 3. Remplacement des codes d'éléments de salaire (ex: sal_base, sursalaire...)
+            if (elementValues != null) {
+                List<String> sortedKeys = elementValues.keySet().stream()
+                        .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                        .toList();
+                for (String code : sortedKeys) {
+                    BigDecimal val = elementValues.get(code);
+                    String valStr = (val != null ? val : BigDecimal.ZERO).toPlainString();
+                    expr = expr.replaceAll("(?i)\\b" + Pattern.quote(code) + "\\b", valStr);
+                }
+            }
+
+            // 4. Nettoyage des variables résiduelles non résolues -> 0
+            expr = expr.replaceAll("(?i)\\b[a-z_][a-z0-9_-]*\\b", "0");
 
             return evalMathExpression(expr);
         } catch (Exception e) {
             log.warn("Erreur évaluation formule '{}' : {}", formula, e.getMessage());
-            // Fallback spécifique pour (SAL_BASE + SUR_SALAIRE)*0,1
-            BigDecimal base = (salBase != null ? salBase : BigDecimal.ZERO).add(surSalaire != null ? surSalaire : BigDecimal.ZERO);
-            return base.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+            return BigDecimal.ZERO;
         }
+    }
+
+    private static String resolveAggregateFunctions(String expr, Map<String, List<BigDecimal>> categoryValues, Map<String, BigDecimal> elementValues) {
+        Pattern pattern = Pattern.compile("(?i)(SUM|AVG|MIN|MAX)\\s*\\(([^)]+)\\)");
+        Matcher matcher = pattern.matcher(expr);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String func = matcher.group(1).toUpperCase(Locale.ROOT);
+            String arg = matcher.group(2).trim();
+
+            List<BigDecimal> values = new ArrayList<>();
+            // Cas 1 : Catégorie correspondante
+            if (categoryValues != null) {
+                for (Map.Entry<String, List<BigDecimal>> entry : categoryValues.entrySet()) {
+                    if (entry.getKey().equalsIgnoreCase(arg)) {
+                        if (entry.getValue() != null) values.addAll(entry.getValue());
+                        break;
+                    }
+                }
+            }
+
+            // Cas 2 : Liste d'éléments séparés par virgules
+            if (values.isEmpty()) {
+                String[] parts = arg.split(",");
+                for (String part : parts) {
+                    String p = part.trim();
+                    if (elementValues != null && elementValues.containsKey(p.toLowerCase(Locale.ROOT))) {
+                        values.add(elementValues.get(p.toLowerCase(Locale.ROOT)));
+                    } else {
+                        try {
+                            values.add(new BigDecimal(p));
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+
+            BigDecimal result = BigDecimal.ZERO;
+            if (!values.isEmpty()) {
+                if ("SUM".equals(func)) {
+                    result = values.stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+                } else if ("AVG".equals(func)) {
+                    BigDecimal sum = values.stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    result = sum.divide(new BigDecimal(values.size()), 4, RoundingMode.HALF_UP);
+                } else if ("MIN".equals(func)) {
+                    result = values.stream().filter(Objects::nonNull).min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+                } else if ("MAX".equals(func)) {
+                    result = values.stream().filter(Objects::nonNull).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+                }
+            }
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(result.toPlainString()));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     private static BigDecimal evalMathExpression(String expression) {
@@ -3703,17 +3804,21 @@ public class BulletinService {
     /**
      * Recherche dynamique d'un élément de salaire dans la table salary_element
      * Priorité :
-     * 1. Codes précis indiqués en paramètre
-     * 2. Catégorie de salaire et/ou mot-clé dans le code ou le libellé
+     * 1. Codes précis indiqués en paramètre (sur code ou codeCorrespondant, insensible à la casse)
+     * 2. Catégorie de salaire et/ou mot-clé dans le code, code_correspondant ou libellé
      */
     public SalaryElement findSalaryElement(String categoryCode, String keyword, String... preferredCodes) {
         if (salaryElementRepository == null) return null;
         try {
-            // 1. Recherche par codes préférés (exact match)
+            // 1. Recherche par codes préférés (exact match insensible à la casse sur code ou codeCorrespondant)
             if (preferredCodes != null) {
                 for (String c : preferredCodes) {
                     if (c == null || c.isBlank()) continue;
-                    Optional<SalaryElement> el = salaryElementRepository.findByCode(c.trim());
+                    String target = c.trim().toLowerCase();
+                    Optional<SalaryElement> el = salaryElementRepository.findByCodeIgnoreCase(target);
+                    if (el.isEmpty()) {
+                        el = salaryElementRepository.findByCodeCorrespondantIgnoreCase(target);
+                    }
                     if (el.isPresent() && !"INACTIF".equalsIgnoreCase(el.get().getStatut())) {
                         return el.get();
                     }
@@ -3728,20 +3833,28 @@ public class BulletinService {
                         return se;
                     }
                     String c = se.getCode() != null ? se.getCode().toUpperCase(Locale.ROOT) : "";
+                    String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toUpperCase(Locale.ROOT) : "";
                     String n = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
-                    if (c.contains(keyword.toUpperCase(Locale.ROOT)) || n.contains(keyword.toUpperCase(Locale.ROOT))) {
+                    String kw = keyword.toUpperCase(Locale.ROOT);
+                    if (c.contains(kw) || cc.contains(kw) || n.contains(kw)) {
                         return se;
                     }
                 }
             }
-            // 3. Recherche par mot-clé global si non trouvé dans la catégorie
+            // 3. Recherche par mot-clé global si non trouvé dans la catégorie (en évitant les retenues si on cherchait un gain/salaire)
             if (keyword != null && !keyword.isBlank()) {
                 String kw = keyword.toUpperCase(Locale.ROOT);
+                boolean isLookingForGain = categoryCode != null && (categoryCode.contains("SAL") || categoryCode.contains("GAIN") || categoryCode.contains("AVOIR") || categoryCode.contains("PRIME"));
                 for (SalaryElement se : all) {
                     if ("INACTIF".equalsIgnoreCase(se.getStatut())) continue;
                     String c = se.getCode() != null ? se.getCode().toUpperCase(Locale.ROOT) : "";
+                    String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toUpperCase(Locale.ROOT) : "";
                     String n = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
-                    if (c.contains(kw) || n.contains(kw)) {
+
+                    if (isLookingForGain && (c.startsWith("RET_") || c.startsWith("PRET_") || c.startsWith("TROP_PERCU"))) {
+                        continue;
+                    }
+                    if (c.contains(kw) || cc.contains(kw) || n.contains(kw)) {
                         return se;
                     }
                 }
@@ -3755,18 +3868,24 @@ public class BulletinService {
     private SalaryElement findCrraePatronaleElement() {
         if (salaryElementRepository == null) return null;
         try {
-            // Priorité 1 : CHG_PAT_CRRAE si actif (ex: ID 52 personnalisé par l'utilisateur)
-            Optional<SalaryElement> el = salaryElementRepository.findByCode("CHG_PAT_CRRAE");
+            // Priorité 1 : chg_pat_crrae (code ou codeCorrespondant)
+            Optional<SalaryElement> el = salaryElementRepository.findByCodeIgnoreCase("chg_pat_crrae");
+            if (el.isEmpty()) {
+                el = salaryElementRepository.findByCodeCorrespondantIgnoreCase("chg_pat_crrae");
+            }
             if (el.isPresent() && "ACTIF".equalsIgnoreCase(el.get().getStatut())) {
                 return el.get();
             }
-            // Priorité 2 : COT_CRRAE si actif (ex: ID 53)
-            el = salaryElementRepository.findByCode("COT_CRRAE");
+            // Priorité 2 : cot_crrae (code ou codeCorrespondant)
+            el = salaryElementRepository.findByCodeIgnoreCase("cot_crrae");
+            if (el.isEmpty()) {
+                el = salaryElementRepository.findByCodeCorrespondantIgnoreCase("cot_crrae");
+            }
             if (el.isPresent() && "ACTIF".equalsIgnoreCase(el.get().getStatut())) {
                 return el.get();
             }
             // Priorité 3 : tout élément patronal lié à la CRRAE actif
-            return findSalaryElement("CAT_CHG_PATRONALES", "CRRAE", "CHG_PAT_CRRAE", "COT_CRRAE");
+            return findSalaryElement("CAT_CHG_PATRONALES", "CRRAE", "chg_pat_crrae", "cot_crrae");
         } catch (Exception e) {
             log.warn("Erreur recherche élément CRRAE patronal : {}", e.getMessage());
             return null;

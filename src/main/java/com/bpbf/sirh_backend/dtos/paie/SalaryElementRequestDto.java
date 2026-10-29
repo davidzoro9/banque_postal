@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SalaryElementRequestDto {
     private String code;
+    private String codeCorrespondant;
     private String name;
     private Long salaryCategoryId;
     private String categoryName;
@@ -22,10 +23,19 @@ public class SalaryElementRequestDto {
     public SalaryElementRequestDto() {}
 
     public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
+    public void setCode(String code) { 
+        this.code = code != null ? code.trim().toLowerCase() : null; 
+    }
+
+    public String getCodeCorrespondant() { return codeCorrespondant; }
+    public void setCodeCorrespondant(String codeCorrespondant) { 
+        this.codeCorrespondant = codeCorrespondant != null ? codeCorrespondant.trim().toLowerCase() : null; 
+    }
 
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) { 
+        this.name = name != null ? name.trim().toUpperCase() : null; 
+    }
 
     public Long getSalaryCategoryId() { return salaryCategoryId; }
     public void setSalaryCategoryId(Long salaryCategoryId) { this.salaryCategoryId = salaryCategoryId; }

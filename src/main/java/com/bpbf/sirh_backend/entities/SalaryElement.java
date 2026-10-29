@@ -18,6 +18,9 @@ public class SalaryElement {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
+    @Column(name = "code_correspondant", length = 100)
+    private String codeCorrespondant;
+
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -29,7 +32,7 @@ public class SalaryElement {
     private Boolean isImposable = true;
 
     @Column(length = 50)
-    private String methodCalcul; // MONTANT_FIXE, POURCENTAGE, FORMULE, etc.
+    private String methodCalcul; // MONTANT_FIXE, FORMULE_COMPLEXE
 
     @Column(columnDefinition = "TEXT")
     private String formule;
@@ -52,14 +55,45 @@ public class SalaryElement {
 
     public SalaryElement() {}
 
+    @PrePersist
+    @PreUpdate
+    public void sanitizeFields() {
+        if (this.code != null) {
+            this.code = this.code.trim().toLowerCase();
+        }
+        if (this.codeCorrespondant != null) {
+            this.codeCorrespondant = this.codeCorrespondant.trim().toLowerCase();
+        }
+        if (this.name != null) {
+            this.name = this.name.trim().toUpperCase();
+        }
+        if (this.methodCalcul != null) {
+            String mc = this.methodCalcul.trim().toUpperCase();
+            if (mc.contains("FORMULE") || mc.contains("POURCENTAGE")) {
+                this.methodCalcul = "FORMULE_COMPLEXE";
+            } else {
+                this.methodCalcul = "MONTANT_FIXE";
+            }
+        }
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
+    public void setCode(String code) { 
+        this.code = code != null ? code.trim().toLowerCase() : null; 
+    }
+
+    public String getCodeCorrespondant() { return codeCorrespondant; }
+    public void setCodeCorrespondant(String codeCorrespondant) { 
+        this.codeCorrespondant = codeCorrespondant != null ? codeCorrespondant.trim().toLowerCase() : null; 
+    }
 
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) { 
+        this.name = name != null ? name.trim().toUpperCase() : null; 
+    }
 
     public BigDecimal getRate() { return rate; }
     public void setRate(BigDecimal rate) { this.rate = rate; }

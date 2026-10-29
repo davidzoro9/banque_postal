@@ -22,6 +22,11 @@ public class SalaryElementController {
         return ResponseEntity.ok(parametrageService.getAllElements());
     }
 
+    @GetMapping("/admin-codes")
+    public ResponseEntity<List<com.bpbf.sirh_backend.dtos.paie.AdminReferenceCodeDto>> getAdminReferenceCodes() {
+        return ResponseEntity.ok(parametrageService.getAdminReferenceCodes());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<SalaryElementResponseDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(parametrageService.getElementById(id));

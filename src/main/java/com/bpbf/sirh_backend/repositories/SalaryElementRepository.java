@@ -10,7 +10,11 @@ import java.util.Optional;
 @Repository
 public interface SalaryElementRepository extends JpaRepository<SalaryElement, Long> {
     Optional<SalaryElement> findByCode(String code);
+    Optional<SalaryElement> findByCodeIgnoreCase(String code);
+    Optional<SalaryElement> findByCodeCorrespondantIgnoreCase(String codeCorrespondant);
+    List<SalaryElement> findByCodeCorrespondant(String codeCorrespondant);
     boolean existsByCode(String code);
+    boolean existsByCodeIgnoreCase(String code);
     List<SalaryElement> findBySalaryCategoryId(Long categoryId);
     List<SalaryElement> findByStatut(String statut);
 }

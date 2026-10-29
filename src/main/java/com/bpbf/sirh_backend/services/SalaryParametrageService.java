@@ -21,7 +21,43 @@ public class SalaryParametrageService {
 
     private final SalaryCategoryRepository categoryRepository;
     private final SalaryElementRepository elementRepository;
+    private final com.bpbf.sirh_backend.repositories.TypeIndemniteRepository typeIndemniteRepository;
     private final JdbcTemplate jdbcTemplate;
+
+    // --- REFERENCE CODES GESTION ADMIN ---
+    @Transactional(readOnly = true)
+    public List<AdminReferenceCodeDto> getAdminReferenceCodes() {
+        java.util.Map<String, AdminReferenceCodeDto> map = new java.util.LinkedHashMap<>();
+
+        // 1. Éléments contractuels de base de Gestion Admin
+        map.put("sal_base", new AdminReferenceCodeDto("sal_base", "Salaire de base (Contrat)", "CONTRAT", "GESTION_ADMIN"));
+        map.put("sursalaire", new AdminReferenceCodeDto("sursalaire", "Sursalaire (Contrat)", "CONTRAT", "GESTION_ADMIN"));
+
+        // 2. Indemnités issues de type_indemnite (Catalogue Gestion Admin)
+        if (typeIndemniteRepository != null) {
+            try {
+                typeIndemniteRepository.findAll().forEach(ti -> {
+                    if (ti.getCode() != null && !ti.getCode().isBlank()) {
+                        String c = ti.getCode().trim().toLowerCase();
+                        String label = ti.getName() != null && !ti.getName().isBlank() ? ti.getName().trim() :
+                                      (ti.getDescription() != null ? ti.getDescription().trim() : c);
+                        map.putIfAbsent(c, new AdminReferenceCodeDto(c, label, "INDEMNITE", "GESTION_ADMIN"));
+                    }
+                });
+            } catch (Exception e) {
+                log.warn("Notice lecture type_indemnite pour codes admin: {}", e.getMessage());
+            }
+        }
+
+        // 3. Fallbacks courants si non présents
+        map.putIfAbsent("ind-log", new AdminReferenceCodeDto("ind-log", "Indemnité de Logement", "INDEMNITE", "GESTION_ADMIN"));
+        map.putIfAbsent("ind-trp", new AdminReferenceCodeDto("ind-trp", "Indemnité de Transport", "INDEMNITE", "GESTION_ADMIN"));
+        map.putIfAbsent("ind-fonc", new AdminReferenceCodeDto("ind-fonc", "Indemnité de Fonction", "INDEMNITE", "GESTION_ADMIN"));
+        map.putIfAbsent("ind-caisse", new AdminReferenceCodeDto("ind-caisse", "Indemnité de Caisse", "INDEMNITE", "GESTION_ADMIN"));
+        map.putIfAbsent("ind-suj", new AdminReferenceCodeDto("ind-suj", "Indemnité de Sujétion", "INDEMNITE", "GESTION_ADMIN"));
+
+        return new java.util.ArrayList<>(map.values());
+    }
 
     // --- CATEGORIES ---
     @Transactional(readOnly = true)
@@ -96,13 +132,25 @@ public class SalaryParametrageService {
         }
 
         SalaryElement el = new SalaryElement();
-        el.setCode(dto.getCode() != null ? dto.getCode().trim().toUpperCase() : "");
-        el.setName(dto.getName() != null ? dto.getName().trim() : "");
+        // Règle V3 : Codes obligatoirement en minuscules, Noms en majuscules
+        el.setCode(dto.getCode() != null ? dto.getCode().trim().toLowerCase() : "");
+        el.setCodeCorrespondant(dto.getCodeCorrespondant() != null ? dto.getCodeCorrespondant().trim().toLowerCase() : null);
+        el.setName(dto.getName() != null ? dto.getName().trim().toUpperCase() : "");
         el.setSalaryCategory(category);
         el.setRate(dto.getRate());
         el.setIsCotisable(dto.getIsCotisable() != null ? dto.getIsCotisable() : true);
         el.setIsImposable(dto.getIsImposable() != null ? dto.getIsImposable() : true);
-        el.setMethodCalcul(dto.getMethodCalcul() != null ? dto.getMethodCalcul() : "MONTANT_FIXE");
+        
+        // Méthodes de calcul strictes : MONTANT_FIXE ou FORMULE_COMPLEXE
+        String method = dto.getMethodCalcul() != null ? dto.getMethodCalcul().trim().toUpperCase() : "MONTANT_FIXE";
+        if (method.contains("FORMULE") || method.contains("POURCENTAGE")) {
+            el.setMethodCalcul("FORMULE_COMPLEXE");
+        } else {
+            el.setMethodCalcul("MONTANT_FIXE");
+            if (el.getCodeCorrespondant() == null || el.getCodeCorrespondant().isBlank()) {
+                el.setCodeCorrespondant(el.getCode());
+            }
+        }
         
         String formulaVal = dto.getFormule() != null ? dto.getFormule() : dto.getFormula();
         el.setFormule(formulaVal != null ? formulaVal : "0");
@@ -127,16 +175,31 @@ public class SalaryParametrageService {
             el.setSalaryCategory(null);
         }
 
+        // Règle V3 : Codes obligatoirement en minuscules, Noms en majuscules
         if (dto.getCode() != null && !dto.getCode().trim().isEmpty()) {
-            el.setCode(dto.getCode().trim().toUpperCase());
+            el.setCode(dto.getCode().trim().toLowerCase());
+        }
+        if (dto.getCodeCorrespondant() != null && !dto.getCodeCorrespondant().trim().isEmpty()) {
+            el.setCodeCorrespondant(dto.getCodeCorrespondant().trim().toLowerCase());
         }
         if (dto.getName() != null && !dto.getName().trim().isEmpty()) {
-            el.setName(dto.getName().trim());
+            el.setName(dto.getName().trim().toUpperCase());
         }
         el.setRate(dto.getRate());
         if (dto.getIsCotisable() != null) el.setIsCotisable(dto.getIsCotisable());
         if (dto.getIsImposable() != null) el.setIsImposable(dto.getIsImposable());
-        if (dto.getMethodCalcul() != null) el.setMethodCalcul(dto.getMethodCalcul());
+        
+        if (dto.getMethodCalcul() != null) {
+            String method = dto.getMethodCalcul().trim().toUpperCase();
+            if (method.contains("FORMULE") || method.contains("POURCENTAGE")) {
+                el.setMethodCalcul("FORMULE_COMPLEXE");
+            } else {
+                el.setMethodCalcul("MONTANT_FIXE");
+                if (el.getCodeCorrespondant() == null || el.getCodeCorrespondant().isBlank()) {
+                    el.setCodeCorrespondant(el.getCode());
+                }
+            }
+        }
         
         String formulaVal = dto.getFormule() != null ? dto.getFormule() : dto.getFormula();
         if (formulaVal != null) {
@@ -203,8 +266,9 @@ public class SalaryParametrageService {
         }
         return SalaryElementResponseDto.builder()
                 .id(el.getId())
-                .code(el.getCode())
-                .name(el.getName())
+                .code(el.getCode() != null ? el.getCode().toLowerCase() : null)
+                .codeCorrespondant(el.getCodeCorrespondant() != null ? el.getCodeCorrespondant().toLowerCase() : null)
+                .name(el.getName() != null ? el.getName().toUpperCase() : null)
                 .categoryId(el.getSalaryCategory() != null ? el.getSalaryCategory().getId() : null)
                 .categoryName(el.getSalaryCategory() != null ? el.getSalaryCategory().getName() : null)
                 .categoryCode(el.getSalaryCategory() != null ? el.getSalaryCategory().getCode() : null)
