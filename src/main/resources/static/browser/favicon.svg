@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#FFFFFF"/>
+  <rect width="64" height="64" rx="12" fill="none" stroke="#E2E8F0" stroke-width="1.5"/>
+  <g transform="translate(3, 17)">
+    <text x="0" y="22" font-family="'Arial Black', Arial, sans-serif"
+          font-size="20" font-weight="900" font-style="italic" fill="#0060B3" letter-spacing="0.2">BPBF</text>
+    <path d="M44,4 L51,15 L44,26"
+          fill="none" stroke="#FFC700" stroke-width="4.5"
+          stroke-linejoin="miter" stroke-linecap="butt"/>
+    <path d="M50,4 L57,15 L50,26"
+          fill="none" stroke="#FFC700" stroke-width="4.5"
+          stroke-linejoin="miter" stroke-linecap="butt"/>
+  </g>
+</svg>

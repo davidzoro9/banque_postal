@@ -122,21 +122,69 @@ public class CompteComptableService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ClasseComptableDto> getClasses(boolean actifOnly) {
         List<ClasseComptable> list = actifOnly ? 
                 classeRepository.findByActifTrueOrderByOrdreAsc() : 
                 classeRepository.findAllByOrderByOrdreAsc();
-        return list.stream().map(c -> ClasseComptableDto.builder()
+        for (ClasseComptable c : list) {
+            boolean modified = false;
+            if ((c.getNumero() == null || c.getNumero().isBlank()) && c.getCode() != null) {
+                c.setNumero(c.getCode().replace("CLASSE_", "").trim());
+                modified = true;
+            }
+            if ((c.getNom() == null || c.getNom().isBlank()) && c.getLibelle() != null) {
+                if (c.getLibelle().contains("—")) {
+                    String[] parts = c.getLibelle().split("—", 2);
+                    if (parts.length > 1) {
+                        c.setNom(parts[1].trim());
+                        modified = true;
+                    }
+                } else if (c.getLibelle().contains("-")) {
+                    String[] parts = c.getLibelle().split("-", 2);
+                    if (parts.length > 1) {
+                        c.setNom(parts[1].trim());
+                        modified = true;
+                    }
+                }
+            }
+            if (modified) {
+                try {
+                    classeRepository.save(c);
+                } catch (Exception ignored) {}
+            }
+        }
+        return list.stream().map(this::toClasseDto).collect(Collectors.toList());
+    }
+
+    private ClasseComptableDto toClasseDto(ClasseComptable c) {
+        String num = c.getNumero();
+        String nom = c.getNom();
+        if ((num == null || num.isBlank()) && c.getCode() != null) {
+            num = c.getCode().replace("CLASSE_", "").trim();
+        }
+        if ((nom == null || nom.isBlank()) && c.getLibelle() != null) {
+            if (c.getLibelle().contains("—")) {
+                String[] p = c.getLibelle().split("—", 2);
+                if (p.length > 1) nom = p[1].trim();
+            } else if (c.getLibelle().contains("-")) {
+                String[] p = c.getLibelle().split("-", 2);
+                if (p.length > 1) nom = p[1].trim();
+            }
+        }
+        if (nom == null || nom.isBlank()) {
+            nom = c.getLibelle() != null ? c.getLibelle() : c.getCode();
+        }
+        return ClasseComptableDto.builder()
                 .id(c.getId())
                 .code(c.getCode())
-                .numero(c.getNumero())
-                .nom(c.getNom())
-                .libelle(c.getLibelle() != null ? c.getLibelle() : (c.getNumero() != null ? "Classe " + c.getNumero() + " — " + c.getNom() : c.getCode()))
+                .numero(num)
+                .nom(nom)
+                .libelle(c.getLibelle() != null ? c.getLibelle() : (num != null ? "Classe " + num + " — " + nom : c.getCode()))
                 .description(c.getDescription())
                 .ordre(c.getOrdre())
                 .actif(c.getActif())
-                .build()).collect(Collectors.toList());
+                .build();
     }
 
     @Transactional
