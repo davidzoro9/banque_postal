@@ -13,6 +13,7 @@ export interface SalaryCategoryDto {
 export interface SalaryElementDto {
   id?: number;
   code: string;
+  codeCorrespondant?: string;
   name: string;
   categoryId?: number;
   salaryCategoryId?: number;
@@ -27,6 +28,13 @@ export interface SalaryElementDto {
   ordre?: number;
   statut?: string | boolean;
   type?: 'GAIN' | 'RETENUE' | 'PATRONALE';
+}
+
+export interface AdminReferenceCodeDto {
+  code: string;
+  label: string;
+  category: string;
+  source: string;
 }
 
 @Injectable({
@@ -62,6 +70,10 @@ export class SalaryParametrageService {
   // --- ELEMENTS ---
   getAllElements(): Observable<SalaryElementDto[]> {
     return this.http.get<SalaryElementDto[]>(this.elementsUrl);
+  }
+
+  getAdminReferenceCodes(): Observable<AdminReferenceCodeDto[]> {
+    return this.http.get<AdminReferenceCodeDto[]>(`${this.elementsUrl}/admin-codes`);
   }
 
   getElementById(id: number): Observable<SalaryElementDto> {

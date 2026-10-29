@@ -1,18 +1,20 @@
 import { Component, OnInit } from '@angular/core';
-import { SalaryParametrageService, SalaryCategoryDto, SalaryElementDto } from '../../services/salary-parametrage.service';
+import { SalaryParametrageService, SalaryCategoryDto, SalaryElementDto, AdminReferenceCodeDto } from '../../services/salary-parametrage.service';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
 export interface SalaryElementModel {
   id: number;
   code: string;
+  codeCorrespondant?: string;
   name: string;
   categoryId: number;
   categoryName: string;
+  categoryCode?: string;
   rate?: number;
   formula: string;
   formule?: string;
-  calculationMethod: 'MONTANT_FIXE' | 'POURCENTAGE' | 'FORMULE_COMPLEXE' | 'SAISIE_MANUELLE' | 'FIXE' | 'FORMULE' | 'GRILLE' | string;
+  calculationMethod: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | string;
   calculMethod?: string;
   methodCalcul?: string;
   isCotisable: boolean;
@@ -32,6 +34,8 @@ export class ElementsSalaireComponent implements OnInit {
   elementsList: SalaryElementModel[] = [];
   filteredList: SalaryElementModel[] = [];
   categoriesList: Array<{ id: number; code: string; name: string; type: 'GAIN' | 'RETENUE' | 'PATRONALE' }> = [];
+  adminCodesList: AdminReferenceCodeDto[] = [];
+  adminCodesFilter: string = '';
 
   searchQuery: string = '';
   categoryFilter: string = '';
@@ -50,6 +54,18 @@ export class ElementsSalaireComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCategories();
+    this.loadAdminCodes();
+  }
+
+  loadAdminCodes(): void {
+    this.parametrageService.getAdminReferenceCodes().subscribe({
+      next: (codes) => {
+        this.adminCodesList = codes || [];
+      },
+      error: (err) => {
+        console.error('Erreur chargement codes admin:', err);
+      }
+    });
   }
 
   loadCategories(): void {
@@ -81,43 +97,51 @@ export class ElementsSalaireComponent implements OnInit {
       next: (data) => {
         this.isLoading = false;
         if (data && data.length > 0) {
-        this.elementsList = data.map((r: SalaryElementDto) => {
-          const numCatId = r.categoryId != null ? Number(r.categoryId) : 0;
-          const matchingCat = this.categoriesList.find(c => c.id === numCatId);
-          const catName = r.categoryName || (matchingCat ? matchingCat.name : '');
-          const elType = (r.type || (matchingCat ? matchingCat.type : 'GAIN')) as 'GAIN' | 'RETENUE' | 'PATRONALE';
+          this.elementsList = data.map((r: SalaryElementDto) => {
+            const numCatId = r.categoryId != null ? Number(r.categoryId) : 0;
+            const matchingCat = this.categoriesList.find(c => c.id === numCatId);
+            const catName = r.categoryName || (matchingCat ? matchingCat.name : '');
+            const catCode = r.categoryCode || (matchingCat ? matchingCat.code : '');
+            const elType = (r.type || (matchingCat ? matchingCat.type : 'GAIN')) as 'GAIN' | 'RETENUE' | 'PATRONALE';
 
-          return {
-            id: Number(r.id),
-            code: (r.code || '').trim(),
-            name: r.name || '',
-            categoryId: numCatId,
-            categoryName: catName,
-            rate: r.rate,
-            formula: r.formule || r.formula || '',
-            formule: r.formule || r.formula || '',
-            calculationMethod: (r.methodCalcul || 'MONTANT_FIXE') as any,
-            calculMethod: (r.methodCalcul || 'MONTANT_FIXE') as any,
-            isCotisable: r.isCotisable !== undefined ? r.isCotisable : true,
-            isImposable: r.isImposable !== undefined ? r.isImposable : true,
-            ordre: r.ordre || 1,
-            statut: r.statut !== undefined ? r.statut === 'ACTIF' || r.statut === true : true,
-            type: elType
-          };
-        });
-      } else {
+            const method = (r.methodCalcul === 'FORMULE_COMPLEXE' || (r.methodCalcul && r.methodCalcul.includes('FORMULE')))
+              ? 'FORMULE_COMPLEXE'
+              : 'MONTANT_FIXE';
+
+            return {
+              id: Number(r.id),
+              code: (r.code || '').trim().toLowerCase(),
+              codeCorrespondant: (r.codeCorrespondant || '').trim().toLowerCase(),
+              name: (r.name || '').trim().toUpperCase(),
+              categoryId: numCatId,
+              categoryName: catName,
+              categoryCode: catCode,
+              rate: r.rate,
+              formula: r.formule || r.formula || '',
+              formule: r.formule || r.formula || '',
+              calculationMethod: method,
+              calculMethod: method,
+              methodCalcul: method,
+              isCotisable: r.isCotisable !== undefined ? r.isCotisable : true,
+              isImposable: r.isImposable !== undefined ? r.isImposable : true,
+              ordre: r.ordre || 1,
+              statut: r.statut !== undefined ? r.statut === 'ACTIF' || r.statut === true : true,
+              type: elType
+            };
+          });
+        } else {
+          this.elementsList = [];
+        }
+        this.applyFilter();
+      },
+      error: (err) => {
+        console.error('Erreur chargement éléments:', err);
+        this.isLoading = false;
         this.elementsList = [];
+        this.applyFilter();
       }
-      this.applyFilter();
-    },
-    error: (err) => {
-      console.error('Erreur chargement éléments:', err);
-      this.isLoading = false;
-      this.elementsList = [];
-      this.applyFilter();
-    }
-  });
-}
+    });
+  }
 
   applyFilter(): void {
     let list = [...this.elementsList];
@@ -125,7 +149,8 @@ export class ElementsSalaireComponent implements OnInit {
       const q = this.searchQuery.toLowerCase().trim();
       list = list.filter(e =>
         (e.name && e.name.toLowerCase().includes(q)) ||
-        (e.code && e.code.toLowerCase().includes(q))
+        (e.code && e.code.toLowerCase().includes(q)) ||
+        (e.codeCorrespondant && e.codeCorrespondant.toLowerCase().includes(q))
       );
     }
     if (this.categoryFilter) {
@@ -138,6 +163,36 @@ export class ElementsSalaireComponent implements OnInit {
     this.filteredList = list;
   }
 
+  // --- FORÇAGE DE CASSE ---
+  onCodeChange(): void {
+    if (this.formModel.code) {
+      this.formModel.code = this.formModel.code.toLowerCase().trim();
+    }
+  }
+
+  onCodeCorrespondantChange(): void {
+    if (this.formModel.codeCorrespondant) {
+      this.formModel.codeCorrespondant = this.formModel.codeCorrespondant.toLowerCase().trim();
+    }
+  }
+
+  onNameChange(): void {
+    if (this.formModel.name) {
+      this.formModel.name = this.formModel.name.toUpperCase();
+    }
+  }
+
+  selectAdminCode(code: string): void {
+    this.formModel.codeCorrespondant = code.toLowerCase().trim();
+  }
+
+  insertIntoFormula(token: string): void {
+    const current = this.formModel.formule || this.formModel.formula || '';
+    const separator = current && !current.endsWith(' ') && !token.startsWith(' ') && !token.startsWith('*') && !token.startsWith('/') ? ' ' : '';
+    this.formModel.formule = (current ? current + separator : '') + token;
+    this.formModel.formula = this.formModel.formule;
+  }
+
   onCategoryChange(catId: any): void {
     const numId = Number(catId);
     this.formModel.categoryId = numId;
@@ -145,6 +200,14 @@ export class ElementsSalaireComponent implements OnInit {
     if (cat) {
       this.formModel.categoryName = cat.name;
       this.formModel.type = cat.type;
+    }
+  }
+
+  onMethodChange(val: string): void {
+    this.formModel.calculationMethod = val === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
+    this.formModel.methodCalcul = this.formModel.calculationMethod;
+    if (this.formModel.calculationMethod === 'MONTANT_FIXE' && !this.formModel.codeCorrespondant) {
+      this.formModel.codeCorrespondant = this.formModel.code;
     }
   }
 
@@ -170,11 +233,20 @@ export class ElementsSalaireComponent implements OnInit {
     const catName = matchingCat ? matchingCat.name : el.categoryName;
     const resolvedType = el.type || (matchingCat ? matchingCat.type : 'GAIN');
 
+    const method = (el.calculationMethod === 'FORMULE_COMPLEXE' || (el.methodCalcul && el.methodCalcul.includes('FORMULE')))
+      ? 'FORMULE_COMPLEXE'
+      : 'MONTANT_FIXE';
+
     this.formModel = {
       ...el,
+      code: (el.code || '').toLowerCase().trim(),
+      codeCorrespondant: (el.codeCorrespondant || el.code || '').toLowerCase().trim(),
+      name: (el.name || '').toUpperCase().trim(),
       categoryId: catId,
       categoryName: catName,
-      type: resolvedType
+      type: resolvedType,
+      calculationMethod: method,
+      methodCalcul: method
     };
     this.showDialog = true;
   }
@@ -192,22 +264,30 @@ export class ElementsSalaireComponent implements OnInit {
     const numCatId = Number(this.formModel.categoryId);
     const cat = this.categoriesList.find(c => c.id === numCatId);
     const catName = cat ? cat.name : this.formModel.categoryName;
+    const catType = cat ? cat.type : (this.formModel.type || 'GAIN');
+
+    const finalMethod = this.formModel.calculationMethod === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
+    const finalCode = this.formModel.code.toLowerCase().trim();
+    const finalCodeCorrespondant = this.formModel.codeCorrespondant
+      ? this.formModel.codeCorrespondant.toLowerCase().trim()
+      : finalCode;
 
     const payload: SalaryElementDto = {
-      code: this.formModel.code.trim().toUpperCase(),
-      name: this.formModel.name.trim(),
+      code: finalCode,
+      codeCorrespondant: finalCodeCorrespondant,
+      name: this.formModel.name.toUpperCase().trim(),
       categoryId: numCatId,
       salaryCategoryId: numCatId,
       categoryName: catName,
       rate: this.formModel.rate,
-      formule: this.formModel.formule || this.formModel.formula,
-      formula: this.formModel.formule || this.formModel.formula,
-      methodCalcul: this.formModel.methodCalcul || this.formModel.calculationMethod || 'MONTANT_FIXE',
+      formule: this.formModel.formule || this.formModel.formula || '',
+      formula: this.formModel.formule || this.formModel.formula || '',
+      methodCalcul: finalMethod,
       isCotisable: this.formModel.isCotisable,
       isImposable: this.formModel.isImposable,
       ordre: Number(this.formModel.ordre || 1),
       statut: this.formModel.statut ? 'ACTIF' : 'INACTIF',
-      type: this.formModel.type
+      type: catType
     };
 
     if (this.editingElement && this.editingElement.id) {
@@ -247,10 +327,11 @@ export class ElementsSalaireComponent implements OnInit {
 
   toggleStatut(el: SalaryElementModel): void {
     const newStatut = !el.statut;
-    const methodCalculVal = el.methodCalcul || el.calculationMethod || 'MONTANT_FIXE';
+    const methodCalculVal = el.calculationMethod === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
     const payload: SalaryElementDto = {
-      code: el.code,
-      name: el.name,
+      code: el.code.toLowerCase().trim(),
+      codeCorrespondant: el.codeCorrespondant ? el.codeCorrespondant.toLowerCase().trim() : el.code.toLowerCase().trim(),
+      name: el.name.toUpperCase().trim(),
       categoryId: el.categoryId,
       salaryCategoryId: el.categoryId,
       rate: el.rate,
@@ -292,12 +373,14 @@ export class ElementsSalaireComponent implements OnInit {
 
   reinitialiserDonneesTest(): void {
     this.loadCategories();
+    this.loadAdminCodes();
   }
 
   private getEmptyForm(): SalaryElementModel {
     return {
       id: 0,
       code: '',
+      codeCorrespondant: '',
       name: '',
       categoryId: 1,
       categoryName: '',

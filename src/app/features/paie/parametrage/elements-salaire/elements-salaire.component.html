@@ -8,8 +8,8 @@
       </div>
     </div>
     <div class="ph-actions" style="display: flex; gap: 10px; align-items: center;">
-      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Générer les éléments de salaire bancaires BPBF" style="border-radius: 8px;">
-        <mat-icon>auto_awesome</mat-icon> Données Banque BPBF
+      <button mat-stroked-button color="primary" (click)="reinitialiserDonneesTest()" title="Recharger les données et codes Gestion Admin" style="border-radius: 8px;">
+        <mat-icon>refresh</mat-icon> Actualiser
       </button>
       <button mat-raised-button class="btn-new" (click)="openAddModal()">
         <mat-icon>add</mat-icon> Nouvel Élément de Salaire
@@ -40,7 +40,7 @@
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Rechercher un élément</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: SAL_BASE, CNSS, Logement...">
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="applyFilter()" placeholder="Ex: sal_base, ind-log, primes...">
           @if (searchQuery) {
             <button matSuffix mat-icon-button (click)="searchQuery=''; applyFilter()"><mat-icon>close</mat-icon></button>
           }
@@ -76,15 +76,16 @@
         <thead>
           <tr>
             <th style="width: 45px; text-align: center;">Ordre</th>
-            <th style="width: 110px;">Code</th>
+            <th style="width: 140px;">Code Élément</th>
+            <th style="width: 140px;">Code Admin</th>
             <th>Libellé / Nom</th>
             <th style="width: 160px;">Catégorie Parente</th>
-            <th style="width: 110px;">Méthode</th>
-            <th style="width: 140px;">Formule / Règle</th>
+            <th style="width: 120px;">Méthode</th>
+            <th style="width: 180px;">Règle / Formule</th>
             <th style="text-align: center; width: 55px;">Cotis.</th>
             <th style="text-align: center; width: 55px;">Impos.</th>
             <th style="text-align: center; width: 75px;">Statut</th>
-            <th class="col-actions" style="text-align: center; width: 120px;">Actions</th>
+            <th class="col-actions" style="text-align: center; width: 110px;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +96,14 @@
               </td>
               <td><code class="code-pill">{{ el.code }}</code></td>
               <td>
-                <strong class="el-name">{{ el.name }}</strong>
+                @if (el.codeCorrespondant) {
+                  <span class="code-pill admin-badge" title="Code lu depuis Gestion Admin">{{ el.codeCorrespondant }}</span>
+                } @else {
+                  <span style="color: #64748b; font-size: 11px;">—</span>
+                }
+              </td>
+              <td>
+                <strong class="el-name" style="text-transform: uppercase;">{{ el.name }}</strong>
               </td>
               <td>
                 <span class="cat-pill" [class.gain]="el.type === 'GAIN'" [class.ret]="el.type === 'RETENUE'" [class.pat]="el.type === 'PATRONALE'">
@@ -103,7 +111,9 @@
                 </span>
               </td>
               <td>
-                <span class="method-chip">{{ el.methodCalcul || el.calculationMethod }}</span>
+                <span class="method-chip" [class.fixed]="el.calculationMethod === 'MONTANT_FIXE'" [class.complex]="el.calculationMethod === 'FORMULE_COMPLEXE'">
+                  {{ el.calculationMethod === 'FORMULE_COMPLEXE' ? 'Formule Complexe' : 'Montant Fixe' }}
+                </span>
               </td>
               <td>
                 <code class="formula-code">{{ el.formule || '—' }}</code>
@@ -157,98 +167,166 @@
 
         <div class="modal-body">
           <div class="form-grid">
-            <!-- Nom -->
+            <!-- Nom (Forcé en Majuscules) -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Nom *</mat-label>
-                <input matInput [(ngModel)]="formModel.name" placeholder="Ex: Indemnité de Logement, Avance sur salaire...">
+                <input matInput [(ngModel)]="formModel.name" (ngModelChange)="onNameChange()" placeholder="Ex: INDEMNITÉ DE LOGEMENT" style="text-transform: uppercase;">
+                <mat-hint>Nom forcé en MAJUSCULES</mat-hint>
               </mat-form-field>
             </div>
 
-            <!-- Code -->
+            <!-- Code Élément (Forcé en Minuscules) -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Code *</mat-label>
-                <input matInput [(ngModel)]="formModel.code" placeholder="Ex: IND_LOGE, AV_SAL..." style="text-transform: uppercase;">
+                <input matInput [(ngModel)]="formModel.code" (ngModelChange)="onCodeChange()" placeholder="Ex: ind_log, sal_base..." style="text-transform: lowercase;">
+                <mat-hint>Code unique forcé en minuscules</mat-hint>
               </mat-form-field>
             </div>
 
-            <!-- Catégorie Parente -->
+            <!-- Catégorie Parente (Hérite automatiquement le type Gain/Retenue/Patronale) -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Catégorie Parente *</mat-label>
                 <mat-select [(ngModel)]="formModel.categoryId" (selectionChange)="onCategoryChange($event.value)">
                   @for (cat of categoriesList; track cat.id) {
                     <mat-option [value]="cat.id">
-                      {{ cat.name }}
+                      {{ cat.name }} ({{ cat.type }})
                     </mat-option>
                   }
                 </mat-select>
               </mat-form-field>
             </div>
 
-            <!-- Type / Nature -->
-            <div>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>Type *</mat-label>
-                <mat-select [(ngModel)]="formModel.type">
-                  <mat-option value="GAIN">Gain</mat-option>
-                  <mat-option value="RETENUE">Retenue</mat-option>
-                  <mat-option value="PATRONALE">Patronale</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            <!-- Méthode de Calcul -->
+            <!-- Méthode de Calcul : STRICTEMENT Montant Fixe ou Formule Complexe -->
             <div>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Méthode de Calcul *</mat-label>
-                <mat-select [(ngModel)]="formModel.calculationMethod" (selectionChange)="formModel.methodCalcul = $event.value">
+                <mat-select [(ngModel)]="formModel.calculationMethod" (selectionChange)="onMethodChange($event.value)">
                   <mat-option value="MONTANT_FIXE">Montant Fixe</mat-option>
-                  <mat-option value="POURCENTAGE">Pourcentage</mat-option>
                   <mat-option value="FORMULE_COMPLEXE">Formule Complexe</mat-option>
-                  <mat-option value="SAISIE_MANUELLE">Saisie Manuelle</mat-option>
-                  <mat-option value="GRILLE">Grille Salariale</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>
 
-            <!-- Ordre -->
-            <div>
+            <!-- Ordre d'affichage sur bulletin -->
+            <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Ordre d'affichage sur bulletin</mat-label>
                 <input matInput type="number" [(ngModel)]="formModel.ordre" placeholder="1, 2, 10, 20...">
               </mat-form-field>
             </div>
 
-            <!-- Paramètre de la Formule / Valeur selon la Méthode -->
-            @if (formModel.calculationMethod === 'POURCENTAGE') {
+            <!-- CAS 1 : MONTANT FIXE -> Code correspondant Gestion Admin -->
+            @if (formModel.calculationMethod === 'MONTANT_FIXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Taux en % *</mat-label>
-                  <input matInput type="number" step="0.01" [(ngModel)]="formModel.rate" placeholder="Ex: 5.5">
+                  <mat-label>Code correspondant (Gestion Admin) *</mat-label>
+                  <input matInput [(ngModel)]="formModel.codeCorrespondant" (ngModelChange)="onCodeCorrespondantChange()" placeholder="Ex: ind-log, sal_base, ind-trp..." style="text-transform: lowercase;">
+                  <mat-hint>Code lu depuis Gestion Admin pour récupérer le montant contractuel ou l'indemnité</mat-hint>
+                </mat-form-field>
+
+                <!-- Suggestions cliquables issues de Gestion Admin -->
+                @if (adminCodesList && adminCodesList.length > 0) {
+                  <div class="admin-codes-box">
+                    <div class="box-label">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">hub</mat-icon>
+                      Codes disponibles dans Gestion Admin (cliquez pour sélectionner) :
+                    </div>
+                    <div class="codes-chips">
+                      @for (ac of adminCodesList; track ac.code) {
+                        <button type="button" class="chip-btn" [class.active]="formModel.codeCorrespondant === ac.code" (click)="selectAdminCode(ac.code)" [title]="ac.label + ' (' + ac.source + ')'">
+                          {{ ac.code }} <small style="opacity: 0.7;">— {{ ac.label }}</small>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="full-col">
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label>Montant Fixe par défaut (Optionnel)</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0 ou 35000 (utilisé si non défini dans Gestion Admin)">
                 </mat-form-field>
               </div>
-            } @else if (formModel.calculationMethod === 'MONTANT_FIXE' || formModel.calculationMethod === 'FIXE') {
+            }
+
+            <!-- CAS 2 : FORMULE COMPLEXE -> Editeur de formule avec SUM, AVG, Catégories, etc. -->
+            @if (formModel.calculationMethod === 'FORMULE_COMPLEXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Montant Fixe par défaut</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000">
+                  <mat-label>Formule de Calcul Complexe *</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="formModel.formule" placeholder="Ex: SUM(CAT_SAL_BASE) * 0.10 ou sal_base + sursalaire + AVG(CAT_INDEMNITES)"></textarea>
+                  <mat-hint>Combinez des catégories parentes, des codes d'éléments et des fonctions mathématiques</mat-hint>
                 </mat-form-field>
-              </div>
-            } @else if (formModel.calculationMethod === 'SAISIE_MANUELLE') {
-              <div class="full-col">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Valeur par défaut</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0">
-                </mat-form-field>
-              </div>
-            } @else {
-              <div class="full-col">
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Formule de calcul</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: SAL_BASE * 0.10, BRUT_COTISABLE * 0.055...">
-                </mat-form-field>
+
+                <!-- Assistant d'insertion rapide dans la formule -->
+                <div class="formula-builder-box">
+                  <!-- Fonctions & Opérateurs -->
+                  <div class="helper-section">
+                    <div class="helper-title">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">functions</mat-icon>
+                      Fonctions & Opérateurs :
+                    </div>
+                    <div class="helper-chips">
+                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('SUM()')">SUM( )</button>
+                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('AVG()')">AVG( )</button>
+                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('MIN()')">MIN( )</button>
+                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('MAX()')">MAX( )</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula('+')">+</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula('-')">-</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula('*')">*</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula('/')">/</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula('(')">(</button>
+                      <button type="button" class="token-btn op" (click)="insertIntoFormula(')')">)</button>
+                      <button type="button" class="token-btn" (click)="insertIntoFormula('* 0.10')">10%</button>
+                      <button type="button" class="token-btn" (click)="insertIntoFormula('* 0.055')">5.5%</button>
+                    </div>
+                  </div>
+
+                  <!-- Catégories parentes -->
+                  @if (categoriesList && categoriesList.length > 0) {
+                    <div class="helper-section">
+                      <div class="helper-title">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">folder</mat-icon>
+                        Catégories parentes :
+                      </div>
+                      <div class="helper-chips">
+                        @for (c of categoriesList; track c.id) {
+                          @if (c.code) {
+                            <button type="button" class="token-btn cat" (click)="insertIntoFormula(c.code)" [title]="c.name">
+                              {{ c.code }}
+                            </button>
+                            <button type="button" class="token-btn fn" (click)="insertIntoFormula('SUM(' + c.code + ')')" [title]="'Somme de ' + c.name">
+                              SUM({{ c.code }})
+                            </button>
+                          }
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Éléments de salaire existants -->
+                  @if (elementsList && elementsList.length > 0) {
+                    <div class="helper-section">
+                      <div class="helper-title">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">tag</mat-icon>
+                        Codes d'éléments existants :
+                      </div>
+                      <div class="helper-chips">
+                        @for (elem of elementsList; track elem.id) {
+                          @if (elem.code && (!formModel.id || elem.id !== formModel.id)) {
+                            <button type="button" class="token-btn" (click)="insertIntoFormula(elem.code)" [title]="elem.name">
+                              {{ elem.code }}
+                            </button>
+                          }
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
               </div>
             }
 
@@ -281,4 +359,3 @@
     </div>
   }
 </div>
-
