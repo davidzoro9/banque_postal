@@ -1871,7 +1871,7 @@ export class GenererBulletinsComponent implements OnInit {
           tauxStr = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0) ? `${l.taux} %` : '5 %';
         } else if (cd.includes('TROP') || cd.includes('PREC') || nm.includes('TROP') || nm.includes('PRECOMPTE')) {
           tauxStr = '';
-        } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
+        } else if (((cd.includes('ANC') && !cd.includes('AVANCE') && !cd.includes('ASSURANCE')) || nm.includes('ANCIENNET')) && !cd.includes('AVANCE') && !cd.includes('ASSURANCE')) {
           tauxStr = (l.taux !== undefined && l.taux !== null && l.taux !== '') ? `${l.taux} %` : '';
         } else if (l.taux !== undefined && l.taux !== null && l.taux !== '' && Number(l.taux) > 0) {
           tauxStr = String(l.taux).includes('%') ? String(l.taux) : `${l.taux} %`;
@@ -1883,7 +1883,7 @@ export class GenererBulletinsComponent implements OnInit {
 
         return {
           code: l.code,
-          name: nm,
+          name: rawName,
           typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
           gain: gainVal,
           retenue: retenueVal,
@@ -1895,7 +1895,11 @@ export class GenererBulletinsComponent implements OnInit {
     }
 
     const ancVal = b.primeAnciennete != null ? Number(b.primeAnciennete) : 0;
-    if (ancVal > 0 && !lines.some((l: any) => (l.code || '').includes('ANC') || (l.name || '').includes('ANCIENNET'))) {
+    if (ancVal > 0 && !lines.some((l: any) => {
+      const c = (l.code || '').toUpperCase();
+      const n = (l.name || '').toUpperCase();
+      return (((c.includes('ANC') && !c.includes('AVANCE') && !c.includes('ASSURANCE')) || n.includes('ANCIENNET')) && !c.includes('AVANCE') && !c.includes('ASSURANCE'));
+    })) {
       lines.push({
         code: 'PRIME_ANC',
         name: "PRIME D'ANCIENNETE",
@@ -1937,7 +1941,7 @@ export class GenererBulletinsComponent implements OnInit {
       // 3. Salaire de base, sur-salaire et prime d'ancienneté
       if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP'))) return 1;
       if (cd === 'SUR_SALAIRE' || nm.includes('SURSALAIRE') || nm.includes('SUR-SALAIRE')) return 2;
-      if (cd.includes('ANC') || nm.includes('ANCIENNET')) return 3;
+      if (((cd.includes('ANC') && !cd.includes('AVANCE') && !cd.includes('ASSURANCE')) || nm.includes('ANCIENNET')) && !cd.includes('AVANCE') && !nm.includes('AVANCE') && !cd.includes('ASSURANCE') && !nm.includes('ASSURANCE')) return 3;
       if (cd.includes('CAISSE') || nm.includes('CAISSE')) return 4;
       if (cd.includes('SUJETION') || cd.includes('SUJ') || nm.includes('SUJETION') || nm.includes('SUJÉTION')) return 5;
       if (cd.includes('TRANS') || cd.includes('TRP') || nm.includes('TRANSPORT') || nm.includes('DEPLACEMENT') || nm.includes('DÉPLACEMENT')) return 6;

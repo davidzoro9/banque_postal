@@ -222,87 +222,19 @@
             @if (formModel.calculationMethod === 'MONTANT_FIXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Montant Fixe par défaut (Optionnel)</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000 (laisser vide pour récupérer le montant de l'agent dans sa fiche)">
-                  <mat-hint>Le système compare automatiquement le Code ou le Nom pour récupérer le montant de l'agent</mat-hint>
+                  <mat-label>Montant Fixe / Valeur</mat-label>
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000">
                 </mat-form-field>
               </div>
             }
 
-            <!-- CAS 2 : FORMULE COMPLEXE -> Editeur de formule avec SUM, AVG, Catégories, etc. -->
+            <!-- CAS 2 : FORMULE COMPLEXE -->
             @if (formModel.calculationMethod === 'FORMULE_COMPLEXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Formule de Calcul Complexe *</mat-label>
-                  <textarea matInput rows="3" [(ngModel)]="formModel.formule" placeholder="Ex: SUM(CAT_SAL_BASE) * 0.10 ou sal_base + sursalaire + AVG(CAT_INDEMNITES)"></textarea>
-                  <mat-hint>Combinez des catégories parentes, des codes d'éléments et des fonctions mathématiques</mat-hint>
+                  <mat-label>Formule de Calcul</mat-label>
+                  <textarea matInput rows="2" [(ngModel)]="formModel.formule" placeholder="Ex: SUM(CAT_SAL_BASE) * 0.10 ou sal_base + sursalaire"></textarea>
                 </mat-form-field>
-
-                <!-- Assistant d'insertion rapide dans la formule -->
-                <div class="formula-builder-box">
-                  <!-- Fonctions & Opérateurs -->
-                  <div class="helper-section">
-                    <div class="helper-title">
-                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">functions</mat-icon>
-                      Fonctions & Opérateurs :
-                    </div>
-                    <div class="helper-chips">
-                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('SUM()')">SUM( )</button>
-                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('AVG()')">AVG( )</button>
-                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('MIN()')">MIN( )</button>
-                      <button type="button" class="token-btn fn" (click)="insertIntoFormula('MAX()')">MAX( )</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula('+')">+</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula('-')">-</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula('*')">*</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula('/')">/</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula('(')">(</button>
-                      <button type="button" class="token-btn op" (click)="insertIntoFormula(')')">)</button>
-                      <button type="button" class="token-btn" (click)="insertIntoFormula('* 0.10')">10%</button>
-                      <button type="button" class="token-btn" (click)="insertIntoFormula('* 0.055')">5.5%</button>
-                    </div>
-                  </div>
-
-                  <!-- Catégories parentes -->
-                  @if (categoriesList && categoriesList.length > 0) {
-                    <div class="helper-section">
-                      <div class="helper-title">
-                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">folder</mat-icon>
-                        Catégories parentes :
-                      </div>
-                      <div class="helper-chips">
-                        @for (c of categoriesList; track c.id) {
-                          @if (c.code) {
-                            <button type="button" class="token-btn cat" (click)="insertIntoFormula(c.code)" [title]="c.name">
-                              {{ c.code }}
-                            </button>
-                            <button type="button" class="token-btn fn" (click)="insertIntoFormula('SUM(' + c.code + ')')" [title]="'Somme de ' + c.name">
-                              SUM({{ c.code }})
-                            </button>
-                          }
-                        }
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Éléments de salaire existants -->
-                  @if (elementsList && elementsList.length > 0) {
-                    <div class="helper-section">
-                      <div class="helper-title">
-                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">tag</mat-icon>
-                        Codes d'éléments existants :
-                      </div>
-                      <div class="helper-chips">
-                        @for (elem of elementsList; track elem.id) {
-                          @if (elem.code && (!formModel.id || elem.id !== formModel.id)) {
-                            <button type="button" class="token-btn" (click)="insertIntoFormula(elem.code)" [title]="elem.name">
-                              {{ elem.code }}
-                            </button>
-                          }
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
               </div>
             }
 
