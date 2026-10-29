@@ -218,37 +218,13 @@
               </mat-form-field>
             </div>
 
-            <!-- CAS 1 : MONTANT FIXE -> Nom du champ dans la table information_salariale de Gestion Admin -->
+            <!-- CAS 1 : MONTANT FIXE -->
             @if (formModel.calculationMethod === 'MONTANT_FIXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Nom du champ dans la table information_salariale (Gestion Admin) *</mat-label>
-                  <input matInput [(ngModel)]="formModel.codeCorrespondant" (ngModelChange)="onCodeCorrespondantChange()" placeholder="Ex: salaire_base, sur_salaire, total_indemnites, ind-log..." style="text-transform: lowercase;">
-                  <mat-hint>Nom exact de la colonne dans la table information_salariale (PostgreSQL) ou code d'indemnité</mat-hint>
-                </mat-form-field>
-
-                <!-- Suggestions cliquables issues de Gestion Admin -->
-                @if (adminCodesList && adminCodesList.length > 0) {
-                  <div class="admin-codes-box">
-                    <div class="box-label">
-                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">storage</mat-icon>
-                      Colonnes de la table information_salariale & Codes d'indemnités (cliquez pour sélectionner) :
-                    </div>
-                    <div class="codes-chips">
-                      @for (ac of adminCodesList; track ac.code) {
-                        <button type="button" class="chip-btn" [class.active]="formModel.codeCorrespondant === ac.code" (click)="selectAdminCode(ac.code)" [title]="ac.label + ' (' + ac.source + ')'">
-                          {{ ac.code }} <small style="opacity: 0.7;">— {{ ac.label }}</small>
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-
-              <div class="full-col">
-                <mat-form-field appearance="outline" class="w-100">
                   <mat-label>Montant Fixe par défaut (Optionnel)</mat-label>
-                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 0 ou 35000 (utilisé si non défini dans Gestion Admin)">
+                  <input matInput [(ngModel)]="formModel.formule" placeholder="Ex: 35000 (laisser vide pour récupérer le montant de l'agent dans sa fiche)">
+                  <mat-hint>Le système compare automatiquement le Code ou le Nom pour récupérer le montant de l'agent</mat-hint>
                 </mat-form-field>
               </div>
             }
