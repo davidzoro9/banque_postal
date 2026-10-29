@@ -2332,10 +2332,18 @@ public class BulletinService {
                         || seNameCheck.contains("TROP-PER") || seNameCheck.contains("TROP PER")
                         || seNameCheck.contains("RAPPEL") || seNameCheck.contains("ASSURANCE");
 
+                if (isVariableOrIndividual) {
+                    // Les éléments variables ou individuels (Rappels, Trop-perçus, Avances, Prêts, Précomptes)
+                    // sont gérés exclusivement par les dossiers réels de l'agent (AvoirEmploye, TropPercuEmploye, etc.).
+                    // Ils ne doivent JAMAIS être injectés globalement depuis le paramétrage général.
+                    processedCodes.add(codeNorm);
+                    continue;
+                }
+
                 BigDecimal fieldVal = resolveInformationSalarialeField(infoSalariale, se.getCodeCorrespondant());
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getCode());
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getName());
-                if (fieldVal == null && !isVariableOrIndividual && se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) {
+                if (fieldVal == null && se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) {
                     fieldVal = se.getRate();
                 }
 
@@ -2368,6 +2376,23 @@ public class BulletinService {
 
             // 13. AUTRE ÉLÉMENT FORMULE_COMPLEXE (Formule personnalisée)
             if ("FORMULE_COMPLEXE".equalsIgnoreCase(se.getMethodCalcul()) && se.getFormule() != null && !se.getFormule().isBlank()) {
+                String seCodeCheck = (se.getCode() != null ? se.getCode() : "").toUpperCase(Locale.ROOT);
+                String seNameCheck = (se.getName() != null ? se.getName() : "").toUpperCase(Locale.ROOT);
+                String catCodeCheck = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
+                        ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
+                boolean isVariableOrIndividual = catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
+                        || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
+                        || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL") || seCodeCheck.contains("ASSURANCE")
+                        || seNameCheck.contains("AVANCE") || seNameCheck.contains("PRÊT") || seNameCheck.contains("PRET")
+                        || seNameCheck.contains("PRÉCOMPTE") || seNameCheck.contains("PRECOMPTE")
+                        || seNameCheck.contains("TROP-PER") || seNameCheck.contains("TROP PER")
+                        || seNameCheck.contains("RAPPEL") || seNameCheck.contains("ASSURANCE");
+
+                if (isVariableOrIndividual) {
+                    processedCodes.add(codeNorm);
+                    continue;
+                }
+
                 BigDecimal formRes = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
                 if (formRes != null && formRes.compareTo(BigDecimal.ZERO) > 0) {
                     String catType = (se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null)
@@ -4076,9 +4101,17 @@ public class BulletinService {
         String c = se.getCode() != null ? se.getCode().toLowerCase(Locale.ROOT) : "";
         String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toLowerCase(Locale.ROOT) : "";
         String n = se.getName() != null ? se.getName().toLowerCase(Locale.ROOT) : "";
+
+        // Exclusion formelle de tout rappel, trop-perçu ou avance
+        if (c.contains("rappel") || cc.contains("rappel") || n.contains("rappel")
+                || c.contains("trop") || cc.contains("trop") || n.contains("trop")
+                || c.contains("avance") || cc.contains("avance") || n.contains("avance")) {
+            return false;
+        }
+
         return cc.equals("salaire_base") || cc.equals("sal_base") || cc.equals("salbase") || cc.equals("sal_mensuel")
-                || c.equals("salaire_base") || c.equals("sal_base") || c.equals("salbase")
-                || n.equals("salaire de base") || n.equals("sal_base") || n.equals("base") || n.contains("salaire de base");
+                || c.equals("salaire_base") || c.equals("sal_base") || c.equals("salbase") || c.equals("sal_de_base")
+                || n.equals("salaire de base") || n.equals("sal_base") || n.equals("base") || n.equals("salaire base");
     }
 
     public static boolean isSurSalaireElement(SalaryElement se) {
@@ -4086,9 +4119,17 @@ public class BulletinService {
         String c = se.getCode() != null ? se.getCode().toLowerCase(Locale.ROOT) : "";
         String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toLowerCase(Locale.ROOT) : "";
         String n = se.getName() != null ? se.getName().toLowerCase(Locale.ROOT) : "";
+
+        // Exclusion formelle de tout rappel, trop-perçu ou avance
+        if (c.contains("rappel") || cc.contains("rappel") || n.contains("rappel")
+                || c.contains("trop") || cc.contains("trop") || n.contains("trop")
+                || c.contains("avance") || cc.contains("avance") || n.contains("avance")) {
+            return false;
+        }
+
         return cc.equals("sur_salaire") || cc.equals("sursalaire")
                 || c.equals("sur_salaire") || c.equals("sursalaire")
-                || n.contains("sur-salaire") || n.contains("sursalaire");
+                || n.equals("sur-salaire") || n.equals("sursalaire") || n.equals("sur salaire");
     }
 
     public static boolean isAncienneteElement(SalaryElement se) {
