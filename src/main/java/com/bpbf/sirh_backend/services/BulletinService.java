@@ -2372,7 +2372,6 @@ public class BulletinService {
                         customLine.setMontant(money(fieldVal));
                     }
                     lines.add(customLine);
-                }
                 processedCodes.add(codeNorm);
                 continue;
             }
