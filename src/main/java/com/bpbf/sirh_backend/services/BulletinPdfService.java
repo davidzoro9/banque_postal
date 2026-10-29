@@ -1106,7 +1106,8 @@ public class BulletinPdfService {
             for (BulletinLine line : b.getLines()) {
                 String code = line.getCode() != null ? line.getCode().toUpperCase(Locale.ROOT) : "";
                 String lib = line.getLibelle() != null ? line.getLibelle().toUpperCase(Locale.ROOT) : "";
-                if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                if (code.contains("CRRAE") || code.contains("CARRAE") || code.contains("RCPNC")
+                        || lib.contains("CRRAE") || lib.contains("CARRAE") || lib.contains("RCPNC")) {
                     return line.getMontant() != null ? line.getMontant() : BigDecimal.ZERO;
                 }
             }
@@ -1114,7 +1115,7 @@ public class BulletinPdfService {
         BigDecimal base = BigDecimal.ZERO;
         if (b.getSalaireBase() != null) base = base.add(b.getSalaireBase());
         if (b.getSurSalaire() != null) base = base.add(b.getSurSalaire());
-        return base.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+        return base.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
     }
 
     private BigDecimal extractCrraeFromDto(BulletinDto dto) {
@@ -1126,7 +1127,8 @@ public class BulletinPdfService {
             for (BulletinLineDto line : dto.getLines()) {
                 String code = line.getCode() != null ? line.getCode().toUpperCase(Locale.ROOT) : "";
                 String lib = (line.getLibelle() != null ? line.getLibelle() : (line.getName() != null ? line.getName() : "")).toUpperCase(Locale.ROOT);
-                if (code.contains("CRRAE") || lib.contains("CRRAE")) {
+                if (code.contains("CRRAE") || code.contains("CARRAE") || code.contains("RCPNC")
+                        || lib.contains("CRRAE") || lib.contains("CARRAE") || lib.contains("RCPNC")) {
                     return line.getMontant() != null ? line.getMontant() : (line.getAmount() != null ? BigDecimal.valueOf(Math.abs(line.getAmount())) : BigDecimal.ZERO);
                 }
             }
@@ -1134,7 +1136,7 @@ public class BulletinPdfService {
         BigDecimal base = BigDecimal.ZERO;
         if (dto.getSalaireBase() != null) base = base.add(dto.getSalaireBase());
         if (dto.getSurSalaire() != null) base = base.add(dto.getSurSalaire());
-        return base.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+        return base.multiply(new BigDecimal("0.06")).setScale(0, RoundingMode.HALF_UP);
     }
 
     private BigDecimal extractCnssFromBulletin(Bulletin b) {

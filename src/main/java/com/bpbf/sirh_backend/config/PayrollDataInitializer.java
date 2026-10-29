@@ -201,8 +201,9 @@ public class PayrollDataInitializer implements CommandLineRunner {
         // Cotisation sécurité sociale
         getOrCreateElement("COTIS_CNSS", "Cotisation CNSS (Salariale)", catCotisSoc, new BigDecimal("5.50"), false, false, "POURCENTAGE", "BRUT_COTISABLE * 0.055", 19);
         getOrCreateElement("COTIS_CARFO", "Cotisation CARFO (Salariale)", catCotisSoc, new BigDecimal("8.00"), false, false, "POURCENTAGE", "BASE_INDICE * 0.08", 20);
-        getOrCreateElement("REGUL_CNSS", "Régularisation CNSS", catCotisSoc, null, false, false, "MONTANT_FIXE", "0", 21);
-        getOrCreateElement("REGUL_CARFO", "Régularisation CARFO", catCotisSoc, null, false, false, "MONTANT_FIXE", "0", 22);
+        getOrCreateElement("COTIS_CRRAE", "Cotisation CRRAE/RCPNC (Salariale)", catCotisSoc, new BigDecimal("6.00"), false, false, "POURCENTAGE", "(SAL_BASE + SUR_SALAIRE) * 0.06", 21);
+        getOrCreateElement("REGUL_CNSS", "Régularisation CNSS", catCotisSoc, null, false, false, "MONTANT_FIXE", "0", 22);
+        getOrCreateElement("REGUL_CARFO", "Régularisation CARFO", catCotisSoc, null, false, false, "MONTANT_FIXE", "0", 23);
 
         // IUTS
         getOrCreateElement("RETENUE_IUTS", "Retenue IUTS", catIuts, null, false, false, "FORMULE", "BAREME_PROGRESSIF_BF", 23);
