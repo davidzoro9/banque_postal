@@ -389,10 +389,42 @@ export class ComptesComptablesComponent implements OnInit {
   // 2. GESTION DES CLASSES COMPTABLES (Numéro et Nom de classe)
   // =========================================================================
 
+  getClasseNumero(cl?: ClasseComptableOption): string {
+    if (!cl) return '';
+    if (cl.numero && cl.numero.trim()) return cl.numero.trim();
+    if (cl.code) return cl.code.replace('CLASSE_', '').trim();
+    if (cl.libelle) {
+      const match = cl.libelle.match(/Classe\s+(\d+)/i);
+      if (match) return match[1];
+    }
+    return '';
+  }
+
+  getClasseNom(cl?: ClasseComptableOption): string {
+    if (!cl) return '';
+    if (cl.nom && cl.nom.trim()) return cl.nom.trim();
+    if (cl.libelle) {
+      if (cl.libelle.includes('—')) {
+        const part = cl.libelle.split('—')[1]?.trim();
+        if (part) return part;
+      } else if (cl.libelle.includes('-')) {
+        const part = cl.libelle.split('-')[1]?.trim();
+        if (part) return part;
+      }
+    }
+    return cl.libelle || cl.code || '';
+  }
+
   ouvrirModalClasse(classe?: ClasseComptableOption): void {
     if (classe) {
       this.isEditingClasse = true;
-      this.currentClasse = { ...classe };
+      const num = this.getClasseNumero(classe);
+      const nom = this.getClasseNom(classe);
+      this.currentClasse = {
+        ...classe,
+        numero: num,
+        nom: nom
+      };
     } else {
       this.isEditingClasse = false;
       this.currentClasse = {

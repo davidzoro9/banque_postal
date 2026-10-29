@@ -211,7 +211,7 @@
               [class.active]="selectedClasse === c.code"
               (click)="onClasseChange(c.code)"
             >
-              {{ c.numero && c.nom ? 'Classe ' + c.numero + ' (' + c.nom + ')' : c.libelle }}
+              {{ 'Classe ' + getClasseNumero(c) + ' (' + getClasseNom(c) + ')' }}
             </button>
           }
         </div>
@@ -376,11 +376,11 @@
               <tr [class.row-inactive]="!cl.actif">
                 <td>
                   <span class="account-badge badge-c6">
-                    Classe {{ cl.numero }}
+                    Classe {{ getClasseNumero(cl) }}
                   </span>
                 </td>
                 <td>
-                  <strong>{{ cl.nom }}</strong>
+                  <strong>{{ getClasseNom(cl) }}</strong>
                 </td>
                 <td>{{ cl.libelle }}</td>
                 <td><code>{{ cl.code }}</code></td>
