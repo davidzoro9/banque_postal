@@ -48,6 +48,7 @@ public class BulletinService {
     private final EmployeeProcessService employeeProcessService;
     private final CongeWorkflowService congeWorkflowService;
     private final TypeIndemniteRepository typeIndemniteRepository;
+    private final SalaryElementRepository salaryElementRepository;
 
     /**
      * Garde-fou d'intégrité V3 : interdit toute modification sur un bulletin ou une session validée/clôturée.
@@ -2192,6 +2193,10 @@ public class BulletinService {
             retLine.setTaux(taux);
 
             if (employeur) {
+                // Pour la CRRAE patronale, le traitement est délégué à COT_CRRAE ci-dessous pour respecter la formule configurée
+                if (rCode.contains("CRRAE") || rLib.contains("CRRAE")) {
+                    continue;
+                }
                 retLine.setTypeLigne("COTISATION_PATRONALE");
                 retLine.setMontant(BigDecimal.ZERO);
                 retLine.setPartPatronale(montant);
@@ -2202,6 +2207,7 @@ public class BulletinService {
                 totalRetenuesSociales = totalRetenuesSociales.add(montant);
                 retLine.setTypeLigne("RETENUE_SOCIALE");
                 retLine.setMontant(montant);
+                retLine.setPartPatronale(BigDecimal.ZERO);
                 retLine.setOrdre(ordre++);
                 lines.add(retLine);
             }
@@ -2235,32 +2241,81 @@ public class BulletinService {
             }
         }
 
-        // Vérifier et garantir la présence de la CRRAE (Salarié 6%, Patronale 6%) pour session ordinaire
-        boolean hasCrrae = lines.stream().anyMatch(l -> l.getCode() != null && (l.getCode().contains("CRRAE") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CRRAE"))));
-        if (!isExtra && !hasCrrae && baseCrrae.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal tauxCrrae = new BigDecimal("6.00");
-            BigDecimal montantCrrae = money(calculatePercentage(baseCrrae, tauxCrrae));
-            BigDecimal crraePatronale = money(calculatePercentage(baseCrrae, new BigDecimal("6.00")));
-            totalRetenuesSociales = totalRetenuesSociales.add(montantCrrae);
-            totalCotisationsPatronales = totalCotisationsPatronales.add(crraePatronale);
+        // 1. Vérifier et garantir la présence de la CRRAE Salariale (6% sur baseCrrae = SB + SS + Prime Anc) pour session ordinaire
+        boolean hasCrraeSal = lines.stream().anyMatch(l -> l.getCode() != null && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne()) 
+                && (l.getCode().contains("CRRAE") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CRRAE"))));
+        if (!isExtra && !hasCrraeSal && baseCrrae.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal tauxCrraeSal = new BigDecimal("6.00");
+            BigDecimal montantCrraeSal = money(calculatePercentage(baseCrrae, tauxCrraeSal));
+            totalRetenuesSociales = totalRetenuesSociales.add(montantCrraeSal);
 
             BulletinLine crraeLine = new BulletinLine();
             crraeLine.setCode("COTIS_CRRAE");
             crraeLine.setLibelle("COTISATION CRRAE/RCPNC");
             crraeLine.setTypeLigne("RETENUE_SOCIALE");
             crraeLine.setBaseCalcul(baseCrrae);
-            crraeLine.setTaux(tauxCrrae);
-            crraeLine.setMontant(montantCrrae);
-            crraeLine.setPartPatronale(crraePatronale);
+            crraeLine.setTaux(tauxCrraeSal);
+            crraeLine.setMontant(montantCrraeSal);
+            crraeLine.setPartPatronale(BigDecimal.ZERO);
             crraeLine.setOrdre(ordre++);
             lines.add(crraeLine);
-        } else if (!isExtra && hasCrrae) {
+        } else if (!isExtra && hasCrraeSal) {
+            // S'assurer que la ligne salariale CRRAE ne porte pas de part patronale afin d'éviter tout doublon avec COT_CRRAE
             for (BulletinLine l : lines) {
-                if (l.getCode() != null && (l.getCode().contains("CRRAE") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CRRAE")))) {
+                if (l.getCode() != null && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne()) 
+                        && (l.getCode().contains("CRRAE") || (l.getLibelle() != null && l.getLibelle().toUpperCase(Locale.ROOT).contains("CRRAE")))) {
+                    l.setPartPatronale(BigDecimal.ZERO);
+                }
+            }
+        }
+
+        // 2. Vérifier et garantir la présence de la CHARGE PATRONALE CRRAE (COT_CRRAE : Formule (SAL_BASE + SUR_SALAIRE)*0,1)
+        boolean hasCrraePat = lines.stream().anyMatch(l -> l.getCode() != null && "COT_CRRAE".equalsIgnoreCase(l.getCode()));
+        BigDecimal baseCrraePat = money(salaireBase.add(surSalaire));
+        if (!isExtra && !hasCrraePat && baseCrraePat.compareTo(BigDecimal.ZERO) > 0) {
+            SalaryElement crraeParam = null;
+            try {
+                if (salaryElementRepository != null) {
+                    crraeParam = salaryElementRepository.findByCode("COT_CRRAE").orElse(null);
+                }
+            } catch (Exception ignored) {}
+
+            String codePat = "COT_CRRAE";
+            String libellePat = (crraeParam != null && crraeParam.getName() != null && !crraeParam.getName().isBlank()) 
+                    ? crraeParam.getName() 
+                    : "Charges patronale CRRAE";
+            String formulePat = (crraeParam != null && crraeParam.getFormule() != null && !crraeParam.getFormule().isBlank()) 
+                    ? crraeParam.getFormule() 
+                    : "(SAL_BASE + SUR_SALAIRE)*0,1";
+
+            BigDecimal tauxPat = (crraeParam != null && crraeParam.getRate() != null && crraeParam.getRate().compareTo(BigDecimal.ZERO) > 0)
+                    ? crraeParam.getRate()
+                    : new BigDecimal("10.00");
+
+            BigDecimal montantPat = evaluateComplexFormula(formulePat, salaireBase, surSalaire, primeAnciennete, remunerationBrute);
+            if (montantPat.compareTo(BigDecimal.ZERO) <= 0) {
+                montantPat = money(baseCrraePat.multiply(new BigDecimal("0.10")));
+            }
+
+            BulletinLine crraePatLine = new BulletinLine();
+            crraePatLine.setCode(codePat);
+            crraePatLine.setLibelle(libellePat);
+            crraePatLine.setTypeLigne("COTISATION_PATRONALE");
+            crraePatLine.setBaseCalcul(baseCrraePat);
+            crraePatLine.setTaux(tauxPat);
+            crraePatLine.setMontant(BigDecimal.ZERO);
+            crraePatLine.setPartPatronale(montantPat);
+            crraePatLine.setOrdre((crraeParam != null && crraeParam.getOrdre() != null) ? crraeParam.getOrdre() : 30);
+            lines.add(crraePatLine);
+
+            totalCotisationsPatronales = totalCotisationsPatronales.add(montantPat);
+        } else if (!isExtra && hasCrraePat) {
+            for (BulletinLine l : lines) {
+                if ("COT_CRRAE".equalsIgnoreCase(l.getCode())) {
                     if (l.getPartPatronale() == null || l.getPartPatronale().compareTo(BigDecimal.ZERO) == 0) {
-                        BigDecimal crraePatronale = money(calculatePercentage(baseCrrae, new BigDecimal("6.00")));
-                        l.setPartPatronale(crraePatronale);
-                        totalCotisationsPatronales = totalCotisationsPatronales.add(crraePatronale);
+                        BigDecimal montantPat = money(baseCrraePat.multiply(new BigDecimal("0.10")));
+                        l.setPartPatronale(montantPat);
+                        totalCotisationsPatronales = totalCotisationsPatronales.add(montantPat);
                     }
                 }
             }
@@ -3055,9 +3110,17 @@ public class BulletinService {
                 } else if (lCode.contains("SAL_BASE") || lCode.contains("SUR_SALAIRE") || libUpper.contains("SALAIRE DE BASE") || libUpper.contains("SUR-SALAIRE") || libUpper.contains("SURSALAIRE")) {
                     taux = b.getWorkedDays() != null ? b.getWorkedDays() : new BigDecimal("30.00");
                 } else if (lCode.contains("CNSS") || libUpper.contains("CNSS")) {
-                    taux = new BigDecimal("5.50");
+                    if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())) {
+                        taux = l.getTaux() != null ? l.getTaux() : new BigDecimal("16.00");
+                    } else {
+                        taux = new BigDecimal("5.50");
+                    }
                 } else if (lCode.contains("CRRAE") || libUpper.contains("CRRAE")) {
-                    taux = new BigDecimal("6.00");
+                    if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())) {
+                        taux = l.getTaux() != null ? l.getTaux() : new BigDecimal("10.00");
+                    } else {
+                        taux = new BigDecimal("6.00");
+                    }
                 } else if (lCode.contains("SOLIDAR") || libUpper.contains("SOLIDAR") || lCode.contains("FSP")) {
                     taux = new BigDecimal("1.00");
                 } else if (lCode.contains("ANC") || libUpper.contains("ANCIENNET")) {
@@ -3322,8 +3385,10 @@ public class BulletinService {
             for (BulletinLine l : b.getLines()) {
                 String c = l.getCode() != null ? l.getCode().toUpperCase() : "";
                 String lib = l.getLibelle() != null ? l.getLibelle().toUpperCase() : "";
-                if (c.contains("CRRAE") || lib.contains("CRRAE")) {
-                    crraeVal = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+                if ((c.contains("CRRAE") || lib.contains("CRRAE")) && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())) {
+                    if (l.getMontant() != null && l.getMontant().compareTo(BigDecimal.ZERO) > 0) {
+                        crraeVal = l.getMontant();
+                    }
                 } else if (c.contains("SOLIDARITE") || c.contains("FSP") || lib.contains("SOLIDARITE")) {
                     solVal = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
                 } else if ((c.contains("CNSS") || lib.contains("CNSS")) && !c.contains("PATRON") && !lib.contains("PATRON")) {
@@ -3485,6 +3550,98 @@ public class BulletinService {
         b.setJustificationEcart(justification);
         Bulletin saved = bulletinRepository.save(b);
         return toDto(saved);
+    }
+
+    /**
+     * Évalue dynamiquement une formule de calcul d'élément de salaire (ex: (SAL_BASE + SUR_SALAIRE)*0,1)
+     */
+    public static BigDecimal evaluateComplexFormula(String formula, BigDecimal salBase, BigDecimal surSalaire, BigDecimal primeAnc, BigDecimal brut) {
+        if (formula == null || formula.isBlank()) return BigDecimal.ZERO;
+        try {
+            BigDecimal sb = salBase != null ? salBase : BigDecimal.ZERO;
+            BigDecimal ss = surSalaire != null ? surSalaire : BigDecimal.ZERO;
+            BigDecimal pa = primeAnc != null ? primeAnc : BigDecimal.ZERO;
+            BigDecimal rb = brut != null ? brut : BigDecimal.ZERO;
+
+            String expr = formula.replace(',', '.')
+                    .replaceAll("(?i)SAL_BASE|SALAIRE_BASE", sb.toPlainString())
+                    .replaceAll("(?i)SUR_SALAIRE|SURSALAIRE", ss.toPlainString())
+                    .replaceAll("(?i)PRIME_ANC|ANCIENNETE", pa.toPlainString())
+                    .replaceAll("(?i)REMUNERATION_BRUTE|BRUT_COTISABLE|BRUT", rb.toPlainString());
+
+            return evalMathExpression(expr);
+        } catch (Exception e) {
+            log.warn("Erreur évaluation formule '{}' : {}", formula, e.getMessage());
+            // Fallback spécifique pour (SAL_BASE + SUR_SALAIRE)*0,1
+            BigDecimal base = (salBase != null ? salBase : BigDecimal.ZERO).add(surSalaire != null ? surSalaire : BigDecimal.ZERO);
+            return base.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        }
+    }
+
+    private static BigDecimal evalMathExpression(String expression) {
+        if (expression == null || expression.isBlank()) return BigDecimal.ZERO;
+        final String clean = expression.replaceAll("\\s+", "").replaceAll("[^0-9.+\\-*/()]", "");
+        return new Object() {
+            int pos = -1, ch;
+
+            void nextChar() {
+                ch = (++pos < clean.length()) ? clean.charAt(pos) : -1;
+            }
+
+            boolean eat(int charToEat) {
+                while (ch == ' ') nextChar();
+                if (ch == charToEat) {
+                    nextChar();
+                    return true;
+                }
+                return false;
+            }
+
+            BigDecimal parse() {
+                nextChar();
+                BigDecimal x = parseExpression();
+                return x != null ? x.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            }
+
+            BigDecimal parseExpression() {
+                BigDecimal x = parseTerm();
+                for (;;) {
+                    if (eat('+')) x = x.add(parseTerm());
+                    else if (eat('-')) x = x.subtract(parseTerm());
+                    else return x;
+                }
+            }
+
+            BigDecimal parseTerm() {
+                BigDecimal x = parseFactor();
+                for (;;) {
+                    if (eat('*')) x = x.multiply(parseFactor());
+                    else if (eat('/')) {
+                        BigDecimal divisor = parseFactor();
+                        if (divisor.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+                        x = x.divide(divisor, 4, RoundingMode.HALF_UP);
+                    } else return x;
+                }
+            }
+
+            BigDecimal parseFactor() {
+                if (eat('+')) return parseFactor();
+                if (eat('-')) return parseFactor().negate();
+
+                BigDecimal x;
+                int startPos = this.pos;
+                if (eat('(')) {
+                    x = parseExpression();
+                    eat(')');
+                } else if ((ch >= '0' && ch <= '9') || ch == '.') {
+                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
+                    x = new BigDecimal(clean.substring(startPos, this.pos));
+                } else {
+                    return BigDecimal.ZERO;
+                }
+                return x;
+            }
+        }.parse();
     }
 
     private List<Retenue> findApplicableRetenues(Employee employee) {

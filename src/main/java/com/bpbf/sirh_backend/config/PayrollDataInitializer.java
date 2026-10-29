@@ -228,6 +228,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
         getOrCreateElement("CHG_PAT_CARFO", "Charges patronales CARFO", catChgPat, new BigDecimal("14.00"), false, false, "POURCENTAGE", "BASE_INDICE * 0.14", 27);
         getOrCreateElement("TPA_BURKINA", "TPA personnel burkinabè", catChgPat, new BigDecimal("3.00"), false, false, "POURCENTAGE", "3.0%", 28);
         getOrCreateElement("TPA_ETRANGER", "TPA personnel étranger", catChgPat, new BigDecimal("4.00"), false, false, "POURCENTAGE", "4.0%", 29);
+        getOrCreateElement("COT_CRRAE", "Charges patronale CRRAE", catChgPat, new BigDecimal("10.00"), false, false, "FORMULE_COMPLEXE", "(SAL_BASE + SUR_SALAIRE)*0,1", 30);
 
         // Cotisations patronales
         getOrCreateElement("COT_PAT_CNSS", "Cotisations patronales CNSS", catCotisPat, new BigDecimal("16.00"), false, false, "POURCENTAGE", "16.0%", 30);

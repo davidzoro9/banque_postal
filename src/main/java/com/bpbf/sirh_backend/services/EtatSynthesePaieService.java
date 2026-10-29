@@ -1527,8 +1527,38 @@ public class EtatSynthesePaieService {
             BigDecimal assiette = salBase.add(surSal);
             if (assiette.compareTo(BigDecimal.ZERO) <= 0) assiette = base;
 
-            BigDecimal partPat = assiette.multiply(tauxPat).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
-            BigDecimal partSal = assiette.multiply(tauxSal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            BigDecimal partPat = null;
+            BigDecimal partSal = null;
+            BigDecimal lineTauxPat = null;
+            BigDecimal lineTauxSal = null;
+
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String lc = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
+                    String ll = l.getLibelle() != null ? l.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (lc.contains("CRRAE") || ll.contains("CRRAE") || lc.contains("RCPNC") || ll.contains("RCPNC")) {
+                        if (l.getPartPatronale() != null && l.getPartPatronale().compareTo(BigDecimal.ZERO) > 0) {
+                            partPat = (partPat == null) ? l.getPartPatronale() : partPat.add(l.getPartPatronale());
+                            if (l.getTaux() != null) lineTauxPat = l.getTaux();
+                        }
+                        if (l.getMontant() != null && l.getMontant().compareTo(BigDecimal.ZERO) > 0 && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())) {
+                            partSal = (partSal == null) ? l.getMontant() : partSal.add(l.getMontant());
+                            if (l.getTaux() != null) lineTauxSal = l.getTaux();
+                        }
+                    }
+                }
+            }
+
+            if (partPat == null) {
+                partPat = assiette.multiply(tauxPat).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            } else if (lineTauxPat != null) {
+                tauxPat = lineTauxPat;
+            }
+            if (partSal == null) {
+                partSal = assiette.multiply(tauxSal).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            } else if (lineTauxSal != null) {
+                tauxSal = lineTauxSal;
+            }
             BigDecimal totalCotis = partPat.add(partSal);
 
             rows.add(EtatCrraeRowDto.builder()
