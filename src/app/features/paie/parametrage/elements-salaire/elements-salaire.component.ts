@@ -268,9 +268,14 @@ export class ElementsSalaireComponent implements OnInit {
 
     const finalMethod = this.formModel.calculationMethod === 'FORMULE_COMPLEXE' ? 'FORMULE_COMPLEXE' : 'MONTANT_FIXE';
     const finalCode = this.formModel.code.toLowerCase().trim();
-    const finalCodeCorrespondant = this.formModel.codeCorrespondant
+    let finalCodeCorrespondant = this.formModel.codeCorrespondant
       ? this.formModel.codeCorrespondant.toLowerCase().trim()
       : finalCode;
+    if (finalCodeCorrespondant === 'sal_base' || finalCodeCorrespondant === 'sal_mensuel' || finalCodeCorrespondant === 'salbase') {
+      finalCodeCorrespondant = 'salaire_base';
+    } else if (finalCodeCorrespondant === 'sursalaire') {
+      finalCodeCorrespondant = 'sur_salaire';
+    }
 
     const payload: SalaryElementDto = {
       code: finalCode,

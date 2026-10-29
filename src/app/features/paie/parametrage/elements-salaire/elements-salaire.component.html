@@ -77,7 +77,7 @@
           <tr>
             <th style="width: 45px; text-align: center;">Ordre</th>
             <th style="width: 140px;">Code Élément</th>
-            <th style="width: 140px;">Code Admin</th>
+            <th style="width: 150px;">Champ Table Admin</th>
             <th>Libellé / Nom</th>
             <th style="width: 160px;">Catégorie Parente</th>
             <th style="width: 120px;">Méthode</th>
@@ -218,21 +218,21 @@
               </mat-form-field>
             </div>
 
-            <!-- CAS 1 : MONTANT FIXE -> Code correspondant Gestion Admin -->
+            <!-- CAS 1 : MONTANT FIXE -> Nom du champ dans la table information_salariale de Gestion Admin -->
             @if (formModel.calculationMethod === 'MONTANT_FIXE') {
               <div class="full-col">
                 <mat-form-field appearance="outline" class="w-100">
-                  <mat-label>Code correspondant (Gestion Admin) *</mat-label>
-                  <input matInput [(ngModel)]="formModel.codeCorrespondant" (ngModelChange)="onCodeCorrespondantChange()" placeholder="Ex: ind-log, sal_base, ind-trp..." style="text-transform: lowercase;">
-                  <mat-hint>Code lu depuis Gestion Admin pour récupérer le montant contractuel ou l'indemnité</mat-hint>
+                  <mat-label>Nom du champ dans la table information_salariale (Gestion Admin) *</mat-label>
+                  <input matInput [(ngModel)]="formModel.codeCorrespondant" (ngModelChange)="onCodeCorrespondantChange()" placeholder="Ex: salaire_base, sur_salaire, total_indemnites, ind-log..." style="text-transform: lowercase;">
+                  <mat-hint>Nom exact de la colonne dans la table information_salariale (PostgreSQL) ou code d'indemnité</mat-hint>
                 </mat-form-field>
 
                 <!-- Suggestions cliquables issues de Gestion Admin -->
                 @if (adminCodesList && adminCodesList.length > 0) {
                   <div class="admin-codes-box">
                     <div class="box-label">
-                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">hub</mat-icon>
-                      Codes disponibles dans Gestion Admin (cliquez pour sélectionner) :
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">storage</mat-icon>
+                      Colonnes de la table information_salariale & Codes d'indemnités (cliquez pour sélectionner) :
                     </div>
                     <div class="codes-chips">
                       @for (ac of adminCodesList; track ac.code) {
