@@ -2325,6 +2325,7 @@ public class BulletinService {
                 String catCodeCheck = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
                         ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
                 boolean isVariableOrIndividual = catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
+                        || catCodeCheck.contains("INDEM")
                         || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
                         || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL") || seCodeCheck.contains("ASSURANCE")
                         || seNameCheck.contains("AVANCE") || seNameCheck.contains("PRÊT") || seNameCheck.contains("PRET")
@@ -2333,8 +2334,8 @@ public class BulletinService {
                         || seNameCheck.contains("RAPPEL") || seNameCheck.contains("ASSURANCE");
 
                 if (isVariableOrIndividual) {
-                    // Les éléments variables ou individuels (Rappels, Trop-perçus, Avances, Prêts, Précomptes)
-                    // sont gérés exclusivement par les dossiers réels de l'agent (AvoirEmploye, TropPercuEmploye, etc.).
+                    // Les éléments variables ou individuels (Rappels, Trop-perçus, Avances, Prêts, Précomptes, Indemnités)
+                    // sont gérés exclusivement par les dossiers réels de l'agent (AvoirEmploye, TropPercuEmploye, IndemniteEmploye).
                     // Ils ne doivent JAMAIS être injectés globalement depuis le paramétrage général.
                     processedCodes.add(codeNorm);
                     continue;
@@ -2343,11 +2344,13 @@ public class BulletinService {
                 BigDecimal fieldVal = resolveInformationSalarialeField(infoSalariale, se.getCodeCorrespondant());
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getCode());
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getName());
-                if (fieldVal == null && se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) {
-                    fieldVal = se.getRate();
-                }
 
-                if (fieldVal != null && fieldVal.compareTo(BigDecimal.ZERO) > 0) {
+                // Règle stricte d'association à l'agent : on n'ajoute pas de ligne forfaitaire globale
+                // si la fiche salariale réelle de l'agent ne contient pas cette rubrique.
+                if (fieldVal == null || fieldVal.compareTo(BigDecimal.ZERO) <= 0) {
+                    processedCodes.add(codeNorm);
+                    continue;
+                }
                     String catType = (se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null)
                             ? se.getSalaryCategory().getType().toUpperCase(Locale.ROOT) : "GAIN";
                     BulletinLine customLine = new BulletinLine();
@@ -2381,6 +2384,7 @@ public class BulletinService {
                 String catCodeCheck = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
                         ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
                 boolean isVariableOrIndividual = catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
+                        || catCodeCheck.contains("INDEM")
                         || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
                         || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL") || seCodeCheck.contains("ASSURANCE")
                         || seNameCheck.contains("AVANCE") || seNameCheck.contains("PRÊT") || seNameCheck.contains("PRET")
@@ -4284,24 +4288,35 @@ public class BulletinService {
         String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().trim().toLowerCase(Locale.ROOT) : "";
         String n = se.getName() != null ? se.getName().trim().toLowerCase(Locale.ROOT) : "";
 
+        String cNorm = c.replace("-", "_");
+        String ccNorm = cc.replace("-", "_");
+
         for (IndemniteEmploye ind : employeeIndemnites) {
             if (Boolean.FALSE.equals(ind.getActif())) continue;
             String indCode = (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getCode() != null)
                     ? ind.getTypeIndemnite().getCode().trim().toLowerCase(Locale.ROOT) : "";
+            String indCodeNorm = indCode.replace("-", "_");
             String indLib = ind.getLibelle() != null ? ind.getLibelle().trim().toLowerCase(Locale.ROOT) :
                     (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getName() != null ? ind.getTypeIndemnite().getName().trim().toLowerCase(Locale.ROOT) : "");
 
-            if (!cc.isEmpty() && (cc.equals(indCode) || cc.replace("-", "_").equals(indCode.replace("-", "_")))) {
-                return ind;
+            // 1. Association stricte par ID ou code direct
+            if (!indCode.isEmpty()) {
+                if (!ccNorm.isEmpty() && (ccNorm.equals(indCodeNorm) || cc.equalsIgnoreCase(indCode))) {
+                    return ind;
+                }
+                if (!cNorm.isEmpty() && (cNorm.equals(indCodeNorm) || c.equalsIgnoreCase(indCode))) {
+                    return ind;
+                }
             }
-            if (!c.isEmpty() && (c.equals(indCode) || c.replace("-", "_").equals(indCode.replace("-", "_")))) {
-                return ind;
-            }
-            if (!cc.isEmpty() && (indLib.equals(cc) || indLib.contains(cc) || cc.contains(indCode))) {
-                return ind;
-            }
-            if (!n.isEmpty() && (indLib.equals(n) || indLib.contains(n) || n.contains(indLib))) {
-                return ind;
+
+            // 2. Association stricte par libellé EXACT uniquement (zéro ressemblance partielle / zéro contains)
+            if (!indLib.isEmpty()) {
+                if (!n.isEmpty() && indLib.equals(n)) {
+                    return ind;
+                }
+                if (!cc.isEmpty() && indLib.replace(" ", "_").equals(ccNorm)) {
+                    return ind;
+                }
             }
         }
         return null;
