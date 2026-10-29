@@ -108,4 +108,34 @@ class BulletinServiceProrataTest {
         assertEquals(new java.math.BigDecimal("900000.00"), dto.getMontantIndemnitePreavis());
         assertEquals(new java.math.BigDecimal("450000.00"), dto.getMontantIndemniteConges());
     }
+
+    @Test
+    void testEvaluateComplexFormula_WithDirectElements() {
+        java.math.BigDecimal salBase = new java.math.BigDecimal("200000");
+        java.math.BigDecimal surSalaire = new java.math.BigDecimal("50000");
+        java.math.BigDecimal primeAnc = new java.math.BigDecimal("10000");
+        java.math.BigDecimal brut = new java.math.BigDecimal("300000");
+
+        // (SAL_BASE + SUR_SALAIRE) * 0.10 = 250000 * 0.10 = 25000.00
+        java.math.BigDecimal res1 = BulletinService.evaluateComplexFormula("(SAL_BASE + SUR_SALAIRE)*0.10", salBase, surSalaire, primeAnc, brut);
+        assertEquals(new java.math.BigDecimal("25000.00"), res1);
+
+        // SUM(CAT_SAL_BASE) * 0.05 = 250000 * 0.05 = 12500.00
+        java.math.BigDecimal res2 = BulletinService.evaluateComplexFormula("SUM(CAT_SAL_BASE)*0.05", salBase, surSalaire, primeAnc, brut);
+        assertEquals(new java.math.BigDecimal("12500.00"), res2);
+    }
+
+    @Test
+    void testResolveInformationSalarialeField() {
+        com.bpbf.sirh_backend.entities.InformationSalariale info = new com.bpbf.sirh_backend.entities.InformationSalariale();
+        info.setSalaireBase(new java.math.BigDecimal("350000.00"));
+        info.setSurSalaire(new java.math.BigDecimal("50000.00"));
+        info.setRemunerationBrute(new java.math.BigDecimal("500000.00"));
+
+        assertEquals(new java.math.BigDecimal("350000.00"), BulletinService.resolveInformationSalarialeField(info, "salaire_base"));
+        assertEquals(new java.math.BigDecimal("350000.00"), BulletinService.resolveInformationSalarialeField(info, "sal_base"));
+        assertEquals(new java.math.BigDecimal("50000.00"), BulletinService.resolveInformationSalarialeField(info, "sur_salaire"));
+        assertEquals(new java.math.BigDecimal("500000.00"), BulletinService.resolveInformationSalarialeField(info, "remuneration_brute"));
+        assertNull(BulletinService.resolveInformationSalarialeField(info, "inconnu"));
+    }
 }

@@ -719,7 +719,7 @@ public class BulletinPdfService {
             BigDecimal avoir = isGain ? mnt : null;
             BigDecimal retenue = isRetenue ? mnt : (isGain ? null : mnt);
 
-            int weight = BulletinService.getOverallLineSortWeight(code, lib, l.getTypeLigne());
+            int weight = (l.getOrdre() != null && l.getOrdre() > 0) ? l.getOrdre() : BulletinService.getOverallLineSortWeight(code, lib, l.getTypeLigne());
             displayLines.add(new DisplayLine(code, lib, baseStr, tauxStr, avoir, retenue, weight));
         }
 
@@ -974,7 +974,7 @@ public class BulletinPdfService {
                 BigDecimal avoir = isGain ? mnt : null;
                 BigDecimal retenue = isRetenue ? mnt : (isGain ? null : mnt);
 
-                int weight = BulletinService.getOverallLineSortWeight(code, lib, l.getTypeLigne());
+                int weight = (l.getOrdre() != null && l.getOrdre() > 0) ? l.getOrdre() : BulletinService.getOverallLineSortWeight(code, lib, l.getTypeLigne());
                 displayLines.add(new DisplayLine(code, lib, baseStr, tauxStr, avoir, retenue, weight));
             }
         }

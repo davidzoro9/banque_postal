@@ -17,4 +17,6 @@ public interface SalaryElementRepository extends JpaRepository<SalaryElement, Lo
     boolean existsByCodeIgnoreCase(String code);
     List<SalaryElement> findBySalaryCategoryId(Long categoryId);
     List<SalaryElement> findByStatut(String statut);
+    List<SalaryElement> findByStatutOrderByOrdreAsc(String statut);
+    List<SalaryElement> findAllByOrderByOrdreAsc();
 }
