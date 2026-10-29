@@ -71,6 +71,8 @@ public class SalaryElement {
             String mc = this.methodCalcul.trim().toUpperCase();
             if (mc.contains("FORMULE") || mc.contains("POURCENTAGE")) {
                 this.methodCalcul = "FORMULE_COMPLEXE";
+            } else if (mc.contains("RIEN") || mc.contains("AUCUN") || mc.contains("NONE")) {
+                this.methodCalcul = "RIEN";
             } else {
                 this.methodCalcul = "MONTANT_FIXE";
             }

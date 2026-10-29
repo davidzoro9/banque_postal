@@ -161,10 +161,12 @@ public class SalaryParametrageService {
         el.setIsCotisable(dto.getIsCotisable() != null ? dto.getIsCotisable() : true);
         el.setIsImposable(dto.getIsImposable() != null ? dto.getIsImposable() : true);
         
-        // Méthodes de calcul strictes : MONTANT_FIXE ou FORMULE_COMPLEXE
+        // Méthodes de calcul : MONTANT_FIXE, FORMULE_COMPLEXE ou RIEN
         String method = dto.getMethodCalcul() != null ? dto.getMethodCalcul().trim().toUpperCase() : "MONTANT_FIXE";
         if (method.contains("FORMULE") || method.contains("POURCENTAGE")) {
             el.setMethodCalcul("FORMULE_COMPLEXE");
+        } else if (method.contains("RIEN") || method.contains("AUCUN") || method.contains("NONE")) {
+            el.setMethodCalcul("RIEN");
         } else {
             el.setMethodCalcul("MONTANT_FIXE");
             if (el.getCodeCorrespondant() == null || el.getCodeCorrespondant().isBlank()) {
@@ -219,6 +221,8 @@ public class SalaryParametrageService {
             String method = dto.getMethodCalcul().trim().toUpperCase();
             if (method.contains("FORMULE") || method.contains("POURCENTAGE")) {
                 el.setMethodCalcul("FORMULE_COMPLEXE");
+            } else if (method.contains("RIEN") || method.contains("AUCUN") || method.contains("NONE")) {
+                el.setMethodCalcul("RIEN");
             } else {
                 el.setMethodCalcul("MONTANT_FIXE");
                 if (el.getCodeCorrespondant() == null || el.getCodeCorrespondant().isBlank()) {
