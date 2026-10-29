@@ -686,7 +686,6 @@ public class BulletinPdfService {
             String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
             String tauxStr = "";
             if (code.contains("IUTS") || lib.contains("IUTS")) {
-                lib = "RETENUE IUTS";
                 int nbChg = 0;
                 if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                     nbChg = l.getTaux().intValue();
@@ -695,15 +694,12 @@ public class BulletinPdfService {
                 }
                 tauxStr = nbChg > 0 ? (nbChg + " chg") : "—";
             } else if (code.contains("CNSS") || lib.contains("CNSS")) {
-                lib = "COTISATION CNSS";
-                tauxStr = "5,5 %";
+                tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "5,5 %";
             } else if (code.contains("CRRAE") || lib.contains("CRRAE")) {
-                lib = "COTISATION CRRAE/RCPNC";
-                tauxStr = "6 %";
+                tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "6 %";
             } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
-                lib = "RETENUE FONDS DE SOLIDARITE";
-                tauxStr = "1 %";
-            } else if (code.contains("ANC")) {
+                tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "1 %";
+            } else if (((code.contains("ANC") && !code.contains("AVANCE") && !code.contains("ASSURANCE")) || lib.contains("ANCIENNET")) && !code.contains("AVANCE") && !code.contains("ASSURANCE")) {
                 tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
             } else if (is13Ou14 && isGain && l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                 tauxStr = l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %";
@@ -779,23 +775,6 @@ public class BulletinPdfService {
                     displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
-        }
-
-        // 5. Garantir la ligne CRRAE si montant CRRAE > 0 et absente
-        BigDecimal mntCrrae = extractCrraeFromBulletin(b);
-        if (!hasCrraeLine && mntCrrae.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal baseCrrae = BigDecimal.ZERO;
-            if (b.getSalaireBase() != null) baseCrrae = baseCrrae.add(b.getSalaireBase());
-            if (b.getSurSalaire() != null) baseCrrae = baseCrrae.add(b.getSurSalaire());
-            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 35));
-        }
-
-        // 6. Vérifier la somme des retenues par rapport à totalRetenues pour équilibre parfait
-        BigDecimal totRetenuesTarget = b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO;
-        BigDecimal currentSumRet = displayLines.stream().map(l -> l.retenue != null ? l.retenue : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal diffRet = totRetenuesTarget.subtract(currentSumRet);
-        if (diffRet.compareTo(new BigDecimal("1.00")) >= 0) {
-            displayLines.add(new DisplayLine("RET_SOLIDARITE", "RETENUE FONDS DE SOLIDARITE", "", "1 %", null, diffRet, 40));
         }
 
         // Déduplication de sécurité finale
@@ -937,7 +916,6 @@ public class BulletinPdfService {
                 String baseStr = l.getBaseCalcul() != null && l.getBaseCalcul().compareTo(BigDecimal.ZERO) > 0 ? formatMoney(l.getBaseCalcul()) : "";
                 String tauxStr = "";
                 if (code.contains("IUTS") || lib.contains("IUTS")) {
-                    lib = "RETENUE IUTS";
                     int nbChg = 0;
                     if (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                         nbChg = l.getTaux().intValue();
@@ -950,15 +928,12 @@ public class BulletinPdfService {
                     }
                     tauxStr = nbChg > 0 ? (nbChg + " chg") : "—";
                 } else if (code.contains("CNSS") || lib.contains("CNSS")) {
-                    lib = "COTISATION CNSS";
-                    tauxStr = "5,5 %";
+                    tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "5,5 %";
                 } else if (code.contains("CRRAE") || lib.contains("CRRAE")) {
-                    lib = "COTISATION CRRAE/RCPNC";
-                    tauxStr = "6 %";
+                    tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "6 %";
                 } else if (code.contains("SOLIDAR") || lib.contains("SOLIDAR") || code.contains("FSP")) {
-                    lib = "RETENUE FONDS DE SOLIDARITE";
-                    tauxStr = "1 %";
-                } else if (code.contains("ANC")) {
+                    tauxStr = (l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) ? (l.getTaux().stripTrailingZeros().toPlainString() + " %") : "1 %";
+                } else if (((code.contains("ANC") && !code.contains("AVANCE") && !code.contains("ASSURANCE")) || lib.contains("ANCIENNET")) && !code.contains("AVANCE") && !code.contains("ASSURANCE")) {
                     tauxStr = (l.getTaux() != null ? l.getTaux().stripTrailingZeros().toPlainString() : "0") + " %";
                 } else if (is13Ou14 && isGain && l.getTaux() != null && l.getTaux().compareTo(BigDecimal.ZERO) > 0) {
                     tauxStr = l.getTaux().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + " %";
@@ -1035,21 +1010,6 @@ public class BulletinPdfService {
                     displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
-        }
-
-        BigDecimal mntCrrae = extractCrraeFromDto(dto);
-        if (!hasCrraeLine && mntCrrae.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal baseCrrae = BigDecimal.ZERO;
-            if (dto.getSalaireBase() != null) baseCrrae = baseCrrae.add(dto.getSalaireBase());
-            if (dto.getSurSalaire() != null) baseCrrae = baseCrrae.add(dto.getSurSalaire());
-            displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 35));
-        }
-
-        BigDecimal totRetenuesTarget = dto.getTotalRetenues() != null ? dto.getTotalRetenues() : BigDecimal.ZERO;
-        BigDecimal currentSumRet = displayLines.stream().map(l -> l.retenue != null ? l.retenue : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal diffRet = totRetenuesTarget.subtract(currentSumRet);
-        if (diffRet.compareTo(new BigDecimal("1.00")) >= 0) {
-            displayLines.add(new DisplayLine("RET_SOLIDARITE", "RETENUE FONDS DE SOLIDARITE", "", "1 %", null, diffRet, 40));
         }
 
         // Déduplication de sécurité finale
