@@ -774,10 +774,10 @@ export class MonEspaceComponent implements OnInit {
         const nm = (l.name || '').toUpperCase();
         const rgl = (l.regle || '').toUpperCase();
         const cd = (l.code || '').toUpperCase();
-        if (cat === 'CHARGES_PAT' || cat === 'TOTAL_PAT' || cat === 'COTISATION_PATRONALE' || cat.includes('PATRONAL') || cat === 'AUCUN') return false;
+        if (cat === 'CHARGES_PAT' || cat === 'TOTAL_PAT' || cat === 'COTISATION_PATRONALE' || cat === 'PATRONALE' || cat.includes('PATRON') || cat === 'AUCUN') return false;
         if (nm.includes('EMPLOYEUR') || nm.includes('PATRONAL') || nm.includes('PART EMPLOYEUR') || nm.includes('RÉMUNÉRATION BRUTE') || nm.includes('REMUNERATION BRUTE')) return false;
         if (rgl.includes('EMPLOYEUR') || rgl.includes('PATRONAL')) return false;
-        if (cd === 'CNSS_PAT' || cd === 'TOT_PAT' || cd === 'CARFO_PAT' || cd === 'CRRAE_PAT' || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE') return false;
+        if (cd.includes('PAT') || cd.includes('TPA') || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE') return false;
         return true;
       });
 

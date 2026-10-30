@@ -1297,7 +1297,10 @@ export class GenererBulletinsComponent implements OnInit {
     let indList = b.lines ? b.lines.filter((l: any) => {
       const cd = (l.code || '').toUpperCase();
       const nm = (l.name || l.libelle || '').toUpperCase();
-      return (l.typeLigne === 'GAIN' || l.category === 'GAIN' || l.category === 'INDEMNITES')
+      const tl = (l.typeLigne || '').toUpperCase();
+      const cat = (l.category || '').toUpperCase();
+      const isPat = tl.includes('PATRON') || cat.includes('PATRON') || cd.includes('PAT') || cd.includes('TPA') || nm.includes('PATRONAL');
+      return !isPat && (l.typeLigne === 'GAIN' || l.category === 'GAIN' || l.category === 'INDEMNITES')
         && cd !== 'SAL_BASE' && !nm.includes('SALAIRE DE BASE')
         && cd !== 'SUR_SALAIRE' && !nm.includes('SURSALAIRE');
     }) : [];
@@ -1494,7 +1497,13 @@ export class GenererBulletinsComponent implements OnInit {
       this.valeurProrata13eme = b.workedDays != null ? Number(b.workedDays) : (this.prorataUnit13eme === 'MOIS' ? 12 : 360);
     }
 
-    const rawLines = enriched?.lines || [];
+    const rawLines = (enriched?.lines || []).filter((l: any) => {
+      const cd = (l.code || '').toUpperCase();
+      const nm = (l.libelle || l.name || '').toUpperCase();
+      const tl = (l.typeLigne || '').toUpperCase();
+      const cat = (l.category || '').toUpperCase();
+      return !tl.includes('PATRON') && !cat.includes('PATRON') && !cd.includes('PAT') && !cd.includes('TPA') && !nm.includes('PATRONAL');
+    });
 
     const lines = rawLines.map((l: any, idx: number) => {
       const cd = (l.code || '').toUpperCase();
@@ -1655,7 +1664,13 @@ export class GenererBulletinsComponent implements OnInit {
         this.modalSalaireNet = res.salaireNet || res.salaireBrut || 0;
 
         if (res.lines && res.lines.length > 0) {
-          this.editableLines = res.lines.map((l: any, idx: number) => {
+          this.editableLines = res.lines.filter((l: any) => {
+            const cd = (l.code || '').toUpperCase();
+            const nm = (l.libelle || l.name || '').toUpperCase();
+            const tl = (l.typeLigne || '').toUpperCase();
+            const cat = (l.category || '').toUpperCase();
+            return !tl.includes('PATRON') && !cat.includes('PATRON') && !cd.includes('PAT') && !cd.includes('TPA') && !nm.includes('PATRONAL');
+          }).map((l: any, idx: number) => {
             const isGain = l.typeLigne === 'GAIN' || (l.gain !== null && l.gain !== undefined && Number(l.gain) > 0);
             return {
               id: l.id || idx,
@@ -1815,7 +1830,15 @@ export class GenererBulletinsComponent implements OnInit {
 
         const isGain = l.gain !== undefined && l.gain !== null ? true : (l.typeLigne === 'GAIN' || l.category === 'GAIN' || l.category === 'INDEMNITES' || !isRetenue);
 
-        const isPatronale = l.typeLigne === 'COTISATION_PATRONALE' || l.typeLigne === 'CHARGE_PATRONALE';
+        const isPatronale = l.typeLigne === 'COTISATION_PATRONALE' ||
+          l.typeLigne === 'CHARGE_PATRONALE' ||
+          l.typeLigne === 'PATRONALE' ||
+          (l.typeLigne && l.typeLigne.toUpperCase().includes('PATRON')) ||
+          l.category === 'PATRONALE' ||
+          (l.category && l.category.toUpperCase().includes('PATRON')) ||
+          cd.includes('PAT') ||
+          cd.includes('TPA') ||
+          nm.includes('PATRONAL');
         if (isPatronale) return null;
 
         const isExcluded = l.typeLigne === 'AUCUN' || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE' ||
