@@ -2874,8 +2874,57 @@ public class BulletinService {
         bulletin.setDateCalcul(LocalDateTime.now());
         bulletin.setNatureSession(session != null ? session.getNatureSession() : null);
 
-        // Ligne récapitulative Rémunération Brute dans bulletin_line (type AUCUN, non affichée sur le bulletin de l'agent)
-        if (remunerationBrute != null && remunerationBrute.compareTo(BigDecimal.ZERO) > 0) {
+        // Traitement dynamique de TOUS les éléments de catégorie AUCUN ou récapitulatifs configurés dans salary_element
+        currentElementValues.put("salaire_net", salaireNet);
+        currentElementValues.put("net_a_payer", salaireNet);
+        currentElementValues.put("net", salaireNet);
+        currentElementValues.put("remuneration_brute", remunerationBrute);
+        currentElementValues.put("brut", remunerationBrute);
+
+        List<SalaryElement> recapElements = activeSalaryElements.stream()
+                .filter(e -> e != null && (
+                        (e.getSalaryCategory() != null && "AUCUN".equalsIgnoreCase(e.getSalaryCategory().getType())) ||
+                        (e.getCode() != null && (e.getCode().toLowerCase(Locale.ROOT).contains("net") || e.getCode().toLowerCase(Locale.ROOT).contains("rem_brute") || e.getCode().toLowerCase(Locale.ROOT).contains("total_brut")))
+                ))
+                .toList();
+
+        boolean brutInjected = false;
+        boolean netInjected = false;
+
+        for (SalaryElement se : recapElements) {
+            String cLower = se.getCode() != null ? se.getCode().toLowerCase(Locale.ROOT) : "";
+            String nUpper = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
+            String fLower = se.getFormule() != null ? se.getFormule().toLowerCase(Locale.ROOT) : "";
+
+            BigDecimal lineAmount = BigDecimal.ZERO;
+            if (cLower.contains("net") || nUpper.contains("NET") || fLower.contains("net")) {
+                lineAmount = salaireNet;
+                netInjected = true;
+            } else if (cLower.contains("brut") || nUpper.contains("BRUT") || fLower.contains("brut")) {
+                lineAmount = remunerationBrute;
+                brutInjected = true;
+            } else if (se.getFormule() != null && !se.getFormule().isBlank()) {
+                lineAmount = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
+            } else if (se.getRate() != null) {
+                lineAmount = se.getRate();
+            }
+
+            if (lineAmount != null && lineAmount.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine line = new BulletinLine();
+                line.setCode(se.getCode());
+                line.setLibelle(se.getName()); // Lu directement depuis salary_element en base de données PostgreSQL
+                line.setTypeLigne(se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null ? se.getSalaryCategory().getType() : "AUCUN");
+                line.setBaseCalcul(lineAmount);
+                line.setTaux(se.getRate());
+                line.setMontant(lineAmount);
+                line.setPartPatronale(BigDecimal.ZERO);
+                line.setOrdre(se.getOrdre() != null ? se.getOrdre() : (cLower.contains("net") ? 100 : 99));
+                lines.add(line);
+            }
+        }
+
+        // Sécurité automatique si non encore créés manuellement dans salary_element
+        if (!brutInjected && remunerationBrute != null && remunerationBrute.compareTo(BigDecimal.ZERO) > 0) {
             BulletinLine brutLine = new BulletinLine();
             brutLine.setCode("REM_BRUTE");
             brutLine.setLibelle("RÉMUNÉRATION BRUTE");
@@ -2888,29 +2937,16 @@ public class BulletinService {
             lines.add(brutLine);
         }
 
-        // Ligne récapitulative NET À PAYER dans bulletin_line (type AUCUN, consultable en base/SQL et dans le cartouche)
-        if (salaireNet != null && salaireNet.compareTo(BigDecimal.ZERO) > 0) {
-            SalaryElement netElement = activeSalaryElements.stream()
-                    .filter(e -> e != null && (
-                            "NET_A_PAYER".equalsIgnoreCase(e.getCode()) ||
-                            "SALAIRE_NET".equalsIgnoreCase(e.getCode()) ||
-                            (e.getName() != null && (e.getName().toUpperCase(Locale.ROOT).contains("NET A PAYER") || e.getName().toUpperCase(Locale.ROOT).contains("NET À PAYER")))
-                    ))
-                    .findFirst().orElse(null);
-
-            String netCode = (netElement != null && netElement.getCode() != null) ? netElement.getCode() : "NET_A_PAYER";
-            String netLibelle = (netElement != null && netElement.getName() != null && !netElement.getName().isBlank()) ? netElement.getName() : "NET À PAYER";
-            int netOrdre = (netElement != null && netElement.getOrdre() != null) ? netElement.getOrdre() : 100;
-
+        if (!netInjected && salaireNet != null && salaireNet.compareTo(BigDecimal.ZERO) > 0) {
             BulletinLine netLine = new BulletinLine();
-            netLine.setCode(netCode);
-            netLine.setLibelle(netLibelle);
+            netLine.setCode("NET_A_PAYER");
+            netLine.setLibelle("NET À PAYER");
             netLine.setTypeLigne("AUCUN");
             netLine.setBaseCalcul(salaireNet);
             netLine.setTaux(null);
             netLine.setMontant(salaireNet);
             netLine.setPartPatronale(BigDecimal.ZERO);
-            netLine.setOrdre(netOrdre);
+            netLine.setOrdre(100);
             lines.add(netLine);
         }
 

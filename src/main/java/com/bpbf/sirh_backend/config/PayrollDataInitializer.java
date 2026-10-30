@@ -77,10 +77,13 @@ public class PayrollDataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("UPDATE avoir SET reference = CONCAT('AVR-2026-', LPAD(id::text, 4, '0')) WHERE reference IS NULL OR reference = '' OR reference = '/'");
 
             // Migration automatique des types de catégories en base de données
+            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'AUCUN' WHERE code = 'CAT_REMU_DUE' OR LOWER(name) LIKE '%rémunération due%' OR LOWER(name) LIKE '%remuneration due%'");
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'RETENUE' WHERE code IN ('CAT_COTIS_SOC', 'CAT_IUTS', 'CAT_RETENUES', 'CAT_COTIS_NON_REV', 'CAT_PRECOMPTE') OR LOWER(name) LIKE '%retenue%' OR LOWER(name) LIKE '%cotis%' OR LOWER(name) LIKE '%iuts%' OR LOWER(name) LIKE '%précompte%' OR LOWER(name) LIKE '%precompte%'");
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'PATRONALE' WHERE code IN ('CAT_CHG_PATRONALES', 'CAT_COTIS_PATRONALES') OR LOWER(name) LIKE '%patronal%' OR LOWER(name) LIKE '%tpa%'");
-            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'GAIN' WHERE code = 'CAT_AVOIR' OR LOWER(name) LIKE '%avoir%' OR type IS NULL OR type = ''");
+            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'GAIN' WHERE (code = 'CAT_AVOIR' OR LOWER(name) LIKE '%avoir%' OR type IS NULL OR type = '') AND code != 'CAT_REMU_DUE'");
             jdbcTemplate.execute("UPDATE element_salary_category SET name = 'AVOIR' WHERE code = 'CAT_AVOIR' OR name = 'Avoir (Rappel / Régularisation)'");
+            jdbcTemplate.execute("UPDATE salary_element SET code = 'net_a_payer', name = 'NET À PAYER', method_calcul = 'FORMULE_COMPLEXE', formule = 'salaire_net', ordre = 100 WHERE LOWER(code) IN ('rem_due_net', 'net_a_payer', 'salaire_net') OR LOWER(name) LIKE '%net à payer%' OR LOWER(name) LIKE '%net a payer%'");
+            jdbcTemplate.execute("UPDATE salary_element SET code = 'rem_brute', name = 'RÉMUNÉRATION BRUTE', method_calcul = 'FORMULE_COMPLEXE', formule = 'remuneration_brute', ordre = 99 WHERE LOWER(code) IN ('rem_brute', 'remuneration_brute', 'total_brut') OR LOWER(name) LIKE '%rémunération brute%' OR LOWER(name) LIKE '%remuneration brute%'");
 
             // Suppression systématique de toute contrainte d'unicité bloquante sur session_paie (mois, annee)
             try {
@@ -203,7 +206,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
         seedTypesAbsenceConges();
 
         // 1. Les Catégories officielles (Genres) avec types persistés
-        SalaryCategory catRemuDue = getOrCreateCategory("CAT_REMU_DUE", "Rémunération due", "GAIN");
+        SalaryCategory catRemuDue = getOrCreateCategory("CAT_REMU_DUE", "Rémunération due", "AUCUN");
         SalaryCategory catSalBase = getOrCreateCategory("CAT_SAL_BASE", "Salaire de base", "GAIN");
         SalaryCategory catIndem = getOrCreateCategory("CAT_INDEMNITES", "Indemnités", "GAIN");
         SalaryCategory catPrimes = getOrCreateCategory("CAT_PRIMES", "Primes", "GAIN");
@@ -217,8 +220,9 @@ public class PayrollDataInitializer implements CommandLineRunner {
         SalaryCategory catCotisNonRev = getOrCreateCategory("CAT_COTIS_NON_REV", "Cotisations non reversées", "RETENUE");
 
         // 2. Éléments de Salaire (Types)
-        // Rémunération due
-        getOrCreateElement("REM_DUE_NET", "Rémunération due (Net à payer viré)", catRemuDue, null, false, false, "FORMULE", "NET_A_PAYER", 1);
+        // Rémunération due / Récapitulatifs (Type AUCUN)
+        getOrCreateElement("net_a_payer", "NET À PAYER", catRemuDue, null, false, false, "FORMULE_COMPLEXE", "salaire_net", 100);
+        getOrCreateElement("rem_brute", "RÉMUNÉRATION BRUTE", catRemuDue, null, false, false, "FORMULE_COMPLEXE", "remuneration_brute", 99);
 
         // Salaire de base
         getOrCreateElement("SAL_MENSUEL", "Salaire mensuel", catSalBase, null, true, true, "GRILLE", "GRILLE_ECHELON", 2);
