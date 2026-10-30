@@ -655,9 +655,11 @@ public class BulletinPdfService {
             String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
             String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
-            if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
+            if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code) || "REM_BRUTE".equals(code) || "TOTAL_BRUT".equals(code)) continue;
             if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
                     || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                    || "AUCUN".equalsIgnoreCase(l.getTypeLigne())
+                    || lib.contains("REMUNERATION BRUTE") || lib.contains("RÉMUNÉRATION BRUTE")
                     || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
                 continue;
             }
@@ -885,9 +887,11 @@ public class BulletinPdfService {
                 String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
                 String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
-                if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code)) continue;
+                if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code) || "REM_BRUTE".equals(code) || "TOTAL_BRUT".equals(code)) continue;
                 if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
                         || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                        || "AUCUN".equalsIgnoreCase(l.getTypeLigne())
+                        || lib.contains("REMUNERATION BRUTE") || lib.contains("RÉMUNÉRATION BRUTE")
                         || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
                     continue;
                 }

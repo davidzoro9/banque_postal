@@ -93,7 +93,7 @@ public class SalaryParametrageService {
         SalaryCategory cat = new SalaryCategory();
         cat.setCode(dto.getCode());
         cat.setName(dto.getName());
-        cat.setType(dto.getType() != null && !dto.getType().trim().isEmpty() ? dto.getType().trim() : "GAIN");
+        cat.setType(dto.getType() != null && !dto.getType().trim().isEmpty() ? dto.getType().trim().toUpperCase(java.util.Locale.ROOT) : "GAIN");
         return mapCategoryToDto(categoryRepository.save(cat));
     }
 
@@ -104,7 +104,7 @@ public class SalaryParametrageService {
         cat.setCode(dto.getCode());
         cat.setName(dto.getName());
         if (dto.getType() != null && !dto.getType().trim().isEmpty()) {
-            cat.setType(dto.getType().trim());
+            cat.setType(dto.getType().trim().toUpperCase(java.util.Locale.ROOT));
         }
         return mapCategoryToDto(categoryRepository.save(cat));
     }

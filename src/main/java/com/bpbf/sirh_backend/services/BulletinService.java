@@ -2368,6 +2368,10 @@ public class BulletinService {
                         customLine.setMontant(money(fieldVal));
                         customLine.setPartPatronale(BigDecimal.ZERO);
                         totalRetenuesSociales = totalRetenuesSociales.add(money(fieldVal));
+                    } else if ("AUCUN".equals(catType)) {
+                        customLine.setTypeLigne("AUCUN");
+                        customLine.setMontant(money(fieldVal));
+                        customLine.setPartPatronale(BigDecimal.ZERO);
                     } else {
                         customLine.setMontant(money(fieldVal));
                     }
@@ -2415,6 +2419,10 @@ public class BulletinService {
                         formLine.setMontant(money(formRes));
                         formLine.setPartPatronale(BigDecimal.ZERO);
                         totalRetenuesSociales = totalRetenuesSociales.add(money(formRes));
+                    } else if ("AUCUN".equals(catType)) {
+                        formLine.setTypeLigne("AUCUN");
+                        formLine.setMontant(money(formRes));
+                        formLine.setPartPatronale(BigDecimal.ZERO);
                     } else {
                         formLine.setMontant(money(formRes));
                     }
@@ -2861,6 +2869,20 @@ public class BulletinService {
         bulletin.setStatut("GENERE");
         bulletin.setDateCalcul(LocalDateTime.now());
         bulletin.setNatureSession(session != null ? session.getNatureSession() : null);
+
+        // Ligne récapitulative Rémunération Brute dans bulletin_line (type AUCUN, non affichée sur le bulletin de l'agent)
+        if (remunerationBrute != null && remunerationBrute.compareTo(BigDecimal.ZERO) > 0) {
+            BulletinLine brutLine = new BulletinLine();
+            brutLine.setCode("REM_BRUTE");
+            brutLine.setLibelle("RÉMUNÉRATION BRUTE");
+            brutLine.setTypeLigne("AUCUN");
+            brutLine.setBaseCalcul(remunerationBrute);
+            brutLine.setTaux(null);
+            brutLine.setMontant(remunerationBrute);
+            brutLine.setPartPatronale(BigDecimal.ZERO);
+            brutLine.setOrdre(99);
+            lines.add(brutLine);
+        }
 
         lines.removeIf(l -> (l.getMontant() == null || l.getMontant().compareTo(BigDecimal.ZERO) <= 0)
                 && (l.getPartPatronale() == null || l.getPartPatronale().compareTo(BigDecimal.ZERO) <= 0));
@@ -3511,12 +3533,16 @@ public class BulletinService {
 
                 boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne());
                 boolean isPatronale = "COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne()) || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne());
+                boolean isAucun = "AUCUN".equalsIgnoreCase(l.getTypeLigne());
                 if (isGain) {
                     ld.setGain(l.getMontant());
                     ld.setRetenue(null);
-                } else if (!isPatronale) {
+                } else if (!isPatronale && !isAucun) {
                     ld.setGain(null);
                     ld.setRetenue(l.getMontant());
+                } else {
+                    ld.setGain(null);
+                    ld.setRetenue(null);
                 }
 
                 ld.setName(cleanLib);

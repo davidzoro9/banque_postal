@@ -139,6 +139,24 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 log.debug("Auto-migration bulletin_line montant (non bloquant): {}", ex.getMessage());
             }
 
+            // Insertion de la ligne RÉMUNÉRATION BRUTE dans bulletin_line pour tous les bulletins
+            try {
+                jdbcTemplate.execute(
+                    "INSERT INTO bulletin_line (bulletin_id, code, libelle, type_ligne, base_calcul, montant, part_patronale, ordre) " +
+                    "SELECT b.id, 'REM_BRUTE', 'RÉMUNÉRATION BRUTE', 'AUCUN', b.salaire_brut, b.salaire_brut, 0.00, 99 " +
+                    "FROM bulletin b " +
+                    "WHERE b.salaire_brut IS NOT NULL AND b.salaire_brut > 0 " +
+                    "  AND NOT EXISTS ( " +
+                    "    SELECT 1 FROM bulletin_line bl " +
+                    "    WHERE bl.bulletin_id = b.id " +
+                    "      AND (bl.code IN ('REM_BRUTE', 'TOTAL_BRUT') OR UPPER(bl.libelle) LIKE '%R%MUN%RATION BRUTE%') " +
+                    "  )"
+                );
+                log.info("Lignes RÉMUNÉRATION BRUTE insérées dans bulletin_line avec succès.");
+            } catch (Exception ex) {
+                log.debug("Auto-migration RÉMUNÉRATION BRUTE dans bulletin_line (non bloquant): {}", ex.getMessage());
+            }
+
             // Colonnes profil employé (Situation familiale, N° CNSS, Avantages véhicule & logement)
             try {
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS situation_familiale VARCHAR(50)");
