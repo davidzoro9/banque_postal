@@ -1819,7 +1819,9 @@ export class GenererBulletinsComponent implements OnInit {
         if (isPatronale) return null;
 
         const isExcluded = l.typeLigne === 'AUCUN' || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE' ||
-          nm.includes('RÉMUNÉRATION BRUTE') || nm.includes('REMUNERATION BRUTE');
+          cd === 'NET_A_PAYER' || cd === 'SALAIRE_NET' ||
+          nm.includes('RÉMUNÉRATION BRUTE') || nm.includes('REMUNERATION BRUTE') ||
+          nm.includes('NET A PAYER') || nm.includes('NET À PAYER') || nm.includes('SALAIRE NET');
         if (isExcluded) return null;
 
         const montant = l.montant !== undefined ? l.montant : (l.amount !== undefined ? l.amount : (isGain ? l.gain : l.retenue));
