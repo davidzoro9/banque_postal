@@ -2018,19 +2018,33 @@ public class BulletinService {
         Map<String, BigDecimal> currentElementValues = new HashMap<>();
         currentElementValues.put("sal_base", salaireBase);
         currentElementValues.put("salaire_base", salaireBase);
+        currentElementValues.put("base", salaireBase);
+        currentElementValues.put("sb", salaireBase);
         currentElementValues.put("sursalaire", surSalaire);
         currentElementValues.put("sur_salaire", surSalaire);
         currentElementValues.put("prime_anc", primeAnciennete);
         currentElementValues.put("anciennete", primeAnciennete);
+        currentElementValues.put("prime_anciennete", primeAnciennete);
         currentElementValues.put("total_indemnites", totalIndemnites);
+        currentElementValues.put("indemnites", totalIndemnites);
         currentElementValues.put("remuneration_brute", remunerationBrute);
+        currentElementValues.put("salaire_brut", remunerationBrute);
+        currentElementValues.put("total_brut", remunerationBrute);
+        currentElementValues.put("rem_brute", remunerationBrute);
         currentElementValues.put("brut", remunerationBrute);
+        currentElementValues.put("avoirs", remunerationBrute);
+        currentElementValues.put("total_avoirs", remunerationBrute);
+        currentElementValues.put("gains", remunerationBrute);
+        currentElementValues.put("total_gains", remunerationBrute);
         currentElementValues.put("base_imposable", baseImposable);
+        currentElementValues.put("imposable", baseImposable);
         currentElementValues.put("base_cnss", baseCnss);
         currentElementValues.put("base_crrae", baseCrrae);
         currentElementValues.put("cotisation_cnss", cotisationCnss);
         currentElementValues.put("cotis_cnss", cotisationCnss);
+        currentElementValues.put("cnss", cotisationCnss);
         currentElementValues.put("iuts", impotIuts);
+        currentElementValues.put("impot_iuts", impotIuts);
         currentElementValues.put("fsp", money(calculatePercentage(baseSolidarite, new BigDecimal("1.00"))));
 
         // Injecter toutes les indemnités de l'agent dans les variables de calcul
@@ -2396,9 +2410,10 @@ public class BulletinService {
             if ("FORMULE_COMPLEXE".equalsIgnoreCase(se.getMethodCalcul()) && se.getFormule() != null && !se.getFormule().isBlank()) {
                 String seCodeCheck = (se.getCode() != null ? se.getCode() : "").toUpperCase(Locale.ROOT);
                 String seNameCheck = (se.getName() != null ? se.getName() : "").toUpperCase(Locale.ROOT);
+                String seFormCheck = se.getFormule().toUpperCase(Locale.ROOT);
 
-                if (seCodeCheck.contains("NET") || seNameCheck.contains("NET")) {
-                    processedCodes.add(codeNorm);
+                // Si l'élément ou sa formule fait référence au Net, aux Avoirs ou aux Retenues, reporter l'évaluation après le calcul final du Net
+                if (seCodeCheck.contains("NET") || seNameCheck.contains("NET") || seFormCheck.contains("NET") || seFormCheck.contains("AVOIR") || seFormCheck.contains("RETENUE")) {
                     continue;
                 }
 
@@ -2875,16 +2890,32 @@ public class BulletinService {
         bulletin.setNatureSession(session != null ? session.getNatureSession() : null);
 
         // Traitement dynamique de TOUS les éléments de catégorie AUCUN ou récapitulatifs configurés dans salary_element
+        currentElementValues.put("sal_net", salaireNet);
         currentElementValues.put("salaire_net", salaireNet);
         currentElementValues.put("net_a_payer", salaireNet);
         currentElementValues.put("net", salaireNet);
+        currentElementValues.put("net_payer", salaireNet);
+        currentElementValues.put("netapayer", salaireNet);
+        currentElementValues.put("avoirs", remunerationBrute);
+        currentElementValues.put("total_avoirs", remunerationBrute);
+        currentElementValues.put("gains", remunerationBrute);
+        currentElementValues.put("total_gains", remunerationBrute);
+        currentElementValues.put("retenues", totalRetenues);
+        currentElementValues.put("total_retenues", totalRetenues);
+        currentElementValues.put("precomptes", totalPrecomptes);
+        currentElementValues.put("total_precomptes", totalPrecomptes);
         currentElementValues.put("remuneration_brute", remunerationBrute);
+        currentElementValues.put("salaire_brut", remunerationBrute);
+        currentElementValues.put("total_brut", remunerationBrute);
+        currentElementValues.put("rem_brute", remunerationBrute);
         currentElementValues.put("brut", remunerationBrute);
 
         List<SalaryElement> recapElements = activeSalaryElements.stream()
                 .filter(e -> e != null && (
                         (e.getSalaryCategory() != null && "AUCUN".equalsIgnoreCase(e.getSalaryCategory().getType())) ||
-                        (e.getCode() != null && (e.getCode().toLowerCase(Locale.ROOT).contains("net") || e.getCode().toLowerCase(Locale.ROOT).contains("rem_brute") || e.getCode().toLowerCase(Locale.ROOT).contains("total_brut")))
+                        (e.getCode() != null && (e.getCode().toLowerCase(Locale.ROOT).contains("net") || e.getCode().toLowerCase(Locale.ROOT).contains("rem_brute") || e.getCode().toLowerCase(Locale.ROOT).contains("total_brut"))) ||
+                        (e.getName() != null && (e.getName().toLowerCase(Locale.ROOT).contains("net") || e.getName().toLowerCase(Locale.ROOT).contains("brut"))) ||
+                        (e.getFormule() != null && (e.getFormule().toLowerCase(Locale.ROOT).contains("net") || e.getFormule().toLowerCase(Locale.ROOT).contains("avoir") || e.getFormule().toLowerCase(Locale.ROOT).contains("retenue")))
                 ))
                 .toList();
 
@@ -2894,19 +2925,26 @@ public class BulletinService {
         for (SalaryElement se : recapElements) {
             String cLower = se.getCode() != null ? se.getCode().toLowerCase(Locale.ROOT) : "";
             String nUpper = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
-            String fLower = se.getFormule() != null ? se.getFormule().toLowerCase(Locale.ROOT) : "";
+            String fTrim = se.getFormule() != null ? se.getFormule().trim() : "";
 
             BigDecimal lineAmount = BigDecimal.ZERO;
-            if (cLower.contains("net") || nUpper.contains("NET") || fLower.contains("net")) {
+
+            // 1. Si une formule explicite est définie (ex: sal_net*0.01, AVOIRS - RETENUES), TOUJOURS l'évaluer en priorité absolue !
+            if (!fTrim.isBlank()) {
+                lineAmount = evaluateComplexFormula(fTrim, currentElementValues, currentCategoryValues);
+            } else if (cLower.contains("net") || nUpper.contains("NET")) {
                 lineAmount = salaireNet;
-                netInjected = true;
-            } else if (cLower.contains("brut") || nUpper.contains("BRUT") || fLower.contains("brut")) {
+            } else if (cLower.contains("brut") || nUpper.contains("BRUT")) {
                 lineAmount = remunerationBrute;
-                brutInjected = true;
-            } else if (se.getFormule() != null && !se.getFormule().isBlank()) {
-                lineAmount = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
             } else if (se.getRate() != null) {
                 lineAmount = se.getRate();
+            }
+
+            if (cLower.contains("net") || nUpper.contains("NET") || fTrim.toLowerCase(Locale.ROOT).contains("net")) {
+                netInjected = true;
+            }
+            if (cLower.contains("brut") || nUpper.contains("BRUT") || fTrim.toLowerCase(Locale.ROOT).contains("brut")) {
+                brutInjected = true;
             }
 
             if (lineAmount != null && lineAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -2914,12 +2952,26 @@ public class BulletinService {
                 line.setCode(se.getCode());
                 line.setLibelle(se.getName()); // Lu directement depuis salary_element en base de données PostgreSQL
                 line.setTypeLigne(se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null ? se.getSalaryCategory().getType() : "AUCUN");
-                line.setBaseCalcul(lineAmount);
+
+                BigDecimal baseForLine = lineAmount;
+                if (cLower.contains("net") || nUpper.contains("NET") || fTrim.toLowerCase(Locale.ROOT).contains("net")) {
+                    baseForLine = salaireNet != null && salaireNet.compareTo(BigDecimal.ZERO) > 0 ? salaireNet : lineAmount;
+                } else if (cLower.contains("brut") || nUpper.contains("BRUT") || fTrim.toLowerCase(Locale.ROOT).contains("brut")) {
+                    baseForLine = remunerationBrute != null && remunerationBrute.compareTo(BigDecimal.ZERO) > 0 ? remunerationBrute : lineAmount;
+                }
+
+                line.setBaseCalcul(baseForLine);
                 line.setTaux(se.getRate());
                 line.setMontant(lineAmount);
                 line.setPartPatronale(BigDecimal.ZERO);
                 line.setOrdre(se.getOrdre() != null ? se.getOrdre() : (cLower.contains("net") ? 100 : 99));
                 lines.add(line);
+
+                // Mettre à jour currentElementValues avec le montant calculé pour les éléments suivants
+                currentElementValues.put(cLower, lineAmount);
+                if (se.getCodeCorrespondant() != null) {
+                    currentElementValues.put(se.getCodeCorrespondant().toLowerCase(Locale.ROOT), lineAmount);
+                }
             }
         }
 
@@ -4051,6 +4103,9 @@ public class BulletinService {
         if (formula == null || formula.isBlank()) return BigDecimal.ZERO;
         try {
             String expr = formula.replace(',', '.').trim();
+
+            // Support du symbole % (ex: 1% -> (1/100), 0.5% -> (0.5/100))
+            expr = expr.replaceAll("([0-9.]+)\\s*%", "($1/100)");
 
             // 1. Remplacement des fonctions agrégatives SUM(CAT_...), AVG(CAT_...), MIN(...), MAX(...)
             expr = resolveAggregateFunctions(expr, categoryValues, elementValues);
