@@ -657,10 +657,13 @@ public class BulletinPdfService {
 
             if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code) || "REM_BRUTE".equals(code) || "TOTAL_BRUT".equals(code)) continue;
             if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
-                    || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                    || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                    || "PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                    || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON"))
                     || "AUCUN".equalsIgnoreCase(l.getTypeLigne())
                     || lib.contains("REMUNERATION BRUTE") || lib.contains("RÉMUNÉRATION BRUTE")
-                    || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
+                    || lib.contains("PATRONAL")
+                    || code.contains("PAT") || code.contains("TPA")) {
                 continue;
             }
 
@@ -891,10 +894,13 @@ public class BulletinPdfService {
                         || "NET_A_PAYER".equals(code) || "SALAIRE_NET".equals(code) || lib.contains("NET A PAYER") || lib.contains("NET À PAYER")
                         || "ALLOC_FAMILIALE".equals(code) || "ALLOCATION_FAMILIALE".equals(code) || lib.contains("ALLOCATION FAMILIALE") || lib.contains("ALLOCATIONS FAMILIALES")) continue;
                 if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
-                        || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
+                        || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || "PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON"))
                         || "AUCUN".equalsIgnoreCase(l.getTypeLigne())
                         || lib.contains("REMUNERATION BRUTE") || lib.contains("RÉMUNÉRATION BRUTE")
-                        || code.contains("TPA_PAT") || code.contains("CHARGES_PAT")) {
+                        || lib.contains("PATRONAL")
+                        || code.contains("PAT") || code.contains("TPA")) {
                     continue;
                 }
 

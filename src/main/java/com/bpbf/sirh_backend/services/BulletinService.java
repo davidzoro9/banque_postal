@@ -2039,6 +2039,9 @@ public class BulletinService {
         currentElementValues.put("base_imposable", baseImposable);
         currentElementValues.put("imposable", baseImposable);
         currentElementValues.put("base_cnss", baseCnss);
+        currentElementValues.put("brut_cotisable", baseCnss);
+        currentElementValues.put("base_cotisable", baseCnss);
+        currentElementValues.put("brut_cotis", baseCnss);
         currentElementValues.put("base_crrae", baseCrrae);
         currentElementValues.put("cotisation_cnss", cotisationCnss);
         currentElementValues.put("cotis_cnss", cotisationCnss);
@@ -2179,8 +2182,14 @@ public class BulletinService {
 
             // 5. CHARGES PATRONALES CNSS
             if (isCnssPatronaleElement(se)) {
+                BigDecimal cnssPat = BigDecimal.ZERO;
+                if ("FORMULE_COMPLEXE".equalsIgnoreCase(se.getMethodCalcul()) && se.getFormule() != null && !se.getFormule().isBlank()) {
+                    cnssPat = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
+                }
                 BigDecimal tx = (se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) ? se.getRate() : new BigDecimal("16.00");
-                BigDecimal cnssPat = money(baseCnss.multiply(tx.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP)));
+                if (cnssPat == null || cnssPat.compareTo(BigDecimal.ZERO) <= 0) {
+                    cnssPat = money(baseCnss.multiply(tx.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP)));
+                }
                 if (!is13Ou14eme && !(isExtra && cnssPlafondAtteint) && cnssPat.compareTo(BigDecimal.ZERO) > 0) {
                     BulletinLine cnssPatLine = new BulletinLine();
                     cnssPatLine.setCode(se.getCode());
@@ -2426,11 +2435,14 @@ public class BulletinService {
                     customLine.setBaseCalcul(money(fieldVal));
                     customLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
 
-                    if ("COTISATION_PATRONALE".equals(catType)) {
+                    boolean isPat = "COTISATION_PATRONALE".equals(catType) || "PATRONALE".equals(catType) || catType.contains("PATRON") || isPatronal(se);
+                    if (isPat) {
+                        customLine.setTypeLigne("COTISATION_PATRONALE");
                         customLine.setMontant(money(fieldVal));
                         customLine.setPartPatronale(money(fieldVal));
                         totalCotisationsPatronales = totalCotisationsPatronales.add(money(fieldVal));
-                    } else if ("RETENUE_SOCIALE".equals(catType)) {
+                    } else if ("RETENUE_SOCIALE".equals(catType) || "RETENUE".equals(catType)) {
+                        customLine.setTypeLigne("RETENUE_SOCIALE");
                         customLine.setMontant(money(fieldVal));
                         customLine.setPartPatronale(BigDecimal.ZERO);
                         totalRetenuesSociales = totalRetenuesSociales.add(money(fieldVal));
@@ -2439,6 +2451,7 @@ public class BulletinService {
                         customLine.setMontant(money(fieldVal));
                         customLine.setPartPatronale(BigDecimal.ZERO);
                     } else {
+                        customLine.setTypeLigne("GAIN");
                         customLine.setMontant(money(fieldVal));
                     }
                     lines.add(customLine);
@@ -2470,11 +2483,14 @@ public class BulletinService {
                     formLine.setBaseCalcul(money(formRes));
                     formLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
 
-                    if ("COTISATION_PATRONALE".equals(catType)) {
+                    boolean isPat = "COTISATION_PATRONALE".equals(catType) || "PATRONALE".equals(catType) || catType.contains("PATRON") || isPatronal(se);
+                    if (isPat) {
+                        formLine.setTypeLigne("COTISATION_PATRONALE");
                         formLine.setMontant(money(formRes));
                         formLine.setPartPatronale(money(formRes));
                         totalCotisationsPatronales = totalCotisationsPatronales.add(money(formRes));
-                    } else if ("RETENUE_SOCIALE".equals(catType)) {
+                    } else if ("RETENUE_SOCIALE".equals(catType) || "RETENUE".equals(catType)) {
+                        formLine.setTypeLigne("RETENUE_SOCIALE");
                         formLine.setMontant(money(formRes));
                         formLine.setPartPatronale(BigDecimal.ZERO);
                         totalRetenuesSociales = totalRetenuesSociales.add(money(formRes));
@@ -2483,6 +2499,7 @@ public class BulletinService {
                         formLine.setMontant(money(formRes));
                         formLine.setPartPatronale(BigDecimal.ZERO);
                     } else {
+                        formLine.setTypeLigne("GAIN");
                         formLine.setMontant(money(formRes));
                     }
                     lines.add(formLine);
@@ -2835,7 +2852,10 @@ public class BulletinService {
 
         // Recalcul exact des totaux basés sur les lignes affichées pour l'agent
         BigDecimal sumGains = lines.stream()
-                .filter(l -> "GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne()))
+                .filter(l -> ("GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne()))
+                        && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && !"PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && (l.getTypeLigne() == null || !l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON")))
                 .map(l -> l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (sumGains.compareTo(BigDecimal.ZERO) > 0) {
@@ -2843,7 +2863,10 @@ public class BulletinService {
         }
 
         BigDecimal sumRetSoc = lines.stream()
-                .filter(l -> "RETENUE_SOCIALE".equalsIgnoreCase(l.getTypeLigne()))
+                .filter(l -> "RETENUE_SOCIALE".equalsIgnoreCase(l.getTypeLigne())
+                        && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && !"PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && (l.getTypeLigne() == null || !l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON")))
                 .map(l -> l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         totalRetenuesSociales = money(sumRetSoc);
@@ -2855,14 +2878,20 @@ public class BulletinService {
         impotIuts = money(sumImpot);
 
         BigDecimal sumPrec = lines.stream()
-                .filter(l -> "PRECOMPTE".equalsIgnoreCase(l.getTypeLigne()) || "RETENUE".equalsIgnoreCase(l.getTypeLigne()))
+                .filter(l -> ("PRECOMPTE".equalsIgnoreCase(l.getTypeLigne()) || "RETENUE".equalsIgnoreCase(l.getTypeLigne()))
+                        && !"COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && !"PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        && (l.getTypeLigne() == null || !l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON")))
                 .map(l -> l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         totalPrecomptes = money(sumPrec);
 
         BigDecimal sumPat = lines.stream()
-                .filter(l -> "COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne()))
-                .map(l -> l.getPartPatronale() != null ? l.getPartPatronale() : BigDecimal.ZERO)
+                .filter(l -> "COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || "PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON")))
+                .map(l -> l.getPartPatronale() != null ? l.getPartPatronale() : (l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         totalCotisationsPatronales = money(sumPat);
 
@@ -3678,12 +3707,24 @@ public class BulletinService {
                 ld.setOrdre(l.getOrdre());
 
                 boolean isGain = "GAIN".equalsIgnoreCase(l.getTypeLigne()) || "AVOIR".equalsIgnoreCase(l.getTypeLigne());
-                boolean isPatronale = "COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne()) || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne());
+                boolean isPatronale = "COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || "CHARGE_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || "PATRONALE".equalsIgnoreCase(l.getTypeLigne())
+                        || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRON"))
+                        || (l.getCode() != null && l.getCode().toUpperCase(Locale.ROOT).contains("PAT"))
+                        || (l.getCode() != null && l.getCode().toUpperCase(Locale.ROOT).contains("TPA"))
+                        || (cleanLib != null && cleanLib.toUpperCase(Locale.ROOT).contains("PATRON"));
                 boolean isAucun = "AUCUN".equalsIgnoreCase(l.getTypeLigne());
-                if (isGain) {
+                if (isPatronale) {
+                    ld.setTypeLigne("COTISATION_PATRONALE");
+                    ld.setCategory("COTISATION_PATRONALE");
+                    ld.setGain(null);
+                    ld.setRetenue(null);
+                    ld.setPartPatronale(l.getPartPatronale() != null ? l.getPartPatronale() : l.getMontant());
+                } else if (isGain) {
                     ld.setGain(l.getMontant());
                     ld.setRetenue(null);
-                } else if (!isPatronale && !isAucun) {
+                } else if (!isAucun) {
                     ld.setGain(null);
                     ld.setRetenue(l.getMontant());
                 } else {
@@ -3692,7 +3733,7 @@ public class BulletinService {
                 }
 
                 ld.setName(cleanLib);
-                ld.setCategory(l.getTypeLigne());
+                ld.setCategory(isPatronale ? "COTISATION_PATRONALE" : l.getTypeLigne());
                 ld.setAmount(l.getMontant() != null ? l.getMontant().doubleValue() : null);
                 ld.setRate(taux != null ? taux.doubleValue() : null);
 
@@ -4296,9 +4337,12 @@ public class BulletinService {
                 ? se.getSalaryCategory().getType().toUpperCase(Locale.ROOT) : "";
         String catCode = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
                 ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
+        String catName = (se.getSalaryCategory() != null && se.getSalaryCategory().getName() != null)
+                ? se.getSalaryCategory().getName().toUpperCase(Locale.ROOT) : "";
         String code = se.getCode() != null ? se.getCode().toUpperCase(Locale.ROOT) : "";
         String name = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
-        return type.contains("PATRON") || catCode.contains("PATRON") || code.contains("PAT") || name.contains("PATRON");
+        return type.contains("PATRON") || catCode.contains("PATRON") || catName.contains("PATRON")
+                || code.contains("PAT") || name.contains("PATRON") || code.contains("TPA");
     }
 
     public static boolean isSalaireBaseElement(SalaryElement se) {
