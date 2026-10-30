@@ -176,8 +176,8 @@ export class GenererBulletinsComponent implements OnInit {
     motifAjustement: ''
   };
 
-  editStcMotifRupture: string = 'LICENCIEMENT_SIMPLE';
-  editStcStatutPreavis: string = 'DISPENSE_PAYE';
+  editStcMotifRupture: string = '';
+  editStcStatutPreavis: string = '';
 
   get nbrGeneres(): number { return this.bulletins.filter(b => b.etat === 'GENERE').length; }
   get nbrValides(): number { return this.bulletins.filter(b => b.etat === 'VALIDE' || b.etat === 'CLOTURE').length; }
@@ -194,6 +194,9 @@ export class GenererBulletinsComponent implements OnInit {
     const n = (s.natureSession || s.name || s.codeSession || '').toUpperCase();
     return n.includes('MATERNITE') || n.includes('MAT');
   }
+
+  // Paramétrage des jours travaillés pour session ordinaire
+  valeurJoursTravailles: number = 30;
 
   // Paramétrage du prorata 13ème et 14ème Mois
   prorataUnit13eme: 'JOURS' | 'MOIS' = 'JOURS';
@@ -221,8 +224,9 @@ export class GenererBulletinsComponent implements OnInit {
 
   isBulletinStc(b: any): boolean {
     if (!b) return false;
+    if (this.isSessionStc) return true;
     const nat = (b.natureSession || b.typeSession || '').toUpperCase();
-    return nat.includes('STC') || this.isSessionStc || !!b.motifRupture;
+    return nat.includes('STC') || nat.includes('SOLDE DE TOUT COMPTE');
   }
 
   getMotifRuptureLibelle(motif?: string): string {
@@ -1354,12 +1358,13 @@ export class GenererBulletinsComponent implements OnInit {
 
   ouvrirModalModifierVariables(b: any): void {
     this.selectedBulletinForEdit = b;
-    this.editStcMotifRupture = b.motifRupture || 'LICENCIEMENT_SIMPLE';
-    this.editStcStatutPreavis = b.statutPreavis || (
+    const isStc = this.isBulletinStc(b) || this.isSessionStc;
+    this.editStcMotifRupture = isStc ? (b.motifRupture || 'LICENCIEMENT_SIMPLE') : '';
+    this.editStcStatutPreavis = isStc ? (b.statutPreavis || (
       this.editStcMotifRupture === 'LICENCIEMENT_FAUTE_LOURDE' || this.editStcMotifRupture === 'FIN_CDD' || this.editStcMotifRupture === 'RETRAITE'
         ? 'NON_APPLICABLE'
         : (this.editStcMotifRupture === 'DEMISSION' ? 'EFFECTUE' : 'DISPENSE_PAYE')
-    );
+    )) : '';
     if (b.lines && b.lines.length > 0) {
       this.initEditableLines(b);
       this.showEditVariablesModal = true;
@@ -1373,11 +1378,13 @@ export class GenererBulletinsComponent implements OnInit {
       ).subscribe(fullB => {
         this.isCalculating = false;
         this.selectedBulletinForEdit = fullB || b;
-        if (this.selectedBulletinForEdit.motifRupture) {
-          this.editStcMotifRupture = this.selectedBulletinForEdit.motifRupture;
-        }
-        if (this.selectedBulletinForEdit.statutPreavis) {
-          this.editStcStatutPreavis = this.selectedBulletinForEdit.statutPreavis;
+        const isStcFull = this.isBulletinStc(this.selectedBulletinForEdit) || this.isSessionStc;
+        if (isStcFull) {
+          this.editStcMotifRupture = this.selectedBulletinForEdit.motifRupture || 'LICENCIEMENT_SIMPLE';
+          this.editStcStatutPreavis = this.selectedBulletinForEdit.statutPreavis || 'DISPENSE_PAYE';
+        } else {
+          this.editStcMotifRupture = '';
+          this.editStcStatutPreavis = '';
         }
         this.initEditableLines(this.selectedBulletinForEdit);
         this.showEditVariablesModal = true;
@@ -1426,6 +1433,26 @@ export class GenererBulletinsComponent implements OnInit {
     this.recalculerLignesVariables();
   }
 
+  onJoursTravaillesChange(): void {
+    if (this.valeurJoursTravailles === null || this.valeurJoursTravailles === undefined || isNaN(this.valeurJoursTravailles)) {
+      this.valeurJoursTravailles = 0;
+    }
+    if (this.valeurJoursTravailles < 0) this.valeurJoursTravailles = 0;
+    if (this.valeurJoursTravailles > 31) this.valeurJoursTravailles = 31;
+
+    for (const l of this.editableLines) {
+      const cd = (l.code || '').toUpperCase();
+      const nm = (l.name || l.libelle || '').toUpperCase();
+      if (this.isDayLine(l) || cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+        l.tauxOrNb = this.valeurJoursTravailles;
+      }
+    }
+    if (this.selectedBulletinForEdit) {
+      this.selectedBulletinForEdit.workedDays = this.valeurJoursTravailles;
+    }
+    this.recalculerLignesVariables();
+  }
+
   getLineDisplayTaux(line: any): string {
     if (!line) return '—';
     const is13or14 = this.isBulletin13Ou14eme(this.selectedBulletinForEdit);
@@ -1440,12 +1467,12 @@ export class GenererBulletinsComponent implements OnInit {
       }
     }
     if (this.isDayLine(line)) {
-      return (line.tauxOrNb ?? 30) + ' j';
+      return (line.tauxOrNb ?? this.valeurJoursTravailles ?? 30) + ' j';
     }
     const cd = (line.code || '').toUpperCase();
     const nm = (line.name || line.libelle || '').toUpperCase();
     if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
-      return (line.tauxOrNb ?? 30) + ' j';
+      return (line.tauxOrNb ?? this.valeurJoursTravailles ?? 30) + ' j';
     }
     if (cd.includes('IUTS') || nm.includes('IUTS')) {
       const parts = this.selectedBulletinForEdit?.partsFiscales || this.selectedBulletinForEdit?.nombreCharges || line.tauxOrNb;
@@ -1495,6 +1522,8 @@ export class GenererBulletinsComponent implements OnInit {
       const scheduled = b.scheduledWorkingDays ? Number(b.scheduledWorkingDays) : 360;
       this.prorataUnit13eme = (scheduled === 12 || (b.workedDays != null && Number(b.workedDays) <= 12)) ? 'MOIS' : 'JOURS';
       this.valeurProrata13eme = b.workedDays != null ? Number(b.workedDays) : (this.prorataUnit13eme === 'MOIS' ? 12 : 360);
+    } else {
+      this.valeurJoursTravailles = b.workedDays != null ? Number(b.workedDays) : (b.scheduledWorkingDays != null ? Number(b.scheduledWorkingDays) : 30);
     }
 
     const rawLines = (enriched?.lines || []).filter((l: any) => {
@@ -1522,12 +1551,12 @@ export class GenererBulletinsComponent implements OnInit {
         fullBase = Number(b.salaireBaseOriginal || b.salaireBase || l.baseCalcul || l.gain || 0);
       } else if (cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE')) {
         unit = 'j';
-        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : 30;
+        const wDays = this.valeurJoursTravailles;
         tauxOrNb = wDays;
         fullBase = Number(b.salaireBaseOriginal || b.salaireBase || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
       } else if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
         unit = is13or14 ? (this.prorataUnit13eme === 'MOIS' ? 'm' : 'j') : 'j';
-        const wDays = b.workedDays !== undefined && b.workedDays !== null ? Number(b.workedDays) : (is13or14 ? this.valeurProrata13eme : 30);
+        const wDays = is13or14 ? this.valeurProrata13eme : this.valeurJoursTravailles;
         tauxOrNb = wDays;
         fullBase = Number(b.surSalaireOriginal || b.surSalaire || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
       } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
@@ -1632,11 +1661,13 @@ export class GenererBulletinsComponent implements OnInit {
       if (surSalLine) surSalLine.tauxOrNb = workedDays;
     } else {
       scheduledDays = b.scheduledWorkingDays ?? 30;
-      workedDays = b.workedDays ?? scheduledDays;
-      if (salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null) {
-        workedDays = Number(salBaseLine.tauxOrNb);
-        if (isNaN(workedDays) || workedDays < 0) workedDays = 0;
-        if (workedDays > 31) workedDays = 31;
+      workedDays = this.valeurJoursTravailles !== undefined && this.valeurJoursTravailles !== null
+        ? Number(this.valeurJoursTravailles)
+        : (b.workedDays ?? scheduledDays);
+      if (isNaN(workedDays) || workedDays < 0) workedDays = 0;
+      if (workedDays > 31) workedDays = 31;
+      this.valeurJoursTravailles = workedDays;
+      if (salBaseLine) {
         salBaseLine.tauxOrNb = workedDays;
       }
       if (surSalLine) {
@@ -1644,12 +1675,13 @@ export class GenererBulletinsComponent implements OnInit {
       }
     }
 
+    const isStc = this.isBulletinStc(b) || this.isSessionStc;
     this.isCalculating = true;
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
       scheduledWorkingDays: scheduledDays,
-      motifRupture: this.editStcMotifRupture,
-      statutPreavis: this.editStcStatutPreavis
+      motifRupture: isStc ? (this.editStcMotifRupture || 'LICENCIEMENT_SIMPLE') : undefined,
+      statutPreavis: isStc ? (this.editStcStatutPreavis || 'DISPENSE_PAYE') : undefined
     }).subscribe({
       next: (res) => {
         this.isCalculating = false;
@@ -1724,23 +1756,27 @@ export class GenererBulletinsComponent implements OnInit {
       workedDays = this.valeurProrata13eme != null ? Number(this.valeurProrata13eme) : (b.workedDays != null ? Number(b.workedDays) : scheduledDays);
     } else {
       scheduledDays = b.scheduledWorkingDays ?? 30;
-      const salBaseLine = this.editableLines.find(l => (l.code || '').includes('SAL_BASE') || (l.name || '').includes('SALAIRE DE BASE'));
-      workedDays = salBaseLine && salBaseLine.tauxOrNb !== undefined && salBaseLine.tauxOrNb !== null
-        ? Number(salBaseLine.tauxOrNb)
+      workedDays = this.valeurJoursTravailles !== undefined && this.valeurJoursTravailles !== null
+        ? Number(this.valeurJoursTravailles)
         : (b.workedDays ?? scheduledDays);
     }
 
+    const isStc = this.isBulletinStc(b) || this.isSessionStc;
     this.isCalculating = true;
 
     this.bulletinService.recalculerBulletin(Number(b.id), {
       workedDays,
       scheduledWorkingDays: scheduledDays,
-      motifRupture: this.editStcMotifRupture,
-      statutPreavis: this.editStcStatutPreavis
+      motifRupture: isStc ? (this.editStcMotifRupture || 'LICENCIEMENT_SIMPLE') : undefined,
+      statutPreavis: isStc ? (this.editStcStatutPreavis || 'DISPENSE_PAYE') : undefined
     }).subscribe({
       next: (savedDto) => {
         this.isCalculating = false;
         const updatedDto = savedDto || b;
+        if (!isStc) {
+          updatedDto.motifRupture = undefined;
+          updatedDto.statutPreavis = undefined;
+        }
         if (this.selectedBulletin && (String(this.selectedBulletin.id) === String(b.id) || String(this.selectedBulletin.employeeId) === String(b.employeeId))) {
           this.selectedBulletin = this.enrichSelectedBulletinLines(updatedDto);
         }
