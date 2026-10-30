@@ -452,11 +452,20 @@ public class BulletinService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bulletin introuvable #" + bulletinId));
         assertModifiable(existing);
 
-        if (motifRupture != null && !motifRupture.isBlank()) {
-            existing.setMotifRupture(motifRupture.trim().toUpperCase(Locale.ROOT));
-        }
-        if (statutPreavis != null && !statutPreavis.isBlank()) {
-            existing.setStatutPreavis(statutPreavis.trim().toUpperCase(Locale.ROOT));
+        boolean isStc = isStc(existing.getSessionPaie());
+        if (isStc) {
+            if (motifRupture != null && !motifRupture.isBlank()) {
+                existing.setMotifRupture(motifRupture.trim().toUpperCase(Locale.ROOT));
+            }
+            if (statutPreavis != null && !statutPreavis.isBlank()) {
+                existing.setStatutPreavis(statutPreavis.trim().toUpperCase(Locale.ROOT));
+            }
+        } else {
+            existing.setMotifRupture(null);
+            existing.setStatutPreavis(null);
+            existing.setMontantIndemniteLicenciement(BigDecimal.ZERO);
+            existing.setMontantIndemnitePreavis(BigDecimal.ZERO);
+            existing.setMontantIndemniteConges(BigDecimal.ZERO);
         }
 
         Employee emp = existing.getEmployee();
@@ -2916,6 +2925,11 @@ public class BulletinService {
         }
 
         Bulletin bulletin = prepareBulletinTarget(existingBulletin, finalCode);
+        bulletin.setMotifRupture(null);
+        bulletin.setStatutPreavis(null);
+        bulletin.setMontantIndemniteLicenciement(BigDecimal.ZERO);
+        bulletin.setMontantIndemnitePreavis(BigDecimal.ZERO);
+        bulletin.setMontantIndemniteConges(BigDecimal.ZERO);
         bulletin.setEmployee(emp);
         bulletin.setSessionPaie(session);
         bulletin.setGrade(grade);
@@ -3503,15 +3517,24 @@ public class BulletinService {
         b.setStatut(dto.getStatut() != null ? dto.getStatut() : "VALIDE");
         b.setDateCalcul(dto.getDateCalcul() != null ? dto.getDateCalcul() : LocalDateTime.now());
 
-        if (dto.getMotifRupture() != null && !dto.getMotifRupture().isBlank()) {
-            b.setMotifRupture(dto.getMotifRupture());
+        boolean isStcB = isStc(b.getSessionPaie());
+        if (isStcB) {
+            if (dto.getMotifRupture() != null && !dto.getMotifRupture().isBlank()) {
+                b.setMotifRupture(dto.getMotifRupture().trim().toUpperCase(Locale.ROOT));
+            }
+            if (dto.getStatutPreavis() != null && !dto.getStatutPreavis().isBlank()) {
+                b.setStatutPreavis(dto.getStatutPreavis().trim().toUpperCase(Locale.ROOT));
+            }
+            b.setMontantIndemniteLicenciement(dto.getMontantIndemniteLicenciement());
+            b.setMontantIndemnitePreavis(dto.getMontantIndemnitePreavis());
+            b.setMontantIndemniteConges(dto.getMontantIndemniteConges());
+        } else {
+            b.setMotifRupture(null);
+            b.setStatutPreavis(null);
+            b.setMontantIndemniteLicenciement(BigDecimal.ZERO);
+            b.setMontantIndemnitePreavis(BigDecimal.ZERO);
+            b.setMontantIndemniteConges(BigDecimal.ZERO);
         }
-        if (dto.getStatutPreavis() != null && !dto.getStatutPreavis().isBlank()) {
-            b.setStatutPreavis(dto.getStatutPreavis());
-        }
-        b.setMontantIndemniteLicenciement(dto.getMontantIndemniteLicenciement());
-        b.setMontantIndemnitePreavis(dto.getMontantIndemnitePreavis());
-        b.setMontantIndemniteConges(dto.getMontantIndemniteConges());
 
         if (b.getLines() == null) {
             b.setLines(new ArrayList<>());
@@ -3581,11 +3604,20 @@ public class BulletinService {
         BigDecimal workedDays = dto.getWorkedDays() != null ? dto.getWorkedDays() : b.getWorkedDays();
         BigDecimal scheduledDays = dto.getScheduledWorkingDays() != null ? dto.getScheduledWorkingDays() : b.getScheduledWorkingDays();
 
-        if (dto.getMotifRupture() != null && !dto.getMotifRupture().isBlank()) {
-            b.setMotifRupture(dto.getMotifRupture().trim().toUpperCase(Locale.ROOT));
-        }
-        if (dto.getStatutPreavis() != null && !dto.getStatutPreavis().isBlank()) {
-            b.setStatutPreavis(dto.getStatutPreavis().trim().toUpperCase(Locale.ROOT));
+        boolean isStcB = isStc(b.getSessionPaie());
+        if (isStcB) {
+            if (dto.getMotifRupture() != null && !dto.getMotifRupture().isBlank()) {
+                b.setMotifRupture(dto.getMotifRupture().trim().toUpperCase(Locale.ROOT));
+            }
+            if (dto.getStatutPreavis() != null && !dto.getStatutPreavis().isBlank()) {
+                b.setStatutPreavis(dto.getStatutPreavis().trim().toUpperCase(Locale.ROOT));
+            }
+        } else {
+            b.setMotifRupture(null);
+            b.setStatutPreavis(null);
+            b.setMontantIndemniteLicenciement(BigDecimal.ZERO);
+            b.setMontantIndemnitePreavis(BigDecimal.ZERO);
+            b.setMontantIndemniteConges(BigDecimal.ZERO);
         }
 
         // Recalcul officiel côté serveur par le moteur de paie (interdiction d'écraser arbitrairement avec des montants non vérifiés)
@@ -3813,11 +3845,12 @@ public class BulletinService {
         dto.setSurSalaire(b.getSurSalaire());
         dto.setJustificationEcart(b.getJustificationEcart());
 
-        dto.setMotifRupture(b.getMotifRupture());
-        dto.setStatutPreavis(b.getStatutPreavis());
-        dto.setMontantIndemniteLicenciement(b.getMontantIndemniteLicenciement());
-        dto.setMontantIndemnitePreavis(b.getMontantIndemnitePreavis());
-        dto.setMontantIndemniteConges(b.getMontantIndemniteConges());
+        boolean isStcSession = isStc(b.getSessionPaie());
+        dto.setMotifRupture(isStcSession ? b.getMotifRupture() : null);
+        dto.setStatutPreavis(isStcSession ? b.getStatutPreavis() : null);
+        dto.setMontantIndemniteLicenciement(isStcSession ? b.getMontantIndemniteLicenciement() : BigDecimal.ZERO);
+        dto.setMontantIndemnitePreavis(isStcSession ? b.getMontantIndemnitePreavis() : BigDecimal.ZERO);
+        dto.setMontantIndemniteConges(isStcSession ? b.getMontantIndemniteConges() : BigDecimal.ZERO);
 
         // Données dynamiques employé et session
         Employee emp = b.getEmployee();
