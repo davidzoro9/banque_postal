@@ -2045,6 +2045,9 @@ public class BulletinService {
         currentElementValues.put("cnss", cotisationCnss);
         currentElementValues.put("iuts", impotIuts);
         currentElementValues.put("impot_iuts", impotIuts);
+        currentElementValues.put("base_solidarite", baseSolidarite);
+        currentElementValues.put("net_cedulaire", baseSolidarite);
+        currentElementValues.put("base_fsp", baseSolidarite);
         currentElementValues.put("fsp", money(calculatePercentage(baseSolidarite, new BigDecimal("1.00"))));
 
         // Injecter toutes les indemnités de l'agent dans les variables de calcul
@@ -2090,6 +2093,13 @@ public class BulletinService {
             if (se == null || "INACTIF".equalsIgnoreCase(se.getStatut())) continue;
 
             String codeNorm = se.getCode() != null ? se.getCode().trim().toLowerCase(Locale.ROOT) : "";
+            String nameNorm = se.getName() != null ? se.getName().trim().toLowerCase(Locale.ROOT) : "";
+
+            // Règle métier : Les allocations familiales ne figurent pas sur le bulletin de paie
+            if ((codeNorm.contains("alloc") && codeNorm.contains("famil")) || (nameNorm.contains("allocation") && nameNorm.contains("famil"))) {
+                continue;
+            }
+
             if (processedCodes.contains(codeNorm) && !codeNorm.isEmpty()) continue;
 
             // 1. SALAIRE DE BASE
@@ -2292,21 +2302,53 @@ public class BulletinService {
                 continue;
             }
 
-            // 10. FONDS DE SOUTIEN PATRIOTIQUE (FSP)
+            // 10. RETENUE FONDS DE SOLIDARITE (FSP)
             if (isFspElement(se)) {
-                if (baseSolidarite.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal tx = (se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) ? se.getRate() : new BigDecimal("1.00");
-                    BigDecimal mSol = money(calculatePercentage(baseSolidarite, tx));
+                BigDecimal mSol = BigDecimal.ZERO;
+                BigDecimal baseForSol = baseSolidarite;
+                BigDecimal tx = (se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) ? se.getRate() : null;
+
+                // A. Priorité absolue : Formule mathématique configurée en base de données sur l'élément (ex: (brut - cnss - iuts) * 0.01)
+                if (se.getFormule() != null && !se.getFormule().isBlank()) {
+                    mSol = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
+                } else if (tx != null) {
+                    // B. Taux configuré directement sur l'élément dans salary_element
+                    if (baseSolidarite != null && baseSolidarite.compareTo(BigDecimal.ZERO) > 0) {
+                        mSol = money(calculatePercentage(baseSolidarite, tx));
+                    }
+                } else {
+                    // C. Récupération dynamique depuis le paramétrage de la table retenue
+                    Retenue retFsp = applicableRetenues.stream()
+                            .filter(r -> r != null && isFspRetenue(r))
+                            .findFirst().orElse(null);
+                    if (retFsp != null) {
+                        if (retFsp.getTaux() != null && retFsp.getTaux() > 0) {
+                            tx = BigDecimal.valueOf(retFsp.getTaux());
+                        }
+                        if (retFsp.getBaseCalcul() != null) {
+                            baseForSol = resolveBaseFromCode(retFsp.getBaseCalcul().name(), currentElementValues, baseSolidarite);
+                        }
+                    }
+                    if (tx == null) tx = new BigDecimal("1.00");
+                    if (baseForSol != null && baseForSol.compareTo(BigDecimal.ZERO) > 0) {
+                        mSol = money(calculatePercentage(baseForSol, tx));
+                    }
+                }
+
+                if (mSol != null && mSol.compareTo(BigDecimal.ZERO) > 0) {
                     BulletinLine solLine = new BulletinLine();
                     solLine.setCode(se.getCode());
                     solLine.setLibelle(se.getName() != null && !se.getName().isBlank() ? se.getName() : "RETENUE FONDS DE SOLIDARITE");
-                    solLine.setTypeLigne("RETENUE_SOCIALE");
-                    solLine.setBaseCalcul(baseSolidarite);
+                    solLine.setTypeLigne(se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null ? se.getSalaryCategory().getType() : "RETENUE_SOCIALE");
+                    solLine.setBaseCalcul(baseForSol != null ? baseForSol : baseSolidarite);
                     solLine.setTaux(tx);
                     solLine.setMontant(mSol);
                     solLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
                     lines.add(solLine);
                     totalRetenuesSociales = totalRetenuesSociales.add(mSol);
+                    currentElementValues.put("fsp", mSol);
+                    currentElementValues.put("retenue_fonds_de_solidarite", mSol);
+                    currentElementValues.put(codeNorm, mSol);
                 }
                 fspProcessed = true;
                 processedCodes.add(codeNorm);
@@ -2708,21 +2750,7 @@ public class BulletinService {
             lines.add(iutsLine);
         }
 
-        if (!fspProcessed && baseSolidarite.compareTo(BigDecimal.ZERO) > 0) {
-            SalaryElement seFsp = findSalaryElement("CAT_COTIS_SOC", "SOLIDARITE", "fsp", "solidarite");
-            String fspLib = (seFsp != null && seFsp.getName() != null && !seFsp.getName().isBlank()) ? seFsp.getName() : "RETENUE FONDS DE SOLIDARITE";
-            BigDecimal mSol = money(calculatePercentage(baseSolidarite, new BigDecimal("1.00")));
-            totalRetenuesSociales = totalRetenuesSociales.add(mSol);
-            BulletinLine solLine = new BulletinLine();
-            solLine.setCode(seFsp != null && seFsp.getCode() != null ? seFsp.getCode() : "FSP");
-            solLine.setLibelle(fspLib);
-            solLine.setTypeLigne("RETENUE_SOCIALE");
-            solLine.setBaseCalcul(baseSolidarite);
-            solLine.setTaux(new BigDecimal("1.00"));
-            solLine.setMontant(mSol);
-            solLine.setOrdre(defaultOrdre++);
-            lines.add(solLine);
-        }
+
 
         // Précomptes employés (crédits, avances, remboursements)
         List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatut(emp.getId(), "ACTIF");
@@ -4388,6 +4416,28 @@ public class BulletinService {
         String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toLowerCase(Locale.ROOT) : "";
         String n = se.getName() != null ? se.getName().toLowerCase(Locale.ROOT) : "";
         return cc.contains("fsp") || c.contains("fsp") || cc.contains("solidar") || c.contains("solidar") || n.contains("fsp") || n.contains("solidar");
+    }
+
+    public static boolean isFspRetenue(Retenue r) {
+        if (r == null) return false;
+        String c = r.getCode() != null ? r.getCode().toLowerCase(Locale.ROOT) : "";
+        String l = r.getLibelle() != null ? r.getLibelle().toLowerCase(Locale.ROOT) : "";
+        return c.contains("fsp") || c.contains("solidar") || l.contains("fsp") || l.contains("solidar");
+    }
+
+    public static BigDecimal resolveBaseFromCode(String baseCode, Map<String, BigDecimal> elementValues, BigDecimal defaultBase) {
+        if (baseCode == null || baseCode.isBlank()) return defaultBase;
+        String b = baseCode.trim().toLowerCase(Locale.ROOT);
+        if (elementValues != null && elementValues.containsKey(b)) {
+            return elementValues.get(b);
+        }
+        if (b.contains("base") && b.contains("sal")) {
+            return elementValues != null ? elementValues.getOrDefault("sal_base", defaultBase) : defaultBase;
+        }
+        if (b.contains("brut") || b.contains("remu")) {
+            return elementValues != null ? elementValues.getOrDefault("remuneration_brute", defaultBase) : defaultBase;
+        }
+        return defaultBase;
     }
 
     public static BigDecimal resolveInformationSalarialeField(InformationSalariale info, String key) {

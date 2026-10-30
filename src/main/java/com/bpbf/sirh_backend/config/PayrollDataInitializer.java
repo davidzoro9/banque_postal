@@ -84,6 +84,8 @@ public class PayrollDataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("UPDATE element_salary_category SET name = 'AVOIR' WHERE code = 'CAT_AVOIR' OR name = 'Avoir (Rappel / Régularisation)'");
             jdbcTemplate.execute("UPDATE salary_element SET code = 'net_a_payer', name = 'NET À PAYER', method_calcul = 'FORMULE_COMPLEXE', formule = 'salaire_net', ordre = 100 WHERE LOWER(code) IN ('rem_due_net', 'net_a_payer', 'salaire_net') OR LOWER(name) LIKE '%net à payer%' OR LOWER(name) LIKE '%net a payer%'");
             jdbcTemplate.execute("UPDATE salary_element SET code = 'rem_brute', name = 'RÉMUNÉRATION BRUTE', method_calcul = 'FORMULE_COMPLEXE', formule = 'remuneration_brute', ordre = 99 WHERE LOWER(code) IN ('rem_brute', 'remuneration_brute', 'total_brut') OR LOWER(name) LIKE '%rémunération brute%' OR LOWER(name) LIKE '%remuneration brute%'");
+            jdbcTemplate.execute("UPDATE salary_element SET statut = 'INACTIF' WHERE code IN ('ALLOC_FAMILIALE', 'ALLOCATION_FAMILIALE') OR UPPER(name) LIKE '%ALLOCATION%FAMILIALE%'");
+            jdbcTemplate.execute("DELETE FROM bulletin_line WHERE code IN ('ALLOC_FAMILIALE', 'ALLOCATION_FAMILIALE') OR UPPER(libelle) LIKE '%ALLOCATION%FAMILIALE%'");
 
             // Suppression systématique de toute contrainte d'unicité bloquante sur session_paie (mois, annee)
             try {
@@ -244,7 +246,7 @@ public class PayrollDataInitializer implements CommandLineRunner {
         getOrCreateElement("PRIME_ANC", "Prime d'ancienneté", catPrimes, null, true, true, "FORMULE", "ANCIENNETE_ECHELON", 14);
         getOrCreateElement("PRIME_GRATIF", "Gratification", catPrimes, null, true, true, "MONTANT_FIXE", "0", 15);
         getOrCreateElement("PRIME_PROD", "Prime de productivité", catPrimes, null, true, true, "MONTANT_FIXE", "0", 16);
-        getOrCreateElement("ALLOC_FAMILIALE", "Allocations familiales", catPrimes, null, false, false, "MONTANT_FIXE", "2000", 17);
+        // getOrCreateElement("ALLOC_FAMILIALE", "Allocations familiales", catPrimes, null, false, false, "MONTANT_FIXE", "2000", 17); // Désactivé : ne figure pas sur le bulletin
         getOrCreateElement("AUTRE_PRIME", "Autre prime", catPrimes, null, true, true, "MONTANT_FIXE", "0", 18);
 
         // Cotisation sécurité sociale
