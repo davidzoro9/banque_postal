@@ -1820,6 +1820,8 @@ export class GenererBulletinsComponent implements OnInit {
 
         const isExcluded = l.typeLigne === 'AUCUN' || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE' ||
           cd === 'NET_A_PAYER' || cd === 'SALAIRE_NET' ||
+          cd === 'ALLOC_FAMILIALE' || cd === 'ALLOCATION_FAMILIALE' ||
+          nm.includes('ALLOCATION FAMILIALE') || nm.includes('ALLOCATIONS FAMILIALES') ||
           nm.includes('RÉMUNÉRATION BRUTE') || nm.includes('REMUNERATION BRUTE') ||
           nm.includes('NET A PAYER') || nm.includes('NET À PAYER') || nm.includes('SALAIRE NET');
         if (isExcluded) return null;
