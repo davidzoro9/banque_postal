@@ -1818,6 +1818,10 @@ export class GenererBulletinsComponent implements OnInit {
         const isPatronale = l.typeLigne === 'COTISATION_PATRONALE' || l.typeLigne === 'CHARGE_PATRONALE';
         if (isPatronale) return null;
 
+        const isExcluded = l.typeLigne === 'AUCUN' || cd === 'TOTAL_BRUT' || cd === 'REM_BRUTE' ||
+          nm.includes('RÉMUNÉRATION BRUTE') || nm.includes('REMUNERATION BRUTE');
+        if (isExcluded) return null;
+
         const montant = l.montant !== undefined ? l.montant : (l.amount !== undefined ? l.amount : (isGain ? l.gain : l.retenue));
         const gainVal = l.gain !== undefined ? l.gain : (isGain ? montant : undefined);
         const retenueVal = l.retenue !== undefined ? l.retenue : (!isGain ? montant : undefined);

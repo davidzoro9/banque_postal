@@ -21,7 +21,7 @@ export interface SalaryElementModel {
   isImposable: boolean;
   ordre: number;
   statut: boolean;
-  type: 'GAIN' | 'RETENUE' | 'PATRONALE';
+  type: 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN';
 }
 
 @Component({
@@ -33,7 +33,7 @@ export interface SalaryElementModel {
 export class ElementsSalaireComponent implements OnInit {
   elementsList: SalaryElementModel[] = [];
   filteredList: SalaryElementModel[] = [];
-  categoriesList: Array<{ id: number; code: string; name: string; type: 'GAIN' | 'RETENUE' | 'PATRONALE' }> = [];
+  categoriesList: Array<{ id: number; code: string; name: string; type: 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN' }> = [];
   adminCodesList: AdminReferenceCodeDto[] = [];
   adminCodesFilter: string = '';
 
@@ -77,7 +77,7 @@ export class ElementsSalaireComponent implements OnInit {
             id: Number(c.id),
             code: c.code || '',
             name: c.name || '',
-            type: (c.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
+            type: (c.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN'
           }));
         } else {
           this.categoriesList = [];
@@ -102,7 +102,7 @@ export class ElementsSalaireComponent implements OnInit {
             const matchingCat = this.categoriesList.find(c => c.id === numCatId);
             const catName = r.categoryName || (matchingCat ? matchingCat.name : '');
             const catCode = r.categoryCode || (matchingCat ? matchingCat.code : '');
-            const elType = (r.type || (matchingCat ? matchingCat.type : 'GAIN')) as 'GAIN' | 'RETENUE' | 'PATRONALE';
+            const elType = (r.type || (matchingCat ? matchingCat.type : 'GAIN')) as 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN';
 
             let method: 'MONTANT_FIXE' | 'FORMULE_COMPLEXE' | 'RIEN' = 'MONTANT_FIXE';
             const mc = (r.methodCalcul || '').toUpperCase();

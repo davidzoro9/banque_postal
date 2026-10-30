@@ -59,8 +59,10 @@
                   <span class="badge-type badge-gain">GAIN</span>
                 } @else if (c.type === 'RETENUE') {
                   <span class="badge-type badge-retenue">RETENUE</span>
-                } @else {
+                } @else if (c.type === 'PATRONALE') {
                   <span class="badge-type badge-patronale">PATRONALE</span>
+                } @else {
+                  <span class="badge-type badge-aucun">AUCUN</span>
                 }
               </td>
               <td class="col-actions" style="text-align: center;">
@@ -123,6 +125,7 @@
                   <mat-option value="GAIN">GAIN (Salaire, Primes, Indemnités, Rappels...)</mat-option>
                   <mat-option value="RETENUE">RETENUE (Cotisations, IUTS, Précomptes, Prêts...)</mat-option>
                   <mat-option value="PATRONALE">PATRONALE (Charges patronales, Cotisations patronales, TPA...)</mat-option>
+                  <mat-option value="AUCUN">AUCUN (Informatif, non imputé)</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>

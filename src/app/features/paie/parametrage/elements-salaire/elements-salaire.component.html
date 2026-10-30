@@ -63,6 +63,7 @@
             <mat-option value="GAIN">Gains & Salaires</mat-option>
             <mat-option value="RETENUE">Retenues & Impôts</mat-option>
             <mat-option value="PATRONALE">Patronales</mat-option>
+            <mat-option value="AUCUN">Aucun</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -106,7 +107,7 @@
                 <strong class="el-name" style="text-transform: uppercase;">{{ el.name }}</strong>
               </td>
               <td>
-                <span class="cat-pill" [class.gain]="el.type === 'GAIN'" [class.ret]="el.type === 'RETENUE'" [class.pat]="el.type === 'PATRONALE'">
+                <span class="cat-pill" [class.gain]="el.type === 'GAIN'" [class.ret]="el.type === 'RETENUE'" [class.pat]="el.type === 'PATRONALE'" [class.aucun]="el.type === 'AUCUN'">
                   {{ el.categoryName || '—' }}
                 </span>
               </td>

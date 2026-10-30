@@ -7,7 +7,7 @@ export interface SalaryCategoryDto {
   id?: number;
   code: string;
   name: string;
-  type: 'GAIN' | 'RETENUE' | 'PATRONALE';
+  type: 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN';
 }
 
 export interface SalaryElementDto {
@@ -27,7 +27,7 @@ export interface SalaryElementDto {
   formula?: string;
   ordre?: number;
   statut?: string | boolean;
-  type?: 'GAIN' | 'RETENUE' | 'PATRONALE';
+  type?: 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN';
 }
 
 export interface AdminReferenceCodeDto {

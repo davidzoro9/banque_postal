@@ -7,7 +7,7 @@ export interface SalaryCategoryModel {
   id: number;
   code: string;
   name: string;
-  type: 'GAIN' | 'RETENUE' | 'PATRONALE';
+  type: 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN';
 }
 
 @Component({
@@ -40,7 +40,7 @@ export class CategoriesElementsComponent implements OnInit {
             id: Number(item.id),
             code: item.code || '',
             name: item.name || '',
-            type: (item.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE'
+            type: (item.type || 'GAIN') as 'GAIN' | 'RETENUE' | 'PATRONALE' | 'AUCUN'
           }));
         } else {
           this.categoriesList = [];
