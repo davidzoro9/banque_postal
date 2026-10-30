@@ -1399,7 +1399,9 @@ export class GenererBulletinsComponent implements OnInit {
     if (!line) return false;
     const cd = (line.code || '').toUpperCase();
     const nm = (line.name || line.libelle || '').toUpperCase();
-    return cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE') || cd.includes('GRAT_13EME') || cd.includes('GRAT_14EME') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF');
+    return cd.includes('SAL_BASE') || nm.includes('SALAIRE DE BASE') || cd.includes('GRAT_13EME') || cd.includes('GRAT_14EME') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF')
+      || cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')
+      || cd.includes('FONCT') || nm.includes('FONCTION') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT');
   }
 
   onProrataUnitChange(): void {
@@ -1559,6 +1561,11 @@ export class GenererBulletinsComponent implements OnInit {
         const wDays = is13or14 ? this.valeurProrata13eme : this.valeurJoursTravailles;
         tauxOrNb = wDays;
         fullBase = Number(b.surSalaireOriginal || b.surSalaire || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || 0);
+      } else if (cd.includes('FONCT') || nm.includes('FONCT') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT')) {
+        unit = is13or14 ? (this.prorataUnit13eme === 'MOIS' ? 'm' : 'j') : 'j';
+        const wDays = is13or14 ? this.valeurProrata13eme : this.valeurJoursTravailles;
+        tauxOrNb = wDays;
+        fullBase = Number(l.baseCalcul || (wDays > 0 ? Math.round((l.gain || 0) * 30 / wDays) : l.gain) || l.gain || 0);
       } else if (cd.includes('ANC') || nm.includes('ANCIENNET')) {
         unit = '%';
         let tVal = 0;
@@ -1673,6 +1680,12 @@ export class GenererBulletinsComponent implements OnInit {
       if (surSalLine) {
         surSalLine.tauxOrNb = workedDays;
       }
+      const fctLines = this.editableLines.filter(l => {
+        const c = (l.code || '').toUpperCase();
+        const n = (l.name || l.libelle || '').toUpperCase();
+        return c.includes('FONCT') || n.includes('FONCT') || c.includes('RESPONS') || n.includes('RESPONSABILIT');
+      });
+      fctLines.forEach(l => l.tauxOrNb = workedDays);
     }
 
     const isStc = this.isBulletinStc(b) || this.isSessionStc;
@@ -1704,6 +1717,9 @@ export class GenererBulletinsComponent implements OnInit {
             return !tl.includes('PATRON') && !cat.includes('PATRON') && !cd.includes('PAT') && !cd.includes('TPA') && !nm.includes('PATRONAL');
           }).map((l: any, idx: number) => {
             const isGain = l.typeLigne === 'GAIN' || (l.gain !== null && l.gain !== undefined && Number(l.gain) > 0);
+            const isBaseOrSur = l.code && (l.code.includes('SAL_BASE') || l.code.includes('SUR_SALAIRE'));
+            const isFctLine = (l.code && (l.code.includes('FONCT') || l.code.includes('RESPONS'))) ||
+              (l.libelle && (l.libelle.toUpperCase().includes('FONCTION') || l.libelle.toUpperCase().includes('RESPONSABILIT')));
             return {
               id: l.id || idx,
               code: l.code,
@@ -1711,7 +1727,7 @@ export class GenererBulletinsComponent implements OnInit {
               libelle: (l.libelle || l.name || '').replace(/[()]/g, '').trim(),
               typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
               baseCalcul: l.baseCalcul,
-              tauxOrNb: is13or14 ? workedDays : ((l.code && (l.code.includes('SAL_BASE') || l.code.includes('SUR_SALAIRE'))) ? workedDays : (l.tauxSalarial || l.taux || l.rate)),
+              tauxOrNb: is13or14 ? workedDays : ((isBaseOrSur || isFctLine) ? workedDays : (l.tauxSalarial || l.taux || l.rate)),
               gain: isGain ? (l.montantSalarial || l.gain || l.montant) : null,
               retenue: (!isGain && !is13or14) ? (l.montantSalarial || l.retenue || l.montant) : null,
               rate: l.tauxSalarial || l.taux || l.rate,
@@ -1900,7 +1916,8 @@ export class GenererBulletinsComponent implements OnInit {
           } else {
             tauxStr = '100.00 %';
           }
-        } else if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
+        } else if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')
+          || cd.includes('FONCT') || nm.includes('FONCTION') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT')) {
           const days = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31)
             ? l.taux
             : (b.workedDays !== undefined && b.workedDays !== null ? b.workedDays : 30);
