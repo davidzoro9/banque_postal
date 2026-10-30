@@ -2318,25 +2318,27 @@ public class BulletinService {
                 continue;
             }
 
-            // 12. AUTRE ÉLÉMENT MONTANT_FIXE (depuis information_salariale ou montant fixe paramétré)
-            if ("MONTANT_FIXE".equalsIgnoreCase(se.getMethodCalcul())) {
+            // 12. AUTRE ÉLÉMENT MONTANT_FIXE OU VALEUR PARAMÉTRÉE
+            if ("MONTANT_FIXE".equalsIgnoreCase(se.getMethodCalcul()) || se.getMethodCalcul() == null || "RIEN".equalsIgnoreCase(se.getMethodCalcul())) {
                 String seCodeCheck = (se.getCode() != null ? se.getCode() : "").toUpperCase(Locale.ROOT);
                 String seNameCheck = (se.getName() != null ? se.getName() : "").toUpperCase(Locale.ROOT);
                 String catCodeCheck = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
                         ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
-                boolean isVariableOrIndividual = catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
-                        || catCodeCheck.contains("INDEM")
-                        || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
-                        || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL") || seCodeCheck.contains("ASSURANCE")
-                        || seNameCheck.contains("AVANCE") || seNameCheck.contains("PRÊT") || seNameCheck.contains("PRET")
-                        || seNameCheck.contains("PRÉCOMPTE") || seNameCheck.contains("PRECOMPTE")
-                        || seNameCheck.contains("TROP-PER") || seNameCheck.contains("TROP PER")
-                        || seNameCheck.contains("RAPPEL") || seNameCheck.contains("ASSURANCE");
 
-                if (isVariableOrIndividual) {
-                    // Les éléments variables ou individuels (Rappels, Trop-perçus, Avances, Prêts, Précomptes, Indemnités)
-                    // sont gérés exclusivement par les dossiers réels de l'agent (AvoirEmploye, TropPercuEmploye, IndemniteEmploye).
-                    // Ils ne doivent JAMAIS être injectés globalement depuis le paramétrage général.
+                // Ignorer les éléments purement liés au Net car traités séparément après calcul du Net
+                if (seCodeCheck.contains("NET") || seNameCheck.contains("NET")) {
+                    processedCodes.add(codeNorm);
+                    continue;
+                }
+
+                // Ne sauter comme dossier individuel QUE les rubriques purement variables n'ayant ni formule ni taux fixe paramétré
+                boolean isPurelyIndividualDossier = (catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
+                        || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
+                        || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL"))
+                        && (se.getFormule() == null || se.getFormule().isBlank())
+                        && (se.getRate() == null || se.getRate().compareTo(BigDecimal.ZERO) <= 0);
+
+                if (isPurelyIndividualDossier) {
                     processedCodes.add(codeNorm);
                     continue;
                 }
@@ -2345,12 +2347,20 @@ public class BulletinService {
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getCode());
                 if (fieldVal == null) fieldVal = resolveInformationSalarialeField(infoSalariale, se.getName());
 
-                // Règle stricte d'association à l'agent : on n'ajoute pas de ligne forfaitaire globale
-                // si la fiche salariale réelle de l'agent ne contient pas cette rubrique.
-                if (fieldVal == null || fieldVal.compareTo(BigDecimal.ZERO) <= 0) {
-                    processedCodes.add(codeNorm);
-                    continue;
+                // Si non trouvé sur la fiche salariale de l'agent, vérifier si une valeur numérique est saisie dans la formule ou le taux
+                if (fieldVal == null && se.getFormule() != null && !se.getFormule().isBlank()) {
+                    try {
+                        String clean = se.getFormule().trim().replace(" ", "").replace(",", ".");
+                        fieldVal = new BigDecimal(clean);
+                    } catch (Exception ignored) {
+                        fieldVal = evaluateComplexFormula(se.getFormule(), currentElementValues, currentCategoryValues);
+                    }
                 }
+                if (fieldVal == null && se.getRate() != null && se.getRate().compareTo(BigDecimal.ZERO) > 0) {
+                    fieldVal = se.getRate();
+                }
+
+                if (fieldVal != null && fieldVal.compareTo(BigDecimal.ZERO) > 0) {
                     String catType = (se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null)
                             ? se.getSalaryCategory().getType().toUpperCase(Locale.ROOT) : "GAIN";
                     BulletinLine customLine = new BulletinLine();
@@ -2376,6 +2386,8 @@ public class BulletinService {
                         customLine.setMontant(money(fieldVal));
                     }
                     lines.add(customLine);
+                    currentElementValues.put(codeNorm, money(fieldVal));
+                }
                 processedCodes.add(codeNorm);
                 continue;
             }
@@ -2384,18 +2396,8 @@ public class BulletinService {
             if ("FORMULE_COMPLEXE".equalsIgnoreCase(se.getMethodCalcul()) && se.getFormule() != null && !se.getFormule().isBlank()) {
                 String seCodeCheck = (se.getCode() != null ? se.getCode() : "").toUpperCase(Locale.ROOT);
                 String seNameCheck = (se.getName() != null ? se.getName() : "").toUpperCase(Locale.ROOT);
-                String catCodeCheck = (se.getSalaryCategory() != null && se.getSalaryCategory().getCode() != null)
-                        ? se.getSalaryCategory().getCode().toUpperCase(Locale.ROOT) : "";
-                boolean isVariableOrIndividual = catCodeCheck.contains("PRECOMPTE") || catCodeCheck.contains("AVOIR")
-                        || catCodeCheck.contains("INDEM")
-                        || seCodeCheck.contains("AVANCE") || seCodeCheck.contains("PRET") || seCodeCheck.contains("PREC")
-                        || seCodeCheck.contains("TROP") || seCodeCheck.contains("RAPPEL") || seCodeCheck.contains("ASSURANCE")
-                        || seNameCheck.contains("AVANCE") || seNameCheck.contains("PRÊT") || seNameCheck.contains("PRET")
-                        || seNameCheck.contains("PRÉCOMPTE") || seNameCheck.contains("PRECOMPTE")
-                        || seNameCheck.contains("TROP-PER") || seNameCheck.contains("TROP PER")
-                        || seNameCheck.contains("RAPPEL") || seNameCheck.contains("ASSURANCE");
 
-                if (isVariableOrIndividual) {
+                if (seCodeCheck.contains("NET") || seNameCheck.contains("NET")) {
                     processedCodes.add(codeNorm);
                     continue;
                 }
@@ -2427,8 +2429,10 @@ public class BulletinService {
                         formLine.setMontant(money(formRes));
                     }
                     lines.add(formLine);
+                    currentElementValues.put(codeNorm, money(formRes));
                 }
                 processedCodes.add(codeNorm);
+                continue;
             }
         }
 
@@ -2882,6 +2886,32 @@ public class BulletinService {
             brutLine.setPartPatronale(BigDecimal.ZERO);
             brutLine.setOrdre(99);
             lines.add(brutLine);
+        }
+
+        // Ligne récapitulative NET À PAYER dans bulletin_line (type AUCUN, consultable en base/SQL et dans le cartouche)
+        if (salaireNet != null && salaireNet.compareTo(BigDecimal.ZERO) > 0) {
+            SalaryElement netElement = activeSalaryElements.stream()
+                    .filter(e -> e != null && (
+                            "NET_A_PAYER".equalsIgnoreCase(e.getCode()) ||
+                            "SALAIRE_NET".equalsIgnoreCase(e.getCode()) ||
+                            (e.getName() != null && (e.getName().toUpperCase(Locale.ROOT).contains("NET A PAYER") || e.getName().toUpperCase(Locale.ROOT).contains("NET À PAYER")))
+                    ))
+                    .findFirst().orElse(null);
+
+            String netCode = (netElement != null && netElement.getCode() != null) ? netElement.getCode() : "NET_A_PAYER";
+            String netLibelle = (netElement != null && netElement.getName() != null && !netElement.getName().isBlank()) ? netElement.getName() : "NET À PAYER";
+            int netOrdre = (netElement != null && netElement.getOrdre() != null) ? netElement.getOrdre() : 100;
+
+            BulletinLine netLine = new BulletinLine();
+            netLine.setCode(netCode);
+            netLine.setLibelle(netLibelle);
+            netLine.setTypeLigne("AUCUN");
+            netLine.setBaseCalcul(salaireNet);
+            netLine.setTaux(null);
+            netLine.setMontant(salaireNet);
+            netLine.setPartPatronale(BigDecimal.ZERO);
+            netLine.setOrdre(netOrdre);
+            lines.add(netLine);
         }
 
         lines.removeIf(l -> (l.getMontant() == null || l.getMontant().compareTo(BigDecimal.ZERO) <= 0)

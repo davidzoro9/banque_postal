@@ -887,7 +887,8 @@ public class BulletinPdfService {
                 String rawLib = l.getLibelle() != null ? l.getLibelle() : "";
                 String lib = rawLib.replaceAll("[()]", "").replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
 
-                if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code) || "REM_BRUTE".equals(code) || "TOTAL_BRUT".equals(code)) continue;
+                if ("SAL_BASE".equals(code) || "SUR_SALAIRE".equals(code) || "NET_PAYE".equals(code) || "REM_BRUTE".equals(code) || "TOTAL_BRUT".equals(code)
+                        || "NET_A_PAYER".equals(code) || "SALAIRE_NET".equals(code) || lib.contains("NET A PAYER") || lib.contains("NET À PAYER")) continue;
                 if ("COTISATION_PATRONALE".equalsIgnoreCase(l.getTypeLigne())
                         || (l.getTypeLigne() != null && l.getTypeLigne().toUpperCase(Locale.ROOT).contains("PATRONAL"))
                         || "AUCUN".equalsIgnoreCase(l.getTypeLigne())

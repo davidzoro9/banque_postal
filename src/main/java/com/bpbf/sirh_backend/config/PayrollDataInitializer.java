@@ -157,6 +157,25 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 log.debug("Auto-migration RÉMUNÉRATION BRUTE dans bulletin_line (non bloquant): {}", ex.getMessage());
             }
 
+            // Insertion de la ligne NET À PAYER dans bulletin_line pour tous les bulletins
+            try {
+                jdbcTemplate.execute(
+                    "INSERT INTO bulletin_line (bulletin_id, code, libelle, type_ligne, base_calcul, montant, part_patronale, ordre) " +
+                    "SELECT b.id, 'NET_A_PAYER', 'NET À PAYER', 'AUCUN', b.salaire_net, b.salaire_net, 0.00, 100 " +
+                    "FROM bulletin b " +
+                    "WHERE b.salaire_net IS NOT NULL AND b.salaire_net > 0 " +
+                    "  AND NOT EXISTS ( " +
+                    "    SELECT 1 FROM bulletin_line bl " +
+                    "    WHERE bl.bulletin_id = b.id " +
+                    "      AND (bl.code IN ('NET_A_PAYER', 'SALAIRE_NET') OR UPPER(bl.libelle) LIKE '%NET%PAYER%') " +
+                    "  )"
+                );
+                jdbcTemplate.execute("UPDATE bulletin_line SET libelle = 'NET À PAYER', code = 'NET_A_PAYER', type_ligne = 'AUCUN' WHERE code IN ('SALAIRE_NET', 'NET_A_PAYER') OR UPPER(libelle) LIKE '%SALAIRE NET%' OR UPPER(libelle) LIKE '%NET A PAYER%'");
+                log.info("Lignes NET À PAYER insérées dans bulletin_line avec succès.");
+            } catch (Exception ex) {
+                log.debug("Auto-migration NET À PAYER dans bulletin_line (non bloquant): {}", ex.getMessage());
+            }
+
             // Colonnes profil employé (Situation familiale, N° CNSS, Avantages véhicule & logement)
             try {
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS situation_familiale VARCHAR(50)");
