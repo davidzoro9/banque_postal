@@ -1458,7 +1458,14 @@ export class GenererBulletinsComponent implements OnInit {
   getLineDisplayTaux(line: any): string {
     if (!line) return '—';
     const is13or14 = this.isBulletin13Ou14eme(this.selectedBulletinForEdit);
-    if (is13or14) {
+    const cd = (line.code || '').toUpperCase();
+    const nm = (line.name || line.libelle || '').toUpperCase();
+    const isBaseOrSur = cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE');
+    const isFct = cd.includes('FONCT') || nm.includes('FONCTION') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT');
+    const isGratifCode = cd.includes('PRORATA_13EME') || cd.includes('PRORATA_14EME') || cd.includes('13EME') || cd.includes('14EME') || cd.includes('GRAT') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF');
+    const isProrataTarget = isBaseOrSur || isFct || isGratifCode || this.isDayLine(line);
+
+    if (is13or14 && isProrataTarget) {
       if (line.taux !== undefined && line.taux !== null && Number(line.taux) > 0) {
         return `${Number(line.taux).toFixed(2)} %`;
       }
@@ -1468,11 +1475,9 @@ export class GenererBulletinsComponent implements OnInit {
         return `${line.tauxOrNb} ${u}`;
       }
     }
-    if (this.isDayLine(line)) {
+    if (this.isDayLine(line) || isBaseOrSur || isFct) {
       return (line.tauxOrNb ?? this.valeurJoursTravailles ?? 30) + ' j';
     }
-    const cd = (line.code || '').toUpperCase();
-    const nm = (line.name || line.libelle || '').toUpperCase();
     if (cd.includes('SUR_SALAIRE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')) {
       return (line.tauxOrNb ?? this.valeurJoursTravailles ?? 30) + ' j';
     }
@@ -1666,6 +1671,12 @@ export class GenererBulletinsComponent implements OnInit {
       this.valeurProrata13eme = workedDays;
       if (salBaseLine) salBaseLine.tauxOrNb = workedDays;
       if (surSalLine) surSalLine.tauxOrNb = workedDays;
+      const fctLines = this.editableLines.filter(l => {
+        const c = (l.code || '').toUpperCase();
+        const n = (l.name || l.libelle || '').toUpperCase();
+        return c.includes('FONCT') || n.includes('FONCT') || c.includes('RESPONS') || n.includes('RESPONSABILIT');
+      });
+      fctLines.forEach(l => l.tauxOrNb = workedDays);
     } else {
       scheduledDays = b.scheduledWorkingDays ?? 30;
       workedDays = this.valeurJoursTravailles !== undefined && this.valeurJoursTravailles !== null
@@ -1720,6 +1731,7 @@ export class GenererBulletinsComponent implements OnInit {
             const isBaseOrSur = l.code && (l.code.includes('SAL_BASE') || l.code.includes('SUR_SALAIRE'));
             const isFctLine = (l.code && (l.code.includes('FONCT') || l.code.includes('RESPONS'))) ||
               (l.libelle && (l.libelle.toUpperCase().includes('FONCTION') || l.libelle.toUpperCase().includes('RESPONSABILIT')));
+            const isGratifLine = l.code && (l.code.includes('GRAT') || l.code.includes('13') || l.code.includes('14'));
             return {
               id: l.id || idx,
               code: l.code,
@@ -1727,7 +1739,7 @@ export class GenererBulletinsComponent implements OnInit {
               libelle: (l.libelle || l.name || '').replace(/[()]/g, '').trim(),
               typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
               baseCalcul: l.baseCalcul,
-              tauxOrNb: is13or14 ? workedDays : ((isBaseOrSur || isFctLine) ? workedDays : (l.tauxSalarial || l.taux || l.rate)),
+              tauxOrNb: (isBaseOrSur || isFctLine || (is13or14 && isGratifLine)) ? workedDays : (l.tauxSalarial || l.taux || l.rate),
               gain: isGain ? (l.montantSalarial || l.gain || l.montant) : null,
               retenue: (!isGain && !is13or14) ? (l.montantSalarial || l.retenue || l.montant) : null,
               rate: l.tauxSalarial || l.taux || l.rate,
@@ -1907,7 +1919,12 @@ export class GenererBulletinsComponent implements OnInit {
 
         const isSession1314 = this.isBulletin13Ou14eme(b) || this.isSession13Ou14eme;
         let tauxStr = '';
-        if (isSession1314 && isGain) {
+        const isBaseOrSur = cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE');
+        const isFct = cd.includes('FONCT') || nm.includes('FONCTION') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT');
+        const isGratifCode = cd.includes('PRORATA_13EME') || cd.includes('PRORATA_14EME') || cd.includes('13EME') || cd.includes('14EME') || cd.includes('GRAT') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF');
+        const isProrataLine1314 = isBaseOrSur || isFct || isGratifCode;
+
+        if (isSession1314 && isGain && isProrataLine1314) {
           if (l.taux !== undefined && l.taux !== null && l.taux !== '') {
             const numTaux = Number(String(l.taux).replace('%', '').trim());
             tauxStr = !isNaN(numTaux) ? `${numTaux.toFixed(2)} %` : String(l.taux);
@@ -1916,8 +1933,7 @@ export class GenererBulletinsComponent implements OnInit {
           } else {
             tauxStr = '100.00 %';
           }
-        } else if (cd.includes('SAL_BASE') || cd.includes('SUR_SALAIRE') || nm.includes('SALAIRE DE BASE') || nm.includes('SUR-SALAIRE') || nm.includes('SURSALAIRE')
-          || cd.includes('FONCT') || nm.includes('FONCTION') || cd.includes('RESPONS') || nm.includes('RESPONSABILIT')) {
+        } else if (isBaseOrSur || isFct) {
           const days = (l.taux !== undefined && l.taux !== null && Number(l.taux) > 0 && Number(l.taux) <= 31)
             ? l.taux
             : (b.workedDays !== undefined && b.workedDays !== null ? b.workedDays : 30);

@@ -951,6 +951,32 @@
               </span>
             </div>
           }
+
+          <!-- Curseur Prorata (Session Extraordinaire : 13ème / 14ème mois) -->
+          @if (isBulletin13Ou14eme(selectedBulletinForEdit) || isSession13Ou14eme) {
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #0060B3; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <label style="font-size: 12px; font-weight: 700; color: #0060B3; display: flex; align-items: center; gap: 4px; margin: 0;">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #0060B3;">pie_chart</mat-icon>
+                Prorata Annuel :
+              </label>
+              <input type="number"
+                     min="0"
+                     [max]="prorataUnit13eme === 'MOIS' ? 12 : 360"
+                     [step]="prorataUnit13eme === 'MOIS' ? 0.5 : 1"
+                     [(ngModel)]="valeurProrata13eme"
+                     (input)="onProrata13emeInputChange()"
+                     style="width: 65px; text-align: center; padding: 4px 6px; border: 1.5px solid #0060B3; border-radius: 6px; font-weight: 800; color: #0060B3; background: #f0f9ff; outline: none; font-size: 13.5px;" />
+              <select [(ngModel)]="prorataUnit13eme"
+                      (change)="onProrataUnitChange()"
+                      style="padding: 3px 6px; font-size: 12px; font-weight: 700; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a; outline: none; cursor: pointer;">
+                <option value="JOURS">/ 360 j</option>
+                <option value="MOIS">/ 12 m</option>
+              </select>
+              <span style="font-weight: 800; font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">
+                {{ getTauxProrata13emePercent() }} %
+              </span>
+            </div>
+          }
         </div>
       </div>
 
