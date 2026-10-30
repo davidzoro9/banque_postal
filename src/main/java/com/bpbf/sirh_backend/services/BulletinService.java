@@ -888,30 +888,39 @@ public class BulletinService {
             for (IndemniteEmploye ind : activeIndemnites) {
                 BigDecimal mPlein = money(ind.getMontant());
                 if (mPlein.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal mProratise = money(mPlein.multiply(ratioProrata));
-                    if (mProratise.compareTo(BigDecimal.ZERO) > 0) {
-                        totalIndemnitesProratisees = totalIndemnitesProratisees.add(mProratise);
-                        String indCode = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getCode() : "INDEMNITE";
-                        String rawLib = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
-                        String indLib = rawLib.toUpperCase(Locale.ROOT).trim();
+                    boolean isFct = isIndemniteFonction(ind);
+                    String indCode = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getCode() : "INDEMNITE";
+                    String rawLib = ind.getLibelle() != null ? ind.getLibelle() : (ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getName() : "Indemnité");
+                    String indLib = rawLib.toUpperCase(Locale.ROOT).trim();
 
-                        SalaryElement indElem = findSalaryElement("CAT_INDEMNITES", rawLib, indCode);
-                        if (indElem != null) {
-                            if (indElem.getCode() != null && !indElem.getCode().isBlank()) {
-                                indCode = indElem.getCode();
-                            }
-                            if (indElem.getName() != null && !indElem.getName().isBlank()) {
-                                indLib = indElem.getName();
-                            }
+                    SalaryElement indElem = findSalaryElement("CAT_INDEMNITES", rawLib, indCode);
+                    if (indElem != null) {
+                        if (isSalaryElementFonction(indElem)) {
+                            isFct = true;
                         }
+                        if (indElem.getCode() != null && !indElem.getCode().isBlank()) {
+                            indCode = indElem.getCode();
+                        }
+                        if (indElem.getName() != null && !indElem.getName().isBlank()) {
+                            indLib = indElem.getName();
+                        }
+                    }
+
+                    BigDecimal mFinal = isFct ? money(mPlein.multiply(ratioProrata)) : mPlein;
+                    if (mFinal.compareTo(BigDecimal.ZERO) > 0) {
+                        totalIndemnitesProratisees = totalIndemnitesProratisees.add(mFinal);
 
                         BulletinLine indLine = new BulletinLine();
                         indLine.setCode(indCode);
                         indLine.setLibelle(indLib);
                         indLine.setTypeLigne("GAIN");
                         indLine.setBaseCalcul(mPlein);
-                        indLine.setTaux(tauxProrataPourcentage);
-                        indLine.setMontant(mProratise);
+                        if (isFct) {
+                            indLine.setTaux(tauxProrataPourcentage);
+                        } else {
+                            indLine.setTaux(null);
+                        }
+                        indLine.setMontant(mFinal);
                         indLine.setOrdre(ordreLigne++);
                         linesGratification.add(indLine);
                     }
