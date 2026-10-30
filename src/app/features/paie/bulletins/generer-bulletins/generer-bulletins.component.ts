@@ -1466,14 +1466,9 @@ export class GenererBulletinsComponent implements OnInit {
     const isProrataTarget = isBaseOrSur || isFct || isGratifCode || this.isDayLine(line);
 
     if (is13or14 && isProrataTarget) {
-      if (line.taux !== undefined && line.taux !== null && Number(line.taux) > 0) {
-        return `${Number(line.taux).toFixed(2)} %`;
-      }
-      if (line.tauxFormatted) return line.tauxFormatted;
-      if (line.tauxOrNb !== undefined && line.tauxOrNb !== null) {
-        const u = this.prorataUnit13eme === 'MOIS' ? 'm' : 'j';
-        return `${line.tauxOrNb} ${u}`;
-      }
+      const u = this.prorataUnit13eme === 'MOIS' ? 'm' : 'j';
+      const nb = line.tauxOrNb !== undefined && line.tauxOrNb !== null ? line.tauxOrNb : this.valeurProrata13eme;
+      return `${nb ?? (this.prorataUnit13eme === 'MOIS' ? 12 : 360)} ${u}`;
     }
     if (this.isDayLine(line) || isBaseOrSur || isFct) {
       return (line.tauxOrNb ?? this.valeurJoursTravailles ?? 30) + ' j';
