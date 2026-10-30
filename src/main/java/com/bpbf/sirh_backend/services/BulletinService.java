@@ -1791,7 +1791,10 @@ public class BulletinService {
                 .toList();
 
         BigDecimal totalIndemnites = indemnites.stream()
-                .map(row -> money(row.getMontant()).multiply(ratio))
+                .map(row -> {
+                    BigDecimal baseM = money(row.getMontant());
+                    return isIndemniteFonction(row) ? money(baseM.multiply(ratio)) : baseM;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Prime d'ancienneté : 5% sur le SB à 3 ans, puis +1% par année supplémentaire
@@ -1945,7 +1948,8 @@ public class BulletinService {
         // Exonérations fiscales : calcul dynamique sur Base de déductions (CGI BF Art. 106 / Circulaire BPBF)
         BigDecimal totalExonerations = BigDecimal.ZERO;
         for (IndemniteEmploye ind : indemnites) {
-            BigDecimal mIndem = money(ind.getMontant()).multiply(ratio);
+            BigDecimal baseM = money(ind.getMontant());
+            BigDecimal mIndem = isIndemniteFonction(ind) ? money(baseM.multiply(ratio)) : baseM;
             if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             TypeIndemnite type = ind.getTypeIndemnite();
@@ -2064,7 +2068,8 @@ public class BulletinService {
 
         // Injecter toutes les indemnités de l'agent dans les variables de calcul
         for (IndemniteEmploye ind : indemnites) {
-            BigDecimal m = money(ind.getMontant()).multiply(ratio);
+            BigDecimal baseM = money(ind.getMontant());
+            BigDecimal m = isIndemniteFonction(ind) ? money(baseM.multiply(ratio)) : baseM;
             if (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getCode() != null) {
                 String c = ind.getTypeIndemnite().getCode().trim().toLowerCase(Locale.ROOT);
                 currentElementValues.put(c, m);
@@ -2376,13 +2381,18 @@ public class BulletinService {
             // 11. INDEMNITÉ DE L'AGENT (Gestion Admin -> IndemniteEmploye)
             IndemniteEmploye matchInd = findMatchingIndemnite(se, indemnites);
             if (matchInd != null && matchInd.getMontant() != null && matchInd.getMontant() > 0) {
-                BigDecimal mIndem = money(matchInd.getMontant()).multiply(ratio);
+                boolean isFct = isIndemniteFonction(matchInd) || isSalaryElementFonction(se);
+                BigDecimal baseM = money(matchInd.getMontant());
+                BigDecimal mIndem = isFct ? money(baseM.multiply(ratio)) : baseM;
                 if (mIndem.compareTo(BigDecimal.ZERO) > 0) {
                     BulletinLine indLine = new BulletinLine();
                     indLine.setCode(se.getCode());
                     indLine.setLibelle(se.getName() != null && !se.getName().isBlank() ? se.getName() : matchInd.getLibelle());
                     indLine.setTypeLigne("GAIN");
-                    indLine.setBaseCalcul(money(matchInd.getMontant()));
+                    indLine.setBaseCalcul(baseM);
+                    if (isFct && workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
+                        indLine.setTaux(workedDays);
+                    }
                     indLine.setMontant(money(mIndem));
                     indLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
                     lines.add(indLine);
@@ -2561,7 +2571,9 @@ public class BulletinService {
         // Indemnités de l'agent non mappées à un salary_element spécifique
         for (IndemniteEmploye ind : indemnites) {
             if (processedIndemniteIds.contains(ind.getId())) continue;
-            BigDecimal mIndem = money(ind.getMontant()).multiply(ratio);
+            boolean isFct = isIndemniteFonction(ind);
+            BigDecimal baseM = money(ind.getMontant());
+            BigDecimal mIndem = isFct ? money(baseM.multiply(ratio)) : baseM;
             if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             String indCode = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getCode() : "INDEMNITE";
@@ -2572,7 +2584,10 @@ public class BulletinService {
             indLine.setCode(indCode);
             indLine.setLibelle(indLib);
             indLine.setTypeLigne("GAIN");
-            indLine.setBaseCalcul(money(mIndem));
+            indLine.setBaseCalcul(baseM);
+            if (isFct && workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
+                indLine.setTaux(workedDays);
+            }
             indLine.setMontant(money(mIndem));
             indLine.setOrdre(defaultOrdre++);
             lines.add(indLine);
@@ -4996,6 +5011,34 @@ public class BulletinService {
         if (typeSession == null) return false;
         String t = typeSession.trim().toUpperCase(Locale.ROOT);
         return t.contains("EXTRA") || t.contains("MATERNITE") || t.contains("MATERNITÉ");
+    }
+
+    public static boolean isIndemniteFonction(IndemniteEmploye ind) {
+        if (ind == null) return false;
+        if (ind.getParametrageIndemnite() != null) {
+            ParametrageIndemnite p = ind.getParametrageIndemnite();
+            if (p.getFonctionObj() != null) return true;
+            if ("NOMINATION".equalsIgnoreCase(p.getRegleType()) || "FONCTION".equalsIgnoreCase(p.getRegleType())) return true;
+            String pCode = p.getCode() != null ? p.getCode().toUpperCase(Locale.ROOT) : "";
+            if (pCode.contains("FONCT") || pCode.contains("RESPONS")) return true;
+        }
+        String code = (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getCode() != null)
+                ? ind.getTypeIndemnite().getCode().toUpperCase(Locale.ROOT) : "";
+        String lib = ind.getLibelle() != null ? ind.getLibelle().toUpperCase(Locale.ROOT) : "";
+        String typeNom = (ind.getTypeIndemnite() != null && ind.getTypeIndemnite().getName() != null)
+                ? ind.getTypeIndemnite().getName().toUpperCase(Locale.ROOT) : "";
+
+        return code.contains("FONCT") || lib.contains("FONCT") || typeNom.contains("FONCT")
+                || code.contains("RESPONS") || lib.contains("RESPONS") || typeNom.contains("RESPONS");
+    }
+
+    public static boolean isSalaryElementFonction(SalaryElement se) {
+        if (se == null) return false;
+        String c = se.getCode() != null ? se.getCode().toUpperCase(Locale.ROOT) : "";
+        String cc = se.getCodeCorrespondant() != null ? se.getCodeCorrespondant().toUpperCase(Locale.ROOT) : "";
+        String n = se.getName() != null ? se.getName().toUpperCase(Locale.ROOT) : "";
+        return c.contains("FONCT") || cc.contains("FONCT") || n.contains("FONCT")
+                || c.contains("RESPONS") || cc.contains("RESPONS") || n.contains("RESPONS");
     }
 
     private static int getIndemniteSortWeight(String libelle) {
