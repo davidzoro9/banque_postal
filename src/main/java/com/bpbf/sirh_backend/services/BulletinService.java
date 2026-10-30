@@ -1112,7 +1112,7 @@ public class BulletinService {
                 tpaLine.setTypeLigne("COTISATION_PATRONALE");
                 tpaLine.setBaseCalcul(montantConge);
                 tpaLine.setTaux(new BigDecimal("3.00"));
-                tpaLine.setMontant(BigDecimal.ZERO);
+                tpaLine.setMontant(tpaConge);
                 tpaLine.setPartPatronale(tpaConge);
                 tpaLine.setOrdre(22);
                 bulletin.addLine(tpaLine);
@@ -1595,7 +1595,7 @@ public class BulletinService {
                 tpaLine.setTypeLigne("COTISATION_PATRONALE");
                 tpaLine.setBaseCalcul(baseTpaStc);
                 tpaLine.setTaux(new BigDecimal("3.00"));
-                tpaLine.setMontant(BigDecimal.ZERO);
+                tpaLine.setMontant(tpaPatronale);
                 tpaLine.setPartPatronale(tpaPatronale);
                 tpaLine.setOrdre(ordre++);
                 lines.add(tpaLine);
@@ -2164,7 +2164,7 @@ public class BulletinService {
                     cnssPatLine.setTypeLigne("COTISATION_PATRONALE");
                     cnssPatLine.setBaseCalcul(baseCnss);
                     cnssPatLine.setTaux(tx);
-                    cnssPatLine.setMontant(BigDecimal.ZERO);
+                    cnssPatLine.setMontant(cnssPat);
                     cnssPatLine.setPartPatronale(cnssPat);
                     cnssPatLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : 26);
                     lines.add(cnssPatLine);
@@ -2227,7 +2227,7 @@ public class BulletinService {
                     crraePatLine.setTypeLigne(catType);
                     crraePatLine.setBaseCalcul(baseCrraePat);
                     crraePatLine.setTaux(tx);
-                    crraePatLine.setMontant(BigDecimal.ZERO);
+                    crraePatLine.setMontant(mPat);
                     crraePatLine.setPartPatronale(mPat);
                     crraePatLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : 30);
                     lines.add(crraePatLine);
@@ -2249,7 +2249,7 @@ public class BulletinService {
                     tpaLine.setTypeLigne("COTISATION_PATRONALE");
                     tpaLine.setBaseCalcul(remunerationBrute);
                     tpaLine.setTaux(tx);
-                    tpaLine.setMontant(BigDecimal.ZERO);
+                    tpaLine.setMontant(mTpa);
                     tpaLine.setPartPatronale(mTpa);
                     tpaLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
                     lines.add(tpaLine);
@@ -2361,7 +2361,7 @@ public class BulletinService {
                     customLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
 
                     if ("COTISATION_PATRONALE".equals(catType)) {
-                        customLine.setMontant(BigDecimal.ZERO);
+                        customLine.setMontant(money(fieldVal));
                         customLine.setPartPatronale(money(fieldVal));
                         totalCotisationsPatronales = totalCotisationsPatronales.add(money(fieldVal));
                     } else if ("RETENUE_SOCIALE".equals(catType)) {
@@ -2408,7 +2408,7 @@ public class BulletinService {
                     formLine.setOrdre(se.getOrdre() != null ? se.getOrdre() : defaultOrdre++);
 
                     if ("COTISATION_PATRONALE".equals(catType)) {
-                        formLine.setMontant(BigDecimal.ZERO);
+                        formLine.setMontant(money(formRes));
                         formLine.setPartPatronale(money(formRes));
                         totalCotisationsPatronales = totalCotisationsPatronales.add(money(formRes));
                     } else if ("RETENUE_SOCIALE".equals(catType)) {
@@ -2558,7 +2558,7 @@ public class BulletinService {
 
             if (employeur) {
                 retLine.setTypeLigne("COTISATION_PATRONALE");
-                retLine.setMontant(BigDecimal.ZERO);
+                retLine.setMontant(montant);
                 retLine.setPartPatronale(montant);
                 retLine.setOrdre(defaultOrdre++);
                 lines.add(retLine);
@@ -2599,7 +2599,7 @@ public class BulletinService {
             cnssPatLine.setTypeLigne("COTISATION_PATRONALE");
             cnssPatLine.setBaseCalcul(baseCnss);
             cnssPatLine.setTaux(new BigDecimal("16.00"));
-            cnssPatLine.setMontant(BigDecimal.ZERO);
+            cnssPatLine.setMontant(cnssPatronale);
             cnssPatLine.setPartPatronale(cnssPatronale);
             cnssPatLine.setOrdre(26);
             lines.add(cnssPatLine);
@@ -2643,7 +2643,7 @@ public class BulletinService {
             crraePatLine.setTypeLigne("COTISATION_PATRONALE");
             crraePatLine.setBaseCalcul(basePat);
             crraePatLine.setTaux(txPat);
-            crraePatLine.setMontant(BigDecimal.ZERO);
+            crraePatLine.setMontant(mPat);
             crraePatLine.setPartPatronale(mPat);
             crraePatLine.setOrdre(seCrraePat != null && seCrraePat.getOrdre() != null ? seCrraePat.getOrdre() : 30);
             lines.add(crraePatLine);
@@ -2660,7 +2660,7 @@ public class BulletinService {
             tpaLine.setTypeLigne("COTISATION_PATRONALE");
             tpaLine.setBaseCalcul(remunerationBrute);
             tpaLine.setTaux(new BigDecimal("3.00"));
-            tpaLine.setMontant(BigDecimal.ZERO);
+            tpaLine.setMontant(mTpa);
             tpaLine.setPartPatronale(mTpa);
             tpaLine.setOrdre(defaultOrdre++);
             lines.add(tpaLine);

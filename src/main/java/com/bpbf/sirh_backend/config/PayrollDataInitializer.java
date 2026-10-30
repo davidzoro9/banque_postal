@@ -131,6 +131,14 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 log.debug("Initialisation taux exonération (non bloquant): {}", ex.getMessage());
             }
 
+            // Harmonisation des montants bulletin_line : toutes les lignes (y compris les cotisations patronales) ont leur montant dans la colonne montant
+            try {
+                jdbcTemplate.execute("UPDATE bulletin_line SET montant = part_patronale WHERE (montant IS NULL OR montant = 0) AND part_patronale IS NOT NULL AND part_patronale > 0");
+                log.info("Harmonisation de la colonne montant dans bulletin_line effectuée avec succès.");
+            } catch (Exception ex) {
+                log.debug("Auto-migration bulletin_line montant (non bloquant): {}", ex.getMessage());
+            }
+
             // Colonnes profil employé (Situation familiale, N° CNSS, Avantages véhicule & logement)
             try {
                 jdbcTemplate.execute("ALTER TABLE employee ADD COLUMN IF NOT EXISTS situation_familiale VARCHAR(50)");
