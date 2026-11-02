@@ -112,10 +112,13 @@
                   </div>
                 </td>
 
-                <!-- Motif / Justification -->
+                <!-- Motif / Justification & Élément de Salaire -->
                 <td>
                   <div class="element-cell">
-                    <strong style="color: var(--on-surface);">{{ item.motif || 'Régularisation trop-perçu sur salaire' }}</strong>
+                    <span class="element-badge" style="display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #fee2e2; color: #dc2626; font-weight: 700; margin-bottom: 3px;">
+                      {{ item.salaryElementName || item.salaryElementCode || 'Élément de salaire' }}
+                    </span>
+                    <div><strong style="color: var(--on-surface);">{{ item.motif || 'Régularisation trop-perçu sur salaire' }}</strong></div>
                   </div>
                 </td>
 
@@ -197,6 +200,17 @@
                 <option [ngValue]="undefined" disabled>— Sélectionner un agent —</option>
                 @for (emp of employeesList; track emp.id) {
                   <option [ngValue]="emp.id">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Sélection Élément de salaire concerné -->
+            <div class="form-group full-width">
+              <label>Élément de salaire faisant l'objet du trop-perçu <span class="required">*</span></label>
+              <select class="custom-select" [(ngModel)]="formModel.salaryElementId">
+                <option [ngValue]="undefined" disabled>— Sélectionner un élément de salaire —</option>
+                @for (el of elementsList; track el.id) {
+                  <option [ngValue]="el.id">{{ el.name }} ({{ el.code }})</option>
                 }
               </select>
             </div>

@@ -105,42 +105,19 @@ export class AvoirsComponent implements OnInit {
   }
 
   loadElements(): void {
-    forkJoin({
-      categories: this.http.get<any[]>(`${environment.apiUrl}/salary-categories`).pipe(catchError(() => of([]))),
-      elements: this.http.get<any[]>(`${environment.apiUrl}/salary-elements`).pipe(catchError(() => of([])))
-    }).subscribe(({ categories, elements }) => {
-      const catList = categories || [];
+    this.http.get<any[]>(`${environment.apiUrl}/salary-elements`).pipe(
+      catchError(() => of([]))
+    ).subscribe(elements => {
       const elList = elements || [];
 
-      // Identifie les catégories parentes "AVOIR"
-      const avoirCatIds = new Set(
-        catList
-          .filter(c => {
-            const name = (c.name || '').toUpperCase().trim();
-            const code = (c.code || '').toUpperCase().trim();
-            return name.includes('AVOIR') || code.includes('AVOIR');
-          })
-          .map(c => Number(c.id))
-      );
-
-      // Ne retenir STRICTEMENT que les éléments de salaire paramétrés avec la catégorie parente AVOIR
-      const filtered = elList.filter(d => {
-        const type = (d.type || '').toUpperCase().trim();
-        if (type === 'RETENUE' || type === 'PATRONALE') return false;
-
-        const catId = Number(d.categoryId != null ? d.categoryId : d.salaryCategoryId);
-        if (catId && avoirCatIds.has(catId)) return true;
-
-        const catName = (d.categoryName || d.salaryCategory?.name || '').toUpperCase().trim();
-        const catCode = (d.categoryCode || d.salaryCategory?.code || '').toUpperCase().trim();
-        if (catName.includes('AVOIR') || catCode.includes('AVOIR')) return true;
-
-        return false;
-      }).map((d: any) => ({
-        id: d.id,
-        name: d.name || d.libelle || '',
-        code: d.code || d.codeRubrique || ''
-      }));
+      // Tous les éléments de salaire paramétrés (gains, primes, indemnités hors cotisations patronales)
+      const filtered = elList
+        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .map((d: any) => ({
+          id: d.id,
+          name: d.name || d.libelle || '',
+          code: d.code || d.codeRubrique || ''
+        }));
 
       // Tri : Salaire de base en premier, puis Sursalaire, puis tri alphabétique
       filtered.sort((a, b) => {

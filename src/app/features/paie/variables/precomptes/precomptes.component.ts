@@ -128,28 +128,30 @@ export class PrecomptesComponent implements OnInit {
       catchError(() => of([]))
     ).subscribe(data => {
       const list = data || [];
+      const mapped = list
+        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .map((d: any) => ({
+          id: d.id,
+          name: d.name || d.libelle || d.code,
+          code: d.code || '',
+          type: d.type
+        }));
 
-      const isRetenue = (d: any): boolean => {
-        const type = (d.type || '').toUpperCase().trim();
-        if (type === 'PATRONALE' || type === 'GAIN') return false;
-        if (type === 'RETENUE') return true;
+      // Tri intelligent : Retenues, avances, prêts en premier, puis les autres éléments
+      mapped.sort((a, b) => {
+        const isRet = (x: any) => {
+          const t = (x.type || '').toUpperCase();
+          const c = (x.code || '').toUpperCase();
+          const n = (x.name || '').toLowerCase();
+          if (t === 'RETENUE' || c.startsWith('PRET') || c.startsWith('AVANCE') || c.startsWith('RET_') || n.includes('retenue') || n.includes('avance') || n.includes('prêt')) return 0;
+          return 1;
+        };
+        const diff = isRet(a) - isRet(b);
+        if (diff !== 0) return diff;
+        return a.name.localeCompare(b.name);
+      });
 
-        const code = (d.code || '').toUpperCase().trim();
-        const name = (d.name || d.libelle || '').toLowerCase().trim();
-        const catName = (d.categoryName || d.salaryCategory?.name || d.salaryCategory?.libelle || '').toLowerCase().trim();
-
-        if (catName.includes('retenue') || catName.includes('precompte') || catName.includes('précompte') || catName.includes('cotis') || catName.includes('iuts')) return true;
-        if (code.startsWith('PRET_') || code.startsWith('AVANCE_') || code.startsWith('RET_') || code.startsWith('SAISIE_')) return true;
-        if (name.includes('retenue') || name.includes('prêt') || name.includes('pret') || name.includes('avance') || name.includes('précompte') || name.includes('precompte')) return true;
-
-        return false;
-      };
-
-      this.elementsList = list.filter(isRetenue).map((d: any) => ({
-        id: d.id,
-        name: d.name || d.libelle || d.code,
-        code: d.code || ''
-      }));
+      this.elementsList = mapped;
     });
   }
 
@@ -390,6 +392,10 @@ export class PrecomptesComponent implements OnInit {
     const dd = String(today.getDate()).padStart(2, '0');
     this.formModel.dateDebut = `${yyyy}-${mm}-${dd}`;
 
+    if (!this.formModel.elementSalaryId && this.elementsList.length > 0) {
+      this.formModel.elementSalaryId = this.elementsList[0].id;
+    }
+
     this.onCalculationsChange();
     this.showDialog = true;
   }
@@ -397,6 +403,9 @@ export class PrecomptesComponent implements OnInit {
   openEditModal(precompte: PrecompteModel): void {
     this.editingPrecompte = precompte;
     this.formModel = { ...precompte };
+    if (!this.formModel.elementSalaryId && (precompte as any).salaryElementId) {
+      this.formModel.elementSalaryId = (precompte as any).salaryElementId;
+    }
     this.agentSearchText = precompte.employeeName ? `${precompte.matricule || ''} - ${precompte.employeeName}` : '';
     this.showAgentDropdown = false;
     this.onCalculationsChange();

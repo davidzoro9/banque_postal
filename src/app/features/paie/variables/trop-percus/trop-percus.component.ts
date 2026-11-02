@@ -115,49 +115,19 @@ export class TropPercusComponent implements OnInit {
     ).subscribe(data => {
       const list = data || [];
 
-      const isRetenue = (d: any): boolean => {
-        const code = (d.code || d.codeRubrique || '').toUpperCase().trim();
-        const name = (d.name || d.libelle || '').toLowerCase().trim();
-        const catName = (d.categoryName || d.salaryCategory?.name || d.salaryCategory?.libelle || '').toLowerCase().trim();
-        const type = (d.type || '').toUpperCase().trim();
+      // Tous les éléments de salaire paramétrés (gains, primes, indemnités et retenues, hors patronale)
+      const mapped = list
+        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .map((el: any) => ({
+          id: el.id,
+          name: el.name || el.libelle || el.code,
+          code: el.code || el.codeRubrique || '',
+          type: el.type
+        }));
 
-        // Exclusion des cotisations patronales ou des rubriques de gain
-        if (type === 'PATRONALE' || type === 'GAIN') return false;
-        if (code.includes('PAT') || code.startsWith('CHG_') || code.startsWith('COT_PAT')) return false;
-        if (catName.includes('patronal') || catName.includes('gain') || catName.includes('base') || catName.includes('prime') || catName.includes('indemnit')) return false;
+      mapped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-        // Identification explicite des retenues, trop-perçus, prêts et précomptes
-        if (type === 'RETENUE') return true;
-        if (catName.includes('retenue') || catName.includes('cotis') || catName.includes('iuts')) return true;
-        if (code.startsWith('RET_') || code.startsWith('PRET_') || code.startsWith('AVANCE_') || code.startsWith('SAISIE_') || code.startsWith('COTIS_') || code.startsWith('REGUL_')) return true;
-        if (name.includes('trop-perçu') || name.includes('trop perçu') || name.includes('retenue') || name.includes('prêt') || name.includes('pret') || name.includes('avance') || name.includes('saisie') || name.includes('mutuelle') || name.includes('assurance')) return true;
-
-        return false;
-      };
-
-      const retenues = list.filter(isRetenue).map((el: any) => ({
-        id: el.id,
-        name: el.name || el.libelle || el.code,
-        code: el.code || el.codeRubrique || ''
-      }));
-
-      // Ordonner : Trop-perçus en premier pour faciliter la sélection, puis les autres retenues
-      retenues.sort((a: any, b: any) => {
-        const getIdx = (item: any) => {
-          const c = (item.code || '').toUpperCase();
-          const n = (item.name || '').toLowerCase();
-          if (c.includes('TROP_PERCU') || n.includes('trop-perçu') || n.includes('trop perçu')) return 0;
-          if (c.startsWith('RET_') || n.includes('retenue')) return 1;
-          if (c.startsWith('PRET_') || n.includes('prêt')) return 2;
-          if (c.startsWith('AVANCE_') || n.includes('avance')) return 3;
-          return 5;
-        };
-        const diff = getIdx(a) - getIdx(b);
-        if (diff !== 0) return diff;
-        return (a.name || '').localeCompare(b.name || '');
-      });
-
-      this.elementsList = retenues || [];
+      this.elementsList = mapped;
 
       if (!this.formModel.salaryElementId && this.elementsList.length > 0) {
         const defaultElem = this.elementsList.find(e => e.code?.includes('TROP_PERCU')) || this.elementsList[0];

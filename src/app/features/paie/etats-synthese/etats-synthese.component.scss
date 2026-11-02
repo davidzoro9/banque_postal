@@ -353,28 +353,10 @@
 }
 
 .filter-grid {
-  display: grid !important;
-  grid-template-columns: minmax(320px, 1.8fr) minmax(200px, 1.2fr) minmax(170px, 1fr) minmax(140px, 0.9fr) minmax(180px, 1fr) !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
   gap: 0.85rem 1rem !important;
   align-items: flex-end !important;
-}
-
-@media (max-width: 1350px) {
-  .filter-grid {
-    grid-template-columns: minmax(320px, 1.8fr) minmax(200px, 1.2fr) minmax(170px, 1fr) !important;
-  }
-}
-
-@media (max-width: 900px) {
-  .filter-grid {
-    grid-template-columns: 1fr 1fr !important;
-  }
-}
-
-@media (max-width: 640px) {
-  .filter-grid {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 .filter-item {
@@ -385,7 +367,29 @@
 }
 
 .filter-item.filter-intervalle {
-  min-width: 320px !important;
+  flex: 0 0 330px !important;
+  min-width: 310px !important;
+  max-width: 100% !important;
+}
+
+.filter-item.filter-session {
+  flex: 1 1 210px !important;
+  min-width: 190px !important;
+}
+
+.filter-item.filter-direction {
+  flex: 1 1 180px !important;
+  min-width: 160px !important;
+}
+
+.filter-item.filter-banque {
+  flex: 0 1 150px !important;
+  min-width: 130px !important;
+}
+
+.filter-item.filter-search {
+  flex: 1 1 200px !important;
+  min-width: 180px !important;
 }
 
 .filter-label {
@@ -845,9 +849,6 @@
 }
 
 @media (max-width: 1024px) {
-  .filter-grid {
-    grid-template-columns: 1fr 1fr;
-  }
   .kpi-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -858,9 +859,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
-  }
-  .filter-grid {
-    grid-template-columns: 1fr;
   }
   .kpi-grid {
     grid-template-columns: 1fr;

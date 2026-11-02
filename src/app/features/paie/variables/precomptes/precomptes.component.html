@@ -180,6 +180,9 @@
                     <div class="agent-info">
                       <a class="agent-name" title="Afficher l'historique complet">{{ p.employeeName }}</a>
                       <span class="agent-matricule">{{ p.matricule }}</span>
+                      <span class="element-badge" style="display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0284c7; font-weight: 600; margin-top: 3px;">
+                        {{ p.elementSalaryName || p.salaryElementName || 'Élément de salaire' }}
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -453,6 +456,20 @@
                   @for (emp of employeesList; track emp.id) {
                     <mat-option [value]="emp.id">
                       <strong>{{ emp.matricule }}</strong> — {{ emp.nom }} {{ emp.prenom }} — {{ emp.fonction || 'Agent' }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Élément de Salaire Paramétré -->
+            <div class="full-col">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label>Élément de salaire concerné *</mat-label>
+                <mat-select [(ngModel)]="formModel.elementSalaryId" placeholder="Sélectionner un élément de salaire...">
+                  @for (el of elementsList; track el.id) {
+                    <mat-option [value]="el.id">
+                      <strong>{{ el.code }}</strong> — {{ el.name }}
                     </mat-option>
                   }
                 </mat-select>

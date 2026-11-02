@@ -133,7 +133,7 @@ export class EmployeeService {
 
     result.echelonId = emp.echelonId ? Number(emp.echelonId) : null;
 
-    result.grilleSalarialeId =  emp.grilleSalarialeId ? Number(emp.grilleSalarialeId) : null;
+    result.grilleSalarialeId = emp.grilleSalarialeId ? Number(emp.grilleSalarialeId) : null;
 
     result.regimeSecuriteSocialId = emp.regimeSecuriteSocialId ? Number(emp.regimeSecuriteSocialId) : null;
     if (emp.superviseurId !== undefined) {
@@ -148,7 +148,7 @@ export class EmployeeService {
     if (emp.documents) result.documentsJson = JSON.stringify(emp.documents);
     if (emp.evaluations) result.evaluationsJson = JSON.stringify(emp.evaluations);
     if (emp.historiqueActions) result.historiqueActionsJson = JSON.stringify(emp.historiqueActions);
-    
+
     // Delete original array/object fields to prevent payload structure mismatch
     delete result.contactsUrgence;
     delete result.conjoint;
@@ -169,7 +169,7 @@ export class EmployeeService {
     delete result.agenceId;
     delete result.regimeSecuriteSocialCode;
     delete result.regimeSecuriteSocialLibelle;
-    
+
     return result;
   }
 
@@ -179,7 +179,7 @@ export class EmployeeService {
     result.situationMatrimoniale = result.situationFamiliale;
     result.ancienneteReprise = db.ancienneteReprise != null ? Number(db.ancienneteReprise) : 0;
     result.dureePreavis = db.dureePreavis != null ? Number(db.dureePreavis) : null;
-    
+
     // Parse JSON fields safely
     try { result.contactsUrgence = db.contactsUrgenceJson ? JSON.parse(db.contactsUrgenceJson) : []; } catch (e) { result.contactsUrgence = []; }
     try { result.autresIndemnites = db.autresIndemnitesJson ? JSON.parse(db.autresIndemnitesJson) : []; } catch (e) { result.autresIndemnites = []; }
@@ -198,7 +198,7 @@ export class EmployeeService {
         if (extra.fonction) result.fonction = extra.fonction;
         if (extra.salaireBase) result.salaireBase = Number(extra.salaireBase);
         if (extra.primeLogement) result.primeLogement = Number(extra.primeLogement);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (result.grade && (!result.categoriePro || result.categoriePro === 'CL1')) {
@@ -228,13 +228,13 @@ export class EmployeeService {
 
     result.echelonId = db.echelonId != null ? String(db.echelonId) : undefined;
 
-    result.grilleSalarialeId =  db.grilleSalarialeId != null ? String(db.grilleSalarialeId) : undefined;
+    result.grilleSalarialeId = db.grilleSalarialeId != null ? String(db.grilleSalarialeId) : undefined;
 
     result.regimeSecuriteSocialId = db.regimeSecuriteSocialId != null ? String(db.regimeSecuriteSocialId) : undefined;
 
     result.regimeSecuriteSocialCode = db.regimeSecuriteSocialCode || '';
 
-    result.regimeSecuriteSocialLibelle =  db.regimeSecuriteSocialLibelle || '';
+    result.regimeSecuriteSocialLibelle = db.regimeSecuriteSocialLibelle || '';
 
     result.superviseurId = db.superviseurId != null ? String(db.superviseurId) : (db.superviseur_id != null ? String(db.superviseur_id) : undefined);
     result.superviseurNom = db.superviseurNom || '';
@@ -259,7 +259,7 @@ export class EmployeeService {
         result.grade = `CL${rNum}${echPart}`;
       }
     }
-    
+
     return createDefaultEmployee(result);
   }
 
