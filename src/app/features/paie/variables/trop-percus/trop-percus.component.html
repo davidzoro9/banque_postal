@@ -210,7 +210,7 @@
               <select class="custom-select" [(ngModel)]="formModel.salaryElementId">
                 <option [ngValue]="undefined" disabled>— Sélectionner un élément de salaire —</option>
                 @for (el of elementsList; track el.id) {
-                  <option [ngValue]="el.id">{{ el.name }} ({{ el.code }})</option>
+                  <option [ngValue]="el.id">{{ el.name }}</option>
                 }
               </select>
             </div>

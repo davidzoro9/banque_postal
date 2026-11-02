@@ -36,6 +36,7 @@ export interface EtatSyntheseFilter {
   bulletinLotId?: number | null;
   directionId?: number | null;
   banque?: string | null;
+  employeeId?: number | null;
 }
 
 export interface EtatSyntheseWrapper {
@@ -110,6 +111,7 @@ export class EtatSyntheseService {
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
     if (filters.banque && filters.banque !== 'TOUTES') params = params.set('banque', filters.banque);
+    if (filters.employeeId) params = params.set('employeeId', filters.employeeId.toString());
 
     return this.http.get<EtatSyntheseWrapper>(this.baseUrl, { params });
   }
@@ -124,6 +126,7 @@ export class EtatSyntheseService {
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
     if (filters.banque && filters.banque !== 'TOUTES') params = params.set('banque', filters.banque);
+    if (filters.employeeId) params = params.set('employeeId', filters.employeeId.toString());
 
     return this.http.get(`${this.baseUrl}/pdf`, { params, responseType: 'blob' });
   }
@@ -138,6 +141,7 @@ export class EtatSyntheseService {
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
     if (filters.banque && filters.banque !== 'TOUTES') params = params.set('banque', filters.banque);
+    if (filters.employeeId) params = params.set('employeeId', filters.employeeId.toString());
 
     return this.http.get(`${this.baseUrl}/excel`, { params, responseType: 'blob' });
   }
@@ -152,6 +156,7 @@ export class EtatSyntheseService {
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
     if (filters.banque && filters.banque !== 'TOUTES') params = params.set('banque', filters.banque);
+    if (filters.employeeId) params = params.set('employeeId', filters.employeeId.toString());
 
     return this.http.get(`${this.baseUrl}/csv`, { params, responseType: 'blob' });
   }

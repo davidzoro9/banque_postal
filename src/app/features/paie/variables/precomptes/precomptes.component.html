@@ -468,9 +468,7 @@
                 <mat-label>Élément de salaire concerné *</mat-label>
                 <mat-select [(ngModel)]="formModel.elementSalaryId" placeholder="Sélectionner un élément de salaire...">
                   @for (el of elementsList; track el.id) {
-                    <mat-option [value]="el.id">
-                      <strong>{{ el.code }}</strong> — {{ el.name }}
-                    </mat-option>
+                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>

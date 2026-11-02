@@ -43,6 +43,7 @@ export class EtatsSyntheseComponent implements OnInit {
   selectedPeriode: string = '';
   directions: any[] = [];
   selectedDirectionId: number | null = null;
+  selectedEmployeeId: number | null = null;
   banques: string[] = ['TOUTES'];
   selectedBanque: string = 'TOUTES';
   searchTerm: string = '';
@@ -127,9 +128,7 @@ export class EtatsSyntheseComponent implements OnInit {
         const resolvedCode = this.resolveCodeFromSlug(slug);
         if (resolvedCode !== this.selectedEtat) {
           this.selectedEtat = resolvedCode;
-          if (this.selectedSessionId) {
-            this.loadEtatData();
-          }
+          this.loadEtatData();
         }
       } else {
         const defaultSlug = this.resolveSlugFromCode(this.selectedEtat || 'LIVRE_PAIE');
@@ -154,6 +153,7 @@ export class EtatsSyntheseComponent implements OnInit {
     this.loadConfigs();
     this.loadFiltersData();
     this.loadSignataires();
+    this.loadEmployees();
   }
 
   // ─── CHARGEMENT DES CONFIGURATIONS D'ÉTATS DEPUIS POSTGRESQL ─────────────
@@ -361,12 +361,25 @@ export class EtatsSyntheseComponent implements OnInit {
     this.router.navigate(['/paie/etats-synthese', slug]);
   }
 
+  get isRuptureEtat(): boolean {
+    return ['ETAT_INDEMNITE_CONGE', 'ETAT_INDEMNITE_LICENCIEMENT', 'ETAT_INDEMNITE_PREAVIS'].includes(this.selectedEtat);
+  }
+
+  onEmployeeFilterChange(): void {
+    this.loadEtatData();
+  }
+
   onFilterChange(): void {
     this.loadEtatData();
   }
 
   loadEtatData(): void {
     if (!this.selectedEtat) return;
+    if (this.isRuptureEtat && !this.selectedEmployeeId) {
+      this.etatData = null;
+      this.isLoading = false;
+      return;
+    }
     this.isLoading = true;
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
@@ -375,7 +388,8 @@ export class EtatsSyntheseComponent implements OnInit {
       dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
-      banque: this.selectedBanque
+      banque: this.selectedBanque,
+      employeeId: this.isRuptureEtat ? this.selectedEmployeeId : null
     };
 
     this.etatService.getEtatSynthese(filter).subscribe({
@@ -655,7 +669,8 @@ export class EtatsSyntheseComponent implements OnInit {
       dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
-      banque: this.selectedBanque
+      banque: this.selectedBanque,
+      employeeId: this.isRuptureEtat ? this.selectedEmployeeId : null
     };
 
     this.etatService.downloadPdf(filter).subscribe({
@@ -678,7 +693,8 @@ export class EtatsSyntheseComponent implements OnInit {
       dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
-      banque: this.selectedBanque
+      banque: this.selectedBanque,
+      employeeId: this.isRuptureEtat ? this.selectedEmployeeId : null
     };
 
     this.etatService.downloadExcel(filter).subscribe({
@@ -701,7 +717,8 @@ export class EtatsSyntheseComponent implements OnInit {
       dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
-      banque: this.selectedBanque
+      banque: this.selectedBanque,
+      employeeId: this.isRuptureEtat ? this.selectedEmployeeId : null
     };
 
     this.etatService.downloadCsv(filter).subscribe({
