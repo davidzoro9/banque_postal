@@ -35,6 +35,7 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'param-indemnite',  label: 'Grille indemnitaire',      icon: 'settings_suggest',   route: '/donnees-base/admin/param-indemnite'  },
       { id: 'param-paie-taux',  label: 'Paramétrage Retenues',     icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
+      { id: 'param-tranche-licenciement', label: 'Paramétrage taux par tranche indemnité de licenciement', icon: 'splitscreen', route: '/donnees-base/admin/param-tranche-licenciement' },
     ]
   },
   {
@@ -117,7 +118,9 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'health_and_safety', route: '/paie/etats-synthese/crrae-faam' },
         { id: 'etat-iuts', label: 'État des Retenues IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
         { id: 'etat-fsp', label: 'État des Retenues - Retenue Fonds de Solidarité', icon: 'shield', route: '/paie/etats-synthese/fsp' },
-        { id: 'etat-stc', label: 'État du Solde de Tout Compte', icon: 'gavel', route: '/paie/etats-synthese/stc' }
+        { id: 'etat-indemnite-conge', label: 'État détaillé indemnité de congé', icon: 'beach_access', route: '/paie/etats-synthese/indemnite-conge' },
+        { id: 'etat-indemnite-licenciement', label: 'État détaillé indemnité de licenciement', icon: 'gavel', route: '/paie/etats-synthese/indemnite-licenciement' },
+        { id: 'etat-indemnite-preavis', label: 'État détaillé indemnité de préavis', icon: 'event_busy', route: '/paie/etats-synthese/indemnite-preavis' }
       ]
     },
     {
@@ -357,8 +360,11 @@ export class ModuleNavService {
       'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
       'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
       'ETAT_BULLETIN': 'bulletin',
-      'ETAT_STC': 'stc',
-      'ETAT_SOLDE_TOUT_COMPTE': 'stc'
+      'ETAT_INDEMNITE_CONGE': 'indemnite-conge',
+      'ETAT_INDEMNITE_LICENCIEMENT': 'indemnite-licenciement',
+      'ETAT_INDEMNITE_PREAVIS': 'indemnite-preavis',
+      'ETAT_STC': 'indemnite-licenciement',
+      'ETAT_SOLDE_TOUT_COMPTE': 'indemnite-licenciement'
     };
     return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }

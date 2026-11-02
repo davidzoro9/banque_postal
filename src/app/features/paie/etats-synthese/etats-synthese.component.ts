@@ -23,6 +23,8 @@ export class EtatsSyntheseComponent implements OnInit {
   selectedEtat: string = 'LIVRE_PAIE';
 
   // Filtres
+  dateDebut: string = '';
+  dateFin: string = '';
   sessions: any[] = [];
   selectedSessionId: number | null = null;
   periodes: Array<{ key: string; label: string; annee: number; mois: string; countSessions: number }> = [];
@@ -136,6 +138,7 @@ export class EtatsSyntheseComponent implements OnInit {
       }
     });
 
+    this.initDefaultDates();
     this.loadConfigs();
     this.loadFiltersData();
     this.loadSignataires();
@@ -253,7 +256,7 @@ export class EtatsSyntheseComponent implements OnInit {
     // Convertir en liste triée par période décroissante (la plus récente d'abord)
     this.periodes = Array.from(mapPeriodes.values()).sort((a, b) => b.key.localeCompare(a.key));
 
-    // Sélectionner la période la plus récente par défaut
+    // Sélectionner la période et ajuster l'intervalle par défaut
     if (this.periodes.length > 0 && !this.selectedPeriode) {
       this.selectedPeriode = this.periodes[0].key;
       const matchingSession = this.sessions.find(s => {
@@ -263,8 +266,52 @@ export class EtatsSyntheseComponent implements OnInit {
       });
       if (matchingSession) {
         this.selectedSessionId = matchingSession.id;
+        const annee = matchingSession.annee || (matchingSession.dateFrom ? new Date(matchingSession.dateFrom).getFullYear() : 2026);
+        const moisNum = parseInt(String(matchingSession.mois || '').replace(/\D/g, ''), 10) || 1;
+        const mStr = String(moisNum).padStart(2, '0');
+        const lastDay = new Date(annee, moisNum, 0).getDate();
+        this.dateDebut = `${annee}-${mStr}-01`;
+        this.dateFin = `${annee}-${mStr}-${String(lastDay).padStart(2, '0')}`;
       }
     }
+  }
+
+  initDefaultDates(): void {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    this.dateDebut = `${y}-${m}-01`;
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    this.dateFin = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+  }
+
+  get filteredSessions(): any[] {
+    if (!this.sessions || this.sessions.length === 0) return [];
+    if (!this.dateDebut && !this.dateFin) return this.sessions;
+
+    return this.sessions.filter(s => {
+      const sStart = s.dateDebut || s.dateFrom || (s.annee && s.mois ? `${s.annee}-${String(parseInt(String(s.mois).replace(/\D/g, ''), 10) || 1).padStart(2, '0')}-01` : null);
+      const sEnd = s.dateFin || s.dateTo || (s.annee && s.mois ? `${s.annee}-${String(parseInt(String(s.mois).replace(/\D/g, ''), 10) || 1).padStart(2, '0')}-28` : null);
+      if (!sStart && !sEnd) return true;
+
+      if (this.dateDebut && sEnd && sEnd < this.dateDebut) return false;
+      if (this.dateFin && sStart && sStart > this.dateFin) return false;
+      return true;
+    });
+  }
+
+  onDateIntervalChange(): void {
+    if (this.selectedSessionId) {
+      const stillValid = this.filteredSessions.some(s => s.id === this.selectedSessionId);
+      if (!stillValid) {
+        this.selectedSessionId = null;
+      }
+    }
+    this.loadEtatData();
+  }
+
+  onSessionChange(): void {
+    this.loadEtatData();
   }
 
   getNomMoisFr(m: number): string {
@@ -301,6 +348,8 @@ export class EtatsSyntheseComponent implements OnInit {
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
       periode: this.selectedPeriode,
+      dateDebut: this.dateDebut || null,
+      dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -524,10 +573,16 @@ export class EtatsSyntheseComponent implements OnInit {
       'etat-elements-salaire': 'ETAT_ELEMENT_SALAIRE',
       'bulletin': 'ETAT_BULLETIN',
       'etat-bulletin': 'ETAT_BULLETIN',
-      'stc': 'ETAT_STC',
-      'etat-stc': 'ETAT_STC',
-      'solde-tout-compte': 'ETAT_STC',
-      'etat-solde-tout-compte': 'ETAT_STC'
+      'indemnite-conge': 'ETAT_INDEMNITE_CONGE',
+      'etat-indemnite-conge': 'ETAT_INDEMNITE_CONGE',
+      'indemnite-licenciement': 'ETAT_INDEMNITE_LICENCIEMENT',
+      'etat-indemnite-licenciement': 'ETAT_INDEMNITE_LICENCIEMENT',
+      'indemnite-preavis': 'ETAT_INDEMNITE_PREAVIS',
+      'etat-indemnite-preavis': 'ETAT_INDEMNITE_PREAVIS',
+      'stc': 'ETAT_INDEMNITE_LICENCIEMENT',
+      'etat-stc': 'ETAT_INDEMNITE_LICENCIEMENT',
+      'solde-tout-compte': 'ETAT_INDEMNITE_LICENCIEMENT',
+      'etat-solde-tout-compte': 'ETAT_INDEMNITE_LICENCIEMENT'
     };
     if (SLUG_MAP[clean]) {
       return SLUG_MAP[clean];
@@ -558,8 +613,11 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_ELEMENT_SALAIRE': 'elements-salaire',
       'ETAT_ELEMENTS_SALAIRE': 'elements-salaire',
       'ETAT_BULLETIN': 'bulletin',
-      'ETAT_STC': 'stc',
-      'ETAT_SOLDE_TOUT_COMPTE': 'stc'
+      'ETAT_INDEMNITE_CONGE': 'indemnite-conge',
+      'ETAT_INDEMNITE_LICENCIEMENT': 'indemnite-licenciement',
+      'ETAT_INDEMNITE_PREAVIS': 'indemnite-preavis',
+      'ETAT_STC': 'indemnite-licenciement',
+      'ETAT_SOLDE_TOUT_COMPTE': 'indemnite-licenciement'
     };
     return CODE_TO_SLUG[code] || code.toLowerCase().replace(/_/g, '-');
   }
@@ -570,6 +628,8 @@ export class EtatsSyntheseComponent implements OnInit {
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
       periode: this.selectedPeriode,
+      dateDebut: this.dateDebut || null,
+      dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -591,6 +651,8 @@ export class EtatsSyntheseComponent implements OnInit {
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
       periode: this.selectedPeriode,
+      dateDebut: this.dateDebut || null,
+      dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -612,6 +674,8 @@ export class EtatsSyntheseComponent implements OnInit {
     const filter: EtatSyntheseFilter = {
       typeEtat: this.selectedEtat,
       periode: this.selectedPeriode,
+      dateDebut: this.dateDebut || null,
+      dateFin: this.dateFin || null,
       sessionPaieId: this.selectedSessionId,
       directionId: this.selectedDirectionId,
       banque: this.selectedBanque
@@ -668,6 +732,9 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_ELEMENTS_SALAIRE',
       'ETAT_ELEMENT_SALAIRE',
       'ETAT_BULLETIN',
+      'ETAT_INDEMNITE_CONGE',
+      'ETAT_INDEMNITE_LICENCIEMENT',
+      'ETAT_INDEMNITE_PREAVIS',
       'ETAT_STC',
       'ETAT_SOLDE_TOUT_COMPTE'
     ];
@@ -675,10 +742,15 @@ export class EtatsSyntheseComponent implements OnInit {
   }
 
   getSelectedEtatObj(): EtatSyntheseConfig {
-    return this.etatsConfigs.find(e => e.code === this.selectedEtat) || {
+    const cfg = this.etatsConfigs.find(e => e.code === this.selectedEtat);
+    if (cfg) {
+      return { ...cfg, description: '' };
+    }
+    return {
       code: this.selectedEtat,
       libelle: this.selectedEtat,
       categorie: 'Général',
+      description: '',
       actif: true,
       icon: 'assessment'
     };

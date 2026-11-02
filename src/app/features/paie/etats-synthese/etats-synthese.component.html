@@ -22,7 +22,6 @@
             Désactivé
           </span>
         </div>
-        <p class="subtitle">{{ getSelectedEtatObj().description }}</p>
       </div>
     </div>
 
@@ -94,24 +93,55 @@
   <!-- ========================================== -->
   <div class="filter-card">
     <div class="filter-grid">
-      <!-- Période de Paie (Consolidée toutes sessions) -->
-      <div class="filter-item">
+      <!-- Période de Paie (Intervalle : Du ... Au ...) -->
+      <div class="filter-item filter-intervalle">
         <label class="filter-label">
-          <span>Période de paie</span>
+          <mat-icon style="font-size: 15px; width: 15px; height: 15px; margin-right: 2px;">date_range</mat-icon>
+          <span>Période (Du ... Au ...)</span>
+        </label>
+        <div class="date-interval-wrapper">
+          <div class="date-input-group">
+            <span class="date-sep-label">Du</span>
+            <input
+              type="date"
+              class="form-control date-input"
+              [(ngModel)]="dateDebut"
+              (change)="onDateIntervalChange()"
+              title="Date de début de la période"
+            />
+          </div>
+          <div class="date-input-group">
+            <span class="date-sep-label">Au</span>
+            <input
+              type="date"
+              class="form-control date-input"
+              [(ngModel)]="dateFin"
+              (change)="onDateIntervalChange()"
+              title="Date de fin de la période"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Session de Paie (Filtre par session spécifique ou consolidé) -->
+      <div class="filter-item filter-session">
+        <label class="filter-label">
+          <span>Session de paie</span>
         </label>
         <select
           class="form-select"
-          [(ngModel)]="selectedPeriode"
-          (change)="onPeriodeChange()"
+          [(ngModel)]="selectedSessionId"
+          (change)="onSessionChange()"
         >
-          <option *ngFor="let p of periodes" [value]="p.key">
-            {{ p.label }} {{ p.countSessions > 1 ? '— Consolidé (' + p.countSessions + ' sessions)' : '' }}
+          <option [ngValue]="null">Toutes les sessions</option>
+          <option *ngFor="let s of filteredSessions" [ngValue]="s.id">
+            {{ s.codeSession }} — {{ s.typeSession || 'ORDINAIRE' }} ({{ s.mois }}/{{ s.annee }})
           </option>
         </select>
       </div>
 
       <!-- Direction -->
-      <div class="filter-item">
+      <div class="filter-item filter-direction">
         <label class="filter-label">
           <span>Direction</span>
         </label>
@@ -128,7 +158,7 @@
       </div>
 
       <!-- Banque -->
-      <div class="filter-item">
+      <div class="filter-item filter-banque">
         <label class="filter-label">
           <span>Banque de virement</span>
         </label>
@@ -235,10 +265,7 @@
     <!-- 0. TABLEAU : RÉCAPITULATIF GLOBAL (PAGE 1) -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'RECAPITULATIF_GLOBAL' && filteredRows.length > 0">
-      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">RÉCAPITULATIF GLOBAL DE LA PAIE — JOURNAL DÉBIT / CRÉDIT</span>
-        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Balance Comptable Équilibrée</span>
-      </div>
+
       <table class="bpbf-table">
         <thead>
           <tr>
@@ -270,9 +297,7 @@
     <!-- 1. TABLEAU : LIVRE DE PAIE (REGISTRE OFFICIEL 17 COLONNES - PAGE 3) -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'LIVRE_PAIE' && filteredRows.length > 0">
-      <div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 10px 16px; margin-bottom: 12px; border-radius: 4px;">
-        <span style="font-weight: 800; color: #0284c7; font-size: 13px;">REGISTRE GÉNÉRAL DE PAIE — 17 COLONNES OFFICIELLES</span>
-      </div>
+
       <table class="bpbf-table font-compact" style="font-size: 11.5px;">
         <thead>
           <tr>
@@ -400,13 +425,7 @@
     <!-- 2b. TABLEAU : COTISATIONS CRRAE (PAGES 4, 5, 6) -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_CRRAE_RRPC' || selectedEtat === 'ETAT_CRRAE_RCPNC' || selectedEtat === 'ETAT_CRRAE_FAAM' || selectedEtat === 'ETAT_CRRAE') && filteredRows.length > 0">
-      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <span style="font-weight: 800; color: #0060B3; font-size: 13.5px; display: block;">{{ getSelectedEtatObj().libelle | uppercase }}</span>
-          <span style="font-size: 12px; color: #64748b;">ADHÉRENT : BANQUE POSTALE DU BURKINA FASO | DESTINATAIRE : CRRAE-UMOA</span>
-        </div>
-        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Déclaration Nominative Mensuelle</span>
-      </div>
+
       <table class="bpbf-table">
         <thead>
           <tr>
@@ -841,88 +860,162 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TABLEAU : ÉTAT DU SOLDE DE TOUT COMPTE STC -->
+    <!-- 12a. TABLEAU : ÉTAT DÉTAILLÉ INDEMNITÉ DE CONGÉ -->
     <!-- ========================================== -->
-    <div class="table-responsive" *ngIf="!isLoading && (selectedEtat === 'ETAT_STC' || selectedEtat === 'ETAT_SOLDE_TOUT_COMPTE') && filteredRows.length > 0">
-      <div style="background: #eff6ff; border-left: 4px solid #0060B3; padding: 12px 16px; margin-bottom: 14px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 800; color: #0060B3; font-size: 13.5px;">ÉTAT DU SOLDE DE TOUT COMPTE — INDEMNITÉS LÉGALES DE RUPTURE</span>
-        <span style="font-size: 12px; color: #1e40af; font-weight: 600;">Départ, Licenciement, Retraite &amp; Soldes des Créances</span>
-      </div>
-      <table class="bpbf-table font-compact" style="font-size: 11.5px;">
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_INDEMNITE_CONGE' && filteredRows.length > 0">
+      <table class="bpbf-table font-compact">
         <thead>
           <tr>
-            <th>Mle</th>
-            <th>Nom et Prénoms</th>
-            <th>Emploi &amp; Structure</th>
-            <th>Motif Rupture</th>
-            <th class="text-center">Ancienneté</th>
-            <th class="text-right">Indemnité Congés Acquis</th>
-            <th class="text-right">Indemnité Licenciement</th>
-            <th class="text-right">Indemnité Préavis</th>
-            <th class="text-right">Prorata Gratifications</th>
-            <th class="text-right">Total Brut STC</th>
-            <th class="text-right">Total Retenues</th>
-            <th class="text-right col-net">Net STC à Payer</th>
+            <th class="text-center" style="width: 5%;">N°</th>
+            <th class="text-center" style="width: 9%;">Matricule</th>
+            <th style="width: 17%;">Nom et Prénoms</th>
+            <th style="width: 14%;">Emploi &amp; Direction</th>
+            <th style="width: 27%;">Mois &amp; Salaire Brut du mois (Détail)</th>
+            <th class="text-right" style="width: 9%;">Total Brut</th>
+            <th class="text-center" style="width: 9%;">Nombre de congé</th>
+            <th class="text-right col-net" style="width: 10%;">Total Indemnité</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of filteredRows">
-            <td class="font-mono font-bold">{{ row.matricule }}</td>
+            <td class="text-center font-mono">{{ row.numeroOrdre }}</td>
+            <td class="text-center font-mono font-bold">{{ row.matricule }}</td>
             <td class="font-bold">{{ row.nomPrenom }}</td>
-            <td>{{ row.emploi }} — <span class="text-muted">{{ row.direction }}</span></td>
             <td>
-              <span class="badge" style="background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600;">
-                {{ row.motifRupture || 'Rupture' }}
+              <div style="font-weight: 600;">{{ row.emploi }}</div>
+              <div class="text-muted" style="font-size: 11px;">{{ row.direction }}</div>
+            </td>
+            <td>
+              <div class="mois-detail-box" *ngIf="row.detailsMois && row.detailsMois.length > 0">
+                <span class="mois-pill" *ngFor="let m of row.detailsMois">
+                  <strong>{{ m.mois }}</strong>: {{ formatFcfa(m.salaireBrut) }}
+                </span>
+              </div>
+              <span *ngIf="!row.detailsMois || row.detailsMois.length === 0" class="text-muted font-mono" style="font-size: 11px;">
+                {{ row.detailsMoisTexte || '—' }}
               </span>
             </td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.totalBrutPeriode) }}</td>
             <td class="text-center font-mono font-bold">
-              {{ row.ancienneteAnnees != null ? row.ancienneteAnnees + ' ans' : '—' }}
+              <span class="badge-accent">{{ row.nombreJoursConge }} j</span>
             </td>
-            <td class="text-right font-mono">
-              <div class="font-bold">{{ formatFcfa(row.indemniteCongesAcquis) }}</div>
-              <div style="font-size: 10px; color: #64748b;" *ngIf="row.joursCongesAcquis > 0">
-                {{ row.joursCongesAcquis }} j &bull; Base {{ formatFcfa(row.salaireMoyenJournalier) }}
-              </div>
-            </td>
-            <td class="text-right font-mono">
-              <div class="font-bold">{{ formatFcfa(row.indemniteLicenciement) }}</div>
-              <div style="font-size: 10px; color: #16a34a;" *ngIf="row.indemniteLicenciement > 0">
-                100% Exonéré &bull; Base {{ formatFcfa(row.salaireGlobalMoyen) }}
-              </div>
-            </td>
-            <td class="text-right font-mono">
-              <div class="font-bold">{{ formatFcfa(row.indemnitePreavis) }}</div>
-              <div style="font-size: 10px; color: #64748b;" *ngIf="row.moisPreavis > 0">
-                {{ row.moisPreavis }} mois
-              </div>
-            </td>
-            <td class="text-right font-mono">
-              {{ formatFcfa(row.prorataGratifications) }}
-            </td>
-            <td class="text-right font-mono font-bold" style="color: #0f172a;">
-              {{ formatFcfa(row.totalBrutStc) }}
-            </td>
-            <td class="text-right font-mono text-danger">
-              <div class="font-bold">{{ formatFcfa(row.totalRetenues) }}</div>
-              <div style="font-size: 10px; color: #dc2626;" *ngIf="row.retenuesPretsEtPrecomptes > 0">
-                Prêts soldés: {{ formatFcfa(row.retenuesPretsEtPrecomptes) }}
-              </div>
-            </td>
-            <td class="text-right col-net font-bold font-mono" style="font-size: 12.5px;">
-              {{ formatFcfa(row.netSoldeToutCompte) }}
-            </td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.totalIndemniteConge) }}</td>
           </tr>
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="5" class="font-bold">TOTAL DES INDEMNITÉS DE SOLDE DE TOUT COMPTE</td>
-            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemniteCongesAcquis')) }}</td>
-            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemniteLicenciement')) }}</td>
-            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('indemnitePreavis')) }}</td>
-            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('prorataGratifications')) }}</td>
-            <td class="text-right font-bold font-mono">{{ formatFcfa(etatData?.totalBrut || getSum('totalBrutStc')) }}</td>
-            <td class="text-right font-bold font-mono text-danger">{{ formatFcfa(etatData?.totalRetenues || getSum('totalRetenues')) }}</td>
-            <td class="text-right col-net font-bold font-mono" style="font-size: 13px;">{{ formatFcfa(etatData?.totalNet || getSum('netSoldeToutCompte')) }}</td>
+            <td colspan="5" class="font-bold">TOTAL GÉNÉRAL INDEMNITÉ DE CONGÉ</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('totalBrutPeriode')) }}</td>
+            <td class="text-center">—</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(getSum('totalIndemniteConge')) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 12b. TABLEAU : ÉTAT DÉTAILLÉ INDEMNITÉ DE LICENCIEMENT -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_INDEMNITE_LICENCIEMENT' && filteredRows.length > 0">
+      <table class="bpbf-table font-compact">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 5%;">N°</th>
+            <th class="text-center" style="width: 9%;">Matricule</th>
+            <th style="width: 17%;">Nom et Prénoms</th>
+            <th style="width: 14%;">Emploi &amp; Direction</th>
+            <th style="width: 27%;">Mois &amp; Brut du mois</th>
+            <th class="text-right" style="width: 9%;">Total Brut</th>
+            <th class="text-center" style="width: 9%;">Ancienneté</th>
+            <th class="text-right col-net" style="width: 10%;">Total Indemnité</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="text-center font-mono">{{ row.numeroOrdre }}</td>
+            <td class="text-center font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>
+              <div style="font-weight: 600;">{{ row.emploi }}</div>
+              <div class="text-muted" style="font-size: 11px;">{{ row.direction }}</div>
+            </td>
+            <td>
+              <div class="mois-detail-box" *ngIf="row.detailsMois && row.detailsMois.length > 0">
+                <span class="mois-pill" *ngFor="let m of row.detailsMois">
+                  <strong>{{ m.mois }}</strong>: {{ formatFcfa(m.salaireBrut) }}
+                </span>
+              </div>
+              <span *ngIf="!row.detailsMois || row.detailsMois.length === 0" class="text-muted font-mono" style="font-size: 11px;">
+                {{ row.detailsMoisTexte || '—' }}
+              </span>
+            </td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.totalBrutPeriode) }}</td>
+            <td class="text-center font-mono font-bold">
+              <span class="badge-accent">{{ row.ancienneteAnnees }} ans</span>
+            </td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.totalIndemniteLicenciement) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5" class="font-bold">TOTAL GÉNÉRAL INDEMNITÉ DE LICENCIEMENT</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('totalBrutPeriode')) }}</td>
+            <td class="text-center">—</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(getSum('totalIndemniteLicenciement')) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 12c. TABLEAU : ÉTAT DÉTAILLÉ INDEMNITÉ DE PRÉAVIS -->
+    <!-- ========================================== -->
+    <div class="table-responsive" *ngIf="!isLoading && selectedEtat === 'ETAT_INDEMNITE_PREAVIS' && filteredRows.length > 0">
+      <table class="bpbf-table font-compact">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 5%;">N°</th>
+            <th class="text-center" style="width: 9%;">Matricule</th>
+            <th style="width: 17%;">Nom et Prénoms</th>
+            <th style="width: 14%;">Emploi &amp; Direction</th>
+            <th style="width: 27%;">Mois &amp; Brut du mois</th>
+            <th class="text-right" style="width: 9%;">Total Brut</th>
+            <th class="text-center" style="width: 9%;">Durée du préavis</th>
+            <th class="text-right col-net" style="width: 10%;">Total Indemnité</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filteredRows">
+            <td class="text-center font-mono">{{ row.numeroOrdre }}</td>
+            <td class="text-center font-mono font-bold">{{ row.matricule }}</td>
+            <td class="font-bold">{{ row.nomPrenom }}</td>
+            <td>
+              <div style="font-weight: 600;">{{ row.emploi }}</div>
+              <div class="text-muted" style="font-size: 11px;">{{ row.direction }}</div>
+            </td>
+            <td>
+              <div class="mois-detail-box" *ngIf="row.detailsMois && row.detailsMois.length > 0">
+                <span class="mois-pill" *ngFor="let m of row.detailsMois">
+                  <strong>{{ m.mois }}</strong>: {{ formatFcfa(m.salaireBrut) }}
+                </span>
+              </div>
+              <span *ngIf="!row.detailsMois || row.detailsMois.length === 0" class="text-muted font-mono" style="font-size: 11px;">
+                {{ row.detailsMoisTexte || '—' }}
+              </span>
+            </td>
+            <td class="text-right font-mono font-bold">{{ formatFcfa(row.totalBrutPeriode) }}</td>
+            <td class="text-center font-mono font-bold">
+              <span class="badge-accent">{{ row.dureePreavisMois }} mois</span>
+            </td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(row.totalIndemnitePreavis) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5" class="font-bold">TOTAL GÉNÉRAL INDEMNITÉ DE PRÉAVIS</td>
+            <td class="text-right font-bold font-mono">{{ formatFcfa(getSum('totalBrutPeriode')) }}</td>
+            <td class="text-center">—</td>
+            <td class="text-right col-net font-bold font-mono">{{ formatFcfa(getSum('totalIndemnitePreavis')) }}</td>
           </tr>
         </tfoot>
       </table>

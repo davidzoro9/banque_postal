@@ -60,6 +60,9 @@ export interface RefItem {
   tauxExoneration?: number; // pour Paramétrage indemnité (% Exonéré)
   plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
   categories?: string[];    // pour Groupe (Liste des codes de catégories rattachées)
+  anneeDebut?: number;      // pour Tranche indemnité licenciement
+  anneeFin?: number;        // pour Tranche indemnité licenciement
+  trancheAnciennete?: string; // pour Tranche indemnité licenciement
   typeNomination?: string;  // pour Fonction : 'NOMMEE' ou 'NON_NOMMEE'
   regleType?: string;       // pour Paramétrage indemnité : 'ORDINAIRE', 'NOMINATION', 'SPECIFIQUE'
   indemnites?: { typeIndemnite: string; montant: number }[]; // pour Fonction Nommée
@@ -472,6 +475,43 @@ const BACKEND_MAP: Record<string, {
       description: item.description,
       actif: item.actif
     }),
+  },
+  'param-tranche-licenciement': {
+    segment: 'param-tranche-licenciement',
+    getAllPath: '/all',
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code,
+      libelle: dto.libelle,
+      anneeDebut: dto.anneeDebut,
+      anneeFin: dto.anneeFin,
+      trancheAnciennete: dto.trancheAnciennete || (dto.anneeFin ? ('De la ' + dto.anneeDebut + 'ᵉ à la ' + dto.anneeFin + 'ᵉ année') : ('Au-delà de la 10ᵉ année (11ᵉ année et plus)')),
+      taux: dto.taux,
+      description: dto.description || '',
+      ordre: dto.ordre ?? 1,
+      actif: dto.actif ?? true
+    }),
+    toBack: item => ({
+      code: item.code,
+      libelle: item.libelle,
+      anneeDebut: item.anneeDebut ? Number(item.anneeDebut) : 1,
+      anneeFin: item.anneeFin ? Number(item.anneeFin) : null,
+      taux: item.taux ? Number(item.taux) : 0,
+      description: item.description,
+      ordre: item.ordre ? Number(item.ordre) : 1,
+      actif: item.actif
+    }),
+    toBackUpdate: item => ({
+      id: item.id ? Number(item.id) : null,
+      code: item.code,
+      libelle: item.libelle,
+      anneeDebut: item.anneeDebut ? Number(item.anneeDebut) : 1,
+      anneeFin: item.anneeFin ? Number(item.anneeFin) : null,
+      taux: item.taux ? Number(item.taux) : 0,
+      description: item.description,
+      ordre: item.ordre ? Number(item.ordre) : 1,
+      actif: item.actif
+    })
   },
   'param-prise-en-charge': {
     segment: 'parampriseencharge',

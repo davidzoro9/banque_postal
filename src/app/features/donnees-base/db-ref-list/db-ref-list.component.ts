@@ -481,6 +481,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       tauxExoneration: [0, [Validators.min(0), Validators.max(100)]],
       plafondExoneration: [0, [Validators.min(0)]],
       tauxAbattement:  [25, [Validators.min(0), Validators.max(100)]],
+      anneeDebut:      [1],
+      anneeFin:        [null],
+      trancheAnciennete: [''],
       typeNomination:  ['NON_NOMMEE']
     });
   }
@@ -497,8 +500,11 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.indemniteTab = 'ORDINAIRE';
         this.regleType = 'ORDINAIRE';
         this.displayedColumns = ['code', 'typeIndemnite', 'grade', 'categorie', 'taux', 'actif', 'actions'];
-      } else if (this.type === 'param-retraite') {
+      } else if (this.type === 'param-retraite',
+      'param-tranche-licenciement') {
         this.displayedColumns = ['grade', 'taux', 'actif', 'actions'];
+      } else if (this.type === 'param-tranche-licenciement') {
+        this.displayedColumns = ['trancheAnciennete', 'taux', 'description', 'actif', 'actions'];
       } else if (this.type === 'param-prise-en-charge') {
         this.displayedColumns = ['code', 'libelle', 'taux', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {

@@ -30,6 +30,8 @@ export interface SignatairesEtat {
 export interface EtatSyntheseFilter {
   typeEtat?: string;
   periode?: string | null;
+  dateDebut?: string | null;
+  dateFin?: string | null;
   sessionPaieId?: number | null;
   bulletinLotId?: number | null;
   directionId?: number | null;
@@ -102,6 +104,8 @@ export class EtatSyntheseService {
     let params = new HttpParams();
     if (filters.typeEtat) params = params.set('typeEtat', filters.typeEtat);
     if (filters.periode) params = params.set('periode', filters.periode);
+    if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
     if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
@@ -114,6 +118,8 @@ export class EtatSyntheseService {
     let params = new HttpParams();
     if (filters.typeEtat) params = params.set('typeEtat', filters.typeEtat);
     if (filters.periode) params = params.set('periode', filters.periode);
+    if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
     if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
@@ -126,6 +132,8 @@ export class EtatSyntheseService {
     let params = new HttpParams();
     if (filters.typeEtat) params = params.set('typeEtat', filters.typeEtat);
     if (filters.periode) params = params.set('periode', filters.periode);
+    if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
     if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());
@@ -138,6 +146,8 @@ export class EtatSyntheseService {
     let params = new HttpParams();
     if (filters.typeEtat) params = params.set('typeEtat', filters.typeEtat);
     if (filters.periode) params = params.set('periode', filters.periode);
+    if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
     if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
     if (filters.bulletinLotId) params = params.set('bulletinLotId', filters.bulletinLotId.toString());
     if (filters.directionId) params = params.set('directionId', filters.directionId.toString());

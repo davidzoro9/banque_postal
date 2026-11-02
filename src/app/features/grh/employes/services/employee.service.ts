@@ -98,6 +98,9 @@ export class EmployeeService {
     if (emp.ancienneteReprise !== undefined) {
       result.ancienneteReprise = Number(emp.ancienneteReprise) || 0;
     }
+    if (emp.dureePreavis !== undefined) {
+      result.dureePreavis = (emp.dureePreavis !== null && emp.dureePreavis !== undefined && (emp.dureePreavis as any) !== '') ? Number(emp.dureePreavis) : null;
+    }
 
     // Map JSON fields & extraData for PostgreSQL safely without forced defaults
     const extraDataObj: any = {};
@@ -175,6 +178,7 @@ export class EmployeeService {
     result.situationFamiliale = db.situationFamiliale || db.situationMatrimoniale || 'Célibataire';
     result.situationMatrimoniale = result.situationFamiliale;
     result.ancienneteReprise = db.ancienneteReprise != null ? Number(db.ancienneteReprise) : 0;
+    result.dureePreavis = db.dureePreavis != null ? Number(db.dureePreavis) : null;
     
     // Parse JSON fields safely
     try { result.contactsUrgence = db.contactsUrgenceJson ? JSON.parse(db.contactsUrgenceJson) : []; } catch (e) { result.contactsUrgence = []; }

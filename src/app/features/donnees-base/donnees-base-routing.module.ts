@@ -24,6 +24,7 @@ const routes: Routes = [
   { path: 'admin/profil',               component: DbRefListComponent, data: { title: 'Profil de poste / Rôle', icon: 'admin_panel_settings', type: 'profil' } },
   { path: 'admin/ville',                component: DbRefListComponent, data: { title: 'Villes', icon: 'location_city', type: 'ville' } },
   { path: 'admin/param-retraite',        component: DbRefListComponent, data: { title: 'Paramétrage retraite', icon: 'event_repeat', type: 'param-retraite' } },
+  { path: 'admin/param-tranche-licenciement', component: DbRefListComponent, data: { title: 'Paramétrage taux par tranche indemnité de licenciement', icon: 'splitscreen', type: 'param-tranche-licenciement' } },
   { path: 'admin/param-prise-en-charge', component: DbRefListComponent, data: { title: 'Prise en charge famille', icon: 'family_restroom', type: 'param-prise-en-charge' } },
   { path: 'admin/regimes-securite-sociale', component: DbRefListComponent, data: { title: 'Régimes de sécurité sociale', icon: 'health_and_safety', type: 'regime-securite-social' } },
 
@@ -52,6 +53,7 @@ const routes: Routes = [
   { path: 'departement',           redirectTo: 'admin/departement',      pathMatch: 'full' },
   { path: 'direction',             redirectTo: 'admin/direction',        pathMatch: 'full' },
   { path: 'service',               redirectTo: 'admin/service',          pathMatch: 'full' },
+  { path: 'param-tranche-licenciement', redirectTo: 'admin/param-tranche-licenciement', pathMatch: 'full' },
 
   { path: '**', redirectTo: '' }
 ];

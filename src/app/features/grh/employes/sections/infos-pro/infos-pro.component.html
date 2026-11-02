@@ -52,7 +52,7 @@
           </mat-form-field>
         </div>
 
-        <div class="form-grid-3">
+        <div class="form-grid-4">
           <mat-form-field appearance="outline">
             <mat-label>Date de prise de fonction / embauche</mat-label>
             <input matInput [matDatepicker]="pickerEmbauche" formControlName="dateEmbauche" placeholder="JJ/MM/AAAA" (dateChange)="onDateEmbaucheChange()">
@@ -64,14 +64,21 @@
             <mat-label>Ancienneté négociée (années)</mat-label>
             <input matInput type="number" min="0" step="1" formControlName="ancienneteReprise" placeholder="Ex: 3" (keydown)="preventNegativeInput($event)">
             <mat-icon matSuffix matTooltip="Années d'ancienneté reconnues et négociées">handshake</mat-icon>
-            <mat-hint>Années d'expérience acquises et négociées</mat-hint>
+            <mat-hint>Années d'expérience négociées</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Ancienneté</mat-label>
             <input matInput [value]="calculatedTotalAncienneteDisplay" readonly style="font-weight: 700; color: #0060B3;">
             <mat-icon matSuffix matTooltip="Ancienneté totale calculée (non modifiable)">history</mat-icon>
-            <mat-hint>Ancienneté totale (non modifiable)</mat-hint>
+            <mat-hint>Ancienneté totale</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Durée du préavis (mois)</mat-label>
+            <input matInput type="number" min="0" max="24" step="1" formControlName="dureePreavis" placeholder="Ex: 3" (keydown)="preventNegativeInput($event)">
+            <mat-icon matSuffix matTooltip="Durée contractuelle ou légale du préavis de rupture en mois">schedule</mat-icon>
+            <mat-hint>Durée de préavis en mois</mat-hint>
           </mat-form-field>
         </div>
 

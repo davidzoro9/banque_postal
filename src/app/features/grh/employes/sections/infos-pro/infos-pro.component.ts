@@ -282,6 +282,7 @@ export class InfosProComponent implements OnInit {
       matricule:            [''],
       numeroCnss:           [''],
       ancienneteReprise:     [0, [Validators.min(0)]],
+      dureePreavis:          [null, [Validators.min(0)]],
       surSalaire:           [0, [Validators.min(0)]]
     });
 
@@ -489,6 +490,7 @@ export class InfosProComponent implements OnInit {
       matricule:        e.matricule || '',
       numeroCnss:       e.numeroCnss || '',
       ancienneteReprise: e.ancienneteReprise || 0,
+      dureePreavis: e.dureePreavis != null ? e.dureePreavis : null,
       surSalaire:       e.surSalaire || 0,
 
       fonctionId:       resolvedFonctionId,
@@ -1028,6 +1030,7 @@ export class InfosProComponent implements OnInit {
       matricule:        v.matricule?.trim() || this.employee?.matricule || '',
       numeroCnss:       v.numeroCnss?.trim() || '',
       ancienneteReprise: Number(v.ancienneteReprise) || 0,
+      dureePreavis: (v.dureePreavis !== null && v.dureePreavis !== undefined && v.dureePreavis !== '') ? Number(v.dureePreavis) : undefined,
       statut:           v.statut,
       dateEmbauche:     v.dateEmbauche,
       modePaiement:     v.modePaiement,

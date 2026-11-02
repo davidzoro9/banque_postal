@@ -217,6 +217,7 @@ export interface Employee {
   agence?: string;
   dateEmbauche: string;
   ancienneteReprise?: number;
+  dureePreavis?: number;
   statut: StatutEmploye;
   typeContrat: TypeContrat;
   emailPro?: string;

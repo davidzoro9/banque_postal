@@ -191,8 +191,8 @@ export class GenererBulletinsComponent implements OnInit {
   get isSessionMaternite(): boolean {
     const s = this.currentSession;
     if (!s) return false;
-    const n = (s.natureSession || s.name || s.codeSession || '').toUpperCase();
-    return n.includes('MATERNITE') || n.includes('MAT');
+    const n = (s.natureSession || s.name || s.codeSession || s.typeSession || '').toUpperCase();
+    return n.includes('MATERNITE') || n.includes('MAT') || n.includes('RELIQUAT') || n.includes('RELIQ');
   }
 
   // Paramétrage des jours travaillés pour session ordinaire
@@ -285,6 +285,15 @@ export class GenererBulletinsComponent implements OnInit {
   }
   get totalRetenuesGlobal(): number {
     return this.bulletins.reduce((acc, b) => acc + (b.totalRetenues || 0), 0);
+  }
+  get totalTpa(): number {
+    return this.bulletins.reduce((acc, b) => acc + (b.tpa || 0), 0);
+  }
+  get totalChargesPatronales(): number {
+    return this.bulletins.reduce((acc, b) => acc + (b.chargesPatronales || 0), 0);
+  }
+  get masseSalarialeTotale(): number {
+    return this.totalMasseSalarialeBrute + this.totalTpa + this.totalChargesPatronales;
   }
 
   getNatureLibelle(s: any): string {
@@ -466,8 +475,9 @@ export class GenererBulletinsComponent implements OnInit {
     if (!this.currentSession) return;
     const mois = this.currentSession.mois || String(this.moisIndex + 1).padStart(2, '0');
     const annee = this.currentSession.annee || this.selectedYear;
+    const sessParam = this.currentSession.id ? `&sessionId=${this.currentSession.id}` : '';
     this.isLoadingMaterniteEligibles = true;
-    this.http.get<Employee[]>(`${environment.apiUrl}/paie/sessions/maternite-eligibles?mois=${mois}&annee=${annee}`).pipe(
+    this.http.get<Employee[]>(`${environment.apiUrl}/paie/sessions/maternite-eligibles?mois=${mois}&annee=${annee}${sessParam}`).pipe(
       catchError(() => of([]))
     ).subscribe(femmes => {
       this.employesMaterniteEligibles = femmes || [];
@@ -1289,6 +1299,33 @@ export class GenererBulletinsComponent implements OnInit {
     copy.totalRetenues = b.totalRetenues != null ? b.totalRetenues : (cotisCnss + cotisCarfo + cotisCrrae + iuts + fsp + precompte);
     copy.totalRetenuesPatronales = b.totalCotisationsPatronales != null ? b.totalCotisationsPatronales : (b.totalRetenuesPatronales != null ? b.totalRetenuesPatronales : (b.totalChargesPatronales != null ? b.totalChargesPatronales : 0));
     copy.salaireNet = b.salaireNet != null ? b.salaireNet : (copy.salaireBrut - copy.totalRetenues);
+
+    let tpaVal = 0;
+    let chargesPatVal = 0;
+    if (b.lines && b.lines.length > 0) {
+      b.lines.forEach((l: any) => {
+        const cd = (l.code || '').toUpperCase();
+        const lb = (l.libelle || l.name || '').toUpperCase();
+        const tl = (l.typeLigne || '').toUpperCase();
+        const cat = (l.category || '').toUpperCase();
+        const isPatronale = tl.includes('PATRON') || cat.includes('PATRON') || cd.includes('PAT') || cd.includes('TPA') || lb.includes('PATRON') || (l.partPatronale != null && Number(l.partPatronale) > 0);
+        const part = l.partPatronale != null ? Number(l.partPatronale) : (isPatronale ? Number(l.montant || l.amount || 0) : 0);
+        if (cd.includes('TPA') || lb.includes('TPA')) {
+          tpaVal += part;
+        } else if (isPatronale && part > 0) {
+          chargesPatVal += part;
+        }
+      });
+    }
+    const brutVal = copy.salaireBrut || 0;
+    if (tpaVal === 0 && brutVal > 0) {
+      tpaVal = Math.round(brutVal * 0.03);
+    }
+    if (chargesPatVal === 0 && copy.totalRetenuesPatronales > 0) {
+      chargesPatVal = Math.max(0, copy.totalRetenuesPatronales - tpaVal);
+    }
+    copy.tpa = tpaVal;
+    copy.chargesPatronales = chargesPatVal;
 
     copy.partsFiscales = b.partsFiscales != null ? b.partsFiscales : (b.nombreCharges != null ? b.nombreCharges : 0);
 
