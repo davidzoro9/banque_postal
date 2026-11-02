@@ -55,6 +55,7 @@ public class EmployeeDto {
     // Job / Position dates & status
     private String dateEmbauche;
     private Integer ancienneteReprise;
+    private Integer dureePreavis;
     private String numeroCnss;
     private String statut;
     private String niveau;

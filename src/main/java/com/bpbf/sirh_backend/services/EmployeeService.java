@@ -247,6 +247,7 @@ public class EmployeeService {
         dto.setVehiculeFourni(entity.getVehiculeFourni());
         dto.setLogementFourni(entity.getLogementFourni());
         dto.setDateEmbauche(entity.getDateEmbauche());
+        dto.setDureePreavis(entity.getDureePreavis());
         dto.setAncienneteReprise(entity.getAncienneteReprise() != null ? entity.getAncienneteReprise() : 0);
         int ancTot = (entity.getAncienneteReprise() != null ? entity.getAncienneteReprise() : 0);
         if (entity.getDateEmbauche() != null && !entity.getDateEmbauche().isBlank()) {

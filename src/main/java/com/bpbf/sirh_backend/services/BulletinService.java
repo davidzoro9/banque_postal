@@ -52,6 +52,7 @@ public class BulletinService {
     private final ContratRepository contratRepository;
     private final EmployeeProcessService employeeProcessService;
     private final CongeWorkflowService congeWorkflowService;
+    private final ParamTrancheLicenciementService paramTrancheLicenciementService;
     private final TypeIndemniteRepository typeIndemniteRepository;
     private final SalaryElementRepository salaryElementRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
@@ -307,10 +308,15 @@ public class BulletinService {
         }
 
         if (isDiffMat) {
-            // Seules les salariées de sexe féminin avec un congé de maternité approuvé/actif durant la période
+            // Seules les collaboratrices de sexe féminin en congé de maternité sur la période ET ayant une rémunération brute > 800 000 FCFA
+            final BigDecimal plafond800k = new BigDecimal("800000.00");
             employees = employees.stream()
                     .filter(congeWorkflowService::isFeminin)
                     .filter(emp -> congeWorkflowService.isEmployeeOnApprovedMaternite(emp.getId(), dP, fP))
+                    .filter(emp -> {
+                        BigDecimal remu = calculateRemunerationBruteTheorique(emp, dP);
+                        return remu != null && remu.compareTo(plafond800k) > 0;
+                    })
                     .collect(Collectors.toList());
         } else if (isOrdinaire) {
             // RÈGLE CODE DU TRAVAIL & CONVENTION BANCAIRE BF :
@@ -524,6 +530,7 @@ public class BulletinService {
                 .filter(s -> !"VALIDE".equalsIgnoreCase(s.getStatut()) && !"CLOTURE".equalsIgnoreCase(s.getStatut()))
                 .collect(Collectors.toList());
 
+        List<BulletinDto> result = new ArrayList<>();
         for (SessionPaie s : sessions) {
             List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(s.getId());
             if (!bulletins.isEmpty()) {
@@ -531,18 +538,21 @@ public class BulletinService {
                         .map(b -> b.getEmployee().getId())
                         .distinct()
                         .collect(Collectors.toList());
-                generateBulletinsForSession(s.getId(), empIds);
+                List<BulletinDto> gen = generateBulletinsForSession(s.getId(), empIds);
+                if (gen != null) {
+                    result.addAll(gen);
+                }
             }
         }
         List<Bulletin> all = bulletinRepository.findAll();
         for (Bulletin b : all) {
             if (b.getSessionPaie() == null && !"VALIDE".equalsIgnoreCase(b.getStatut()) && !"CLOTURE".equalsIgnoreCase(b.getStatut())) {
                 try {
-                    recalculerBulletin(b.getId());
+                    result.add(recalculerBulletin(b.getId()));
                 } catch (Exception ignored) {}
             }
         }
-        return getAllBulletins();
+        return result;
     }
 
     @Transactional
@@ -1276,8 +1286,8 @@ public class BulletinService {
             BigDecimal complementBrut = money(remuBruteNormale.subtract(plafondCnss));
 
             BulletinLine compLine = new BulletinLine();
-            compLine.setCode("COMPL_MATERNITE");
-            compLine.setLibelle("Complément Maternité - Dépassement Plafond CNSS 800 000 FCFA");
+            compLine.setCode("RELIQUAT_MATERNITE");
+            compLine.setLibelle("Reliquat Maternité - Surplus au-delà du Plafond CNSS 800 000 FCFA");
             compLine.setTypeLigne("GAIN");
             compLine.setBaseCalcul(remuBruteNormale);
             compLine.setTaux(new BigDecimal("100.00"));
@@ -1411,14 +1421,9 @@ public class BulletinService {
 
             BigDecimal indemniteLicenciement = BigDecimal.ZERO;
             if (ouvreDroitIndemniteRupture && ancienneteAns >= 1.0) {
-                double t1Ans = Math.min(ancienneteAns, 5.0);
-                double t2Ans = Math.max(0.0, Math.min(ancienneteAns - 5.0, 5.0));
-                double t3Ans = Math.max(0.0, ancienneteAns - 10.0);
-
-                BigDecimal part1 = money(sgm.multiply(BigDecimal.valueOf(t1Ans)).multiply(new BigDecimal("0.30")));
-                BigDecimal part2 = money(sgm.multiply(BigDecimal.valueOf(t2Ans)).multiply(new BigDecimal("0.35")));
-                BigDecimal part3 = money(sgm.multiply(BigDecimal.valueOf(t3Ans)).multiply(new BigDecimal("0.45")));
-                indemniteLicenciement = money(part1.add(part2).add(part3));
+                indemniteLicenciement = paramTrancheLicenciementService != null
+                        ? paramTrancheLicenciementService.calculateIndemniteLicenciement(sgm, ancienneteAns)
+                        : BigDecimal.ZERO;
             }
 
             // 4. Indemnité ou Retenue de Préavis
@@ -1431,7 +1436,7 @@ public class BulletinService {
                 String gLib = emp.getGradeObj().getLibelle().toUpperCase(Locale.ROOT);
                 isCadre = gLib.contains("CADRE") || gLib.contains("DIRECTEUR") || gLib.contains("CHEF");
             }
-            int moisPreavis = isCadre ? 3 : 1;
+            int moisPreavis = (emp.getDureePreavis() != null && emp.getDureePreavis() > 0) ? emp.getDureePreavis() : (isCadre ? 3 : 1);
             BigDecimal montantPreavisCalcul = money(sgm.multiply(BigDecimal.valueOf(moisPreavis)));
 
             BigDecimal indemnitePreavis = BigDecimal.ZERO;
@@ -4992,6 +4997,67 @@ public class BulletinService {
         if (text == null) return false;
         String t = text.trim().toUpperCase(Locale.ROOT);
         return t.contains("STC") || t.contains("SOLDE DE TOUT COMPTE");
+    }
+
+        public BigDecimal calculateRemunerationBruteTheorique(Employee emp, LocalDate dateRef) {
+        if (emp == null) return BigDecimal.ZERO;
+
+        InformationSalariale infoSalariale = informationSalarialeRepository != null 
+                ? informationSalarialeRepository.findByEmployeeId(emp.getId()).orElse(null) 
+                : null;
+        SituationSalariale situation = situationRepository.findByEmployeeId(emp.getId()).orElse(null);
+
+        BigDecimal salaireBase = BigDecimal.ZERO;
+        if (infoSalariale != null && infoSalariale.getSalaireBase() != null && infoSalariale.getSalaireBase().compareTo(BigDecimal.ZERO) > 0) {
+            salaireBase = money(infoSalariale.getSalaireBase());
+        } else if (situation != null && situation.getSalaireBase() != null && situation.getSalaireBase() > 0) {
+            salaireBase = money(new BigDecimal(situation.getSalaireBase()));
+        } else if (situation != null && situation.getGrilleSalariale() != null && situation.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(situation.getGrilleSalariale().getBasicSalary());
+        } else if (emp.getGrilleSalariale() != null && emp.getGrilleSalariale().getBasicSalary() != null) {
+            salaireBase = money(emp.getGrilleSalariale().getBasicSalary());
+        }
+
+        BigDecimal surSalaire = BigDecimal.ZERO;
+        if (infoSalariale != null && infoSalariale.getSurSalaire() != null && infoSalariale.getSurSalaire().compareTo(BigDecimal.ZERO) > 0) {
+            surSalaire = money(infoSalariale.getSurSalaire());
+        } else if (situation != null && situation.getSurSalaire() != null && situation.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(situation.getSurSalaire()));
+        } else if (emp.getSurSalaire() != null && emp.getSurSalaire() > 0) {
+            surSalaire = money(new BigDecimal(emp.getSurSalaire()));
+        }
+
+        // Indemnités actives
+        List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId()).stream()
+                .filter(row -> !Boolean.FALSE.equals(row.getActif()))
+                .filter(row -> {
+                    String code = (row.getTypeIndemnite() != null && row.getTypeIndemnite().getCode() != null)
+                            ? row.getTypeIndemnite().getCode().toUpperCase(Locale.ROOT) : "";
+                    String lib = row.getLibelle() != null ? row.getLibelle().toUpperCase(Locale.ROOT) : "";
+                    if (Boolean.TRUE.equals(emp.getVehiculeFourni()) && (code.contains("TRP") || code.contains("TRANS") || lib.contains("TRANSPORT"))) return false;
+                    if (Boolean.TRUE.equals(emp.getLogementFourni()) && (code.contains("LOG") || code.contains("MAISON") || lib.contains("LOGEMENT"))) return false;
+                    return true;
+                })
+                .toList();
+        BigDecimal totIndem = rawIndemnites.stream()
+                .map(i -> i.getMontant() != null ? money(new BigDecimal(String.valueOf(i.getMontant()))) : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Prime ancienneté
+        BigDecimal txAnc = BigDecimal.ZERO;
+        int ansAnc = (emp.getAncienneteReprise() != null && emp.getAncienneteReprise() > 0) ? emp.getAncienneteReprise() : 0;
+        if (emp.getDateEmbauche() != null && !emp.getDateEmbauche().isBlank()) {
+            try {
+                LocalDate dateEmb = LocalDate.parse(emp.getDateEmbauche().trim());
+                LocalDate ref = dateRef != null ? dateRef : LocalDate.now();
+                ansAnc += Math.max(0, java.time.Period.between(dateEmb, ref).getYears());
+            } catch (Exception ignored) {}
+        }
+        if (ansAnc == 3) txAnc = new BigDecimal("5.00");
+        else if (ansAnc > 3) txAnc = new BigDecimal(5 + (ansAnc - 3)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal pAnc = money(calculatePercentage(salaireBase, txAnc));
+
+        return money(salaireBase.add(surSalaire).add(pAnc).add(totIndem));
     }
 
     public static boolean isDifferentielMaternite(SessionPaie session) {

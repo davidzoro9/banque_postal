@@ -44,6 +44,8 @@ public class Employee {
     private String dateEmbauche;
     @Column(name = "anciennete_reprise")
     private Integer ancienneteReprise = 0;
+    @Column(name = "duree_preavis")
+    private Integer dureePreavis;
     @Column(name = "numero_cnss", length = 50)
     private String numeroCnss;
     private String statut;

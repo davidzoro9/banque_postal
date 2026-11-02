@@ -65,20 +65,50 @@ public class SessionPaieController {
     @GetMapping("/maternite-eligibles")
     public ResponseEntity<List<com.bpbf.sirh_backend.dtos.EmployeeDto>> getFemmesEnCongeMaternite(
             @RequestParam(required = false) String mois,
-            @RequestParam(required = false) Integer annee) {
+            @RequestParam(required = false) Integer annee,
+            @RequestParam(required = false) Long sessionId) {
         int m = (mois != null && !mois.isBlank()) ? com.bpbf.sirh_backend.services.BulletinService.parseMois(mois) : java.time.LocalDate.now().getMonthValue();
         int a = (annee != null && annee > 0) ? annee : java.time.LocalDate.now().getYear();
+
+        if (sessionId != null) {
+            SessionPaie s = sessionPaieRepository.findById(sessionId).orElse(null);
+            if (s != null) {
+                if (s.getMois() != null && !s.getMois().isBlank()) {
+                    m = com.bpbf.sirh_backend.services.BulletinService.parseMois(s.getMois());
+                }
+                if (s.getAnnee() != null && s.getAnnee() > 0) {
+                    a = s.getAnnee();
+                }
+            }
+        }
 
         java.time.LocalDate debut = java.time.LocalDate.of(a, m, 1);
         java.time.LocalDate fin = debut.withDayOfMonth(debut.lengthOfMonth());
 
+        final java.math.BigDecimal plafondMaterniteCnss = new java.math.BigDecimal("800000.00");
+
+        // RÈGLE MÉTIER RELIQUAT : Seules les collaboratrices en congé de maternité avec rémunération brute > 800 000 FCFA
         List<com.bpbf.sirh_backend.entities.Employee> eligibles = employeeRepository.findAll().stream()
                 .filter(bulletinService::isEmployeeEligiblePaie)
                 .filter(congeWorkflowService::isFeminin)
                 .filter(emp -> congeWorkflowService.isEmployeeOnApprovedMaternite(emp.getId(), debut, fin))
+                .filter(emp -> {
+                    java.math.BigDecimal remu = bulletinService.calculateRemunerationBruteTheorique(emp, debut);
+                    return remu != null && remu.compareTo(plafondMaterniteCnss) > 0;
+                })
                 .toList();
 
-        return ResponseEntity.ok(employeeMapper.toDtos(eligibles));
+        List<com.bpbf.sirh_backend.dtos.EmployeeDto> dtos = new java.util.ArrayList<>();
+        for (com.bpbf.sirh_backend.entities.Employee emp : eligibles) {
+            com.bpbf.sirh_backend.dtos.EmployeeDto dto = employeeMapper.toDto(emp);
+            java.math.BigDecimal remu = bulletinService.calculateRemunerationBruteTheorique(emp, debut);
+            java.math.BigDecimal surplus = remu.subtract(plafondMaterniteCnss).max(java.math.BigDecimal.ZERO);
+            dto.setSalaireBrut(remu.doubleValue()); // Rémunération normale brute
+            dto.setSurSalaire(surplus.doubleValue()); // Le Reliquat (Surplus au-delà de 800 000 F)
+            dtos.add(dto);
+        }
+
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")

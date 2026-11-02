@@ -585,12 +585,14 @@ public class CongeWorkflowService {
         if (employeeId == null || debut == null || fin == null) return false;
         List<Conge> conges = congeRepository.findByEmployeeId(employeeId);
         for (Conge c : conges) {
-            String st = c.getStatut() != null ? c.getStatut().toUpperCase() : "";
-            if (st.equals("APPROUVE") || st.equals("VALIDE") || st.equals("ACCEPTE") || st.equals("EN_COURS")) {
+            String st = c.getStatut() != null ? c.getStatut().trim().toUpperCase() : "";
+            boolean isRejected = st.equals("REJETE") || st.equals("ANNULE") || st.equals("REFUSE");
+            if (!isRejected) {
                 TypeAbsenceConge tac = c.getTypeAbsenceConge();
                 String code = tac != null && tac.getCode() != null ? tac.getCode().toUpperCase() : "";
                 String name = (tac != null && tac.getName() != null ? tac.getName() : (c.getType() != null ? c.getType() : "")).toUpperCase();
-                if (code.contains("MATERNITE") || name.contains("MATERNITE") || name.contains("MATERNITÉ")) {
+                String motif = c.getMotif() != null ? c.getMotif().toUpperCase() : "";
+                if (code.contains("MATERNITE") || name.contains("MATERNITE") || name.contains("MATERNITÉ") || motif.contains("MATERNITE") || motif.contains("MATERNITÉ")) {
                     if (c.getDateDebut() != null && c.getDateFin() != null) {
                         try {
                             LocalDate cDebut = parseDateRobust(c.getDateDebut());
