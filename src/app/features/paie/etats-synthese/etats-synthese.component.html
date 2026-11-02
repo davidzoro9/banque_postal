@@ -88,6 +88,23 @@
     </div>
   </div>
 
+
+  <!-- ========================================== -->
+  <!-- BARRE D'ONGLETS RAPIDES DES ÉTATS OFFICIELS -->
+  <!-- ========================================== -->
+  <div class="states-tabs-bar" *ngIf="activeConfigs && activeConfigs.length > 0">
+    <button
+      *ngFor="let cfg of activeConfigs"
+      type="button"
+      class="state-tab-btn"
+      [class.active]="selectedEtat === cfg.code"
+      (click)="selectEtat(cfg.code)"
+    >
+      <mat-icon class="tab-icon">{{ cfg.icon || 'assessment' }}</mat-icon>
+      <span class="tab-label">{{ cfg.libelle }}</span>
+    </button>
+  </div>
+
   <!-- ========================================== -->
   <!-- BARRE DE FILTRES UNIFIÉE                   -->
   <!-- ========================================== -->

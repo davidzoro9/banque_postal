@@ -1504,3 +1504,64 @@
   font-size: 12px;
   border: 1px solid #bae6fd;
 }
+
+/* ========================================== */
+/* BARRE D'ONGLETS RAPIDES DES ÉTATS          */
+/* ========================================== */
+.states-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.2rem 0.75rem 0.2rem;
+  margin-bottom: 0.85rem;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+}
+
+.state-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  mat-icon.tab-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #64748b;
+  }
+
+  &:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  &.active {
+    background: #0060b3;
+    color: #ffffff;
+    border-color: #0060b3;
+    box-shadow: 0 2px 6px rgba(0, 96, 179, 0.25);
+
+    mat-icon.tab-icon {
+      color: #ffffff;
+    }
+  }
+}
