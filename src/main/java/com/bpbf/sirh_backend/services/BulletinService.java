@@ -2862,7 +2862,8 @@ public class BulletinService {
 
                 BulletinLine tpLine = new BulletinLine();
                 tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
-                String libelle = "Retenue Trop-perçu";
+                String elemName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : null;
+                String libelle = elemName != null ? ("Retenue Trop-perçu (" + elemName + ")") : "Retenue Trop-perçu";
                 if (tp.getMoisOrigine() != null && !tp.getMoisOrigine().isBlank()) {
                     libelle += " - " + tp.getMoisOrigine();
                 }

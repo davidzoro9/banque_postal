@@ -15,3 +15,4 @@ public class MoisBrutDto {
     private String mois;
     private BigDecimal salaireBrut;
 }
+

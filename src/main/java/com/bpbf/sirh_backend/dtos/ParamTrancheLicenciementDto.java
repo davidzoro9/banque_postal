@@ -20,3 +20,4 @@ public class ParamTrancheLicenciementDto {
     private Integer ordre;
     private Boolean actif;
 }
+

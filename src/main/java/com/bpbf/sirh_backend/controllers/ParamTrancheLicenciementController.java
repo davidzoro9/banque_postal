@@ -47,3 +47,4 @@ public class ParamTrancheLicenciementController {
         return ResponseEntity.noContent().build();
     }
 }
+

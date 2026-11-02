@@ -14,3 +14,4 @@ public interface ParamTrancheLicenciementRepository extends JpaRepository<ParamT
     Optional<ParamTrancheLicenciement> findByCode(String code);
     boolean existsByCode(String code);
 }
+

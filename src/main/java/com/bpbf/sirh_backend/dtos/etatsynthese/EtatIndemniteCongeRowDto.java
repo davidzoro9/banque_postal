@@ -30,3 +30,4 @@ public class EtatIndemniteCongeRowDto {
     private BigDecimal nombreJoursConge;
     private BigDecimal totalIndemniteConge;
 }
+

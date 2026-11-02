@@ -30,3 +30,4 @@ public class EtatIndemnitePreavisRowDto {
     private Integer dureePreavisMois;
     private BigDecimal totalIndemnitePreavis;
 }
+

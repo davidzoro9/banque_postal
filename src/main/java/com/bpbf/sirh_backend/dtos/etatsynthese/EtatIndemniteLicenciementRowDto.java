@@ -30,3 +30,4 @@ public class EtatIndemniteLicenciementRowDto {
     private BigDecimal ancienneteAnnees;
     private BigDecimal totalIndemniteLicenciement;
 }
+

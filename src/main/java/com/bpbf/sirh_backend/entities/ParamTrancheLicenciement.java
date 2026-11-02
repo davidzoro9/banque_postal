@@ -42,3 +42,4 @@ public class ParamTrancheLicenciement {
     @Builder.Default
     private Boolean actif = true;
 }
+
