@@ -69,10 +69,11 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) Long sessionPaieId,
             @RequestParam(required = false) Long bulletinLotId,
             @RequestParam(required = false) Long directionId,
-            @RequestParam(required = false) String banque) {
+            @RequestParam(required = false) String banque,
+            @RequestParam(required = false) Long employeeId) {
 
         EtatSyntheseWrapperDto dto = etatSynthesePaieService.getEtatSynthese(
-                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque);
+                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque, employeeId);
         return ResponseEntity.ok(dto);
     }
 
@@ -85,10 +86,11 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) Long sessionPaieId,
             @RequestParam(required = false) Long bulletinLotId,
             @RequestParam(required = false) Long directionId,
-            @RequestParam(required = false) String banque) {
+            @RequestParam(required = false) String banque,
+            @RequestParam(required = false) Long employeeId) {
 
         byte[] pdfBytes = etatSynthesePaieService.generatePdfReport(
-                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque);
+                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque, employeeId);
 
         String filename = "etat-" + typeEtat.toLowerCase() + ".pdf";
         return ResponseEntity.ok()
@@ -106,10 +108,11 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) Long sessionPaieId,
             @RequestParam(required = false) Long bulletinLotId,
             @RequestParam(required = false) Long directionId,
-            @RequestParam(required = false) String banque) {
+            @RequestParam(required = false) String banque,
+            @RequestParam(required = false) Long employeeId) {
 
         byte[] excelBytes = etatSynthesePaieService.generateExcelExport(
-                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque);
+                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque, employeeId);
 
         String filename = "etat-" + typeEtat.toLowerCase() + ".xlsx";
         return ResponseEntity.ok()
@@ -127,10 +130,11 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) Long sessionPaieId,
             @RequestParam(required = false) Long bulletinLotId,
             @RequestParam(required = false) Long directionId,
-            @RequestParam(required = false) String banque) {
+            @RequestParam(required = false) String banque,
+            @RequestParam(required = false) Long employeeId) {
 
         byte[] csvBytes = etatSynthesePaieService.generateCsvExport(
-                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque);
+                typeEtat, periode, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banque, employeeId);
 
         String filename = "etat-" + typeEtat.toLowerCase() + ".csv";
         return ResponseEntity.ok()

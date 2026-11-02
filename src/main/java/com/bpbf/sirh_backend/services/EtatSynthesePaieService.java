@@ -66,6 +66,8 @@ public class EtatSynthesePaieService {
     private final CompteComptableRepository compteComptableRepository;
     private final CongeWorkflowService congeWorkflowService;
     private final ParamTrancheLicenciementService paramTrancheLicenciementService;
+    private final EmployeeRepository employeeRepository;
+    private final InformationSalarialeRepository informationSalarialeRepository;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -94,6 +96,11 @@ public class EtatSynthesePaieService {
 
     @Transactional(readOnly = true)
     public EtatSyntheseWrapperDto getEtatSynthese(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
+        return getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, null);
+    }
+
+    @Transactional(readOnly = true)
+    public EtatSyntheseWrapperDto getEtatSynthese(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom, Long employeeId) {
         String type = typeEtat != null ? typeEtat.trim().toUpperCase(Locale.ROOT) : "LIVRE_PAIE";
 
         // 1. Récupération des bulletins éligibles selon les filtres (consolidés par agent)
@@ -247,40 +254,40 @@ public class EtatSynthesePaieService {
 
             case "ETAT_INDEMNITE_CONGE":
                 titreEtat = "État Détaillé Indemnité de Congé";
-                List<EtatIndemniteCongeRowDto> congeRows = buildEtatIndemniteCongeRows(bulletins);
+                List<EtatIndemniteCongeRowDto> congeRows = buildEtatIndemniteCongeRows(resolveSingleEmployeeBulletins(employeeId, bulletins));
                 rows.addAll(congeRows);
                 if (!congeRows.isEmpty()) {
                     totalNet = congeRows.stream().map(EtatIndemniteCongeRowDto::getTotalIndemniteConge).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-                    totalBrut = totalNet;
+                    totalBrut = congeRows.stream().map(EtatIndemniteCongeRowDto::getTotalBrutPeriode).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
                     totalRetenues = BigDecimal.ZERO;
                     totalPatronales = BigDecimal.ZERO;
-                    totalMasseSalariale = totalBrut;
+                    totalMasseSalariale = totalNet;
                 }
                 break;
 
             case "ETAT_INDEMNITE_LICENCIEMENT":
                 titreEtat = "État Détaillé Indemnité de Licenciement";
-                List<EtatIndemniteLicenciementRowDto> licRows = buildEtatIndemniteLicenciementRows(bulletins);
+                List<EtatIndemniteLicenciementRowDto> licRows = buildEtatIndemniteLicenciementRows(resolveSingleEmployeeBulletins(employeeId, bulletins));
                 rows.addAll(licRows);
                 if (!licRows.isEmpty()) {
                     totalNet = licRows.stream().map(EtatIndemniteLicenciementRowDto::getTotalIndemniteLicenciement).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-                    totalBrut = totalNet;
+                    totalBrut = licRows.stream().map(EtatIndemniteLicenciementRowDto::getTotalBrutPeriode).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
                     totalRetenues = BigDecimal.ZERO;
                     totalPatronales = BigDecimal.ZERO;
-                    totalMasseSalariale = totalBrut;
+                    totalMasseSalariale = totalNet;
                 }
                 break;
 
             case "ETAT_INDEMNITE_PREAVIS":
                 titreEtat = "État Détaillé Indemnité de Préavis";
-                List<EtatIndemnitePreavisRowDto> preavRows = buildEtatIndemnitePreavisRows(bulletins);
+                List<EtatIndemnitePreavisRowDto> preavRows = buildEtatIndemnitePreavisRows(resolveSingleEmployeeBulletins(employeeId, bulletins));
                 rows.addAll(preavRows);
                 if (!preavRows.isEmpty()) {
                     totalNet = preavRows.stream().map(EtatIndemnitePreavisRowDto::getTotalIndemnitePreavis).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-                    totalBrut = totalNet;
+                    totalBrut = preavRows.stream().map(EtatIndemnitePreavisRowDto::getTotalBrutPeriode).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
                     totalRetenues = BigDecimal.ZERO;
                     totalPatronales = BigDecimal.ZERO;
-                    totalMasseSalariale = totalBrut;
+                    totalMasseSalariale = totalNet;
                 }
                 break;
 
@@ -675,36 +682,83 @@ public class EtatSynthesePaieService {
         return new BigDecimal("30.0");
     }
 
+    private List<Bulletin> resolveSingleEmployeeBulletins(Long employeeId, List<Bulletin> filteredBulletins) {
+        if (employeeId == null) {
+            return Collections.emptyList();
+        }
+        if (filteredBulletins != null) {
+            Optional<Bulletin> match = filteredBulletins.stream()
+                    .filter(b -> b.getEmployee() != null && Objects.equals(b.getEmployee().getId(), employeeId))
+                    .findFirst();
+            if (match.isPresent()) {
+                return List.of(match.get());
+            }
+        }
+        List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId);
+        if (past != null && !past.isEmpty()) {
+            return List.of(past.get(0));
+        }
+        if (employeeRepository != null) {
+            Optional<Employee> empOpt = employeeRepository.findById(employeeId);
+            if (empOpt.isPresent()) {
+                Bulletin synthetic = new Bulletin();
+                synthetic.setEmployee(empOpt.get());
+                return List.of(synthetic);
+            }
+        }
+        return Collections.emptyList();
+    }
+
     private List<MoisBrutDto> getMonthlyBrutsForEmployee(Employee e, Bulletin currentB) {
         List<MoisBrutDto> list = new ArrayList<>();
         if (e != null && e.getId() != null) {
             List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(e.getId());
             if (past != null && !past.isEmpty()) {
-                List<Bulletin> eligible = past.stream()
-                        .filter(b -> b.getSalaireBrut() != null && b.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0)
-                        .filter(b -> {
-                            String nat = b.getNatureSession() != null ? b.getNatureSession().toUpperCase(Locale.ROOT) : "";
-                            return !nat.contains("STC") && !nat.contains("RETRAITE");
-                        })
-                        .limit(12)
-                        .toList();
-                for (Bulletin pb : eligible) {
+                Map<String, BigDecimal> byMonth = new LinkedHashMap<>();
+                for (Bulletin pb : past) {
+                    if (pb.getSalaireBrut() == null || pb.getSalaireBrut().compareTo(BigDecimal.ZERO) <= 0) continue;
+                    String nat = pb.getNatureSession() != null ? pb.getNatureSession().toUpperCase(Locale.ROOT) : "";
+                    if (nat.contains("STC") || nat.contains("RETRAITE")) continue;
                     String mLabel = (pb.getSessionPaie() != null && pb.getSessionPaie().getMois() != null && pb.getSessionPaie().getAnnee() != null)
                             ? (pb.getSessionPaie().getMois() + "/" + pb.getSessionPaie().getAnnee())
                             : (pb.getDateFrom() != null ? pb.getDateFrom().toString().substring(0, 7) : "Mois");
-                    list.add(new MoisBrutDto(mLabel, pb.getSalaireBrut()));
+                    if (!byMonth.containsKey(mLabel) && byMonth.size() < 12) {
+                        byMonth.put(mLabel, pb.getSalaireBrut());
+                    }
+                }
+                List<Map.Entry<String, BigDecimal>> entries = new ArrayList<>(byMonth.entrySet());
+                Collections.reverse(entries);
+                for (Map.Entry<String, BigDecimal> entry : entries) {
+                    list.add(new MoisBrutDto(entry.getKey(), entry.getValue()));
                 }
             }
         }
-        if (list.isEmpty() && currentB != null) {
-            BigDecimal bBrut = currentB.getSalaireBrut() != null && currentB.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0
-                    ? currentB.getSalaireBrut()
-                    : ((currentB.getSalaireBase() != null ? currentB.getSalaireBase() : BigDecimal.ZERO)
-                            .add(currentB.getSurSalaire() != null ? currentB.getSurSalaire() : BigDecimal.ZERO));
+        if (list.isEmpty() && currentB != null && currentB.getSalaireBrut() != null && currentB.getSalaireBrut().compareTo(BigDecimal.ZERO) > 0) {
             String mLabel = (currentB.getSessionPaie() != null && currentB.getSessionPaie().getMois() != null && currentB.getSessionPaie().getAnnee() != null)
                     ? (currentB.getSessionPaie().getMois() + "/" + currentB.getSessionPaie().getAnnee())
-                    : "Période en cours";
-            list.add(new MoisBrutDto(mLabel, bBrut));
+                    : "Mois en cours";
+            list.add(new MoisBrutDto(mLabel, currentB.getSalaireBrut()));
+        }
+        if (list.isEmpty() && e != null) {
+            BigDecimal fallbackBrut = BigDecimal.ZERO;
+            if (informationSalarialeRepository != null && e.getId() != null) {
+                Optional<InformationSalariale> infoOpt = informationSalarialeRepository.findByEmployeeId(e.getId());
+                if (infoOpt.isPresent()) {
+                    InformationSalariale info = infoOpt.get();
+                    if (info.getRemunerationBrute() != null && info.getRemunerationBrute().compareTo(BigDecimal.ZERO) > 0) {
+                        fallbackBrut = info.getRemunerationBrute();
+                    } else {
+                        BigDecimal sb = info.getSalaireBase() != null ? info.getSalaireBase() : BigDecimal.ZERO;
+                        BigDecimal ss = info.getSurSalaire() != null ? info.getSurSalaire() : BigDecimal.ZERO;
+                        BigDecimal ind = info.getTotalIndemnites() != null ? info.getTotalIndemnites() : BigDecimal.ZERO;
+                        fallbackBrut = sb.add(ss).add(ind);
+                    }
+                }
+            }
+            if (fallbackBrut.compareTo(BigDecimal.ZERO) <= 0 && e.getGrilleSalariale() != null && e.getGrilleSalariale().getSalaireBase() != null) {
+                fallbackBrut = BigDecimal.valueOf(e.getGrilleSalariale().getSalaireBase());
+            }
+            list.add(new MoisBrutDto("Mois en cours", fallbackBrut));
         }
         return list;
     }
@@ -2221,7 +2275,11 @@ public class EtatSynthesePaieService {
     }
 
     public byte[] generatePdfReport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generatePdfReport(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, null);
+    }
+
+    public byte[] generatePdfReport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom, Long employeeId) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, employeeId);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4.rotate(), 15, 15, 20, 20);
@@ -2376,147 +2434,216 @@ public class EtatSynthesePaieService {
     }
 
     private void addTableIndemniteConge(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(8);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{6, 16, 12, 28, 10, 8, 8, 12});
-        table.setSpacingAfter(8f);
-
-        addThMini(table, "Mle");
-        addThMini(table, "Nom et Prénoms");
-        addThMini(table, "Emploi & Direction");
-        addThMini(table, "Mois & Brut du mois (Détail)");
-        addThMini(table, "Total Brut");
-        addThMini(table, "Base SMJ");
-        addThMini(table, "Congés");
-        addThMini(table, "Total Indemnité");
-
-        BigDecimal totBrut = BigDecimal.ZERO;
-        BigDecimal totInd = BigDecimal.ZERO;
-
         for (Object obj : data) {
             if (obj instanceof EtatIndemniteCongeRowDto row) {
-                addTdMini(table, row.getMatricule(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getEmploi() + " (" + row.getDirection() + ")", Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getDetailsMoisTexte() != null ? row.getDetailsMoisTexte() : "—", Element.ALIGN_LEFT, false);
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, formatMoney(row.getSalaireMoyenJournalier()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, row.getNombreJoursConge() != null ? String.format(Locale.US, "%.1f j", row.getNombreJoursConge()) : "—", Element.ALIGN_CENTER, false);
+                Paragraph pAgent = new Paragraph("Employé : " + row.getNomPrenom() + "   |   Matricule : " + row.getMatricule() + "   |   Emploi : " + row.getEmploi() + "   |   Direction : " + row.getDirection(), FONT_SUBTITLE);
+                pAgent.setSpacingAfter(6f);
+                doc.add(pAgent);
+
+                PdfPTable table = new PdfPTable(6);
+                table.setWidthPercentage(100);
+                table.setWidths(new float[]{8, 22, 20, 18, 14, 18});
+                table.setSpacingAfter(8f);
+
+                addThMini(table, "N°");
+                addThMini(table, "Mois");
+                addThMini(table, "Brut du mois");
+                addThMini(table, "Total Brut");
+                addThMini(table, "Nombre de congé");
+                addThMini(table, "Total Indemnité");
+
+                List<MoisBrutDto> details = (row.getDetailsMois() != null && !row.getDetailsMois().isEmpty())
+                        ? row.getDetailsMois()
+                        : List.of(new MoisBrutDto("Période", row.getTotalBrutPeriode()));
+
+                int span = details.size();
+                for (int i = 0; i < span; i++) {
+                    MoisBrutDto m = details.get(i);
+                    addTdMini(table, String.valueOf(i + 1), Element.ALIGN_CENTER, false);
+                    addTdMini(table, m.getMois(), Element.ALIGN_LEFT, true);
+                    addTdMini(table, formatMoney(m.getSalaireBrut()), Element.ALIGN_RIGHT, false);
+
+                    if (i == 0) {
+                        PdfPCell cTotBrut = new PdfPCell(new Phrase(formatMoney(row.getTotalBrutPeriode()), FONT_TD_BOLD_MINI));
+                        cTotBrut.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotBrut.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotBrut.setRowspan(span);
+                        cTotBrut.setPadding(4f);
+                        table.addCell(cTotBrut);
+
+                        String jStr = row.getNombreJoursConge() != null ? String.format(Locale.US, "%.1f j", row.getNombreJoursConge()) : "—";
+                        PdfPCell cJours = new PdfPCell(new Phrase(jStr, FONT_TD_BOLD_MINI));
+                        cJours.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        cJours.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cJours.setRowspan(span);
+                        cJours.setPadding(4f);
+                        table.addCell(cJours);
+
+                        PdfPCell cTotInd = new PdfPCell(new Phrase(formatMoney(row.getTotalIndemniteConge()), FONT_TD_BOLD_MINI));
+                        cTotInd.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotInd.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotInd.setRowspan(span);
+                        cTotInd.setPadding(4f);
+                        table.addCell(cTotInd);
+                    }
+                }
+
+                PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE CONGÉ", FONT_TD_BOLD_MINI));
+                cTot.setColspan(2);
+                cTot.setBackgroundColor(HEADER_BG);
+                cTot.setPadding(4f);
+                table.addCell(cTot);
+
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, row.getNombreJoursConge() != null ? String.format(Locale.US, "%.1f j", row.getNombreJoursConge()) : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemniteConge()), Element.ALIGN_RIGHT, true);
 
-                if (row.getTotalBrutPeriode() != null) totBrut = totBrut.add(row.getTotalBrutPeriode());
-                if (row.getTotalIndemniteConge() != null) totInd = totInd.add(row.getTotalIndemniteConge());
+                doc.add(table);
             }
         }
-
-        PdfPCell cTot = new PdfPCell(new Phrase("TOTAL GÉNÉRAL INDEMNITÉ DE CONGÉ", FONT_TD_BOLD_MINI));
-        cTot.setColspan(4);
-        cTot.setBackgroundColor(HEADER_BG);
-        cTot.setPadding(4f);
-        table.addCell(cTot);
-
-        addTdMini(table, formatMoney(totBrut), Element.ALIGN_RIGHT, true);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, formatMoney(totInd), Element.ALIGN_RIGHT, true);
-
-        doc.add(table);
     }
 
     private void addTableIndemniteLicenciement(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(8);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{6, 16, 12, 28, 10, 8, 8, 12});
-        table.setSpacingAfter(8f);
-
-        addThMini(table, "Mle");
-        addThMini(table, "Nom et Prénoms");
-        addThMini(table, "Emploi & Direction");
-        addThMini(table, "Mois & Brut du mois (Détail)");
-        addThMini(table, "Total Brut");
-        addThMini(table, "Base SGM");
-        addThMini(table, "Ancienneté");
-        addThMini(table, "Total Indemnité");
-
-        BigDecimal totBrut = BigDecimal.ZERO;
-        BigDecimal totInd = BigDecimal.ZERO;
-
         for (Object obj : data) {
             if (obj instanceof EtatIndemniteLicenciementRowDto row) {
-                addTdMini(table, row.getMatricule(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getEmploi() + " (" + row.getDirection() + ")", Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getDetailsMoisTexte() != null ? row.getDetailsMoisTexte() : "—", Element.ALIGN_LEFT, false);
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, formatMoney(row.getSalaireGlobalMoyen()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, row.getAncienneteAnnees() != null ? String.format(Locale.US, "%.1f a", row.getAncienneteAnnees()) : "—", Element.ALIGN_CENTER, false);
+                Paragraph pAgent = new Paragraph("Employé : " + row.getNomPrenom() + "   |   Matricule : " + row.getMatricule() + "   |   Emploi : " + row.getEmploi() + "   |   Direction : " + row.getDirection(), FONT_SUBTITLE);
+                pAgent.setSpacingAfter(6f);
+                doc.add(pAgent);
+
+                PdfPTable table = new PdfPTable(6);
+                table.setWidthPercentage(100);
+                table.setWidths(new float[]{8, 22, 20, 18, 14, 18});
+                table.setSpacingAfter(8f);
+
+                addThMini(table, "N°");
+                addThMini(table, "Mois");
+                addThMini(table, "Brut du mois");
+                addThMini(table, "Total Brut");
+                addThMini(table, "Ancienneté");
+                addThMini(table, "Total Indemnité");
+
+                List<MoisBrutDto> details = (row.getDetailsMois() != null && !row.getDetailsMois().isEmpty())
+                        ? row.getDetailsMois()
+                        : List.of(new MoisBrutDto("Période", row.getTotalBrutPeriode()));
+
+                int span = details.size();
+                for (int i = 0; i < span; i++) {
+                    MoisBrutDto m = details.get(i);
+                    addTdMini(table, String.valueOf(i + 1), Element.ALIGN_CENTER, false);
+                    addTdMini(table, m.getMois(), Element.ALIGN_LEFT, true);
+                    addTdMini(table, formatMoney(m.getSalaireBrut()), Element.ALIGN_RIGHT, false);
+
+                    if (i == 0) {
+                        PdfPCell cTotBrut = new PdfPCell(new Phrase(formatMoney(row.getTotalBrutPeriode()), FONT_TD_BOLD_MINI));
+                        cTotBrut.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotBrut.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotBrut.setRowspan(span);
+                        cTotBrut.setPadding(4f);
+                        table.addCell(cTotBrut);
+
+                        String aStr = row.getAncienneteAnnees() != null ? String.format(Locale.US, "%.1f ans", row.getAncienneteAnnees()) : "—";
+                        PdfPCell cAnc = new PdfPCell(new Phrase(aStr, FONT_TD_BOLD_MINI));
+                        cAnc.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        cAnc.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cAnc.setRowspan(span);
+                        cAnc.setPadding(4f);
+                        table.addCell(cAnc);
+
+                        PdfPCell cTotInd = new PdfPCell(new Phrase(formatMoney(row.getTotalIndemniteLicenciement()), FONT_TD_BOLD_MINI));
+                        cTotInd.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotInd.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotInd.setRowspan(span);
+                        cTotInd.setPadding(4f);
+                        table.addCell(cTotInd);
+                    }
+                }
+
+                PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE LICENCIEMENT", FONT_TD_BOLD_MINI));
+                cTot.setColspan(2);
+                cTot.setBackgroundColor(HEADER_BG);
+                cTot.setPadding(4f);
+                table.addCell(cTot);
+
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, row.getAncienneteAnnees() != null ? String.format(Locale.US, "%.1f ans", row.getAncienneteAnnees()) : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemniteLicenciement()), Element.ALIGN_RIGHT, true);
 
-                if (row.getTotalBrutPeriode() != null) totBrut = totBrut.add(row.getTotalBrutPeriode());
-                if (row.getTotalIndemniteLicenciement() != null) totInd = totInd.add(row.getTotalIndemniteLicenciement());
+                doc.add(table);
             }
         }
-
-        PdfPCell cTot = new PdfPCell(new Phrase("TOTAL GÉNÉRAL INDEMNITÉ DE LICENCIEMENT", FONT_TD_BOLD_MINI));
-        cTot.setColspan(4);
-        cTot.setBackgroundColor(HEADER_BG);
-        cTot.setPadding(4f);
-        table.addCell(cTot);
-
-        addTdMini(table, formatMoney(totBrut), Element.ALIGN_RIGHT, true);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, formatMoney(totInd), Element.ALIGN_RIGHT, true);
-
-        doc.add(table);
     }
 
     private void addTableIndemnitePreavis(Document doc, List<Object> data) throws DocumentException {
-        PdfPTable table = new PdfPTable(8);
-        table.setWidthPercentage(100);
-        table.setWidths(new float[]{6, 16, 12, 28, 10, 8, 8, 12});
-        table.setSpacingAfter(8f);
-
-        addThMini(table, "Mle");
-        addThMini(table, "Nom et Prénoms");
-        addThMini(table, "Emploi & Direction");
-        addThMini(table, "Mois & Brut du mois (Détail)");
-        addThMini(table, "Total Brut");
-        addThMini(table, "Base SGM");
-        addThMini(table, "Préavis");
-        addThMini(table, "Total Indemnité");
-
-        BigDecimal totBrut = BigDecimal.ZERO;
-        BigDecimal totInd = BigDecimal.ZERO;
-
         for (Object obj : data) {
             if (obj instanceof EtatIndemnitePreavisRowDto row) {
-                addTdMini(table, row.getMatricule(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getNomPrenom(), Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getEmploi() + " (" + row.getDirection() + ")", Element.ALIGN_LEFT, false);
-                addTdMini(table, row.getDetailsMoisTexte() != null ? row.getDetailsMoisTexte() : "—", Element.ALIGN_LEFT, false);
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, formatMoney(row.getSalaireMoyenMensuel()), Element.ALIGN_RIGHT, false);
-                addTdMini(table, row.getDureePreavisMois() != null && row.getDureePreavisMois() > 0 ? row.getDureePreavisMois() + " m" : "—", Element.ALIGN_CENTER, false);
+                Paragraph pAgent = new Paragraph("Employé : " + row.getNomPrenom() + "   |   Matricule : " + row.getMatricule() + "   |   Emploi : " + row.getEmploi() + "   |   Direction : " + row.getDirection(), FONT_SUBTITLE);
+                pAgent.setSpacingAfter(6f);
+                doc.add(pAgent);
+
+                PdfPTable table = new PdfPTable(6);
+                table.setWidthPercentage(100);
+                table.setWidths(new float[]{8, 22, 20, 18, 14, 18});
+                table.setSpacingAfter(8f);
+
+                addThMini(table, "N°");
+                addThMini(table, "Mois");
+                addThMini(table, "Brut du mois");
+                addThMini(table, "Total Brut");
+                addThMini(table, "Durée du préavis");
+                addThMini(table, "Total Indemnité");
+
+                List<MoisBrutDto> details = (row.getDetailsMois() != null && !row.getDetailsMois().isEmpty())
+                        ? row.getDetailsMois()
+                        : List.of(new MoisBrutDto("Période", row.getTotalBrutPeriode()));
+
+                int span = details.size();
+                for (int i = 0; i < span; i++) {
+                    MoisBrutDto m = details.get(i);
+                    addTdMini(table, String.valueOf(i + 1), Element.ALIGN_CENTER, false);
+                    addTdMini(table, m.getMois(), Element.ALIGN_LEFT, true);
+                    addTdMini(table, formatMoney(m.getSalaireBrut()), Element.ALIGN_RIGHT, false);
+
+                    if (i == 0) {
+                        PdfPCell cTotBrut = new PdfPCell(new Phrase(formatMoney(row.getTotalBrutPeriode()), FONT_TD_BOLD_MINI));
+                        cTotBrut.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotBrut.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotBrut.setRowspan(span);
+                        cTotBrut.setPadding(4f);
+                        table.addCell(cTotBrut);
+
+                        String pStr = row.getDureePreavisMois() != null && row.getDureePreavisMois() > 0 ? row.getDureePreavisMois() + " mois" : "—";
+                        PdfPCell cPreav = new PdfPCell(new Phrase(pStr, FONT_TD_BOLD_MINI));
+                        cPreav.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        cPreav.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cPreav.setRowspan(span);
+                        cPreav.setPadding(4f);
+                        table.addCell(cPreav);
+
+                        PdfPCell cTotInd = new PdfPCell(new Phrase(formatMoney(row.getTotalIndemnitePreavis()), FONT_TD_BOLD_MINI));
+                        cTotInd.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                        cTotInd.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                        cTotInd.setRowspan(span);
+                        cTotInd.setPadding(4f);
+                        table.addCell(cTotInd);
+                    }
+                }
+
+                PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE PRÉAVIS", FONT_TD_BOLD_MINI));
+                cTot.setColspan(2);
+                cTot.setBackgroundColor(HEADER_BG);
+                cTot.setPadding(4f);
+                table.addCell(cTot);
+
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
+                addTdMini(table, row.getDureePreavisMois() != null && row.getDureePreavisMois() > 0 ? row.getDureePreavisMois() + " mois" : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemnitePreavis()), Element.ALIGN_RIGHT, true);
 
-                if (row.getTotalBrutPeriode() != null) totBrut = totBrut.add(row.getTotalBrutPeriode());
-                if (row.getTotalIndemnitePreavis() != null) totInd = totInd.add(row.getTotalIndemnitePreavis());
+                doc.add(table);
             }
         }
-
-        PdfPCell cTot = new PdfPCell(new Phrase("TOTAL GÉNÉRAL INDEMNITÉ DE PRÉAVIS", FONT_TD_BOLD_MINI));
-        cTot.setColspan(4);
-        cTot.setBackgroundColor(HEADER_BG);
-        cTot.setPadding(4f);
-        table.addCell(cTot);
-
-        addTdMini(table, formatMoney(totBrut), Element.ALIGN_RIGHT, true);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, "—", Element.ALIGN_CENTER, false);
-        addTdMini(table, formatMoney(totInd), Element.ALIGN_RIGHT, true);
-
-        doc.add(table);
     }
     private void addTableStc(Document doc, List<Object> data) throws DocumentException {
         // État du Solde de Tout Compte & Indemnités de Départ (Modèle Officiel A4 Paysage)
@@ -3249,7 +3376,11 @@ public class EtatSynthesePaieService {
     }
 
     public byte[] generateCsvExport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generateCsvExport(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, null);
+    }
+
+    public byte[] generateCsvExport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom, Long employeeId) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, employeeId);
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -3296,123 +3427,64 @@ public class EtatSynthesePaieService {
             pw.println("TOTAL ORDRE DE DÉBIT COMPTABLE (OD DE PAIE);;;;" + formatCsvMontant(totDeb) + ";" + formatCsvMontant(totCrd) + ";;");
 
         } else if ("ETAT_INDEMNITE_CONGE".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SMJ (FCFA);Nombre de Jours de Congé;Total Indemnité de Congé (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
+            pw.println("N°;Mois;Brut du mois (FCFA);Total Brut (FCFA);Nombre de congé;Total Indemnité (FCFA)");
             for (Object o : data) {
                 if (o instanceof EtatIndemniteCongeRowDto c) {
-                    pw.println((c.getNumeroOrdre() != null ? c.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(c.getMatricule()) + ";" +
-                               escape(c.getNomPrenom()) + ";" +
-                               escape(c.getEmploi()) + ";" +
-                               escape(c.getDirection()) + ";" +
-                               escape(c.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(c.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(c.getSalaireMoyenJournalier()) + ";" +
-                               (c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "0") + ";" +
-                               formatCsvMontant(c.getTotalIndemniteConge()));
-                    if (c.getTotalIndemniteConge() != null) totInd = totInd.add(c.getTotalIndemniteConge());
+                    List<MoisBrutDto> details = (c.getDetailsMois() != null && !c.getDetailsMois().isEmpty())
+                            ? c.getDetailsMois()
+                            : List.of(new MoisBrutDto("Période", c.getTotalBrutPeriode()));
+                    for (int i = 0; i < details.size(); i++) {
+                        MoisBrutDto m = details.get(i);
+                        pw.println((i + 1) + ";" +
+                                   escape(m.getMois()) + ";" +
+                                   formatCsvMontant(m.getSalaireBrut()) + ";" +
+                                   (i == 0 ? formatCsvMontant(c.getTotalBrutPeriode()) : "") + ";" +
+                                   (i == 0 && c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "") + ";" +
+                                   (i == 0 ? formatCsvMontant(c.getTotalIndemniteConge()) : ""));
+                    }
+                    pw.println("TOTAL;;" + formatCsvMontant(c.getTotalBrutPeriode()) + ";" + formatCsvMontant(c.getTotalBrutPeriode()) + ";" + (c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "") + ";" + formatCsvMontant(c.getTotalIndemniteConge()));
                 }
             }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
 
         } else if ("ETAT_INDEMNITE_LICENCIEMENT".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SGM (FCFA);Ancienneté (ans);Total Indemnité de Licenciement (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
+            pw.println("N°;Mois;Brut du mois (FCFA);Total Brut (FCFA);Ancienneté (ans);Total Indemnité (FCFA)");
             for (Object o : data) {
                 if (o instanceof EtatIndemniteLicenciementRowDto l) {
-                    pw.println((l.getNumeroOrdre() != null ? l.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(l.getMatricule()) + ";" +
-                               escape(l.getNomPrenom()) + ";" +
-                               escape(l.getEmploi()) + ";" +
-                               escape(l.getDirection()) + ";" +
-                               escape(l.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(l.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(l.getSalaireGlobalMoyen()) + ";" +
-                               (l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "0") + ";" +
-                               formatCsvMontant(l.getTotalIndemniteLicenciement()));
-                    if (l.getTotalIndemniteLicenciement() != null) totInd = totInd.add(l.getTotalIndemniteLicenciement());
+                    List<MoisBrutDto> details = (l.getDetailsMois() != null && !l.getDetailsMois().isEmpty())
+                            ? l.getDetailsMois()
+                            : List.of(new MoisBrutDto("Période", l.getTotalBrutPeriode()));
+                    for (int i = 0; i < details.size(); i++) {
+                        MoisBrutDto m = details.get(i);
+                        pw.println((i + 1) + ";" +
+                                   escape(m.getMois()) + ";" +
+                                   formatCsvMontant(m.getSalaireBrut()) + ";" +
+                                   (i == 0 ? formatCsvMontant(l.getTotalBrutPeriode()) : "") + ";" +
+                                   (i == 0 && l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "") + ";" +
+                                   (i == 0 ? formatCsvMontant(l.getTotalIndemniteLicenciement()) : ""));
+                    }
+                    pw.println("TOTAL;;" + formatCsvMontant(l.getTotalBrutPeriode()) + ";" + formatCsvMontant(l.getTotalBrutPeriode()) + ";" + (l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "") + ";" + formatCsvMontant(l.getTotalIndemniteLicenciement()));
                 }
             }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
 
         } else if ("ETAT_INDEMNITE_PREAVIS".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SGM (FCFA);Durée Préavis (mois);Total Indemnité de Préavis (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
+            pw.println("N°;Mois;Brut du mois (FCFA);Total Brut (FCFA);Durée du préavis (mois);Total Indemnité (FCFA)");
             for (Object o : data) {
                 if (o instanceof EtatIndemnitePreavisRowDto p) {
-                    pw.println((p.getNumeroOrdre() != null ? p.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(p.getMatricule()) + ";" +
-                               escape(p.getNomPrenom()) + ";" +
-                               escape(p.getEmploi()) + ";" +
-                               escape(p.getDirection()) + ";" +
-                               escape(p.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(p.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(p.getSalaireMoyenMensuel()) + ";" +
-                               (p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "0") + ";" +
-                               formatCsvMontant(p.getTotalIndemnitePreavis()));
-                    if (p.getTotalIndemnitePreavis() != null) totInd = totInd.add(p.getTotalIndemnitePreavis());
+                    List<MoisBrutDto> details = (p.getDetailsMois() != null && !p.getDetailsMois().isEmpty())
+                            ? p.getDetailsMois()
+                            : List.of(new MoisBrutDto("Période", p.getTotalBrutPeriode()));
+                    for (int i = 0; i < details.size(); i++) {
+                        MoisBrutDto m = details.get(i);
+                        pw.println((i + 1) + ";" +
+                                   escape(m.getMois()) + ";" +
+                                   formatCsvMontant(m.getSalaireBrut()) + ";" +
+                                   (i == 0 ? formatCsvMontant(p.getTotalBrutPeriode()) : "") + ";" +
+                                   (i == 0 && p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "") + ";" +
+                                   (i == 0 ? formatCsvMontant(p.getTotalIndemnitePreavis()) : ""));
+                    }
+                    pw.println("TOTAL;;" + formatCsvMontant(p.getTotalBrutPeriode()) + ";" + formatCsvMontant(p.getTotalBrutPeriode()) + ";" + (p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "") + ";" + formatCsvMontant(p.getTotalIndemnitePreavis()));
                 }
             }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
-        } else if ("ETAT_INDEMNITE_CONGE".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SMJ (FCFA);Nombre de Jours de Congé;Total Indemnité de Congé (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
-            for (Object o : data) {
-                if (o instanceof EtatIndemniteCongeRowDto c) {
-                    pw.println((c.getNumeroOrdre() != null ? c.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(c.getMatricule()) + ";" +
-                               escape(c.getNomPrenom()) + ";" +
-                               escape(c.getEmploi()) + ";" +
-                               escape(c.getDirection()) + ";" +
-                               escape(c.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(c.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(c.getSalaireMoyenJournalier()) + ";" +
-                               (c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "0") + ";" +
-                               formatCsvMontant(c.getTotalIndemniteConge()));
-                    if (c.getTotalIndemniteConge() != null) totInd = totInd.add(c.getTotalIndemniteConge());
-                }
-            }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
-
-        } else if ("ETAT_INDEMNITE_LICENCIEMENT".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SGM (FCFA);Ancienneté (ans);Total Indemnité de Licenciement (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
-            for (Object o : data) {
-                if (o instanceof EtatIndemniteLicenciementRowDto l) {
-                    pw.println((l.getNumeroOrdre() != null ? l.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(l.getMatricule()) + ";" +
-                               escape(l.getNomPrenom()) + ";" +
-                               escape(l.getEmploi()) + ";" +
-                               escape(l.getDirection()) + ";" +
-                               escape(l.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(l.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(l.getSalaireGlobalMoyen()) + ";" +
-                               (l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "0") + ";" +
-                               formatCsvMontant(l.getTotalIndemniteLicenciement()));
-                    if (l.getTotalIndemniteLicenciement() != null) totInd = totInd.add(l.getTotalIndemniteLicenciement());
-                }
-            }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
-
-        } else if ("ETAT_INDEMNITE_PREAVIS".equalsIgnoreCase(type)) {
-            pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Mois et Bruts Mensuels;Total Brut Période (FCFA);Base SGM (FCFA);Durée Préavis (mois);Total Indemnité de Préavis (FCFA)");
-            BigDecimal totInd = BigDecimal.ZERO;
-            for (Object o : data) {
-                if (o instanceof EtatIndemnitePreavisRowDto p) {
-                    pw.println((p.getNumeroOrdre() != null ? p.getNumeroOrdre().toString() : "—") + ";" +
-                               escape(p.getMatricule()) + ";" +
-                               escape(p.getNomPrenom()) + ";" +
-                               escape(p.getEmploi()) + ";" +
-                               escape(p.getDirection()) + ";" +
-                               escape(p.getDetailsMoisTexte()) + ";" +
-                               formatCsvMontant(p.getTotalBrutPeriode()) + ";" +
-                               formatCsvMontant(p.getSalaireMoyenMensuel()) + ";" +
-                               (p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "0") + ";" +
-                               formatCsvMontant(p.getTotalIndemnitePreavis()));
-                    if (p.getTotalIndemnitePreavis() != null) totInd = totInd.add(p.getTotalIndemnitePreavis());
-                }
-            }
-            pw.println("TOTAL;;;;;;" + formatCsvMontant(totInd));
         } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
             pw.println("N° d'Ordre;Matricule;Nom et Prénoms;Emploi;Direction;Motif Rupture;Ancienneté (ans);Base SGM (FCFA);Base SMJ (FCFA);Jours Congés Acquis;Indemnité Congés Acquis (FCFA);Indemnité Licenciement (FCFA);Préavis (mois);Indemnité Préavis (FCFA);Prorata Gratifications (FCFA);Total Brut STC (FCFA);Total Exonérations (FCFA);Retenues Fiscales & Sociales (FCFA);Solde Prêts & Précomptes (FCFA);Total Retenues (FCFA);Net Solde de Tout Compte (FCFA)");
             BigDecimal totCp = BigDecimal.ZERO;
@@ -3918,7 +3990,11 @@ public class EtatSynthesePaieService {
     }
 
     public byte[] generateExcelExport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
-        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom);
+        return generateExcelExport(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, null);
+    }
+
+    public byte[] generateExcelExport(String typeEtat, String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom, Long employeeId) {
+        EtatSyntheseWrapperDto etat = getEtatSynthese(typeEtat, periodeFiltre, dateDebut, dateFin, sessionPaieId, bulletinLotId, directionId, banqueNom, employeeId);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             String sheetName = etat.getTypeEtat() != null ? etat.getTypeEtat() : "ETAT";
@@ -4062,88 +4138,97 @@ public class EtatSynthesePaieService {
                 createCell(totRow, 4, totCredit, totalNumStyle);
 
             } else if ("ETAT_INDEMNITE_CONGE".equalsIgnoreCase(type)) {
-                String[] headers = {"N°", "Matricule", "Nom et Prénoms", "Emploi", "Direction", "Mois et Bruts Mensuels", "Total Brut (FCFA)", "Base SMJ (FCFA)", "Jours Congé", "Total Indemnité Congé (FCFA)"};
+                String[] headers = {"N°", "Mois", "Brut du mois (FCFA)", "Total Brut (FCFA)", "Nombre de congé", "Total Indemnité (FCFA)"};
                 colCount = headers.length;
                 for (int h = 0; h < headers.length; h++) {
-                    createCell(headerRow, h, headers[h], (h >= 6) ? thNumStyle : thStyle);
+                    createCell(headerRow, h, headers[h], (h >= 2) ? thNumStyle : thStyle);
                 }
-                BigDecimal totInd = BigDecimal.ZERO;
                 for (Object o : data) {
                     if (o instanceof EtatIndemniteCongeRowDto c) {
-                        Row row = sheet.createRow(rowIndex++);
-                        createCell(row, 0, c.getNumeroOrdre() != null ? c.getNumeroOrdre().toString() : "—", tdCenterStyle);
-                        createCell(row, 1, c.getMatricule(), tdCenterStyle);
-                        createCell(row, 2, c.getNomPrenom(), tdTextStyle);
-                        createCell(row, 3, c.getEmploi(), tdTextStyle);
-                        createCell(row, 4, c.getDirection(), tdTextStyle);
-                        createCell(row, 5, c.getDetailsMoisTexte(), tdTextStyle);
-                        createCell(row, 6, c.getTotalBrutPeriode(), tdNumStyle);
-                        createCell(row, 7, c.getSalaireMoyenJournalier(), tdNumStyle);
-                        createCell(row, 8, c.getNombreJoursConge(), tdNumStyle);
-                        createCell(row, 9, c.getTotalIndemniteConge(), tdNumBoldStyle);
-                        if (c.getTotalIndemniteConge() != null) totInd = totInd.add(c.getTotalIndemniteConge());
+                        List<MoisBrutDto> details = (c.getDetailsMois() != null && !c.getDetailsMois().isEmpty())
+                                ? c.getDetailsMois()
+                                : List.of(new MoisBrutDto("Période", c.getTotalBrutPeriode()));
+                        for (int i = 0; i < details.size(); i++) {
+                            MoisBrutDto m = details.get(i);
+                            Row row = sheet.createRow(rowIndex++);
+                            createCell(row, 0, String.valueOf(i + 1), tdCenterStyle);
+                            createCell(row, 1, m.getMois(), tdTextStyle);
+                            createCell(row, 2, m.getSalaireBrut(), tdNumStyle);
+                            createCell(row, 3, i == 0 ? c.getTotalBrutPeriode() : null, tdNumBoldStyle);
+                            createCell(row, 4, i == 0 ? c.getNombreJoursConge() : null, tdCenterStyle);
+                            createCell(row, 5, i == 0 ? c.getTotalIndemniteConge() : null, tdNumBoldStyle);
+                        }
+                        Row totRow = sheet.createRow(rowIndex++);
+                        createCell(totRow, 0, "TOTAL INDEMNITÉ DE CONGÉ", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
+                        createCell(totRow, 2, c.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 3, c.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 4, c.getNombreJoursConge(), totalNumStyle);
+                        createCell(totRow, 5, c.getTotalIndemniteConge(), totalNumStyle);
                     }
                 }
-                Row totRow = sheet.createRow(rowIndex++);
-                createCell(totRow, 0, "TOTAL", totalLabelStyle);
-                sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 8));
-                createCell(totRow, 9, totInd, totalNumStyle);
 
             } else if ("ETAT_INDEMNITE_LICENCIEMENT".equalsIgnoreCase(type)) {
-                String[] headers = {"N°", "Matricule", "Nom et Prénoms", "Emploi", "Direction", "Mois et Bruts Mensuels", "Total Brut (FCFA)", "Base SGM (FCFA)", "Ancienneté (ans)", "Total Indemnité Licenciement (FCFA)"};
+                String[] headers = {"N°", "Mois", "Brut du mois (FCFA)", "Total Brut (FCFA)", "Ancienneté (ans)", "Total Indemnité (FCFA)"};
                 colCount = headers.length;
                 for (int h = 0; h < headers.length; h++) {
-                    createCell(headerRow, h, headers[h], (h >= 6) ? thNumStyle : thStyle);
+                    createCell(headerRow, h, headers[h], (h >= 2) ? thNumStyle : thStyle);
                 }
-                BigDecimal totInd = BigDecimal.ZERO;
                 for (Object o : data) {
                     if (o instanceof EtatIndemniteLicenciementRowDto l) {
-                        Row row = sheet.createRow(rowIndex++);
-                        createCell(row, 0, l.getNumeroOrdre() != null ? l.getNumeroOrdre().toString() : "—", tdCenterStyle);
-                        createCell(row, 1, l.getMatricule(), tdCenterStyle);
-                        createCell(row, 2, l.getNomPrenom(), tdTextStyle);
-                        createCell(row, 3, l.getEmploi(), tdTextStyle);
-                        createCell(row, 4, l.getDirection(), tdTextStyle);
-                        createCell(row, 5, l.getDetailsMoisTexte(), tdTextStyle);
-                        createCell(row, 6, l.getTotalBrutPeriode(), tdNumStyle);
-                        createCell(row, 7, l.getSalaireGlobalMoyen(), tdNumStyle);
-                        createCell(row, 8, l.getAncienneteAnnees(), tdNumStyle);
-                        createCell(row, 9, l.getTotalIndemniteLicenciement(), tdNumBoldStyle);
-                        if (l.getTotalIndemniteLicenciement() != null) totInd = totInd.add(l.getTotalIndemniteLicenciement());
+                        List<MoisBrutDto> details = (l.getDetailsMois() != null && !l.getDetailsMois().isEmpty())
+                                ? l.getDetailsMois()
+                                : List.of(new MoisBrutDto("Période", l.getTotalBrutPeriode()));
+                        for (int i = 0; i < details.size(); i++) {
+                            MoisBrutDto m = details.get(i);
+                            Row row = sheet.createRow(rowIndex++);
+                            createCell(row, 0, String.valueOf(i + 1), tdCenterStyle);
+                            createCell(row, 1, m.getMois(), tdTextStyle);
+                            createCell(row, 2, m.getSalaireBrut(), tdNumStyle);
+                            createCell(row, 3, i == 0 ? l.getTotalBrutPeriode() : null, tdNumBoldStyle);
+                            createCell(row, 4, i == 0 ? l.getAncienneteAnnees() : null, tdCenterStyle);
+                            createCell(row, 5, i == 0 ? l.getTotalIndemniteLicenciement() : null, tdNumBoldStyle);
+                        }
+                        Row totRow = sheet.createRow(rowIndex++);
+                        createCell(totRow, 0, "TOTAL INDEMNITÉ DE LICENCIEMENT", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
+                        createCell(totRow, 2, l.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 3, l.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 4, l.getAncienneteAnnees(), totalNumStyle);
+                        createCell(totRow, 5, l.getTotalIndemniteLicenciement(), totalNumStyle);
                     }
                 }
-                Row totRow = sheet.createRow(rowIndex++);
-                createCell(totRow, 0, "TOTAL", totalLabelStyle);
-                sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 8));
-                createCell(totRow, 9, totInd, totalNumStyle);
 
             } else if ("ETAT_INDEMNITE_PREAVIS".equalsIgnoreCase(type)) {
-                String[] headers = {"N°", "Matricule", "Nom et Prénoms", "Emploi", "Direction", "Mois et Bruts Mensuels", "Total Brut (FCFA)", "Base SGM (FCFA)", "Préavis (mois)", "Total Indemnité Préavis (FCFA)"};
+                String[] headers = {"N°", "Mois", "Brut du mois (FCFA)", "Total Brut (FCFA)", "Durée du préavis (mois)", "Total Indemnité (FCFA)"};
                 colCount = headers.length;
                 for (int h = 0; h < headers.length; h++) {
-                    createCell(headerRow, h, headers[h], (h >= 6) ? thNumStyle : thStyle);
+                    createCell(headerRow, h, headers[h], (h >= 2) ? thNumStyle : thStyle);
                 }
-                BigDecimal totInd = BigDecimal.ZERO;
                 for (Object o : data) {
                     if (o instanceof EtatIndemnitePreavisRowDto p) {
-                        Row row = sheet.createRow(rowIndex++);
-                        createCell(row, 0, p.getNumeroOrdre() != null ? p.getNumeroOrdre().toString() : "—", tdCenterStyle);
-                        createCell(row, 1, p.getMatricule(), tdCenterStyle);
-                        createCell(row, 2, p.getNomPrenom(), tdTextStyle);
-                        createCell(row, 3, p.getEmploi(), tdTextStyle);
-                        createCell(row, 4, p.getDirection(), tdTextStyle);
-                        createCell(row, 5, p.getDetailsMoisTexte(), tdTextStyle);
-                        createCell(row, 6, p.getTotalBrutPeriode(), tdNumStyle);
-                        createCell(row, 7, p.getSalaireMoyenMensuel(), tdNumStyle);
-                        createCell(row, 8, p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "0", tdCenterStyle);
-                        createCell(row, 9, p.getTotalIndemnitePreavis(), tdNumBoldStyle);
-                        if (p.getTotalIndemnitePreavis() != null) totInd = totInd.add(p.getTotalIndemnitePreavis());
+                        List<MoisBrutDto> details = (p.getDetailsMois() != null && !p.getDetailsMois().isEmpty())
+                                ? p.getDetailsMois()
+                                : List.of(new MoisBrutDto("Période", p.getTotalBrutPeriode()));
+                        for (int i = 0; i < details.size(); i++) {
+                            MoisBrutDto m = details.get(i);
+                            Row row = sheet.createRow(rowIndex++);
+                            createCell(row, 0, String.valueOf(i + 1), tdCenterStyle);
+                            createCell(row, 1, m.getMois(), tdTextStyle);
+                            createCell(row, 2, m.getSalaireBrut(), tdNumStyle);
+                            createCell(row, 3, i == 0 ? p.getTotalBrutPeriode() : null, tdNumBoldStyle);
+                            createCell(row, 4, i == 0 && p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : null, tdCenterStyle);
+                            createCell(row, 5, i == 0 ? p.getTotalIndemnitePreavis() : null, tdNumBoldStyle);
+                        }
+                        Row totRow = sheet.createRow(rowIndex++);
+                        createCell(totRow, 0, "TOTAL INDEMNITÉ DE PRÉAVIS", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
+                        createCell(totRow, 2, p.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 3, p.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 4, p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "0", tdCenterStyle);
+                        createCell(totRow, 5, p.getTotalIndemnitePreavis(), totalNumStyle);
                     }
                 }
-                Row totRow = sheet.createRow(rowIndex++);
-                createCell(totRow, 0, "TOTAL", totalLabelStyle);
-                sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 8));
-                createCell(totRow, 9, totInd, totalNumStyle);
             } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
                 String[] headers = {"N°", "Matricule", "Nom et Prénoms", "Emploi", "Direction", "Motif Rupture", "Ancienneté (ans)", "Base SGM (FCFA)", "Base SMJ (FCFA)", "Congés (j)", "Ind. Congés (FCFA)", "Ind. Licenciement (FCFA)", "Préavis (mois)", "Ind. Préavis (FCFA)", "Prorata 13è/14è (FCFA)", "Total Brut STC (FCFA)", "Exonérations (FCFA)", "Retenues Fisc./Soc. (FCFA)", "Solde Prêts (FCFA)", "Total Retenues (FCFA)", "Net STC à Payer (FCFA)"};
                 colCount = headers.length;
