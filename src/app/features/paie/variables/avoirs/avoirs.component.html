@@ -395,12 +395,12 @@
             <div class="full-col">
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label>Élément de Salaire du Rappel *</mat-label>
-                <mat-select [(ngModel)]="formModel.salaryElementId">
+                <mat-select [(ngModel)]="formModel.salaryElementId" placeholder="Sélectionner un élément de salaire...">
                   @for (el of elementsList; track el.id) {
-                    <mat-option [value]="el.id">{{ el.name }}</mat-option>
+                    <mat-option [value]="el.id"><strong>{{ el.code }}</strong> — {{ el.name }}</mat-option>
                   }
                 </mat-select>
-                <mat-hint>Ex: Sur salaire de base, apparaîtra sous « Rappel Salaire de base » sur le bulletin</mat-hint>
+                <mat-hint>Rappel appliqué sur cet élément de salaire</mat-hint>
               </mat-form-field>
             </div>
 
