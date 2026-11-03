@@ -12,5 +12,6 @@ public interface TropPercuRepository extends JpaRepository<TropPercu, Long> {
     List<TropPercu> findByMoisApplication(String moisApplication);
     List<TropPercu> findByStatut(String statut);
     List<TropPercu> findByEmployeeIdAndStatut(Long employeeId, String statut);
+    List<TropPercu> findByEmployeeIdAndStatutIn(Long employeeId, java.util.Collection<String> statuts);
     List<TropPercu> findAllByOrderByDateCreationDesc();
 }

@@ -78,10 +78,17 @@ public class PayrollDataInitializer implements CommandLineRunner {
 
             // Migration automatique des types de catégories en base de données
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'AUCUN' WHERE code = 'CAT_REMU_DUE' OR LOWER(name) LIKE '%rémunération due%' OR LOWER(name) LIKE '%remuneration due%'");
-            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'RETENUE' WHERE code IN ('CAT_COTIS_SOC', 'CAT_IUTS', 'CAT_RETENUES', 'CAT_COTIS_NON_REV', 'CAT_PRECOMPTE') OR LOWER(name) LIKE '%retenue%' OR LOWER(name) LIKE '%cotis%' OR LOWER(name) LIKE '%iuts%' OR LOWER(name) LIKE '%précompte%' OR LOWER(name) LIKE '%precompte%'");
+            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'RETENUE' WHERE code IN ('CAT_COTIS_SOC', 'CAT_IUTS', 'CAT_RETENUES', 'CAT_COTIS_NON_REV', 'CAT_PRECOMPTE', 'CAT_TROP_PERCU') OR LOWER(name) LIKE '%retenue%' OR LOWER(name) LIKE '%cotis%' OR LOWER(name) LIKE '%iuts%' OR LOWER(name) LIKE '%précompte%' OR LOWER(name) LIKE '%precompte%' OR LOWER(name) LIKE '%trop percu%' OR LOWER(name) LIKE '%trop-percu%'");
             jdbcTemplate.execute("UPDATE element_salary_category SET type = 'PATRONALE' WHERE code IN ('CAT_CHG_PATRONALES', 'CAT_COTIS_PATRONALES') OR LOWER(name) LIKE '%patronal%' OR LOWER(name) LIKE '%tpa%'");
-            jdbcTemplate.execute("UPDATE element_salary_category SET type = 'GAIN' WHERE (code = 'CAT_AVOIR' OR LOWER(name) LIKE '%avoir%' OR type IS NULL OR type = '') AND code != 'CAT_REMU_DUE'");
-            jdbcTemplate.execute("UPDATE element_salary_category SET name = 'AVOIR' WHERE code = 'CAT_AVOIR' OR name = 'Avoir (Rappel / Régularisation)'");
+            jdbcTemplate.execute("UPDATE element_salary_category SET name = 'RAPPEL', type = 'GAIN' WHERE code = 'CAT_RAPPEL' OR code = 'CAT_AVOIR' OR LOWER(name) LIKE '%rappel%' OR LOWER(name) LIKE '%avoir%'");
+            jdbcTemplate.execute("UPDATE element_salary_category SET name = 'TROP PERCU', type = 'RETENUE' WHERE code = 'CAT_TROP_PERCU' OR LOWER(name) LIKE '%trop percu%' OR LOWER(name) LIKE '%trop-percu%'");
+            jdbcTemplate.execute("UPDATE element_salary_category SET name = 'PRECOMPTES', type = 'RETENUE' WHERE code = 'CAT_PRECOMPTE' OR LOWER(name) LIKE '%precompte%' OR LOWER(name) LIKE '%précompte%'");
+            
+            // Réattribution des éléments de salaire aux catégories parentes officielles
+            jdbcTemplate.execute("UPDATE salary_element SET salary_category_id = (SELECT id FROM element_salary_category WHERE code = 'CAT_RAPPEL' OR name = 'RAPPEL' LIMIT 1) WHERE code ILIKE '%RAPPEL%' OR name ILIKE '%RAPPEL%'");
+            jdbcTemplate.execute("UPDATE salary_element SET salary_category_id = (SELECT id FROM element_salary_category WHERE code = 'CAT_TROP_PERCU' OR name = 'TROP PERCU' LIMIT 1) WHERE code ILIKE '%TROP_PERCU%' OR name ILIKE '%TROP-PERÇU%' OR name ILIKE '%TROP PERCU%'");
+            jdbcTemplate.execute("UPDATE salary_element SET salary_category_id = (SELECT id FROM element_salary_category WHERE code = 'CAT_PRECOMPTE' OR name = 'PRECOMPTES' LIMIT 1) WHERE code IN ('PRET_EQUIP', 'AVANCE_SAL', 'PRET_SCOLAIRE', 'PRET_VEHICULE', 'RET_MUTUELLE', 'RET_ASSURANCE', 'SAISIE_ARRET', 'RET_VIVRES', 'RET_DIVERS') OR code ILIKE 'PRET_%' OR code ILIKE 'AVANCE_%' OR name ILIKE 'Prêt %' OR name ILIKE 'Avance %' OR name ILIKE '%scolarité%' OR name ILIKE '%scolaire%'");
+
             jdbcTemplate.execute("UPDATE salary_element SET code = 'net_a_payer', name = 'NET À PAYER', method_calcul = 'FORMULE_COMPLEXE', formule = 'salaire_net', ordre = 100 WHERE LOWER(code) IN ('rem_due_net', 'net_a_payer', 'salaire_net') OR LOWER(name) LIKE '%net à payer%' OR LOWER(name) LIKE '%net a payer%'");
             jdbcTemplate.execute("UPDATE salary_element SET code = 'rem_brute', name = 'RÉMUNÉRATION BRUTE', method_calcul = 'FORMULE_COMPLEXE', formule = 'remuneration_brute', ordre = 99 WHERE LOWER(code) IN ('rem_brute', 'remuneration_brute', 'total_brut') OR LOWER(name) LIKE '%rémunération brute%' OR LOWER(name) LIKE '%remuneration brute%'");
             jdbcTemplate.execute("UPDATE salary_element SET statut = 'INACTIF' WHERE code IN ('ALLOC_FAMILIALE', 'ALLOCATION_FAMILIALE') OR UPPER(name) LIKE '%ALLOCATION%FAMILIALE%'");
@@ -212,8 +219,9 @@ public class PayrollDataInitializer implements CommandLineRunner {
         SalaryCategory catSalBase = getOrCreateCategory("CAT_SAL_BASE", "Salaire de base", "GAIN");
         SalaryCategory catIndem = getOrCreateCategory("CAT_INDEMNITES", "Indemnités", "GAIN");
         SalaryCategory catPrimes = getOrCreateCategory("CAT_PRIMES", "Primes", "GAIN");
-        SalaryCategory catAvoir = getOrCreateCategory("CAT_AVOIR", "AVOIR", "GAIN");
-        SalaryCategory catPrecompte = getOrCreateCategory("CAT_PRECOMPTE", "Précompte", "RETENUE");
+        SalaryCategory catRappel = getOrCreateCategory("CAT_RAPPEL", "RAPPEL", "GAIN");
+        SalaryCategory catTropPercu = getOrCreateCategory("CAT_TROP_PERCU", "TROP PERCU", "RETENUE");
+        SalaryCategory catPrecompte = getOrCreateCategory("CAT_PRECOMPTE", "PRECOMPTES", "RETENUE");
         SalaryCategory catCotisSoc = getOrCreateCategory("CAT_COTIS_SOC", "Cotisation sécurité sociale", "RETENUE");
         SalaryCategory catIuts = getOrCreateCategory("CAT_IUTS", "IUTS", "RETENUE");
         SalaryCategory catRetenues = getOrCreateCategory("CAT_RETENUES", "Retenue", "RETENUE");
@@ -230,7 +238,11 @@ public class PayrollDataInitializer implements CommandLineRunner {
         getOrCreateElement("SAL_MENSUEL", "Salaire mensuel", catSalBase, null, true, true, "GRILLE", "GRILLE_ECHELON", 2);
         getOrCreateElement("HEURE_SUP", "Heure supplémentaire", catSalBase, null, true, true, "FORMULE", "HEURES_SUP_130_150", 3);
         getOrCreateElement("SURSALAIRE", "Sursalaire", catSalBase, null, true, true, "MONTANT_FIXE", "0", 4);
-        getOrCreateElement("RAPPEL_SALAIRE", "Rappel salaire", catSalBase, null, true, true, "MONTANT_FIXE", "0", 5);
+        getOrCreateElement("RAPPEL_SALAIRE", "RAPPEL SALAIRE DE BASE", catRappel, null, true, true, "MONTANT_FIXE", "0", 5);
+        getOrCreateElement("RAPPEL_SURSALAIRE", "RAPPEL SURSALAIRE", catRappel, null, true, true, "MONTANT_FIXE", "0", 6);
+        getOrCreateElement("RAPPEL_INDEMNITE", "RAPPEL INDEMNITÉS", catRappel, null, true, true, "MONTANT_FIXE", "0", 7);
+        getOrCreateElement("RAPPEL_PRIME", "RAPPEL PRIMES", catRappel, null, true, true, "MONTANT_FIXE", "0", 8);
+        getOrCreateElement("RAPPEL_DIVERS", "RAPPEL RÉGULARISATION DIVERSE", catRappel, null, true, true, "MONTANT_FIXE", "0", 9);
         getOrCreateElement("CONGE_PAYE", "Congé payé", catSalBase, null, true, true, "FORMULE", "CALCUL_CONGE", 6);
         getOrCreateElement("REMU_HEURE", "Rémunération à l'heure", catSalBase, null, true, true, "FORMULE", "TAUX_HORAIRE * HEURES", 7);
         getOrCreateElement("REMU_JOUR", "Rémunération journalière", catSalBase, null, true, true, "FORMULE", "TAUX_JOUR * JOURS", 8);
@@ -246,7 +258,6 @@ public class PayrollDataInitializer implements CommandLineRunner {
         getOrCreateElement("PRIME_ANC", "Prime d'ancienneté", catPrimes, null, true, true, "FORMULE", "ANCIENNETE_ECHELON", 14);
         getOrCreateElement("PRIME_GRATIF", "Gratification", catPrimes, null, true, true, "MONTANT_FIXE", "0", 15);
         getOrCreateElement("PRIME_PROD", "Prime de productivité", catPrimes, null, true, true, "MONTANT_FIXE", "0", 16);
-        // getOrCreateElement("ALLOC_FAMILIALE", "Allocations familiales", catPrimes, null, false, false, "MONTANT_FIXE", "2000", 17); // Désactivé : ne figure pas sur le bulletin
         getOrCreateElement("AUTRE_PRIME", "Autre prime", catPrimes, null, true, true, "MONTANT_FIXE", "0", 18);
 
         // Cotisation sécurité sociale
@@ -260,20 +271,21 @@ public class PayrollDataInitializer implements CommandLineRunner {
         getOrCreateElement("RETENUE_IUTS", "Retenue IUTS", catIuts, null, false, false, "FORMULE", "BAREME_PROGRESSIF_BF", 23);
         getOrCreateElement("REGUL_IUTS", "Régularisation IUTS", catIuts, null, false, false, "MONTANT_FIXE", "0", 24);
 
-        // Retenues & Précomptes bancaires individuels
-        getOrCreateElement("PRET_EQUIP", "Prêt Équipement & Personnel BPBF", catRetenues, null, false, false, "MONTANT_FIXE", "0", 25);
-        getOrCreateElement("AVANCE_SAL", "Avance sur Salaire (Quinzaine / Acompte)", catRetenues, null, false, false, "MONTANT_FIXE", "0", 26);
-        getOrCreateElement("PRET_SCOLAIRE", "Prêt Scolarité / Fêtes / Tabaski", catRetenues, null, false, false, "MONTANT_FIXE", "0", 27);
-        getOrCreateElement("PRET_VEHICULE", "Prêt Véhicule / Immobilier", catRetenues, null, false, false, "MONTANT_FIXE", "0", 28);
-        getOrCreateElement("RET_MUTUELLE", "Cotisation Mutuelle de Santé des Banques", catRetenues, null, false, false, "MONTANT_FIXE", "0", 29);
-        getOrCreateElement("RET_ASSURANCE", "Assurance Groupe / Prévoyance", catRetenues, null, false, false, "MONTANT_FIXE", "0", 30);
-        getOrCreateElement("SAISIE_ARRET", "Saisie-arrêt sur salaire", catRetenues, null, false, false, "MONTANT_FIXE", "0", 31);
-        getOrCreateElement("RET_VIVRES", "Remboursement Vivres & Achats groupés", catRetenues, null, false, false, "MONTANT_FIXE", "0", 32);
-        getOrCreateElement("RET_DIVERS", "Autre retenue sur salaire net (Auto-école, UAB...)", catRetenues, null, false, false, "MONTANT_FIXE", "0", 33);
-        // Trop-perçus & Régularisations négatives spontanées en 1 fois
-        getOrCreateElement("RET_TROP_PERCU_SAL", "Trop-perçu sur salaire de base", catRetenues, null, false, false, "MONTANT_FIXE", "0", 34);
-        getOrCreateElement("RET_TROP_PERCU_PRIME", "Trop-perçu sur primes & indemnités", catRetenues, null, false, false, "MONTANT_FIXE", "0", 35);
-        getOrCreateElement("RET_TROP_PERCU", "Trop-perçu & Régularisation diverse", catRetenues, null, false, false, "MONTANT_FIXE", "0", 36);
+        // Retenues & Précomptes bancaires individuels (Catégorie PRECOMPTES)
+        getOrCreateElement("PRET_SCOLAIRE", "PRÊT SCOLARITÉ", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 25);
+        getOrCreateElement("PRET_EQUIP", "Prêt Équipement & Personnel BPBF", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 26);
+        getOrCreateElement("AVANCE_SAL", "Avance sur Salaire (Quinzaine / Acompte)", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 27);
+        getOrCreateElement("PRET_VEHICULE", "Prêt Véhicule / Immobilier", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 28);
+        getOrCreateElement("RET_MUTUELLE", "Cotisation Mutuelle de Santé des Banques", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 29);
+        getOrCreateElement("RET_ASSURANCE", "Assurance Groupe / Prévoyance", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 30);
+        getOrCreateElement("SAISIE_ARRET", "Saisie-arrêt sur salaire", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 31);
+        getOrCreateElement("RET_VIVRES", "Remboursement Vivres & Achats groupés", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 32);
+        getOrCreateElement("RET_DIVERS", "Autre retenue sur salaire net (Auto-école, UAB...)", catPrecompte, null, false, false, "MONTANT_FIXE", "0", 33);
+
+        // Trop-perçus & Régularisations négatives spontanées en 1 fois (Catégorie TROP PERCU)
+        getOrCreateElement("RET_TROP_PERCU_SAL", "Trop-perçu sur salaire de base", catTropPercu, null, false, false, "MONTANT_FIXE", "0", 34);
+        getOrCreateElement("RET_TROP_PERCU_PRIME", "Trop-perçu sur primes & indemnités", catTropPercu, null, false, false, "MONTANT_FIXE", "0", 35);
+        getOrCreateElement("RET_TROP_PERCU", "Trop-perçu & Régularisation diverse", catTropPercu, null, false, false, "MONTANT_FIXE", "0", 36);
 
         // Charges patronales
         getOrCreateElement("CHG_PAT_CNSS", "Charges patronales CNSS", catChgPat, new BigDecimal("16.00"), false, false, "POURCENTAGE", "BRUT_COTISABLE * 0.16", 26);

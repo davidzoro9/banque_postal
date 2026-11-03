@@ -10,6 +10,7 @@ import java.util.List;
 public interface AvoirRepository extends JpaRepository<Avoir, Long> {
     List<Avoir> findByEmployeeId(Long employeeId);
     List<Avoir> findByEmployeeIdAndStatut(Long employeeId, String statut);
+    List<Avoir> findByEmployeeIdAndStatutIn(Long employeeId, java.util.Collection<String> statuts);
     List<Avoir> findByStatut(String statut);
     boolean existsByReference(String reference);
     void deleteByEmployeeId(Long employeeId);

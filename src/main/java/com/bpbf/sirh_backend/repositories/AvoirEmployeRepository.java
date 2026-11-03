@@ -12,6 +12,7 @@ public interface AvoirEmployeRepository extends JpaRepository<AvoirEmploye, Long
     List<AvoirEmploye> findByEmployeeId(Long employeeId);
 
     List<AvoirEmploye> findByEmployeeIdAndStatut(Long employeeId, String statut);
+    List<AvoirEmploye> findByEmployeeIdAndStatutIn(Long employeeId, java.util.Collection<String> statuts);
 
     List<AvoirEmploye> findByStatut(String statut);
 }
