@@ -103,6 +103,26 @@
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="typePersonnel">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Catégorie de Personnel</th>
+            <td mat-cell *matCellDef="let row">
+              <span [style.background]="row.typePersonnel === 'CADRE' ? '#e0f2fe' : (row.typePersonnel === 'MAITRISE' ? '#fef3c7' : '#f1f5f9')"
+                    [style.color]="row.typePersonnel === 'CADRE' ? '#0369a1' : (row.typePersonnel === 'MAITRISE' ? '#b45309' : '#334155')"
+                    style="font-weight: 700; padding: 4px 10px; border-radius: 12px; font-size: 12px;">
+                {{ row.typePersonnel === 'CADRE' ? 'Cadre / Dirigeant' : (row.typePersonnel === 'MAITRISE' ? 'Agent de Maîtrise' : 'Non-Cadre / Exécution') }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dureeMois">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Durée de Préavis</th>
+            <td mat-cell *matCellDef="let row">
+              <span style="font-weight: 700; color: #0060B3; background: #e0f2fe; padding: 4px 12px; border-radius: 12px; font-size: 13px;">
+                {{ row.dureeMois }} mois
+              </span>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="description">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Description / Barème</th>
             <td mat-cell *matCellDef="let row">
@@ -841,7 +861,38 @@
         <textarea matInput formControlName="description" rows="2" placeholder="Ex: 25 % du salaire mensuel moyen par année de service."></textarea>
       </mat-form-field>
 
-    } @else if (type !== 'grille-salariale' && type !== 'param-retraite' && type !== 'param-groupe' && type !== 'grade' && type !== 'param-tranche-licenciement') {
+    } @else if (type === 'param-preavis') {
+      <mat-form-field appearance="outline" style="width: 100%; margin-top: 5px;">
+        <mat-label>Code règle *</mat-label>
+        <input matInput formControlName="code" placeholder="Ex: PREAVIS_CADRE" [readonly]="isEditing">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Intitulé du paramétrage *</mat-label>
+        <input matInput formControlName="libelle" placeholder="Ex: Préavis Cadres et Dirigeants">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Catégorie de personnel ciblée *</mat-label>
+        <mat-select formControlName="typePersonnel">
+          <mat-option value="CADRE">Cadre / Directeur / Chef de service</mat-option>
+          <mat-option value="MAITRISE">Agent de maîtrise / Technicien</mat-option>
+          <mat-option value="NON_CADRE">Non-Cadre / Personnel d'exécution</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Durée du préavis (en mois) *</mat-label>
+        <input matInput type="number" formControlName="dureeMois" placeholder="Ex: 3" min="1" max="12">
+        <span matSuffix style="font-weight: 700; margin-right: 8px;">mois</span>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="width: 100%;">
+        <mat-label>Description / Base légale</mat-label>
+        <textarea matInput formControlName="description" rows="2" placeholder="Ex: Convention collective bancaire ou Code du travail."></textarea>
+      </mat-form-field>
+
+    } @else if (type !== 'grille-salariale' && type !== 'param-retraite' && type !== 'param-groupe' && type !== 'grade' && type !== 'param-tranche-licenciement' && type !== 'param-preavis') {
       
        <!-- @if (type === 'regime-securite-social') {
           <mat-form-field appearance="outline" style="width: 100%;">

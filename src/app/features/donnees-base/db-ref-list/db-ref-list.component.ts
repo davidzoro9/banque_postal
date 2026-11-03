@@ -484,6 +484,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       anneeDebut:      [1],
       anneeFin:        [null],
       trancheAnciennete: [''],
+      typePersonnel:   ['NON_CADRE'],
+      dureeMois:       [1, [Validators.min(1)]],
       typeNomination:  ['NON_NOMMEE']
     });
   }
@@ -504,6 +506,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.displayedColumns = ['grade', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-tranche-licenciement') {
         this.displayedColumns = ['trancheAnciennete', 'taux', 'description', 'actif', 'actions'];
+      } else if (this.type === 'param-preavis') {
+        this.displayedColumns = ['code', 'libelle', 'typePersonnel', 'dureeMois', 'description', 'actif', 'actions'];
       } else if (this.type === 'param-prise-en-charge') {
         this.displayedColumns = ['code', 'libelle', 'taux', 'actif', 'actions'];
       } else if (this.type === 'type-indemnite') {
@@ -834,6 +838,15 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         description: '',
         actif: true
       });
+    } else if (this.type === 'param-preavis') {
+      this.formGroup.patchValue({
+        code: '',
+        libelle: '',
+        typePersonnel: 'NON_CADRE',
+        dureeMois: 1,
+        description: '',
+        actif: true
+      });
     }
     this.setupValidators();
     this.formGroup.get('code')?.enable();
@@ -996,6 +1009,34 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         grade:         '',
         categorie:     '',
         categories:    [],
+        tauxExoneration: 0,
+        plafondExoneration: 0,
+        tauxAbattement: defaultAbattement,
+        typeNomination: 'NON_NOMMEE'
+      });
+    } else if (this.type === 'param-preavis') {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.libelle || '',
+        typePersonnel: item.typePersonnel || 'NON_CADRE',
+        dureeMois:     item.dureeMois ?? 1,
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       0,
+        departementId: null,
+        directionId:   null,
+        agenceId:      null,
+        parentDirectionId: null,
+        directeurId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: '',
+        typeRetenue:   '',
+        fonction:      '',
+        grade:         '',
+        categorie:     '',
+        categories:    [],
+        taux:          0,
         tauxExoneration: 0,
         plafondExoneration: 0,
         tauxAbattement: defaultAbattement,
@@ -1299,6 +1340,18 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         taux:        v.taux != null ? Number(v.taux) : 0,
         description: v.description || '',
         actif:       v.actif ?? true
+      };
+    } else if (this.type === 'param-preavis') {
+      const libVal = v.libelle && v.libelle.trim() ? v.libelle.trim() : (this.editingItem?.libelle || 'Règle Préavis');
+      const finalCode = this.editingItem?.code || (v.code && v.code.trim() ? v.code.trim() : this.generateCode(this.type, libVal));
+      item = {
+        id:            this.editingItem?.id,
+        code:          finalCode,
+        libelle:       libVal,
+        typePersonnel: v.typePersonnel || 'NON_CADRE',
+        dureeMois:     v.dureeMois != null && v.dureeMois > 0 ? Number(v.dureeMois) : 1,
+        description:   v.description || '',
+        actif:         v.actif ?? true
       };
     } else {
       const libelleVal = v.libelle && v.libelle.trim() ? v.libelle.trim() : (this.editingItem?.libelle || 'Nouvel Élément');

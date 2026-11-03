@@ -63,6 +63,8 @@ export interface RefItem {
   anneeDebut?: number;      // pour Tranche indemnité licenciement
   anneeFin?: number | null; // pour Tranche indemnité licenciement
   trancheAnciennete?: string; // pour Tranche indemnité licenciement
+  typePersonnel?: string;   // pour Paramétrage durée préavis : 'CADRE', 'MAITRISE', 'NON_CADRE'
+  dureeMois?: number;       // pour Paramétrage durée préavis (en mois)
   typeNomination?: string;  // pour Fonction : 'NOMMEE' ou 'NON_NOMMEE'
   regleType?: string;       // pour Paramétrage indemnité : 'ORDINAIRE', 'NOMINATION', 'SPECIFIQUE'
   indemnites?: { typeIndemnite: string; montant: number }[]; // pour Fonction Nommée
@@ -508,6 +510,39 @@ const BACKEND_MAP: Record<string, {
       anneeDebut: item.anneeDebut ? Number(item.anneeDebut) : 1,
       anneeFin: item.anneeFin ? Number(item.anneeFin) : null,
       taux: item.taux ? Number(item.taux) : 0,
+      description: item.description,
+      ordre: item.ordre ? Number(item.ordre) : 1,
+      actif: item.actif
+    })
+  },
+  'param-preavis': {
+    segment: 'param-preavis',
+    getAllPath: '/all',
+    toFront: dto => ({
+      id: String(dto.id),
+      code: dto.code,
+      libelle: dto.libelle,
+      typePersonnel: dto.typePersonnel || 'NON_CADRE',
+      dureeMois: dto.dureeMois ?? 1,
+      description: dto.description || '',
+      ordre: dto.ordre ?? 1,
+      actif: dto.actif ?? true
+    }),
+    toBack: item => ({
+      code: item.code,
+      libelle: item.libelle,
+      typePersonnel: item.typePersonnel || 'NON_CADRE',
+      dureeMois: item.dureeMois ? Number(item.dureeMois) : 1,
+      description: item.description,
+      ordre: item.ordre ? Number(item.ordre) : 1,
+      actif: item.actif
+    }),
+    toBackUpdate: item => ({
+      id: item.id ? Number(item.id) : null,
+      code: item.code,
+      libelle: item.libelle,
+      typePersonnel: item.typePersonnel || 'NON_CADRE',
+      dureeMois: item.dureeMois ? Number(item.dureeMois) : 1,
       description: item.description,
       ordre: item.ordre ? Number(item.ordre) : 1,
       actif: item.actif

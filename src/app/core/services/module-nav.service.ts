@@ -36,6 +36,7 @@ export const DONNEES_BASE_MENUS: MenuItem[] = [
       { id: 'param-paie-taux',  label: 'Paramétrage Retenues',     icon: 'tune',                route: '/donnees-base/admin/type-retenue-emploi' },
       { id: 'param-retraite',   label: 'Paramétrage retraite',     icon: 'event_repeat',        route: '/donnees-base/admin/param-retraite'   },
       { id: 'param-tranche-licenciement', label: 'Paramétrage taux par tranche indemnité de licenciement', icon: 'splitscreen', route: '/donnees-base/admin/param-tranche-licenciement' },
+      { id: 'param-preavis',    label: 'Paramétrage durée de préavis', icon: 'schedule',           route: '/donnees-base/admin/param-preavis' }
     ]
   },
   {
@@ -111,16 +112,16 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
       icon: 'assessment',
       children: [
         { id: 'etat-recapitulatif-global', label: 'Récapitulatif Global de la Paie', icon: 'account_balance_wallet', route: '/paie/etats-synthese/recapitulatif-global' },
-        { id: 'etat-banque', label: 'État de Virement des Salaires', icon: 'account_balance', route: '/paie/etats-synthese/banque' },
+        { id: 'etat-banque', label: 'Virement des Salaires', icon: 'account_balance', route: '/paie/etats-synthese/banque' },
         { id: 'etat-livre-paie', label: 'Registre de Paie', icon: 'menu_book', route: '/paie/etats-synthese/livre-paie' },
         { id: 'etat-crrae-rrpc', label: 'Cotisations RRPC', icon: 'security', route: '/paie/etats-synthese/crrae-rrpc' },
         { id: 'etat-crrae-rcpnc', label: 'Cotisations RCPNC', icon: 'security', route: '/paie/etats-synthese/crrae-rcpnc' },
         { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'health_and_safety', route: '/paie/etats-synthese/crrae-faam' },
-        { id: 'etat-iuts', label: 'État des Retenues IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
-        { id: 'etat-fsp', label: 'État des Retenues - Retenue Fonds de Solidarité', icon: 'shield', route: '/paie/etats-synthese/fsp' },
-        { id: 'etat-indemnite-conge', label: 'État détaillé indemnité de congé', icon: 'beach_access', route: '/paie/etats-synthese/indemnite-conge' },
-        { id: 'etat-indemnite-licenciement', label: 'État détaillé indemnité de licenciement', icon: 'gavel', route: '/paie/etats-synthese/indemnite-licenciement' },
-        { id: 'etat-indemnite-preavis', label: 'État détaillé indemnité de préavis', icon: 'event_busy', route: '/paie/etats-synthese/indemnite-preavis' }
+        { id: 'etat-iuts', label: 'Retenues IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
+        { id: 'etat-fsp', label: 'Retenue Fonds de Solidarité', icon: 'shield', route: '/paie/etats-synthese/fsp' },
+        { id: 'etat-indemnite-conge', label: 'Détaille Indemnité de Congé', icon: 'beach_access', route: '/paie/etats-synthese/indemnite-conge' },
+        { id: 'etat-indemnite-licenciement', label: 'Détaille Indemnité de Licenciement', icon: 'gavel', route: '/paie/etats-synthese/indemnite-licenciement' },
+        { id: 'etat-indemnite-preavis', label: 'Détaille Indemnité de Préavis', icon: 'event_busy', route: '/paie/etats-synthese/indemnite-preavis' }
       ]
     },
     {

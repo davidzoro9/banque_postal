@@ -28,24 +28,6 @@
     <div class="header-actions">
       <button
         type="button"
-        class="btn-export btn-new-state"
-        (click)="openCreateModal()"
-        matTooltip="Créer et configurer un nouvel état de synthèse via un formulaire"
-      >
-        <span>+ Nouvel État</span>
-      </button>
-
-      <button
-        type="button"
-        class="btn-export btn-cfg"
-        (click)="openEditModal(getSelectedEtatObj())"
-        matTooltip="Paramétrer / Configurer cet état"
-      >
-        <span>Paramétrer</span>
-      </button>
-
-      <button
-        type="button"
         class="btn-export btn-signataires"
         (click)="openSignatairesModal()"
         matTooltip="Configurer les 2 signataires officiels des bordereaux et PDF"
@@ -224,55 +206,6 @@
             <mat-icon>close</mat-icon>
           </button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================== -->
-  <!-- CARTES KPI SYNTHÉTIQUES                    -->
-  <!-- ========================================== -->
-  <div class="kpi-grid" *ngIf="etatData">
-    <div class="kpi-card kpi-brut">
-      <div class="kpi-icon-box">
-        <mat-icon>trending_up</mat-icon>
-      </div>
-      <div class="kpi-info">
-        <span class="kpi-label">Masse Salariale Brute</span>
-        <span class="kpi-val">{{ formatFcfa(etatData.totalBrut) }}</span>
-        <span class="kpi-sub">{{ etatData.nombreBulletins }} bulletin(s) calculé(s)</span>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-net">
-      <div class="kpi-icon-box">
-        <mat-icon>payments</mat-icon>
-      </div>
-      <div class="kpi-info">
-        <span class="kpi-label">Total Net à Virer</span>
-        <span class="kpi-val highlight">{{ formatFcfa(etatData.totalNet) }}</span>
-        <span class="kpi-sub">Virements bancaires BPBF & Réseau</span>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-retenues">
-      <div class="kpi-icon-box">
-        <mat-icon>remove_circle_outline</mat-icon>
-      </div>
-      <div class="kpi-info">
-        <span class="kpi-label">Total Retenues - CNSS, IUTS, Prêts</span>
-        <span class="kpi-val">{{ formatFcfa(etatData.totalRetenues) }}</span>
-        <span class="kpi-sub">Prélèvements fiscaux et sociaux</span>
-      </div>
-    </div>
-
-    <div class="kpi-card kpi-patronales">
-      <div class="kpi-icon-box">
-        <mat-icon>corporate_fare</mat-icon>
-      </div>
-      <div class="kpi-info">
-        <span class="kpi-label">Charges Patronales & Coût Total</span>
-        <span class="kpi-val">{{ formatFcfa(etatData.totalMasseSalariale) }}</span>
-        <span class="kpi-sub">Patronal : {{ formatFcfa(etatData.totalCotisationsPatronales) }}</span>
       </div>
     </div>
   </div>

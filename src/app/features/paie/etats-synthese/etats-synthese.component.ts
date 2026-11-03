@@ -21,16 +21,16 @@ export class EtatsSyntheseComponent implements OnInit {
   // Données PostgreSQL réelles (Initialisation avec les états officiels)
   etatsConfigs: EtatSyntheseConfig[] = [
     { code: 'RECAPITULATIF_GLOBAL', libelle: 'Récapitulatif Global de la Paie', categorie: 'Comptabilité & Paie', icon: 'account_balance_wallet', ordre: 1, actif: true },
-    { code: 'ETAT_BANQUE', libelle: 'État de Virement des Salaires', categorie: 'Bancaire', icon: 'account_balance', ordre: 2, actif: true },
+    { code: 'ETAT_BANQUE', libelle: 'Virement des Salaires', categorie: 'Bancaire', icon: 'account_balance', ordre: 2, actif: true },
     { code: 'LIVRE_PAIE', libelle: 'Registre de Paie', categorie: 'Paie Globale', icon: 'menu_book', ordre: 3, actif: true },
     { code: 'ETAT_CRRAE_RRPC', libelle: 'Cotisations RRPC', categorie: 'Charges Sociales', icon: 'security', ordre: 4, actif: true },
     { code: 'ETAT_CRRAE_RCPNC', libelle: 'Cotisations RCPNC', categorie: 'Charges Sociales', icon: 'security', ordre: 5, actif: true },
     { code: 'ETAT_CRRAE_FAAM', libelle: 'Cotisations FAAM', categorie: 'Charges Sociales', icon: 'health_and_safety', ordre: 6, actif: true },
-    { code: 'ETAT_IUTS', libelle: 'État des Retenues IUTS', categorie: 'Fiscalité', icon: 'receipt_long', ordre: 7, actif: true },
-    { code: 'ETAT_FSP', libelle: 'État des Retenues - Retenue Fonds de Solidarité', categorie: 'Cotisations Légales', icon: 'shield', ordre: 8, actif: true },
-    { code: 'ETAT_INDEMNITE_CONGE', libelle: 'État Détaillé Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
-    { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'État Détaillé Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'État Détaillé Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+    { code: 'ETAT_IUTS', libelle: 'Retenues IUTS', categorie: 'Fiscalité', icon: 'receipt_long', ordre: 7, actif: true },
+    { code: 'ETAT_FSP', libelle: 'Retenue Fonds de Solidarité', categorie: 'Cotisations Légales', icon: 'shield', ordre: 8, actif: true },
+    { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détaille Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
+    { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détaille Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
+    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détaille Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
   ];
   selectedEtat: string = 'LIVRE_PAIE';
 
@@ -163,9 +163,9 @@ export class EtatsSyntheseComponent implements OnInit {
       next: (configs) => {
         const received = configs && configs.length > 0 ? configs : [];
         const mustHave: EtatSyntheseConfig[] = [
-          { code: 'ETAT_INDEMNITE_CONGE', libelle: 'État Détaillé Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
-          { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'État Détaillé Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'État Détaillé Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+          { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détaille Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
+          { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détaille Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
+          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détaille Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
         ];
         mustHave.forEach(def => {
           if (!received.some(c => c.code === def.code)) {
