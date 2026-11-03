@@ -2038,9 +2038,19 @@ export class GenererBulletinsComponent implements OnInit {
 
         const baseVal = l.baseCalcul !== undefined ? l.baseCalcul : (isGain ? montant : undefined);
 
+        // Nettoyage et mise en majuscules du libellé affiché
+        let displayName = rawName.toUpperCase();
+        displayName = displayName
+          .replace(/\s*-\s*\d+(\.\d+)?\s*ANS/gi, '')
+          .replace(/\s*-\s*\d+\s*MOIS/gi, '')
+          .replace(/\s*-\s*\d+(\.\d+)?\s*J/gi, '')
+          .replace(/\s+\d+\/12/gi, '')
+          .replace(/\s*-\s*SOLDE.*$/gi, '')
+          .trim();
+
         return {
           code: l.code,
-          name: rawName,
+          name: displayName,
           typeLigne: l.typeLigne || (isGain ? 'GAIN' : 'RETENUE'),
           gain: gainVal,
           retenue: retenueVal,
