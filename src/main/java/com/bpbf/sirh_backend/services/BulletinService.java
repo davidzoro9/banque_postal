@@ -1174,7 +1174,8 @@ public class BulletinService {
             List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
 
             BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
-            double ancienneteAns = getAncienneteExacte(emp, session);
+            // Ancienneté arrondie à 1 décimale : valeur affichée = valeur utilisée dans le calcul
+            double ancienneteAns = arrondirAnciennete(getAncienneteExacte(emp, session));
 
             double t1Ans = Math.min(ancienneteAns, 5.0);
             double t2Ans = Math.max(0.0, Math.min(ancienneteAns - 5.0, 5.0));
@@ -1372,7 +1373,10 @@ public class BulletinService {
             List<IndemniteEmploye> rawIndemnites = indemniteRepository.findByEmployeeId(emp.getId());
 
             BigDecimal sgm = getSalaireGlobalMensuelMoyen(emp.getId(), salaireBase, surSalaire, BigDecimal.ZERO, rawIndemnites);
-            double ancienneteAns = getAncienneteExacte(emp, session);
+            // Ancienneté exacte : utilisée uniquement pour le contrôle d'éligibilité (>= 1 an)
+            double ancienneteExacte = getAncienneteExacte(emp, session);
+            // Ancienneté arrondie à 1 décimale : valeur affichée = valeur utilisée dans le calcul
+            double ancienneteAns = arrondirAnciennete(ancienneteExacte);
 
             // 1. Détermination du Motif de Rupture
             String motifRupture = (existingBulletin != null && existingBulletin.getMotifRupture() != null && !existingBulletin.getMotifRupture().isBlank())
@@ -1419,7 +1423,7 @@ public class BulletinService {
                     || "RETRAITE".equals(motifRupture);
 
             BigDecimal indemniteLicenciement = BigDecimal.ZERO;
-            if (ouvreDroitIndemniteRupture && ancienneteAns >= 1.0) {
+            if (ouvreDroitIndemniteRupture && ancienneteExacte >= 1.0) {
                 indemniteLicenciement = paramTrancheLicenciementService != null
                         ? paramTrancheLicenciementService.calculateIndemniteLicenciement(sgm, ancienneteAns)
                         : BigDecimal.ZERO;
@@ -5246,6 +5250,11 @@ public class BulletinService {
             } catch (Exception ignored) {}
         }
         return Math.max(0.0, ans);
+    }
+
+    /** Arrondit l'ancienneté à 1 décimale (HALF_UP) : même valeur pour l'affichage et le calcul. */
+    private double arrondirAnciennete(double ans) {
+        return BigDecimal.valueOf(ans).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
 
     private BigDecimal getSalaireGlobalMensuelMoyen(Long employeeId, BigDecimal base, BigDecimal sursalaire, BigDecimal primeAnc, List<IndemniteEmploye> rawIndemnites) {

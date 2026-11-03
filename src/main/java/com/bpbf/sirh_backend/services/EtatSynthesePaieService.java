@@ -818,8 +818,10 @@ public class EtatSynthesePaieService {
             if (totalBrut.compareTo(BigDecimal.ZERO) <= 0 && b.getSalaireBrut() != null) totalBrut = b.getSalaireBrut();
 
             BigDecimal sgm = totalBrut.divide(BigDecimal.valueOf(Math.max(1, details.size())), 2, RoundingMode.HALF_UP);
-            double ansVal = getAncienneteExacte(e, b.getSessionPaie());
-            BigDecimal ancienneteAnnees = BigDecimal.valueOf(ansVal).setScale(1, RoundingMode.HALF_UP);
+            // L'ancienneté est arrondie à 1 décimale et c'est CETTE valeur (affichée sur l'état)
+            // qui est utilisée dans le calcul, afin que SGM x taux x ancienneté soit vérifiable.
+            BigDecimal ancienneteAnnees = BigDecimal.valueOf(getAncienneteExacte(e, b.getSessionPaie())).setScale(1, RoundingMode.HALF_UP);
+            double ansVal = ancienneteAnnees.doubleValue();
 
             // Barème légal de licenciement (Code du Travail & Convention Collective Bancaire)
             double ans = ansVal;
