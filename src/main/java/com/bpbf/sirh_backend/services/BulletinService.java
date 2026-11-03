@@ -680,8 +680,20 @@ public class BulletinService {
         if (computedRatio.compareTo(BigDecimal.ZERO) < 0) computedRatio = BigDecimal.ZERO;
         final BigDecimal ratio = computedRatio;
 
-        // RÈGLE V3 : Les variables de paie (Rappels, Trop-perçus, Précomptes) ne s'appliquent qu'à la validation de session
+        // RÈGLE V3 : Les variables de paie (Rappels, Trop-perçus, Précomptes) s'intègrent dans le bulletin et le calcul dès génération
         boolean isSessionValidee = (session == null) || "VALIDE".equalsIgnoreCase(session.getStatut()) || "CLOTURE".equalsIgnoreCase(session.getStatut());
+
+        List<String> allowedAvoirStatuts = isSessionValidee
+                ? java.util.List.of("ACTIF", "EN_ATTENTE", "EN_COURS", "SOLDE")
+                : java.util.List.of("ACTIF", "EN_ATTENTE", "EN_COURS");
+
+        List<String> allowedPrecompteStatuts = isSessionValidee
+                ? java.util.List.of("EN_COURS", "ACTIF", "EN_ATTENTE", "SOLDE")
+                : java.util.List.of("EN_COURS", "ACTIF", "EN_ATTENTE");
+
+        List<String> allowedTropPercuStatuts = isSessionValidee
+                ? java.util.List.of("EN_ATTENTE", "ACTIF", "EN_COURS", "APPLIQUE")
+                : java.util.List.of("EN_ATTENTE", "ACTIF", "EN_COURS");
 
         BigDecimal salaireBasePlein = salaireBase;
         salaireBase = money(salaireBasePlein.multiply(ratio));
@@ -941,55 +953,53 @@ public class BulletinService {
                 }
             }
 
-            // E. Composante 5 : Avoirs actifs et rappels (Uniquement si session validée)
+            // E. Composante 5 : Avoirs actifs et rappels (positionnés sur le bulletin et le calcul)
             List<BulletinLine> linesAvoirs = new ArrayList<>();
             BigDecimal totalAvoirs = BigDecimal.ZERO;
 
-            if (isSessionValidee) {
-                List<AvoirEmploye> avoirsEmploye = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-                for (AvoirEmploye av : avoirsEmploye) {
-                    if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
-                        totalAvoirs = totalAvoirs.add(av.getMontantMensuel());
+            List<AvoirEmploye> avoirsEmploye = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
+            for (AvoirEmploye av : avoirsEmploye) {
+                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                    totalAvoirs = totalAvoirs.add(av.getMontantMensuel());
+                    BulletinLine avLine = new BulletinLine();
+                    avLine.setRubriquePaie(av.getRubriquePaie());
+                    avLine.setCode("AVOIR_" + av.getId());
+                    String echStr = (av.getEcheancesTotal() != null && av.getEcheancesRestantes() != null)
+                            ? (" - Échéance " + (av.getEcheancesTotal() - av.getEcheancesRestantes() + 1) + "/" + av.getEcheancesTotal())
+                            : "";
+                    avLine.setLibelle(av.getLibelle() + echStr);
+                    avLine.setTypeLigne("GAIN");
+                    avLine.setBaseCalcul(av.getMontantInitial());
+                    avLine.setTaux(null);
+                    avLine.setMontant(av.getMontantMensuel());
+                    avLine.setOrdre(ordreLigne++);
+                    linesAvoirs.add(avLine);
+                }
+            }
+
+            List<Avoir> avoirsVariables = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
+            for (Avoir av : avoirsVariables) {
+                if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal m = av.getAmount();
+                    if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                        m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
+                    }
+                    if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                        m = m.min(av.getMontantRestant());
+                    }
+                    if (m.compareTo(BigDecimal.ZERO) > 0) {
+                        totalAvoirs = totalAvoirs.add(m);
+                        String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel salaire");
+                        String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
                         BulletinLine avLine = new BulletinLine();
-                        avLine.setRubriquePaie(av.getRubriquePaie());
-                        avLine.setCode("AVOIR_" + av.getId());
-                        String echStr = (av.getEcheancesTotal() != null && av.getEcheancesRestantes() != null)
-                                ? (" - Échéance " + (av.getEcheancesTotal() - av.getEcheancesRestantes() + 1) + "/" + av.getEcheancesTotal())
-                                : "";
-                        avLine.setLibelle(av.getLibelle() + echStr);
+                        avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
+                        avLine.setLibelle(finalLibelle);
                         avLine.setTypeLigne("GAIN");
-                        avLine.setBaseCalcul(av.getMontantInitial());
+                        avLine.setBaseCalcul(av.getAmount());
                         avLine.setTaux(null);
-                        avLine.setMontant(av.getMontantMensuel());
+                        avLine.setMontant(m);
                         avLine.setOrdre(ordreLigne++);
                         linesAvoirs.add(avLine);
-                    }
-                }
-
-                List<Avoir> avoirsVariables = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-                for (Avoir av : avoirsVariables) {
-                    if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal m = av.getAmount();
-                        if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
-                            m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
-                        }
-                        if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                            m = m.min(av.getMontantRestant());
-                        }
-                        if (m.compareTo(BigDecimal.ZERO) > 0) {
-                            totalAvoirs = totalAvoirs.add(m);
-                            String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel salaire");
-                            String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
-                            BulletinLine avLine = new BulletinLine();
-                            avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
-                            avLine.setLibelle(finalLibelle);
-                            avLine.setTypeLigne("GAIN");
-                            avLine.setBaseCalcul(av.getAmount());
-                            avLine.setTaux(null);
-                            avLine.setMontant(m);
-                            avLine.setOrdre(ordreLigne++);
-                            linesAvoirs.add(avLine);
-                        }
                     }
                 }
             }
@@ -1485,44 +1495,42 @@ public class BulletinService {
                 prorata13eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
             }
 
-            // 6.bis Intégration des Rappels / Avoirs validés pour l'employé dans le STC
+            // 6.bis Intégration des Rappels / Avoirs positionnés pour l'employé dans le STC
             BigDecimal totalAvoirsStc = BigDecimal.ZERO;
             List<BulletinLine> avoirLines = new ArrayList<>();
-            if (isSessionValidee) {
-                List<AvoirEmploye> avoirsEmp = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-                for (AvoirEmploye av : avoirsEmp) {
-                    if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
-                        totalAvoirsStc = totalAvoirsStc.add(av.getMontantMensuel());
-                        BulletinLine avLine = new BulletinLine();
-                        avLine.setRubriquePaie(av.getRubriquePaie());
-                        avLine.setCode(av.getRubriquePaie() != null ? av.getRubriquePaie().getCodeRubrique() : "AVR_" + av.getId());
-                        avLine.setLibelle(av.getLibelle() != null ? av.getLibelle() : "Rappel");
-                        avLine.setTypeLigne("GAIN");
-                        avLine.setBaseCalcul(av.getMontantMensuel());
-                        avLine.setMontant(av.getMontantMensuel());
-                        avoirLines.add(avLine);
-                    }
+            List<AvoirEmploye> avoirsEmp = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
+            for (AvoirEmploye av : avoirsEmp) {
+                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                    totalAvoirsStc = totalAvoirsStc.add(av.getMontantMensuel());
+                    BulletinLine avLine = new BulletinLine();
+                    avLine.setRubriquePaie(av.getRubriquePaie());
+                    avLine.setCode(av.getRubriquePaie() != null ? av.getRubriquePaie().getCodeRubrique() : "AVR_" + av.getId());
+                    avLine.setLibelle(av.getLibelle() != null ? av.getLibelle() : "Rappel");
+                    avLine.setTypeLigne("GAIN");
+                    avLine.setBaseCalcul(av.getMontantMensuel());
+                    avLine.setMontant(av.getMontantMensuel());
+                    avoirLines.add(avLine);
                 }
-                List<Avoir> avoirsVar = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF", "SOLDE"));
-                for (Avoir av : avoirsVar) {
-                    BigDecimal m = av.getAmount();
-                    if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
-                        m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
-                    }
-                    if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                        m = m.min(av.getMontantRestant());
-                    }
-                    if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
-                        totalAvoirsStc = totalAvoirsStc.add(m);
-                        BulletinLine avLine = new BulletinLine();
-                        avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "AVR_" + av.getId());
-                        String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel");
-                        avLine.setLibelle(rawName);
-                        avLine.setTypeLigne("GAIN");
-                        avLine.setBaseCalcul(m);
-                        avLine.setMontant(m);
-                        avoirLines.add(avLine);
-                    }
+            }
+            List<Avoir> avoirsVar = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
+            for (Avoir av : avoirsVar) {
+                BigDecimal m = av.getAmount();
+                if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                    m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
+                }
+                if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(av.getMontantRestant());
+                }
+                if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                    totalAvoirsStc = totalAvoirsStc.add(m);
+                    BulletinLine avLine = new BulletinLine();
+                    avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "AVR_" + av.getId());
+                    String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel");
+                    avLine.setLibelle(rawName);
+                    avLine.setTypeLigne("GAIN");
+                    avLine.setBaseCalcul(m);
+                    avLine.setMontant(m);
+                    avoirLines.add(avLine);
                 }
             }
 
@@ -1757,58 +1765,56 @@ public class BulletinService {
                 lines.add(retPreavLine);
             }
 
-            // Déduction intégrale des prêts et précomptes (Uniquement si session validée)
+            // Déduction intégrale des prêts et précomptes (positionnés sur le bulletin et le calcul)
             BigDecimal totalPrecomptesStc = BigDecimal.ZERO;
-            if (isSessionValidee) {
-                List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-                for (PrecompteEmploye prec : precomptes) {
-                    BigDecimal soldePret = prec.getMontantRestant() != null ? prec.getMontantRestant() : BigDecimal.ZERO;
-                    if (soldePret.compareTo(BigDecimal.ZERO) > 0) {
-                        totalPrecomptesStc = totalPrecomptesStc.add(soldePret);
-                        BulletinLine pLine = new BulletinLine();
-                        pLine.setRubriquePaie(prec.getRubriquePaie());
-                        pLine.setCode("PREC_" + prec.getId());
-                        pLine.setLibelle(prec.getLibelle() != null ? prec.getLibelle().toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
-                        pLine.setTypeLigne("PRECOMPTE");
-                        pLine.setBaseCalcul(prec.getMontantInitial());
-                        pLine.setMontant(soldePret);
-                        pLine.setOrdre(ordre++);
-                        lines.add(pLine);
-                    }
+            List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedPrecompteStatuts);
+            for (PrecompteEmploye prec : precomptes) {
+                BigDecimal soldePret = prec.getMontantRestant() != null ? prec.getMontantRestant() : BigDecimal.ZERO;
+                if (soldePret.compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(soldePret);
+                    BulletinLine pLine = new BulletinLine();
+                    pLine.setRubriquePaie(prec.getRubriquePaie());
+                    pLine.setCode("PREC_" + prec.getId());
+                    pLine.setLibelle(prec.getLibelle() != null ? prec.getLibelle().toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
+                    pLine.setTypeLigne("PRECOMPTE");
+                    pLine.setBaseCalcul(prec.getMontantInitial());
+                    pLine.setMontant(soldePret);
+                    pLine.setOrdre(ordre++);
+                    lines.add(pLine);
                 }
+            }
 
-                List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF", "SOLDE"));
-                for (Precompte prec : precomptesVariables) {
-                    BigDecimal solde = prec.getMontantRestant() != null ? prec.getMontantRestant() : prec.getAmount();
-                    if (solde != null && solde.compareTo(BigDecimal.ZERO) > 0) {
-                        totalPrecomptesStc = totalPrecomptesStc.add(solde);
-                        BulletinLine pLine = new BulletinLine();
-                        pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
-                        String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
-                        pLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
-                        pLine.setTypeLigne("PRECOMPTE");
-                        pLine.setBaseCalcul(prec.getAmount());
-                        pLine.setMontant(solde);
-                        pLine.setOrdre(ordre++);
-                        lines.add(pLine);
-                    }
+            List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedPrecompteStatuts);
+            for (Precompte prec : precomptesVariables) {
+                BigDecimal solde = prec.getMontantRestant() != null ? prec.getMontantRestant() : prec.getAmount();
+                if (solde != null && solde.compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(solde);
+                    BulletinLine pLine = new BulletinLine();
+                    pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
+                    String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
+                    pLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
+                    pLine.setTypeLigne("PRECOMPTE");
+                    pLine.setBaseCalcul(prec.getAmount());
+                    pLine.setMontant(solde);
+                    pLine.setOrdre(ordre++);
+                    lines.add(pLine);
                 }
+            }
 
-                // Déduction des Trop-perçus
-                List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_ATTENTE", "APPLIQUE", "ACTIF", "EN_COURS"));
-                for (TropPercu tp : tropPercus) {
-                    if (tp.getAmount() != null && tp.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                        totalPrecomptesStc = totalPrecomptesStc.add(tp.getAmount());
-                        BulletinLine tpLine = new BulletinLine();
-                        tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
-                        String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
-                        tpLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "TROP-PERÇU");
-                        tpLine.setTypeLigne("RETENUE");
-                        tpLine.setBaseCalcul(tp.getAmount());
-                        tpLine.setMontant(tp.getAmount());
-                        tpLine.setOrdre(ordre++);
-                        lines.add(tpLine);
-                    }
+            // Déduction des Trop-perçus
+            List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedTropPercuStatuts);
+            for (TropPercu tp : tropPercus) {
+                if (isTropPercuForSession(tp, session) && tp.getAmount() != null && tp.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    totalPrecomptesStc = totalPrecomptesStc.add(tp.getAmount());
+                    BulletinLine tpLine = new BulletinLine();
+                    tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
+                    String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
+                    tpLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "TROP-PERÇU");
+                    tpLine.setTypeLigne("RETENUE");
+                    tpLine.setBaseCalcul(tp.getAmount());
+                    tpLine.setMontant(tp.getAmount());
+                    tpLine.setOrdre(ordre++);
+                    lines.add(tpLine);
                 }
             }
 
@@ -1916,31 +1922,27 @@ public class BulletinService {
         }
         BigDecimal primeAnciennete = money(calculatePercentage(salaireBase, tauxAnciennete));
 
-        // Avoirs (Gains périodiques / rappels échelonnés / Primes variables - uniquement si session validée)
-        List<AvoirEmploye> avoirs = new ArrayList<>();
-        List<Avoir> avoirsVariables = new ArrayList<>();
+        // Avoirs (Gains périodiques / rappels échelonnés / Primes variables - positionnés sur le bulletin et le calcul)
+        List<AvoirEmploye> avoirs = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
+        List<Avoir> avoirsVariables = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedAvoirStatuts);
         BigDecimal totalAvoirs = BigDecimal.ZERO;
 
-        if (isSessionValidee) {
-            avoirs = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-            for (AvoirEmploye av : avoirs) {
-                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
-                    totalAvoirs = totalAvoirs.add(av.getMontantMensuel());
-                }
+        for (AvoirEmploye av : avoirs) {
+            if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                totalAvoirs = totalAvoirs.add(av.getMontantMensuel());
             }
+        }
 
-            avoirsVariables = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-            for (Avoir av : avoirsVariables) {
-                if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal m = av.getAmount();
-                    if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
-                        m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
-                    }
-                    if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                        m = m.min(av.getMontantRestant());
-                    }
-                    totalAvoirs = totalAvoirs.add(m);
+        for (Avoir av : avoirsVariables) {
+            if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal m = av.getAmount();
+                if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                    m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
                 }
+                if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(av.getMontantRestant());
+                }
+                totalAvoirs = totalAvoirs.add(m);
             }
         }
 
@@ -2714,42 +2716,40 @@ public class BulletinService {
             lines.add(iccpLine);
         }
 
-        // Lignes Avoirs (Rappels - uniquement si session validée)
-        if (isSessionValidee) {
-            for (AvoirEmploye av : avoirs) {
-                if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
-                    BulletinLine avLine = new BulletinLine();
-                    avLine.setRubriquePaie(av.getRubriquePaie());
-                    avLine.setCode("AVOIR_" + av.getId());
-                    avLine.setLibelle(av.getLibelle());
-                    avLine.setTypeLigne("GAIN");
-                    avLine.setBaseCalcul(av.getMontantInitial());
-                    avLine.setMontant(av.getMontantMensuel());
-                    avLine.setOrdre(defaultOrdre++);
-                    lines.add(avLine);
-                }
+        // Lignes Avoirs (Rappels - positionnés sur le bulletin)
+        for (AvoirEmploye av : avoirs) {
+            if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine avLine = new BulletinLine();
+                avLine.setRubriquePaie(av.getRubriquePaie());
+                avLine.setCode("AVOIR_" + av.getId());
+                avLine.setLibelle(av.getLibelle());
+                avLine.setTypeLigne("GAIN");
+                avLine.setBaseCalcul(av.getMontantInitial());
+                avLine.setMontant(av.getMontantMensuel());
+                avLine.setOrdre(defaultOrdre++);
+                lines.add(avLine);
             }
+        }
 
-            for (Avoir av : avoirsVariables) {
-                if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal m = av.getAmount();
-                    if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
-                        m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
-                    }
-                    if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                        m = m.min(av.getMontantRestant());
-                    }
-                    String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel salaire");
-                    String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
-                    BulletinLine avLine = new BulletinLine();
-                    avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
-                    avLine.setLibelle(finalLibelle);
-                    avLine.setTypeLigne("GAIN");
-                    avLine.setBaseCalcul(av.getAmount());
-                    avLine.setMontant(m);
-                    avLine.setOrdre(defaultOrdre++);
-                    lines.add(avLine);
+        for (Avoir av : avoirsVariables) {
+            if (av.getAmount() != null && av.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal m = av.getAmount();
+                if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                    m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
                 }
+                if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(av.getMontantRestant());
+                }
+                String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel salaire");
+                String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
+                BulletinLine avLine = new BulletinLine();
+                avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
+                avLine.setLibelle(finalLibelle);
+                avLine.setTypeLigne("GAIN");
+                avLine.setBaseCalcul(av.getAmount());
+                avLine.setMontant(m);
+                avLine.setOrdre(defaultOrdre++);
+                lines.add(avLine);
             }
         }
 
@@ -2903,74 +2903,72 @@ public class BulletinService {
 
 
 
-        // Précomptes et Trop-perçus employés (Uniquement si session validée)
+        // Précomptes et Trop-perçus employés (positionnés sur le bulletin et le calcul)
         BigDecimal totalPrecomptes = BigDecimal.ZERO;
-        if (isSessionValidee) {
-            List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
-            for (PrecompteEmploye prec : precomptes) {
-                BigDecimal mPrelev = isStc ? prec.getMontantRestant() : (prec.getMontantMensuel() != null && prec.getMontantRestant() != null ? prec.getMontantMensuel().min(prec.getMontantRestant()) : prec.getMontantMensuel());
-                if (mPrelev != null && mPrelev.compareTo(BigDecimal.ZERO) > 0) {
-                    totalPrecomptes = totalPrecomptes.add(mPrelev);
-                    BulletinLine precLine = new BulletinLine();
-                    precLine.setRubriquePaie(prec.getRubriquePaie());
-                    precLine.setCode("PREC_" + prec.getId());
-                    precLine.setLibelle(isStc ? (prec.getLibelle() + " - Solde intégral") : prec.getLibelle());
-                    precLine.setTypeLigne("PRECOMPTE");
-                    precLine.setBaseCalcul(prec.getMontantInitial());
-                    precLine.setMontant(mPrelev);
-                    precLine.setOrdre(defaultOrdre++);
-                    lines.add(precLine);
-                }
+        List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedPrecompteStatuts);
+        for (PrecompteEmploye prec : precomptes) {
+            BigDecimal mPrelev = isStc ? prec.getMontantRestant() : (prec.getMontantMensuel() != null && prec.getMontantRestant() != null ? prec.getMontantMensuel().min(prec.getMontantRestant()) : prec.getMontantMensuel());
+            if (mPrelev != null && mPrelev.compareTo(BigDecimal.ZERO) > 0) {
+                totalPrecomptes = totalPrecomptes.add(mPrelev);
+                BulletinLine precLine = new BulletinLine();
+                precLine.setRubriquePaie(prec.getRubriquePaie());
+                precLine.setCode("PREC_" + prec.getId());
+                precLine.setLibelle(isStc ? (prec.getLibelle() + " - Solde intégral") : prec.getLibelle());
+                precLine.setTypeLigne("PRECOMPTE");
+                precLine.setBaseCalcul(prec.getMontantInitial());
+                precLine.setMontant(mPrelev);
+                precLine.setOrdre(defaultOrdre++);
+                lines.add(precLine);
             }
+        }
 
-            List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF", "SOLDE"));
-            for (Precompte prec : precomptesVariables) {
-                if (prec.getAmount() != null && prec.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal m = prec.getAmount();
-                    if (isStc && prec.getMontantRestant() != null && prec.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                        m = prec.getMontantRestant();
-                    } else if (prec.getRetenueMensuelle() != null && prec.getRetenueMensuelle().compareTo(BigDecimal.ZERO) > 0) {
-                        m = prec.getRetenueMensuelle();
-                    } else if (prec.getEcheance() != null && prec.getEcheance() > 1) {
-                        m = prec.getAmount().divide(new BigDecimal(prec.getEcheance()), 0, RoundingMode.HALF_UP);
-                    }
-                    if (!isStc && prec.getMontantRestant() != null && prec.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
-                        m = m.min(prec.getMontantRestant());
-                    }
-                    totalPrecomptes = totalPrecomptes.add(m);
-
-                    BulletinLine precLine = new BulletinLine();
-                    precLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
-                    String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
-                    String finalLibelle = formatLigneVariableLibelle("Précompte", rawName) + (isStc ? " - Solde intégral" : "");
-                    precLine.setLibelle(finalLibelle);
-                    precLine.setTypeLigne("PRECOMPTE");
-                    precLine.setBaseCalcul(prec.getAmount());
-                    precLine.setTaux(null);
-                    precLine.setMontant(m);
-                    precLine.setOrdre(defaultOrdre++);
-                    lines.add(precLine);
+        List<Precompte> precomptesVariables = precompteVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedPrecompteStatuts);
+        for (Precompte prec : precomptesVariables) {
+            if (prec.getAmount() != null && prec.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal m = prec.getAmount();
+                if (isStc && prec.getMontantRestant() != null && prec.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = prec.getMontantRestant();
+                } else if (prec.getRetenueMensuelle() != null && prec.getRetenueMensuelle().compareTo(BigDecimal.ZERO) > 0) {
+                    m = prec.getRetenueMensuelle();
+                } else if (prec.getEcheance() != null && prec.getEcheance() > 1) {
+                    m = prec.getAmount().divide(new BigDecimal(prec.getEcheance()), 0, RoundingMode.HALF_UP);
                 }
+                if (!isStc && prec.getMontantRestant() != null && prec.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                    m = m.min(prec.getMontantRestant());
+                }
+                totalPrecomptes = totalPrecomptes.add(m);
+
+                BulletinLine precLine = new BulletinLine();
+                precLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
+                String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
+                String finalLibelle = formatLigneVariableLibelle("Précompte", rawName) + (isStc ? " - Solde intégral" : "");
+                precLine.setLibelle(finalLibelle);
+                precLine.setTypeLigne("PRECOMPTE");
+                precLine.setBaseCalcul(prec.getAmount());
+                precLine.setTaux(null);
+                precLine.setMontant(m);
+                precLine.setOrdre(defaultOrdre++);
+                lines.add(precLine);
             }
+        }
 
-            // Trop-perçus
-            List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_ATTENTE", "APPLIQUE", "ACTIF", "EN_COURS"));
-            for (TropPercu tp : tropPercus) {
-                if (isTropPercuForSession(tp, session) && tp.getAmount() != null && tp.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    totalPrecomptes = totalPrecomptes.add(tp.getAmount());
+        // Trop-perçus
+        List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(emp.getId(), allowedTropPercuStatuts);
+        for (TropPercu tp : tropPercus) {
+            if (isTropPercuForSession(tp, session) && tp.getAmount() != null && tp.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                totalPrecomptes = totalPrecomptes.add(tp.getAmount());
 
-                    BulletinLine tpLine = new BulletinLine();
-                    tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
-                    String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
-                    String libelle = formatLigneVariableLibelle("Trop-perçu", rawName);
-                    tpLine.setLibelle(libelle);
-                    tpLine.setTypeLigne("RETENUE");
-                    tpLine.setBaseCalcul(tp.getAmount());
-                    tpLine.setTaux(null);
-                    tpLine.setMontant(tp.getAmount());
-                    tpLine.setOrdre(defaultOrdre++);
-                    lines.add(tpLine);
-                }
+                BulletinLine tpLine = new BulletinLine();
+                tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
+                String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
+                String libelle = formatLigneVariableLibelle("Trop-perçu", rawName);
+                tpLine.setLibelle(libelle);
+                tpLine.setTypeLigne("RETENUE");
+                tpLine.setBaseCalcul(tp.getAmount());
+                tpLine.setTaux(null);
+                tpLine.setMontant(tp.getAmount());
+                tpLine.setOrdre(defaultOrdre++);
+                lines.add(tpLine);
             }
         }
 
@@ -3260,7 +3258,7 @@ public class BulletinService {
             boolean isStcSession = isStc(session);
 
             // Mettre à jour les précomptes de l'employé
-            List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
+            List<PrecompteEmploye> precomptes = precompteRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("ACTIF", "EN_COURS", "EN_ATTENTE"));
             for (PrecompteEmploye p : precomptes) {
                 BigDecimal m = isStcSession ? p.getMontantRestant() : (p.getMontantMensuel() != null && p.getMontantRestant() != null ? p.getMontantMensuel().min(p.getMontantRestant()) : p.getMontantMensuel());
                 if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
@@ -3274,7 +3272,7 @@ public class BulletinService {
                 }
             }
 
-            List<Precompte> precomptesVar = precompteVariableRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("EN_COURS", "ACTIF"));
+            List<Precompte> precomptesVar = precompteVariableRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("EN_COURS", "ACTIF", "EN_ATTENTE"));
             for (Precompte p : precomptesVar) {
                 BigDecimal m = p.getAmount();
                 if (p.getRetenueMensuelle() != null && p.getRetenueMensuelle().compareTo(BigDecimal.ZERO) > 0) {
@@ -3296,7 +3294,7 @@ public class BulletinService {
             }
 
             // Mettre à jour les avoirs de l'employé
-            List<AvoirEmploye> avoirs = avoirRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
+            List<AvoirEmploye> avoirs = avoirRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("ACTIF", "EN_ATTENTE", "EN_COURS"));
             for (AvoirEmploye a : avoirs) {
                 BigDecimal m = a.getMontantMensuel() != null && a.getMontantRestant() != null ? a.getMontantMensuel().min(a.getMontantRestant()) : a.getMontantMensuel();
                 if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
@@ -3310,7 +3308,7 @@ public class BulletinService {
                 }
             }
 
-            List<Avoir> avoirsVar = avoirVariableRepository.findByEmployeeIdAndStatut(b.getEmployee().getId(), "ACTIF");
+            List<Avoir> avoirsVar = avoirVariableRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("ACTIF", "EN_ATTENTE", "EN_COURS"));
             for (Avoir a : avoirsVar) {
                 BigDecimal m = a.getAmount();
                 if (a.getEcheance() != null && a.getEcheance() > 1 && a.getMontantRestant() != null) {
@@ -3332,7 +3330,7 @@ public class BulletinService {
             }
 
             // Mettre à jour les trop-perçus appliqués sur ce bulletin (en 1 seule fois)
-            List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("EN_ATTENTE", "ACTIF"));
+            List<TropPercu> tropPercus = tropPercuRepository.findByEmployeeIdAndStatutIn(b.getEmployee().getId(), java.util.List.of("EN_ATTENTE", "ACTIF", "EN_COURS"));
             for (TropPercu tp : tropPercus) {
                 if (isTropPercuForSession(tp, session)) {
                     tp.setStatut("APPLIQUE");

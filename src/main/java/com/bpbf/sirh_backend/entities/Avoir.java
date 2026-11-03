@@ -49,5 +49,5 @@ public class Avoir {
     private LocalDate dateEcheance;
 
     @Builder.Default
-    private String statut = "ACTIF"; // ACTIF, SOLDE, SUSPENDU
+    private String statut = "EN_ATTENTE"; // EN_ATTENTE, ACTIF, SOLDE, SUSPENDU
 }

@@ -433,7 +433,9 @@ public class VariablesPaieService {
             String sql = "SELECT b.id, b.date_from, bl.montant " +
                          "FROM bulletin_line bl " +
                          "JOIN bulletin b ON bl.bulletin_id = b.id " +
+                         "LEFT JOIN session_paie sp ON b.session_paie_id = sp.id " +
                          "WHERE b.employee_id = ? AND bl.type_ligne = 'GAIN' " +
+                         "AND (b.statut IN ('VALIDE', 'CLOTURE') OR sp.statut IN ('VALIDE', 'CLOTURE')) " +
                          "AND (bl.code = ? OR bl.libelle ILIKE ?) " +
                          "ORDER BY b.date_from ASC";
 
@@ -586,7 +588,9 @@ public class VariablesPaieService {
             String sql = "SELECT b.id, b.date_from, bl.montant " +
                          "FROM bulletin_line bl " +
                          "JOIN bulletin b ON bl.bulletin_id = b.id " +
+                         "LEFT JOIN session_paie sp ON b.session_paie_id = sp.id " +
                          "WHERE b.employee_id = ? AND bl.type_ligne = 'PRECOMPTE' " +
+                         "AND (b.statut IN ('VALIDE', 'CLOTURE') OR sp.statut IN ('VALIDE', 'CLOTURE')) " +
                          "AND (bl.code = ? OR bl.libelle ILIKE ?) " +
                          "ORDER BY b.date_from ASC";
 
