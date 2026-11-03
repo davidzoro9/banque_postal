@@ -51,7 +51,7 @@ export class AvoirsComponent implements OnInit {
   }
 
   get countActifs(): number {
-    return this.avoirsList.filter(a => a.statut === 'ACTIF').length;
+    return this.avoirsList.filter(a => a.statut === 'ACTIF' || a.statut === 'EN_ATTENTE' || a.statut === 'EN_COURS').length;
   }
 
   get countSoldes(): number {
@@ -186,9 +186,9 @@ export class AvoirsComponent implements OnInit {
   applyFilter(): void {
     let list = [...this.avoirsList];
 
-    // Filtre par Onglet (Actifs vs Historique Soldés)
+    // Filtre par Onglet (Actifs / En attente vs Historique Soldés)
     if (this.activeTabAvoir === 'ACTIFS') {
-      list = list.filter(a => a.statut === 'ACTIF');
+      list = list.filter(a => a.statut === 'ACTIF' || a.statut === 'EN_ATTENTE' || a.statut === 'EN_COURS');
     } else if (this.activeTabAvoir === 'HISTORIQUE') {
       list = list.filter(a => a.statut === 'SOLDE');
     }
@@ -204,7 +204,11 @@ export class AvoirsComponent implements OnInit {
       );
     }
     if (this.statutFilter) {
-      list = list.filter(a => a.statut === this.statutFilter);
+      if (this.statutFilter === 'ACTIF' || this.statutFilter === 'EN_ATTENTE') {
+        list = list.filter(a => a.statut === 'ACTIF' || a.statut === 'EN_ATTENTE' || a.statut === 'EN_COURS');
+      } else {
+        list = list.filter(a => a.statut === this.statutFilter);
+      }
     }
     if (this.elementFilter) {
       list = list.filter(a => a.salaryElementName === this.elementFilter);
@@ -429,7 +433,7 @@ export class AvoirsComponent implements OnInit {
       montantRestant: totalAmount,
       echeance: 1, // Règle métier : pas d'échéancier pour un rappel, versé en 1 seule fois
       dateEcheance: dateDebutStr,
-      statut: this.formModel.statut || 'ACTIF',
+      statut: this.formModel.statut || 'EN_ATTENTE',
       employeeName: selectedEmp ? `${selectedEmp.nom} ${selectedEmp.prenom}` : this.formModel.employeeName,
       matricule: selectedEmp ? selectedEmp.matricule : this.formModel.matricule,
       salaryElementName: selectedElem ? selectedElem.name : this.formModel.salaryElementName,
@@ -492,7 +496,7 @@ export class AvoirsComponent implements OnInit {
       amount: undefined as any,
       montantRestant: undefined as any,
       echeance: 1,
-      statut: 'ACTIF'
+      statut: 'EN_ATTENTE'
     };
   }
 }

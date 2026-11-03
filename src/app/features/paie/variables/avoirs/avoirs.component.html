@@ -117,7 +117,7 @@
             <mat-label>Statut</mat-label>
             <mat-select [(ngModel)]="statutFilter" (selectionChange)="applyFilter()">
               <mat-option value="">— Tous les statuts —</mat-option>
-              <mat-option value="ACTIF">Actif</mat-option>
+              <mat-option value="EN_ATTENTE">En attente de paie</mat-option>
               <mat-option value="SOLDE">Soldé</mat-option>
               <mat-option value="SUSPENDU">Suspendu</mat-option>
             </mat-select>
@@ -221,9 +221,9 @@
 
                 <!-- Statut avec pastille lumineuse -->
                 <td style="text-align: center;">
-                  <span class="status-pill" [ngClass]="a.statut ? a.statut.toLowerCase() : 'actif'">
+                  <span class="status-pill" [ngClass]="a.statut ? a.statut.toLowerCase() : 'en_attente'">
                     <span class="dot"></span>
-                    {{ a.statut === 'ACTIF' ? 'Actif' : (a.statut === 'SOLDE' ? 'Soldé' : a.statut) }}
+                    {{ a.statut === 'SOLDE' ? 'Soldé' : (a.statut === 'SUSPENDU' ? 'Suspendu' : 'En attente') }}
                   </span>
                 </td>
 
@@ -261,9 +261,9 @@
             <div class="mh-title">
               <div class="mh-top">
                 <h2>{{ selectedAvoir.employeeName }}</h2>
-                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'actif'">
+                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'en_attente'">
                   <span class="dot"></span>
-                  {{ selectedAvoir.statut === 'ACTIF' ? 'Actif' : (selectedAvoir.statut === 'SOLDE' ? 'Soldé' : selectedAvoir.statut) }}
+                  {{ selectedAvoir.statut === 'SOLDE' ? 'Soldé' : (selectedAvoir.statut === 'SUSPENDU' ? 'Suspendu' : 'En attente') }}
                 </span>
               </div>
               <span class="mh-sub">{{ selectedAvoir.salaryElementName }} • Matricule : <strong>{{ selectedAvoir.matricule }}</strong></span>
@@ -295,9 +295,9 @@
             <div class="metric-card">
               <span class="m-label">Statut</span>
               <div class="m-value">
-                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'actif'">
+                <span class="status-pill" [ngClass]="selectedAvoir.statut ? selectedAvoir.statut.toLowerCase() : 'en_attente'">
                   <span class="dot"></span>
-                  {{ selectedAvoir.statut === 'ACTIF' ? 'Actif' : (selectedAvoir.statut === 'SOLDE' ? 'Soldé' : selectedAvoir.statut) }}
+                  {{ selectedAvoir.statut === 'SOLDE' ? 'Soldé' : (selectedAvoir.statut === 'SUSPENDU' ? 'Suspendu' : 'En attente') }}
                 </span>
               </div>
             </div>
