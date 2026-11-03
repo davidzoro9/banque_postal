@@ -100,6 +100,16 @@ export class EtatSyntheseService {
     return this.http.delete<void>(`${this.baseUrl}/configs/${id}`);
   }
 
+  getEligibleEmployees(filters: { periode?: string | null; dateDebut?: string | null; dateFin?: string | null; sessionPaieId?: number | null }): Observable<any[]> {
+    let params = new HttpParams();
+    if (filters.periode) params = params.set('periode', filters.periode);
+    if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
+    if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
+
+    return this.http.get<any[]>(`${this.baseUrl}/employes-eligibles`, { params });
+  }
+
   // ─── CALCUL ET RAPPORT DE L'ÉTAT DE SYNTHÈSE ────────────────────────────
   getEtatSynthese(filters: EtatSyntheseFilter): Observable<EtatSyntheseWrapper> {
     let params = new HttpParams();

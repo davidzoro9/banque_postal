@@ -150,9 +150,10 @@
           [(ngModel)]="selectedEmployeeId"
           (change)="onEmployeeFilterChange()"
         >
-          <option [ngValue]="null">— Sélectionner un employé (Nom et Prénoms) —</option>
-          <option *ngFor="let emp of employeesList" [ngValue]="emp.id">
-            {{ emp.nom }} {{ emp.prenom }}
+          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length > 0">— Sélectionner un employé (Session Validée / Clôturée) —</option>
+          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length === 0">— Aucun employé avec bulletin validé/clôturé pour cette période —</option>
+          <option *ngFor="let emp of eligibleEmployeesList" [ngValue]="emp.id">
+            {{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }})
           </option>
         </select>
       </div>

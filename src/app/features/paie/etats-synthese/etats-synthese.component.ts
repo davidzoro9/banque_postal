@@ -44,6 +44,8 @@ export class EtatsSyntheseComponent implements OnInit {
   directions: any[] = [];
   selectedDirectionId: number | null = null;
   selectedEmployeeId: number | null = null;
+  eligibleEmployeesList: any[] = [];
+  isLoadingEligibleEmployees: boolean = false;
   banques: string[] = ['TOUTES'];
   selectedBanque: string = 'TOUTES';
   searchTerm: string = '';
@@ -207,11 +209,16 @@ export class EtatsSyntheseComponent implements OnInit {
 
   // ─── CHARGEMENT DES FILTRES DEPUIS POSTGRESQL ────────────────────────────
   loadFiltersData(): void {
-    // 1. Charger les sessions et consolider les périodes uniques
+    // 1. Charger les sessions et filtrer strictement les sessions VALIDE ou CLOTURE
     this.http.get<any[]>(`${environment.apiUrl}/paie/sessions`).subscribe({
       next: (res) => {
-        this.sessions = res || [];
+        const raw = res || [];
+        this.sessions = raw.filter(s => {
+          const st = String(s.statut || s.status || '').toUpperCase();
+          return st === 'VALIDE' || st === 'CLOTURE' || st === 'CLÔTURÉ';
+        });
         this.buildPeriodesList();
+        this.loadEligibleEmployees();
         if (this.selectedEtat) {
           this.loadEtatData();
         }
@@ -219,8 +226,13 @@ export class EtatsSyntheseComponent implements OnInit {
       error: () => {
         this.http.get<any[]>(`${environment.apiUrl}/bulletin-lots`).subscribe({
           next: (lots) => {
-            this.sessions = lots || [];
+            const raw = lots || [];
+            this.sessions = raw.filter(s => {
+              const st = String(s.statut || s.status || '').toUpperCase();
+              return st === 'VALIDE' || st === 'CLOTURE' || st === 'CLÔTURÉ';
+            });
             this.buildPeriodesList();
+            this.loadEligibleEmployees();
             if (this.selectedEtat) {
               this.loadEtatData();
             }
@@ -323,6 +335,35 @@ export class EtatsSyntheseComponent implements OnInit {
     });
   }
 
+  loadEligibleEmployees(): void {
+    this.isLoadingEligibleEmployees = true;
+    this.etatService.getEligibleEmployees({
+      periode: this.selectedPeriode || null,
+      dateDebut: this.dateDebut || null,
+      dateFin: this.dateFin || null,
+      sessionPaieId: this.selectedSessionId || null
+    }).subscribe({
+      next: (emps) => {
+        this.eligibleEmployeesList = (emps || []).sort((a: any, b: any) =>
+          `${a.nom || ''} ${a.prenom || ''}`.localeCompare(`${b.nom || ''} ${b.prenom || ''}`)
+        );
+        this.isLoadingEligibleEmployees = false;
+        // Si l'employé sélectionné ne fait plus partie des éligibles, on réinitialise
+        if (this.selectedEmployeeId && !this.eligibleEmployeesList.some((e: any) => Number(e.id) === Number(this.selectedEmployeeId))) {
+          this.selectedEmployeeId = null;
+          if (this.isRuptureEtat) {
+            this.loadEtatData();
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Erreur chargement des employés éligibles aux états de synthèse', err);
+        this.eligibleEmployeesList = [];
+        this.isLoadingEligibleEmployees = false;
+      }
+    });
+  }
+
   onDateIntervalChange(): void {
     if (this.selectedSessionId) {
       const stillValid = this.filteredSessions.some(s => s.id === this.selectedSessionId);
@@ -330,10 +371,12 @@ export class EtatsSyntheseComponent implements OnInit {
         this.selectedSessionId = null;
       }
     }
+    this.loadEligibleEmployees();
     this.loadEtatData();
   }
 
   onSessionChange(): void {
+    this.loadEligibleEmployees();
     this.loadEtatData();
   }
 
@@ -352,6 +395,7 @@ export class EtatsSyntheseComponent implements OnInit {
       return `${annee}-${String(moisNum).padStart(2, '0')}` === this.selectedPeriode;
     });
     this.selectedSessionId = matchingSession ? matchingSession.id : null;
+    this.loadEligibleEmployees();
     this.loadEtatData();
   }
 
