@@ -1594,10 +1594,10 @@ public class BulletinService {
                 BulletinLine lLic = new BulletinLine();
                 if ("RETRAITE".equalsIgnoreCase(motifRupture)) {
                     lLic.setCode("IND_RETRAITE");
-                    lLic.setLibelle("Indemnité de Départ à la Retraite - " + String.format(Locale.US, "%.1f", ancienneteAns) + " ans");
+                    lLic.setLibelle("INDEMNITÉ DE DÉPART À LA RETRAITE");
                 } else {
                     lLic.setCode("IND_LICENC");
-                    lLic.setLibelle("Indemnité de Licenciement - " + String.format(Locale.US, "%.1f", ancienneteAns) + " ans");
+                    lLic.setLibelle("INDEMNITÉ DE LICENCIEMENT");
                 }
                 lLic.setTypeLigne("GAIN");
                 lLic.setBaseCalcul(sgm);
@@ -1610,7 +1610,7 @@ public class BulletinService {
             if (indemnitePreavis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine lPreav = new BulletinLine();
                 lPreav.setCode("IND_PREAVIS");
-                lPreav.setLibelle("Indemnité Compensatrice de Préavis - " + moisPreavis + " mois");
+                lPreav.setLibelle("INDEMNITÉ COMPENSATRICE DE PRÉAVIS");
                 lPreav.setTypeLigne("GAIN");
                 lPreav.setBaseCalcul(sgm);
                 lPreav.setTaux(BigDecimal.valueOf(moisPreavis));
@@ -1622,7 +1622,7 @@ public class BulletinService {
             if (indemniteCongesAcquis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine lCp = new BulletinLine();
                 lCp.setCode("IND_CP_ACQUIS");
-                lCp.setLibelle("Indemnité Compensatrice de Congés Acquis - " + formatMoneyNoDec(joursCongeAcquis) + " j");
+                lCp.setLibelle("INDEMNITÉ COMPENSATRICE DE CONGÉS ACQUIS");
                 lCp.setTypeLigne("GAIN");
                 lCp.setBaseCalcul(smj);
                 lCp.setTaux(joursCongeAcquis);
@@ -1634,7 +1634,7 @@ public class BulletinService {
             if (prorata13eme.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine l13P = new BulletinLine();
                 l13P.setCode("PRORATA_13EME");
-                l13P.setLibelle("13ème Mois au Prorata " + moisDepart + "/12");
+                l13P.setLibelle("13ÈME MOIS AU PRORATA");
                 l13P.setTypeLigne("GAIN");
                 l13P.setBaseCalcul(salaireBase.add(surSalaire));
                 BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
@@ -1646,6 +1646,9 @@ public class BulletinService {
 
             // Ajout des Rappels / Avoirs validés
             for (BulletinLine avL : avoirLines) {
+                if (avL.getLibelle() != null) {
+                    avL.setLibelle(avL.getLibelle().toUpperCase(Locale.ROOT));
+                }
                 avL.setOrdre(ordre++);
                 lines.add(avL);
             }
@@ -1654,8 +1657,9 @@ public class BulletinService {
             if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
                 cnssLine.setCode(seCnss != null ? seCnss.getCode() : "COTIS_CNSS");
-                cnssLine.setLibelle(seCnss != null && seCnss.getName() != null && !seCnss.getName().isBlank()
-                        ? seCnss.getName() : "Cotisation CNSS (Salariale)");
+                String cnssLib = seCnss != null && seCnss.getName() != null && !seCnss.getName().isBlank()
+                        ? seCnss.getName() : "COTISATION CNSS SALARIALE";
+                cnssLine.setLibelle(cnssLib.toUpperCase(Locale.ROOT));
                 cnssLine.setTypeLigne("RETENUE_SOCIALE");
                 cnssLine.setBaseCalcul(baseCnss);
                 cnssLine.setTaux(tauxCnss);
@@ -1669,8 +1673,9 @@ public class BulletinService {
             if (cnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssPatLine = new BulletinLine();
                 cnssPatLine.setCode(seCnssPat != null ? seCnssPat.getCode() : "CHG_PAT_CNSS");
-                cnssPatLine.setLibelle(seCnssPat != null && seCnssPat.getName() != null && !seCnssPat.getName().isBlank()
-                        ? seCnssPat.getName() : "Charges patronales CNSS");
+                String cnssPatLib = seCnssPat != null && seCnssPat.getName() != null && !seCnssPat.getName().isBlank()
+                        ? seCnssPat.getName() : "CHARGES PATRONALES CNSS";
+                cnssPatLine.setLibelle(cnssPatLib.toUpperCase(Locale.ROOT));
                 cnssPatLine.setTypeLigne("COTISATION_PATRONALE");
                 cnssPatLine.setBaseCalcul(baseCnss);
                 cnssPatLine.setTaux(tauxCnssPat);
@@ -1685,8 +1690,9 @@ public class BulletinService {
             if (tpaPatronale.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine tpaLine = new BulletinLine();
                 tpaLine.setCode(seTpa != null ? seTpa.getCode() : "TPA_BURKINA");
-                tpaLine.setLibelle(seTpa != null && seTpa.getName() != null && !seTpa.getName().isBlank()
-                        ? seTpa.getName() : "TPA personnel burkinabè");
+                String tpaLib = seTpa != null && seTpa.getName() != null && !seTpa.getName().isBlank()
+                        ? seTpa.getName() : "TAXE PATRONALE D'APPRENTISSAGE (TPA)";
+                tpaLine.setLibelle(tpaLib.toUpperCase(Locale.ROOT));
                 tpaLine.setTypeLigne("COTISATION_PATRONALE");
                 tpaLine.setBaseCalcul(baseTpaStc);
                 tpaLine.setTaux(tauxTpa);
@@ -1703,8 +1709,9 @@ public class BulletinService {
                 } catch (Exception ignored) {}
                 BulletinLine iutsLine = new BulletinLine();
                 iutsLine.setCode(seIuts != null ? seIuts.getCode() : "RETENUE_IUTS");
-                iutsLine.setLibelle(seIuts != null && seIuts.getName() != null && !seIuts.getName().isBlank()
-                        ? seIuts.getName() : "RETENUE IUTS");
+                String iutsLib = seIuts != null && seIuts.getName() != null && !seIuts.getName().isBlank()
+                        ? seIuts.getName() : "RETENUE IUTS";
+                iutsLine.setLibelle(iutsLib.toUpperCase(Locale.ROOT));
                 iutsLine.setTypeLigne("IMPOT");
                 iutsLine.setBaseCalcul(baseImposable);
                 iutsLine.setTaux(BigDecimal.valueOf(nbCharges));
@@ -1723,8 +1730,9 @@ public class BulletinService {
                 fspMontant = money(calculatePercentage(baseFsp, tauxFsp));
                 BulletinLine fspLine = new BulletinLine();
                 fspLine.setCode(seFsp != null ? seFsp.getCode() : "RET_FSP");
-                fspLine.setLibelle(seFsp != null && seFsp.getName() != null && !seFsp.getName().isBlank()
-                        ? seFsp.getName() : "Fonds de Soutien Patriotique - FSP 1%");
+                String fspLib = seFsp != null && seFsp.getName() != null && !seFsp.getName().isBlank()
+                        ? seFsp.getName() : "RETENUE FONDS DE SOLIDARITE";
+                fspLine.setLibelle(fspLib.toUpperCase(Locale.ROOT));
                 fspLine.setTypeLigne("RETENUE_SOCIALE");
                 fspLine.setBaseCalcul(baseFsp);
                 fspLine.setTaux(tauxFsp);
@@ -1737,9 +1745,10 @@ public class BulletinService {
             if (retenuePreavis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine retPreavLine = new BulletinLine();
                 retPreavLine.setCode(seRetPreavis != null ? seRetPreavis.getCode() : "RET_PREAVIS");
-                retPreavLine.setLibelle((seRetPreavis != null && seRetPreavis.getName() != null && !seRetPreavis.getName().isBlank())
-                        ? seRetPreavis.getName() + " - " + moisPreavis + " mois"
-                        : "Préavis non effectué par le salarié - " + moisPreavis + " mois");
+                String retPreavLib = (seRetPreavis != null && seRetPreavis.getName() != null && !seRetPreavis.getName().isBlank())
+                        ? seRetPreavis.getName()
+                        : "PRÉAVIS NON EFFECTUÉ PAR LE SALARIÉ";
+                retPreavLine.setLibelle(retPreavLib.toUpperCase(Locale.ROOT));
                 retPreavLine.setTypeLigne("RETENUE");
                 retPreavLine.setBaseCalcul(sgm);
                 retPreavLine.setTaux(BigDecimal.valueOf(moisPreavis));
@@ -1759,7 +1768,7 @@ public class BulletinService {
                         BulletinLine pLine = new BulletinLine();
                         pLine.setRubriquePaie(prec.getRubriquePaie());
                         pLine.setCode("PREC_" + prec.getId());
-                        pLine.setLibelle(prec.getLibelle());
+                        pLine.setLibelle(prec.getLibelle() != null ? prec.getLibelle().toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
                         pLine.setTypeLigne("PRECOMPTE");
                         pLine.setBaseCalcul(prec.getMontantInitial());
                         pLine.setMontant(soldePret);
@@ -1776,7 +1785,7 @@ public class BulletinService {
                         BulletinLine pLine = new BulletinLine();
                         pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
                         String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
-                        pLine.setLibelle(rawName);
+                        pLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "PRÉCOMPTE");
                         pLine.setTypeLigne("PRECOMPTE");
                         pLine.setBaseCalcul(prec.getAmount());
                         pLine.setMontant(solde);
@@ -1793,7 +1802,7 @@ public class BulletinService {
                         BulletinLine tpLine = new BulletinLine();
                         tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
                         String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
-                        tpLine.setLibelle(rawName);
+                        tpLine.setLibelle(rawName != null ? rawName.toUpperCase(Locale.ROOT) : "TROP-PERÇU");
                         tpLine.setTypeLigne("RETENUE");
                         tpLine.setBaseCalcul(tp.getAmount());
                         tpLine.setMontant(tp.getAmount());
