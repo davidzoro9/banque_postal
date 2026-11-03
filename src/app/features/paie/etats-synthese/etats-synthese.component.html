@@ -911,6 +911,7 @@
           <div><strong>Matricule :</strong> <span class="font-mono">{{ row.matricule }}</span></div>
           <div><strong>Emploi :</strong> {{ row.emploi }}</div>
           <div><strong>Direction :</strong> {{ row.direction }}</div>
+          <div *ngIf="row.salaireMoyenJournalier"><strong>Salaire Moyen Journalier (SMJ) :</strong> <span class="font-mono font-bold text-primary">{{ formatFcfa(row.salaireMoyenJournalier) }}</span></div>
         </div>
         <table class="bpbf-table font-compact">
           <thead>
@@ -961,6 +962,7 @@
           <div><strong>Matricule :</strong> <span class="font-mono">{{ row.matricule }}</span></div>
           <div><strong>Emploi :</strong> {{ row.emploi }}</div>
           <div><strong>Direction :</strong> {{ row.direction }}</div>
+          <div *ngIf="row.salaireGlobalMoyen"><strong>Salaire Global Moyen (SGM) :</strong> <span class="font-mono font-bold text-primary">{{ formatFcfa(row.salaireGlobalMoyen) }}</span></div>
         </div>
         <table class="bpbf-table font-compact">
           <thead>
@@ -1011,6 +1013,7 @@
           <div><strong>Matricule :</strong> <span class="font-mono">{{ row.matricule }}</span></div>
           <div><strong>Emploi :</strong> {{ row.emploi }}</div>
           <div><strong>Direction :</strong> {{ row.direction }}</div>
+          <div *ngIf="row.salaireMoyenMensuel"><strong>Salaire Moyen Mensuel :</strong> <span class="font-mono font-bold text-primary">{{ formatFcfa(row.salaireMoyenMensuel) }}</span></div>
         </div>
         <table class="bpbf-table font-compact">
           <thead>
