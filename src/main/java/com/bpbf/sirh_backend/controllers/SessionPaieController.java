@@ -2,6 +2,7 @@ package com.bpbf.sirh_backend.controllers;
 
 import com.bpbf.sirh_backend.entities.SessionPaie;
 import com.bpbf.sirh_backend.repositories.SessionPaieRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,16 +51,24 @@ public class SessionPaieController {
 
     @GetMapping
     public List<SessionPaie> getAllSessions() {
-        try {
-            congeWorkflowService.synchroniserSessionsMaterniteEnAttente();
-        } catch (Exception e) {
-            // continuer
-        }
+        // NOTE RÈGLE MÉTIER : Ne plus synchroniser automatiquement les sessions maternité à chaque GET,
+        // afin de permettre à l'utilisateur de supprimer définitivement les sessions reliquat non voulues.
         List<SessionPaie> list = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
         for (SessionPaie s : list) {
             enrichSessionMetrics(s);
         }
         return list;
+    }
+
+    @PostMapping("/synchroniser-maternite")
+    public ResponseEntity<java.util.Map<String, Object>> synchroniserMaternite() {
+        try {
+            congeWorkflowService.synchroniserSessionsMaterniteEnAttente();
+            return ResponseEntity.ok(java.util.Map.of("message", "Sessions maternité synchronisées avec succès."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "Erreur lors de la synchronisation : " + e.getMessage()));
+        }
     }
 
     @GetMapping("/maternite-eligibles")
@@ -282,6 +291,26 @@ public class SessionPaieController {
             }
             return ResponseEntity.ok(sessionPaieRepository.save(session));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/non-validees")
+    public ResponseEntity<java.util.Map<String, Object>> deleteAllUnvalidatedSessions() {
+        int count = bulletinService.deleteAllUnvalidatedSessions();
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", count + " session(s) non validée(s) supprimée(s) avec succès.",
+                "count", count
+        ));
+    }
+
+    @PutMapping("/tout-reinitialiser-validees")
+    public ResponseEntity<java.util.Map<String, Object>> resetAllValidatedSessions() {
+        int count = bulletinService.resetAllValidatedSessions();
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", count + " session(s) validée(s) réinitialisée(s) avec succès (GÉNÉRÉ).",
+                "count", count
+        ));
     }
 
     @DeleteMapping("/{id}")

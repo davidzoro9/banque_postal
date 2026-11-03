@@ -28,8 +28,12 @@ public class EtatSynthesePaieController {
             @RequestParam(required = false) String periode,
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin,
-            @RequestParam(required = false) Long sessionPaieId) {
-        return ResponseEntity.ok(etatSynthesePaieService.getEligibleEmployees(periode, dateDebut, dateFin, sessionPaieId));
+            @RequestParam(required = false) Long sessionPaieId,
+            @RequestParam(required = false) Boolean onlyStc,
+            @RequestParam(required = false) String etatCode) {
+        boolean filterStc = Boolean.TRUE.equals(onlyStc)
+                || (etatCode != null && (etatCode.contains("INDEMNITE") || etatCode.contains("CONGE") || etatCode.contains("LICENCIEMENT") || etatCode.contains("PREAVIS")));
+        return ResponseEntity.ok(etatSynthesePaieService.getEligibleEmployees(periode, dateDebut, dateFin, sessionPaieId, filterStc));
     }
 
     @PutMapping("/signataires")

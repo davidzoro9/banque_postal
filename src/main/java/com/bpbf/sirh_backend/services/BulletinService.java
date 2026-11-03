@@ -57,6 +57,7 @@ public class BulletinService {
     private final TypeIndemniteRepository typeIndemniteRepository;
     private final SalaryElementRepository salaryElementRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     /**
      * Garde-fou d'intégrité V3 : interdit toute modification sur un bulletin ou une session validée/clôturée.
@@ -3462,11 +3463,52 @@ public class BulletinService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Impossible de supprimer une session " + session.getStatut().toLowerCase() + ". Veuillez d'abord réinitialiser son statut.");
         }
 
+        // Détacher d'éventuelles demandes de bulletins liées
+        try {
+            jdbcTemplate.update("UPDATE demande_bulletin SET session_id = NULL WHERE session_id = ?", sessionPaieId);
+            jdbcTemplate.update("UPDATE demande_bulletin SET bulletin_id = NULL WHERE bulletin_id IN (SELECT id FROM bulletin WHERE session_paie_id = ?)", sessionPaieId);
+        } catch (Exception e) {
+            log.debug("Détachement demande_bulletin (non bloquant): {}", e.getMessage());
+        }
+
         List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
         if (!bulletins.isEmpty()) {
+            for (Bulletin b : bulletins) {
+                if (b.getLines() != null) {
+                    b.getLines().clear();
+                }
+            }
             bulletinRepository.deleteAll(bulletins);
+            bulletinRepository.flush();
         }
         sessionPaieRepository.delete(session);
+        sessionPaieRepository.flush();
+    }
+
+    @Transactional
+    public int deleteAllUnvalidatedSessions() {
+        List<SessionPaie> list = sessionPaieRepository.findAll();
+        int count = 0;
+        for (SessionPaie s : list) {
+            if (!"VALIDE".equalsIgnoreCase(s.getStatut()) && !"CLOTURE".equalsIgnoreCase(s.getStatut())) {
+                deleteSession(s.getId());
+                count++;
+            }
+        }
+        return count;
+    }
+
+    @Transactional
+    public int resetAllValidatedSessions() {
+        List<SessionPaie> list = sessionPaieRepository.findAll();
+        int count = 0;
+        for (SessionPaie s : list) {
+            if ("VALIDE".equalsIgnoreCase(s.getStatut())) {
+                devaliderSession(s.getId());
+                count++;
+            }
+        }
+        return count;
     }
 
     @Transactional(readOnly = true)

@@ -498,8 +498,20 @@ public class EtatSynthesePaieService {
      * selon les filtres (session, période, intervalle de dates).
      */
     @Transactional(readOnly = true)
-    public List<com.bpbf.sirh_backend.dtos.EmployeeDto> getEligibleEmployees(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId) {
+    public List<com.bpbf.sirh_backend.dtos.EmployeeDto> getEligibleEmployees(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, boolean onlyStc) {
         List<Bulletin> bulletins = findBulletins(periodeFiltre, dateDebut, dateFin, sessionPaieId, null, null, null);
+        if (onlyStc) {
+            bulletins = bulletins.stream()
+                    .filter(this::isStcBulletin)
+                    .collect(Collectors.toList());
+            // Si la période filtrée ne contient pas de session STC mais qu'on consulte les états STC,
+            // récupérer tous les bulletins STC validés ou clôturés de la base
+            if (bulletins.isEmpty()) {
+                bulletins = bulletinRepository.findAll().stream()
+                        .filter(b -> isBulletinValideOrCloture(b) && isStcBulletin(b))
+                        .collect(Collectors.toList());
+            }
+        }
         Map<Long, Employee> uniqueEmployees = new LinkedHashMap<>();
         for (Bulletin b : bulletins) {
             Employee emp = b.getEmployee();
@@ -511,6 +523,11 @@ public class EtatSynthesePaieService {
                 .map(employeeMapper::toDto)
                 .sorted(Comparator.comparing(e -> (e.getNom() != null ? e.getNom() : "") + " " + (e.getPrenom() != null ? e.getPrenom() : "")))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.bpbf.sirh_backend.dtos.EmployeeDto> getEligibleEmployees(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId) {
+        return getEligibleEmployees(periodeFiltre, dateDebut, dateFin, sessionPaieId, false);
     }
 
     private boolean isSamePeriode(SessionPaie s, Integer annee, String mois, String periode) {
