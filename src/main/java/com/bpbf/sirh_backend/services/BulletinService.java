@@ -1457,10 +1457,9 @@ public class BulletinService {
             BigDecimal joursCongeAcquis = getJoursCongeAcquis(emp.getId());
             BigDecimal indemniteCongesAcquis = money(smj.multiply(joursCongeAcquis));
 
-            // 6. 13ème et 14ème mois au prorata
-            // Non dus en cas de faute lourde
+            // 6. 13ème mois au prorata (le 14ème mois est exclu du STC)
+            // Non dû en cas de faute lourde
             BigDecimal prorata13eme = BigDecimal.ZERO;
-            BigDecimal prorata14eme = BigDecimal.ZERO;
             int moisDepart = 12;
             if (!"LICENCIEMENT_FAUTE_LOURDE".equalsIgnoreCase(motifRupture)) {
                 if (emp.getId() != null) {
@@ -1484,21 +1483,19 @@ public class BulletinService {
                 }
                 BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
                 prorata13eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
-                prorata14eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
             }
 
             BigDecimal totalBrutStc = money(indemniteLicenciement
                     .add(indemnitePreavis)
                     .add(indemniteCongesAcquis)
-                    .add(prorata13eme)
-                    .add(prorata14eme));
+                    .add(prorata13eme));
 
             // 7. RÈGLES FISCALES & SOCIALES BURKINA FASO V3 :
             // Exonération totale (100%) IUTS et CNSS sur l'indemnité de licenciement ou de retraite !
             BigDecimal totalExonerations = indemniteLicenciement;
 
-            // Éléments imposables / assujettis (Préavis versé + Congés payés + Prorata 13è/14è)
-            BigDecimal brutSoumis = money(indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme).add(prorata14eme));
+            // Éléments imposables / assujettis (Préavis versé + Congés payés + Prorata 13è)
+            BigDecimal brutSoumis = money(indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme));
             BigDecimal baseCnss = BigDecimal.ZERO;
             BigDecimal cnssEmploye = BigDecimal.ZERO;
             BigDecimal cnssPatronale = BigDecimal.ZERO;
@@ -1582,19 +1579,6 @@ public class BulletinService {
                 l13P.setMontant(prorata13eme);
                 l13P.setOrdre(ordre++);
                 lines.add(l13P);
-            }
-
-            if (prorata14eme.compareTo(BigDecimal.ZERO) > 0) {
-                BulletinLine l14P = new BulletinLine();
-                l14P.setCode("PRORATA_14EME");
-                l14P.setLibelle("14ème Mois au Prorata " + moisDepart + "/12");
-                l14P.setTypeLigne("GAIN");
-                l14P.setBaseCalcul(salaireBase.add(surSalaire));
-                BigDecimal prorataMois = new BigDecimal(moisDepart).divide(new BigDecimal("12"), 6, RoundingMode.HALF_UP);
-                l14P.setTaux(prorataMois.multiply(CENT));
-                l14P.setMontant(prorata14eme);
-                l14P.setOrdre(ordre++);
-                lines.add(l14P);
             }
 
             // Cotisations & Impôts
@@ -1750,7 +1734,7 @@ public class BulletinService {
             bulletin.setWorkedDays(workedDays);
             bulletin.setSalaireBase(salaireBase);
             bulletin.setSurSalaire(surSalaire);
-            bulletin.setTotalIndemnites(money(totalBrutStc.subtract(prorata13eme).subtract(prorata14eme)));
+            bulletin.setTotalIndemnites(money(totalBrutStc.subtract(prorata13eme)));
             bulletin.setTotalAvoirs(BigDecimal.ZERO);
             bulletin.setSalaireBrut(totalBrutStc);
             bulletin.setTotalExonerations(indemniteLicenciement);
