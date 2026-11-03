@@ -115,14 +115,20 @@ export class TropPercusComponent implements OnInit {
     ).subscribe(data => {
       const list = data || [];
 
-      // Tous les éléments de salaire paramétrés (gains, primes, indemnités et retenues, hors patronale)
+      // Uniquement les éléments de salaire avec la catégorie parente TROP PERCU (CAT_TROP_PERCU)
       const mapped = list
-        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .filter(d => {
+          const catCode = (d.categoryCode || '').toUpperCase().trim();
+          const catName = (d.categoryName || '').toUpperCase().trim();
+          return catCode === 'CAT_TROP_PERCU' || catName.includes('TROP');
+        })
         .map((el: any) => ({
           id: el.id,
           name: el.name || el.libelle || el.code,
           code: el.code || el.codeRubrique || '',
-          type: el.type
+          type: el.type,
+          categoryName: el.categoryName,
+          categoryCode: el.categoryCode
         }));
 
       mapped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));

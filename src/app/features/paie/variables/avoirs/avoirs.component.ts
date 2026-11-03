@@ -110,28 +110,22 @@ export class AvoirsComponent implements OnInit {
     ).subscribe(elements => {
       const elList = elements || [];
 
-      // Tous les éléments de salaire paramétrés (gains, primes, indemnités hors cotisations patronales)
+      // RÈGLE V3 : Seuls les éléments de salaire ayant la catégorie parente RAPPEL
       const filtered = elList
-        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .filter(d => {
+          const catCode = (d.categoryCode || '').toUpperCase().trim();
+          const catName = (d.categoryName || '').toUpperCase().trim();
+          return catCode === 'CAT_RAPPEL' || catCode === 'CAT_AVOIR' || catName.includes('RAPPEL') || catName.includes('AVOIR');
+        })
         .map((d: any) => ({
           id: d.id,
           name: d.name || d.libelle || '',
-          code: d.code || d.codeRubrique || ''
+          code: d.code || d.codeRubrique || '',
+          categoryName: d.categoryName,
+          categoryCode: d.categoryCode
         }));
 
-      // Tri : Salaire de base en premier, puis Sursalaire, puis tri alphabétique
-      filtered.sort((a, b) => {
-        const getIdx = (item: any) => {
-          const c = (item.code || '').toUpperCase();
-          const n = (item.name || '').toLowerCase();
-          if (c.includes('SAL_BASE') || (n.includes('salaire') && n.includes('base'))) return 0;
-          if (c.includes('SURSALAIRE') || n.includes('sursalaire')) return 1;
-          return 10;
-        };
-        const diff = getIdx(a) - getIdx(b);
-        if (diff !== 0) return diff;
-        return (a.name || '').localeCompare(b.name || '');
-      });
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       this.elementsList = filtered;
     });

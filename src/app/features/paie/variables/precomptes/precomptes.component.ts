@@ -128,28 +128,24 @@ export class PrecomptesComponent implements OnInit {
       catchError(() => of([]))
     ).subscribe(data => {
       const list = data || [];
+      // Uniquement les éléments de salaire avec la catégorie parente PRECOMPTES (CAT_PRECOMPTE)
       const mapped = list
-        .filter(d => (d.type || '').toUpperCase().trim() !== 'PATRONALE')
+        .filter(d => {
+          const catCode = (d.categoryCode || '').toUpperCase().trim();
+          const catName = (d.categoryName || '').toUpperCase().trim();
+          return catCode === 'CAT_PRECOMPTE' || catName.includes('PRECOMPTE');
+        })
         .map((d: any) => ({
           id: d.id,
           name: d.name || d.libelle || d.code,
           code: d.code || '',
-          type: d.type
+          type: d.type,
+          categoryName: d.categoryName,
+          categoryCode: d.categoryCode
         }));
 
-      // Tri intelligent : Retenues, avances, prêts en premier, puis les autres éléments
-      mapped.sort((a, b) => {
-        const isRet = (x: any) => {
-          const t = (x.type || '').toUpperCase();
-          const c = (x.code || '').toUpperCase();
-          const n = (x.name || '').toLowerCase();
-          if (t === 'RETENUE' || c.startsWith('PRET') || c.startsWith('AVANCE') || c.startsWith('RET_') || n.includes('retenue') || n.includes('avance') || n.includes('prêt')) return 0;
-          return 1;
-        };
-        const diff = isRet(a) - isRet(b);
-        if (diff !== 0) return diff;
-        return a.name.localeCompare(b.name);
-      });
+      // Tri alphabétique par nom
+      mapped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       this.elementsList = mapped;
     });
