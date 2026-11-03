@@ -1485,17 +1485,80 @@ public class BulletinService {
                 prorata13eme = money((salaireBase.add(surSalaire)).multiply(prorataMois));
             }
 
+            // 6.bis Intégration des Rappels / Avoirs validés pour l'employé dans le STC
+            BigDecimal totalAvoirsStc = BigDecimal.ZERO;
+            List<BulletinLine> avoirLines = new ArrayList<>();
+            if (isSessionValidee) {
+                List<AvoirEmploye> avoirsEmp = avoirRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("ACTIF", "SOLDE"));
+                for (AvoirEmploye av : avoirsEmp) {
+                    if (av.getMontantMensuel() != null && av.getMontantMensuel().compareTo(BigDecimal.ZERO) > 0) {
+                        totalAvoirsStc = totalAvoirsStc.add(av.getMontantMensuel());
+                        BulletinLine avLine = new BulletinLine();
+                        avLine.setRubriquePaie(av.getRubriquePaie());
+                        avLine.setCode(av.getRubriquePaie() != null ? av.getRubriquePaie().getCodeRubrique() : "AVR_" + av.getId());
+                        avLine.setLibelle(av.getLibelle() != null ? av.getLibelle() : "Rappel");
+                        avLine.setTypeLigne("GAIN");
+                        avLine.setBaseCalcul(av.getMontantMensuel());
+                        avLine.setMontant(av.getMontantMensuel());
+                        avoirLines.add(avLine);
+                    }
+                }
+                List<Avoir> avoirsVar = avoirVariableRepository.findByEmployeeIdAndStatutIn(emp.getId(), java.util.List.of("EN_COURS", "ACTIF", "SOLDE"));
+                for (Avoir av : avoirsVar) {
+                    BigDecimal m = av.getAmount();
+                    if (av.getEcheance() != null && av.getEcheance() > 1 && av.getMontantRestant() != null) {
+                        m = av.getAmount().divide(new BigDecimal(av.getEcheance()), 0, RoundingMode.HALF_UP);
+                    }
+                    if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
+                        m = m.min(av.getMontantRestant());
+                    }
+                    if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                        totalAvoirsStc = totalAvoirsStc.add(m);
+                        BulletinLine avLine = new BulletinLine();
+                        avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "AVR_" + av.getId());
+                        String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Rappel");
+                        avLine.setLibelle(rawName);
+                        avLine.setTypeLigne("GAIN");
+                        avLine.setBaseCalcul(m);
+                        avLine.setMontant(m);
+                        avoirLines.add(avLine);
+                    }
+                }
+            }
+
             BigDecimal totalBrutStc = money(indemniteLicenciement
                     .add(indemnitePreavis)
                     .add(indemniteCongesAcquis)
-                    .add(prorata13eme));
+                    .add(prorata13eme)
+                    .add(totalAvoirsStc));
 
             // 7. RÈGLES FISCALES & SOCIALES BURKINA FASO V3 :
             // Exonération totale (100%) IUTS et CNSS sur l'indemnité de licenciement ou de retraite !
             BigDecimal totalExonerations = indemniteLicenciement;
 
-            // Éléments imposables / assujettis (Préavis versé + Congés payés + Prorata 13è)
-            BigDecimal brutSoumis = money(indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme));
+            // Éléments imposables / assujettis (Préavis versé + Congés payés + Prorata 13è + Rappels)
+            BigDecimal brutSoumis = money(indemnitePreavis.add(indemniteCongesAcquis).add(prorata13eme).add(totalAvoirsStc));
+
+            // Liaison dynamique aux éléments de salaire paramétrés (Codes, Libellés, Taux)
+            SalaryElement seCnss = findSalaryElement("CAT_COTIS_SOC", "CNSS", "cotis_cnss", "cot_cnss", "ret_cnss");
+            SalaryElement seCnssPat = findCnssSalaryElement();
+            if (seCnssPat == null) {
+                seCnssPat = findSalaryElement("CAT_CHG_PATRONALES", "CNSS", "chg_pat_cnss", "cot_pat_cnss");
+            }
+            SalaryElement seTpa = findSalaryElement("CAT_CHG_PATRONALES", "TPA", "tpa_burkina", "tpa", "tpa_pat");
+            SalaryElement seIuts = findSalaryElement("CAT_IUTS", "IUTS", "retenue_iuts", "iuts", "ret_iuts");
+            SalaryElement seFsp = findSalaryElement("CAT_COTIS_SOC", "FSP", "ret_fsp", "fsp", "ret_solidarite");
+            SalaryElement seRetPreavis = findSalaryElement("CAT_PRECOMPTE", "PREAVIS", "ret_preavis", "preavis_ret");
+
+            BigDecimal tauxCnss = (seCnss != null && seCnss.getRate() != null && seCnss.getRate().compareTo(BigDecimal.ZERO) > 0)
+                    ? seCnss.getRate() : new BigDecimal("5.50");
+            BigDecimal tauxCnssPat = (seCnssPat != null && seCnssPat.getRate() != null && seCnssPat.getRate().compareTo(BigDecimal.ZERO) > 0)
+                    ? seCnssPat.getRate() : new BigDecimal("16.00");
+            BigDecimal tauxTpa = (seTpa != null && seTpa.getRate() != null && seTpa.getRate().compareTo(BigDecimal.ZERO) > 0)
+                    ? seTpa.getRate() : new BigDecimal("3.00");
+            BigDecimal tauxFsp = (seFsp != null && seFsp.getRate() != null && seFsp.getRate().compareTo(BigDecimal.ZERO) > 0)
+                    ? seFsp.getRate() : new BigDecimal("1.00");
+
             BigDecimal baseCnss = BigDecimal.ZERO;
             BigDecimal cnssEmploye = BigDecimal.ZERO;
             BigDecimal cnssPatronale = BigDecimal.ZERO;
@@ -1507,8 +1570,8 @@ public class BulletinService {
 
             if (brutSoumis.compareTo(BigDecimal.ZERO) > 0) {
                 baseCnss = brutSoumis.min(new BigDecimal("800000.00"));
-                cnssEmploye = money(baseCnss.multiply(new BigDecimal("0.055"))).min(new BigDecimal("44000.00"));
-                cnssPatronale = money(baseCnss.multiply(new BigDecimal("0.16")));
+                cnssEmploye = money(baseCnss.multiply(tauxCnss.divide(CENT, 4, RoundingMode.HALF_UP))).min(new BigDecimal("44000.00"));
+                cnssPatronale = money(baseCnss.multiply(tauxCnssPat.divide(CENT, 4, RoundingMode.HALF_UP)));
 
                 abattement = money(brutSoumis.multiply(new BigDecimal("0.20")).min(new BigDecimal("75000.00")));
                 baseImposable = money(brutSoumis.subtract(cnssEmploye).subtract(abattement).max(BigDecimal.ZERO));
@@ -1526,7 +1589,7 @@ public class BulletinService {
             List<BulletinLine> lines = new ArrayList<>();
             int ordre = 1;
 
-            // Gains
+            // Gains spécifiques STC (Code du travail)
             if (indemniteLicenciement.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine lLic = new BulletinLine();
                 if ("RETRAITE".equalsIgnoreCase(motifRupture)) {
@@ -1581,32 +1644,55 @@ public class BulletinService {
                 lines.add(l13P);
             }
 
-            // Cotisations & Impôts
-            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0 || cnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
+            // Ajout des Rappels / Avoirs validés
+            for (BulletinLine avL : avoirLines) {
+                avL.setOrdre(ordre++);
+                lines.add(avL);
+            }
+
+            // Cotisations & Impôts (Liés à la table salary_element)
+            if (cnssEmploye.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine cnssLine = new BulletinLine();
-                cnssLine.setCode("COT_CNSS");
-                cnssLine.setLibelle("Cotisation CNSS 5.5%");
+                cnssLine.setCode(seCnss != null ? seCnss.getCode() : "COTIS_CNSS");
+                cnssLine.setLibelle(seCnss != null && seCnss.getName() != null && !seCnss.getName().isBlank()
+                        ? seCnss.getName() : "Cotisation CNSS (Salariale)");
                 cnssLine.setTypeLigne("RETENUE_SOCIALE");
                 cnssLine.setBaseCalcul(baseCnss);
-                cnssLine.setTaux(new BigDecimal("5.50"));
+                cnssLine.setTaux(tauxCnss);
                 cnssLine.setMontant(cnssEmploye);
                 cnssLine.setPartPatronale(cnssPatronale);
-                cnssLine.setOrdre(ordre++);
+                cnssLine.setOrdre(seCnss != null && seCnss.getOrdre() != null ? seCnss.getOrdre() : ordre++);
                 lines.add(cnssLine);
             }
 
+            // Ligne dédiée Charge patronale CNSS
+            if (cnssPatronale.compareTo(BigDecimal.ZERO) > 0) {
+                BulletinLine cnssPatLine = new BulletinLine();
+                cnssPatLine.setCode(seCnssPat != null ? seCnssPat.getCode() : "CHG_PAT_CNSS");
+                cnssPatLine.setLibelle(seCnssPat != null && seCnssPat.getName() != null && !seCnssPat.getName().isBlank()
+                        ? seCnssPat.getName() : "Charges patronales CNSS");
+                cnssPatLine.setTypeLigne("COTISATION_PATRONALE");
+                cnssPatLine.setBaseCalcul(baseCnss);
+                cnssPatLine.setTaux(tauxCnssPat);
+                cnssPatLine.setMontant(cnssPatronale);
+                cnssPatLine.setPartPatronale(cnssPatronale);
+                cnssPatLine.setOrdre(seCnssPat != null && seCnssPat.getOrdre() != null ? seCnssPat.getOrdre() : ordre++);
+                lines.add(cnssPatLine);
+            }
+
             BigDecimal baseTpaStc = brutSoumis != null && brutSoumis.compareTo(BigDecimal.ZERO) > 0 ? brutSoumis : totalBrutStc;
-            BigDecimal tpaPatronale = money(baseTpaStc.multiply(new BigDecimal("0.03")));
+            BigDecimal tpaPatronale = money(baseTpaStc.multiply(tauxTpa.divide(CENT, 4, RoundingMode.HALF_UP)));
             if (tpaPatronale.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine tpaLine = new BulletinLine();
-                tpaLine.setCode("TPA_PAT");
-                tpaLine.setLibelle("TAXE PATRONALE D'APPRENTISSAGE (TPA 3%)");
+                tpaLine.setCode(seTpa != null ? seTpa.getCode() : "TPA_BURKINA");
+                tpaLine.setLibelle(seTpa != null && seTpa.getName() != null && !seTpa.getName().isBlank()
+                        ? seTpa.getName() : "TPA personnel burkinabè");
                 tpaLine.setTypeLigne("COTISATION_PATRONALE");
                 tpaLine.setBaseCalcul(baseTpaStc);
-                tpaLine.setTaux(new BigDecimal("3.00"));
+                tpaLine.setTaux(tauxTpa);
                 tpaLine.setMontant(tpaPatronale);
                 tpaLine.setPartPatronale(tpaPatronale);
-                tpaLine.setOrdre(ordre++);
+                tpaLine.setOrdre(seTpa != null && seTpa.getOrdre() != null ? seTpa.getOrdre() : ordre++);
                 lines.add(tpaLine);
             }
 
@@ -1616,46 +1702,49 @@ public class BulletinService {
                     nbCharges = Math.toIntExact(familleRepository.countByEmployeeIdAndEstChargeTrue(emp.getId()));
                 } catch (Exception ignored) {}
                 BulletinLine iutsLine = new BulletinLine();
-                iutsLine.setCode("IUTS");
-                iutsLine.setLibelle("RETENUE IUTS");
+                iutsLine.setCode(seIuts != null ? seIuts.getCode() : "RETENUE_IUTS");
+                iutsLine.setLibelle(seIuts != null && seIuts.getName() != null && !seIuts.getName().isBlank()
+                        ? seIuts.getName() : "RETENUE IUTS");
                 iutsLine.setTypeLigne("IMPOT");
                 iutsLine.setBaseCalcul(baseImposable);
                 iutsLine.setTaux(BigDecimal.valueOf(nbCharges));
                 iutsLine.setMontant(impotIuts);
-                iutsLine.setOrdre(ordre++);
+                iutsLine.setOrdre(seIuts != null && seIuts.getOrdre() != null ? seIuts.getOrdre() : ordre++);
                 lines.add(iutsLine);
             }
 
-            // 7.bis Retenue Fonds de Soutien Patriotique (FSP 1% sur le net imposable / cédulaire)
+            // 7.bis Retenue Fonds de Soutien Patriotique (FSP sur le net imposable / cédulaire)
             BigDecimal baseFsp = money(brutSoumis.subtract(cnssEmploye).subtract(impotIuts).max(BigDecimal.ZERO));
             if (baseFsp.compareTo(BigDecimal.ZERO) == 0 && totalBrutStc.compareTo(BigDecimal.ZERO) > 0) {
                 baseFsp = money(totalBrutStc.subtract(cnssEmploye).subtract(impotIuts).max(BigDecimal.ZERO));
             }
             BigDecimal fspMontant = BigDecimal.ZERO;
             if (baseFsp.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal tauxFsp = new BigDecimal("1.00");
                 fspMontant = money(calculatePercentage(baseFsp, tauxFsp));
                 BulletinLine fspLine = new BulletinLine();
-                fspLine.setCode("RET_FSP");
-                fspLine.setLibelle("Fonds de Soutien Patriotique - FSP 1%");
+                fspLine.setCode(seFsp != null ? seFsp.getCode() : "RET_FSP");
+                fspLine.setLibelle(seFsp != null && seFsp.getName() != null && !seFsp.getName().isBlank()
+                        ? seFsp.getName() : "Fonds de Soutien Patriotique - FSP 1%");
                 fspLine.setTypeLigne("RETENUE_SOCIALE");
                 fspLine.setBaseCalcul(baseFsp);
                 fspLine.setTaux(tauxFsp);
                 fspLine.setMontant(fspMontant);
-                fspLine.setOrdre(ordre++);
+                fspLine.setOrdre(seFsp != null && seFsp.getOrdre() != null ? seFsp.getOrdre() : ordre++);
                 lines.add(fspLine);
             }
 
             // Retenue Préavis non effectué par le salarié
             if (retenuePreavis.compareTo(BigDecimal.ZERO) > 0) {
                 BulletinLine retPreavLine = new BulletinLine();
-                retPreavLine.setCode("RET_PREAVIS");
-                retPreavLine.setLibelle("Préavis non effectué par le salarié - " + moisPreavis + " mois");
+                retPreavLine.setCode(seRetPreavis != null ? seRetPreavis.getCode() : "RET_PREAVIS");
+                retPreavLine.setLibelle((seRetPreavis != null && seRetPreavis.getName() != null && !seRetPreavis.getName().isBlank())
+                        ? seRetPreavis.getName() + " - " + moisPreavis + " mois"
+                        : "Préavis non effectué par le salarié - " + moisPreavis + " mois");
                 retPreavLine.setTypeLigne("RETENUE");
                 retPreavLine.setBaseCalcul(sgm);
                 retPreavLine.setTaux(BigDecimal.valueOf(moisPreavis));
                 retPreavLine.setMontant(retenuePreavis);
-                retPreavLine.setOrdre(ordre++);
+                retPreavLine.setOrdre(seRetPreavis != null && seRetPreavis.getOrdre() != null ? seRetPreavis.getOrdre() : ordre++);
                 lines.add(retPreavLine);
             }
 
@@ -1670,7 +1759,7 @@ public class BulletinService {
                         BulletinLine pLine = new BulletinLine();
                         pLine.setRubriquePaie(prec.getRubriquePaie());
                         pLine.setCode("PREC_" + prec.getId());
-                        pLine.setLibelle(prec.getLibelle() + " - Solde Intégral STC");
+                        pLine.setLibelle(prec.getLibelle());
                         pLine.setTypeLigne("PRECOMPTE");
                         pLine.setBaseCalcul(prec.getMontantInitial());
                         pLine.setMontant(soldePret);
@@ -1687,7 +1776,7 @@ public class BulletinService {
                         BulletinLine pLine = new BulletinLine();
                         pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
                         String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
-                        pLine.setLibelle(formatLigneVariableLibelle("Précompte", rawName) + " - Solde Intégral STC");
+                        pLine.setLibelle(rawName);
                         pLine.setTypeLigne("PRECOMPTE");
                         pLine.setBaseCalcul(prec.getAmount());
                         pLine.setMontant(solde);
@@ -1704,7 +1793,7 @@ public class BulletinService {
                         BulletinLine tpLine = new BulletinLine();
                         tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
                         String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
-                        tpLine.setLibelle(formatLigneVariableLibelle("Trop-perçu", rawName) + " - Solde STC");
+                        tpLine.setLibelle(rawName);
                         tpLine.setTypeLigne("RETENUE");
                         tpLine.setBaseCalcul(tp.getAmount());
                         tpLine.setMontant(tp.getAmount());
@@ -1734,8 +1823,8 @@ public class BulletinService {
             bulletin.setWorkedDays(workedDays);
             bulletin.setSalaireBase(salaireBase);
             bulletin.setSurSalaire(surSalaire);
-            bulletin.setTotalIndemnites(money(totalBrutStc.subtract(prorata13eme)));
-            bulletin.setTotalAvoirs(BigDecimal.ZERO);
+            bulletin.setTotalIndemnites(money(totalBrutStc.subtract(prorata13eme).subtract(totalAvoirsStc)));
+            bulletin.setTotalAvoirs(totalAvoirsStc);
             bulletin.setSalaireBrut(totalBrutStc);
             bulletin.setTotalExonerations(indemniteLicenciement);
             bulletin.setAbattementForfaitaire(abattement);
