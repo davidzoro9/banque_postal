@@ -61,7 +61,7 @@ export interface RefItem {
   plafondExoneration?: number; // pour Paramétrage indemnité (Plafond FCFA d'exonération)
   categories?: string[];    // pour Groupe (Liste des codes de catégories rattachées)
   anneeDebut?: number;      // pour Tranche indemnité licenciement
-  anneeFin?: number;        // pour Tranche indemnité licenciement
+  anneeFin?: number | null; // pour Tranche indemnité licenciement
   trancheAnciennete?: string; // pour Tranche indemnité licenciement
   typeNomination?: string;  // pour Fonction : 'NOMMEE' ou 'NON_NOMMEE'
   regleType?: string;       // pour Paramétrage indemnité : 'ORDINAIRE', 'NOMINATION', 'SPECIFIQUE'

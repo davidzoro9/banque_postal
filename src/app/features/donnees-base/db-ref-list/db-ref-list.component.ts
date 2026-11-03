@@ -500,8 +500,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         this.indemniteTab = 'ORDINAIRE';
         this.regleType = 'ORDINAIRE';
         this.displayedColumns = ['code', 'typeIndemnite', 'grade', 'categorie', 'taux', 'actif', 'actions'];
-      } else if (this.type === 'param-retraite',
-      'param-tranche-licenciement') {
+      } else if (this.type === 'param-retraite') {
         this.displayedColumns = ['grade', 'taux', 'actif', 'actions'];
       } else if (this.type === 'param-tranche-licenciement') {
         this.displayedColumns = ['trancheAnciennete', 'taux', 'description', 'actif', 'actions'];
@@ -547,7 +546,8 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       'type-conge',
       'param-groupe',
       'retenue',
-      'param-retraite'
+      'param-retraite',
+      'param-tranche-licenciement'
     ];
     return hiddenTypes.includes(this.type) || (this.type ? this.type.includes('fonction') : false);
   }
@@ -758,6 +758,9 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
       this.formGroup.get('categorieId')?.setValidators([Validators.required]);
     } else if (this.type === 'param-retraite') {
       this.formGroup.get('gradeId')?.setValidators([Validators.required]);
+    } else if (this.type === 'param-tranche-licenciement') {
+      this.formGroup.get('libelle')?.setValidators([Validators.required, Validators.maxLength(150)]);
+      this.formGroup.get('taux')?.setValidators([Validators.required, Validators.min(0), Validators.max(100)]);
     } else if (this.type === 'service') {
       this.formGroup.get('directionId')?.setValidators([Validators.required]);
     } else {
@@ -778,6 +781,7 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
     this.formGroup.get('baseCalcul')?.updateValueAndValidity();
     this.formGroup.get('fonctionId')?.updateValueAndValidity();
     this.formGroup.get('emploiId')?.updateValueAndValidity();
+    this.formGroup.get('taux')?.updateValueAndValidity();
     this.formGroup.get('directeurId')?.updateValueAndValidity();
     this.formGroup.get('departementId')?.updateValueAndValidity();
     this.formGroup.get('agenceId')?.updateValueAndValidity();
@@ -819,6 +823,16 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         emploiId: null,
         gradeId: null,
         categorieId: null
+      });
+    } else if (this.type === 'param-tranche-licenciement') {
+      this.formGroup.patchValue({
+        code: '',
+        libelle: '',
+        anneeDebut: 1,
+        anneeFin: null,
+        taux: 25,
+        description: '',
+        actif: true
       });
     }
     this.setupValidators();
@@ -958,6 +972,34 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         tauxExoneration: 0,
         plafondExoneration: 0,
         tauxAbattement:  defaultAbattement
+      });
+    } else if (this.type === 'param-tranche-licenciement') {
+      this.formGroup.reset({
+        code:          item.code || '',
+        libelle:       item.libelle || '',
+        anneeDebut:    item.anneeDebut ?? 1,
+        anneeFin:      item.anneeFin ?? null,
+        taux:          item.taux ?? 0,
+        description:   item.description || '',
+        actif:         item.actif ?? true,
+        montant:       0,
+        departementId: null,
+        directionId:   null,
+        agenceId:      null,
+        parentDirectionId: null,
+        directeurId:   null,
+        echelle:       '',
+        echellon:      '',
+        typeIndemnite: '',
+        typeRetenue:   '',
+        fonction:      '',
+        grade:         '',
+        categorie:     '',
+        categories:    [],
+        tauxExoneration: 0,
+        plafondExoneration: 0,
+        tauxAbattement: defaultAbattement,
+        typeNomination: 'NON_NOMMEE'
       });
     } else if (this.type === 'param-retraite') {
       this.formGroup.reset({
@@ -1244,6 +1286,19 @@ export class DbRefListComponent implements OnInit, AfterViewInit {
         regimeSecuriteSocialLibelle: selectedRegimeSecuriteSocial?.libelle || '',
         taux:          Number(v.taux ?? 0),
         baseCalcul:    v.baseCalcul
+      };
+    } else if (this.type === 'param-tranche-licenciement') {
+      const libVal = v.libelle && v.libelle.trim() ? v.libelle.trim() : (this.editingItem?.libelle || 'Tranche');
+      const finalCode = this.editingItem?.code || (v.code && v.code.trim() ? v.code.trim() : this.generateCode(this.type, libVal));
+      item = {
+        id:          this.editingItem?.id,
+        code:        finalCode,
+        libelle:     libVal,
+        anneeDebut:  v.anneeDebut != null && v.anneeDebut !== '' ? Number(v.anneeDebut) : 1,
+        anneeFin:    v.anneeFin != null && v.anneeFin !== '' ? Number(v.anneeFin) : null,
+        taux:        v.taux != null ? Number(v.taux) : 0,
+        description: v.description || '',
+        actif:       v.actif ?? true
       };
     } else {
       const libelleVal = v.libelle && v.libelle.trim() ? v.libelle.trim() : (this.editingItem?.libelle || 'Nouvel Élément');
