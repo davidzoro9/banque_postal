@@ -489,6 +489,60 @@
           </div>
         </div>
 
+        <!-- Barre de recherche et filtres rapides d'agents -->
+        <div style="display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap;">
+          <div style="position: relative; flex: 1; min-width: 280px; max-width: 520px;">
+            <mat-icon style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--on-surface-3); font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+            <input
+              type="text"
+              [(ngModel)]="searchBulletinTexte"
+              placeholder="Rechercher un agent (nom, prénom, matricule, grade...)"
+              style="width: 100%; height: 38px; padding: 6px 36px 6px 38px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface-variant); color: var(--on-surface); outline: none; font-size: 13.5px;"
+            />
+            @if (searchBulletinTexte) {
+              <button
+                type="button"
+                (click)="searchBulletinTexte = ''"
+                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--on-surface-3); display: flex; align-items: center; justify-content: center; padding: 4px;"
+                title="Effacer la recherche">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+              </button>
+            }
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <!-- Filtres par statut -->
+            <button
+              type="button"
+              (click)="filtreEtatBulletin = 'TOUS'"
+              [style.background]="filtreEtatBulletin === 'TOUS' ? '#0060B3' : 'var(--surface-variant)'"
+              [style.color]="filtreEtatBulletin === 'TOUS' ? '#ffffff' : 'var(--on-surface-2)'"
+              style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              Tous ({{ bulletins.length }})
+            </button>
+            <button
+              type="button"
+              (click)="filtreEtatBulletin = 'GENERE'"
+              [style.background]="filtreEtatBulletin === 'GENERE' ? '#f59e0b' : 'var(--surface-variant)'"
+              [style.color]="filtreEtatBulletin === 'GENERE' ? '#ffffff' : '#b45309'"
+              style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              À valider ({{ nbrGeneres }})
+            </button>
+            <button
+              type="button"
+              (click)="filtreEtatBulletin = 'VALIDE'"
+              [style.background]="filtreEtatBulletin === 'VALIDE' ? '#16a34a' : 'var(--surface-variant)'"
+              [style.color]="filtreEtatBulletin === 'VALIDE' ? '#ffffff' : '#15803d'"
+              style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              Validés ({{ nbrValides }})
+            </button>
+
+            <span style="font-size: 12px; color: var(--on-surface-3); font-weight: 600; margin-left: 6px;">
+              {{ bulletinsFiltres.length }} affiché(s)
+            </span>
+          </div>
+        </div>
+
       <div class="table-responsive">
         <table class="paie-table">
           <thead>
@@ -517,7 +571,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (b of bulletins; track b.employeeId; let idx = $index) {
+            @for (b of bulletinsFiltres; track b.employeeId; let idx = $index) {
               <tr>
                 <td style="text-align: center; font-weight: 600; opacity: 0.7;">{{ idx + 1 }}</td>
                 <td>
@@ -608,6 +662,24 @@
                       }
                     }
                   </div>
+                </td>
+              </tr>
+            }
+            @if (bulletinsFiltres.length === 0) {
+              <tr>
+                <td [attr.colspan]="modeComparatifMminus1 ? 16 : 13" style="text-align: center; padding: 40px 20px; color: var(--on-surface-3);">
+                  <mat-icon style="font-size: 40px; width: 40px; height: 40px; color: var(--on-surface-3); margin-bottom: 8px;">person_search</mat-icon>
+                  <div style="font-weight: 700; font-size: 15px; color: var(--on-surface);">Aucun agent trouvé</div>
+                  <div style="font-size: 13px; margin-top: 4px; color: var(--on-surface-2);">
+                    @if (searchBulletinTexte) {
+                      Aucun bulletin ne correspond à la recherche « <strong>{{ searchBulletinTexte }}</strong> »
+                    } @else {
+                      Aucun bulletin ne correspond au filtre sélectionné
+                    }
+                  </div>
+                  <button type="button" mat-stroked-button color="primary" (click)="searchBulletinTexte = ''; filtreEtatBulletin = 'TOUS'" style="margin-top: 14px; font-weight: 600;">
+                    Réinitialiser les filtres
+                  </button>
                 </td>
               </tr>
             }

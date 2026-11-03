@@ -146,6 +146,31 @@ export class GenererBulletinsComponent implements OnInit {
   bulletins: any[] = [];
   selectedBulletin: any = null;
 
+  // Recherche et filtres d'agents dans la table des bulletins de session
+  searchBulletinTexte: string = '';
+  filtreEtatBulletin: 'TOUS' | 'GENERE' | 'VALIDE' = 'TOUS';
+
+  get bulletinsFiltres(): any[] {
+    if (!this.bulletins) return [];
+    let list = this.bulletins;
+    if (this.filtreEtatBulletin === 'GENERE') {
+      list = list.filter(b => b.etat === 'GENERE');
+    } else if (this.filtreEtatBulletin === 'VALIDE') {
+      list = list.filter(b => b.etat === 'VALIDE' || b.etat === 'CLOTURE');
+    }
+    if (!this.searchBulletinTexte || !this.searchBulletinTexte.trim()) {
+      return list;
+    }
+    const q = this.searchBulletinTexte.toLowerCase().trim();
+    return list.filter(b => {
+      const nom = (b.employeeName || '').toLowerCase();
+      const mat = (b.matricule || '').toLowerCase();
+      const grade = (b.grade || b.gradeLibelle || b.classification || '').toLowerCase();
+      const emploi = (b.emploi || b.fonction || '').toLowerCase();
+      return nom.includes(q) || mat.includes(q) || grade.includes(q) || emploi.includes(q);
+    });
+  }
+
   // Modification des variables du bulletin par lot
   showEditVariablesModal = false;
   selectedBulletinForEdit: any = null;
