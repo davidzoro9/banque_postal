@@ -150,8 +150,12 @@
           [(ngModel)]="selectedEmployeeId"
           (change)="onEmployeeFilterChange()"
         >
-          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length > 0">— Sélectionner un employé (Session Validée / Clôturée) —</option>
-          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length === 0">— Aucun employé avec bulletin validé/clôturé pour cette période —</option>
+          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length > 0">
+            {{ isRuptureEtat ? '— Sélectionner un agent (Session STC Validée / Clôturée) —' : '— Sélectionner un employé (Session Validée / Clôturée) —' }}
+          </option>
+          <option [ngValue]="null" *ngIf="eligibleEmployeesList.length === 0">
+            {{ isRuptureEtat ? '— Aucun agent issu d\'une session STC validée/clôturée —' : '— Aucun employé avec bulletin validé/clôturé pour cette période —' }}
+          </option>
           <option *ngFor="let emp of eligibleEmployeesList" [ngValue]="emp.id">
             {{ emp.nom }} {{ emp.prenom }} ({{ emp.matricule }})
           </option>

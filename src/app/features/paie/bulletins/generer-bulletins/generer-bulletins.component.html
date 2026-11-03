@@ -179,6 +179,19 @@
           style="font-weight: 700; border-radius: 8px; background: #0284c7; color: white; height: 42px; font-size: 14px; padding: 0 20px; box-shadow: 0 4px 12px rgba(2,132,199,0.25);">
           <mat-icon style="margin-right: 6px;">add_circle</mat-icon> + Nouvelle Session de Paie
         </button>
+
+        <button mat-stroked-button (click)="toutReinitialiserSessionsValidees()"
+          style="font-weight: 700; border-radius: 8px; height: 42px; color: #d97706; border-color: #f59e0b; background: #fffbeb;"
+          title="Tout réinitialiser les sessions validées et les ramener à l'état initial GÉNÉRÉ">
+          <mat-icon style="margin-right: 4px;">restore</mat-icon> Tout réinitialiser (validées)
+        </button>
+
+        <button mat-stroked-button color="warn" (click)="toutSupprimerSessionsNonValidees()"
+          style="font-weight: 700; border-radius: 8px; height: 42px; color: #dc2626; border-color: #fca5a5; background: #fef2f2;"
+          title="Supprimer définitivement toutes les sessions pas encore validées et leurs bulletins">
+          <mat-icon style="margin-right: 4px;">delete_sweep</mat-icon> Tout supprimer (non validées)
+        </button>
+
         <button mat-stroked-button color="warn" (click)="recalculerTousLesBulletins()" [disabled]="isCalculating"
           style="font-weight: 700; border-radius: 8px; height: 42px;" title="Recalculer tous les bulletins de paie selon les règles officielles du CGI">
           <mat-icon style="margin-right: 4px;">published_with_changes</mat-icon> Recalculer tous les bulletins

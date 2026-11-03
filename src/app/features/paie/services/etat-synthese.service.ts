@@ -100,12 +100,14 @@ export class EtatSyntheseService {
     return this.http.delete<void>(`${this.baseUrl}/configs/${id}`);
   }
 
-  getEligibleEmployees(filters: { periode?: string | null; dateDebut?: string | null; dateFin?: string | null; sessionPaieId?: number | null }): Observable<any[]> {
+  getEligibleEmployees(filters: { periode?: string | null; dateDebut?: string | null; dateFin?: string | null; sessionPaieId?: number | null; onlyStc?: boolean | null; etatCode?: string | null }): Observable<any[]> {
     let params = new HttpParams();
     if (filters.periode) params = params.set('periode', filters.periode);
     if (filters.dateDebut) params = params.set('dateDebut', filters.dateDebut);
     if (filters.dateFin) params = params.set('dateFin', filters.dateFin);
     if (filters.sessionPaieId) params = params.set('sessionPaieId', filters.sessionPaieId.toString());
+    if (filters.onlyStc) params = params.set('onlyStc', 'true');
+    if (filters.etatCode) params = params.set('etatCode', filters.etatCode);
 
     return this.http.get<any[]>(`${this.baseUrl}/employes-eligibles`, { params });
   }

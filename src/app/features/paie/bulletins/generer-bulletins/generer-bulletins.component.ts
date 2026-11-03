@@ -1207,6 +1207,53 @@ export class GenererBulletinsComponent implements OnInit {
     }
   }
 
+  toutSupprimerSessionsNonValidees(): void {
+    const nonValidees = this.listeSessions.filter(s => s.statut !== 'VALIDE' && s.statut !== 'CLOTURE');
+    if (nonValidees.length === 0) {
+      alert("Aucune session non validée à supprimer.");
+      return;
+    }
+    const msg = `Attention : vous êtes sur le point de supprimer définitivement ${nonValidees.length} session(s) pas encore validée(s) ainsi que tous leurs bulletins associés.\n\nCette action est irréversible. Voulez-vous continuer ?`;
+    if (!confirm(msg)) return;
+
+    this.http.delete<any>(`${environment.apiUrl}/paie/sessions/non-validees`).pipe(
+      catchError(err => {
+        alert('Erreur lors de la suppression groupée: ' + (err?.error?.message || err.message));
+        return of(null);
+      })
+    ).subscribe(res => {
+      if (res) {
+        alert(res.message || `${res.count || nonValidees.length} session(s) non validée(s) supprimée(s) avec succès.`);
+        this.currentSession = null;
+        this.bulletins = [];
+        this.vueActive = 'LISTE_SESSIONS';
+        this.chargerToutesLesSessions();
+      }
+    });
+  }
+
+  toutReinitialiserSessionsValidees(): void {
+    const validees = this.listeSessions.filter(s => s.statut === 'VALIDE');
+    if (validees.length === 0) {
+      alert("Aucune session validée à réinitialiser.");
+      return;
+    }
+    const msg = `Confirmer la réinitialisation de ${validees.length} session(s) validée(s) vers l'ancien état ?\n\nElles repasseront au statut initial GÉNÉRÉ et leurs variables associées seront restaurées, vous permettant d'effectuer des modifications ou de les supprimer.`;
+    if (!confirm(msg)) return;
+
+    this.http.put<any>(`${environment.apiUrl}/paie/sessions/tout-reinitialiser-validees`, {}).pipe(
+      catchError(err => {
+        alert('Erreur lors de la réinitialisation groupée: ' + (err?.error?.message || err.message));
+        return of(null);
+      })
+    ).subscribe(res => {
+      if (res) {
+        alert(res.message || `${res.count || validees.length} session(s) validée(s) réinitialisée(s) avec succès (GÉNÉRÉ).`);
+        this.chargerToutesLesSessions();
+      }
+    });
+  }
+
   recalculerTousLesBulletins(): void {
     if (confirm("Voulez-vous recalculer TOUS les bulletins existants selon les règles officielles du CGI ?\nCette opération mettra à jour les exonérations d'indemnités, l'IUTS et le net à payer pour toutes les sessions.")) {
       this.isCalculating = true;

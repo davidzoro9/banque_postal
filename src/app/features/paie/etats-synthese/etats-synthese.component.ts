@@ -130,6 +130,7 @@ export class EtatsSyntheseComponent implements OnInit {
         const resolvedCode = this.resolveCodeFromSlug(slug);
         if (resolvedCode !== this.selectedEtat) {
           this.selectedEtat = resolvedCode;
+          this.loadEligibleEmployees();
           this.loadEtatData();
         }
       } else {
@@ -341,7 +342,9 @@ export class EtatsSyntheseComponent implements OnInit {
       periode: this.selectedPeriode || null,
       dateDebut: this.dateDebut || null,
       dateFin: this.dateFin || null,
-      sessionPaieId: this.selectedSessionId || null
+      sessionPaieId: this.selectedSessionId || null,
+      onlyStc: this.isRuptureEtat,
+      etatCode: this.selectedEtat || null
     }).subscribe({
       next: (emps) => {
         this.eligibleEmployeesList = (emps || []).sort((a: any, b: any) =>
@@ -401,6 +404,7 @@ export class EtatsSyntheseComponent implements OnInit {
 
   selectEtat(key: string): void {
     this.selectedEtat = key;
+    this.loadEligibleEmployees();
     const slug = this.resolveSlugFromCode(key);
     this.router.navigate(['/paie/etats-synthese', slug]);
   }
