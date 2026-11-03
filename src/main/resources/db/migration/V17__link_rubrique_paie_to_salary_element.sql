@@ -173,3 +173,4 @@ FROM salary_element se
 WHERE rp.code_rubrique = 'RAPPELS'
   AND LOWER(se.code) IN ('rappel_salaire', 'rappel', 'rappels', 'avoir')
   AND se.name IS NOT NULL AND se.name <> '';
+
