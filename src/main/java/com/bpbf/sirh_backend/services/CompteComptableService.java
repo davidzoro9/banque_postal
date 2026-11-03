@@ -386,10 +386,12 @@ public class CompteComptableService {
         String libelleFinal = r.getLibelle();
         Long seId = null;
         String seName = null;
+        String seCode = null;
 
         if (r.getSalaryElement() != null) {
             seId = r.getSalaryElement().getId();
             seName = r.getSalaryElement().getName();
+            seCode = r.getSalaryElement().getCode();
             if (seName != null && !seName.isBlank()) {
                 libelleFinal = seName;
             }
@@ -398,6 +400,7 @@ public class CompteComptableService {
             if (el != null) {
                 seId = el.getId();
                 seName = el.getName();
+                seCode = el.getCode();
                 if (seName != null && !seName.isBlank()) {
                     libelleFinal = seName;
                 }
@@ -422,6 +425,7 @@ public class CompteComptableService {
                 .actif(r.getActif())
                 .salaryElementId(seId)
                 .salaryElementName(seName)
+                .salaryElementCode(seCode)
                 .build();
     }
 
@@ -498,10 +502,16 @@ public class CompteComptableService {
     @Transactional
     public RubriqueOptionDto saveRubrique(RubriqueOptionDto dto) {
         if (dto.getCode() == null || dto.getCode().trim().isBlank()) {
-            throw new IllegalArgumentException("Le code de la rubrique est obligatoire.");
+            throw new IllegalArgumentException("Le code est obligatoire.");
         }
-        String code = dto.getCode().trim().toUpperCase(java.util.Locale.ROOT);
-        RubriquePaie r = rubriqueRepository.findByCodeRubrique(code).orElseGet(() -> RubriquePaie.builder().codeRubrique(code).build());
+        String code = dto.getCode().trim();
+        RubriquePaie r = null;
+        if (dto.getId() != null) {
+            r = rubriqueRepository.findById(dto.getId()).orElse(null);
+        }
+        if (r == null) {
+            r = rubriqueRepository.findByCodeRubriqueIgnoreCase(code).orElseGet(() -> RubriquePaie.builder().codeRubrique(code).build());
+        }
         
         List<SalaryElement> allElements = salaryElementRepository.findAll();
         SalaryElement linkedEl = null;
@@ -522,10 +532,12 @@ public class CompteComptableService {
             }
         } else {
             if (dto.getLibelle() == null || dto.getLibelle().trim().isBlank()) {
-                throw new IllegalArgumentException("Le libellé de la rubrique est obligatoire.");
+                throw new IllegalArgumentException("Le libellé est obligatoire.");
             }
             r.setLibelle(dto.getLibelle().trim());
         }
+
+        r.setCodeRubrique(code);
 
         if (dto.getSensSuggere() != null) r.setSensSuggere(dto.getSensSuggere().trim().toUpperCase(java.util.Locale.ROOT));
         if (dto.getClasseSuggeree() != null) r.setClasseSuggeree(dto.getClasseSuggeree().trim());

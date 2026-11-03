@@ -22,4 +22,5 @@ public class RubriqueOptionDto {
     private Boolean actif;
     private Long salaryElementId;
     private String salaryElementName;
+    private String salaryElementCode;
 }
