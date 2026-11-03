@@ -2489,12 +2489,11 @@ public class EtatSynthesePaieService {
                 }
 
                 PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE CONGÉ", FONT_TD_BOLD_MINI));
-                cTot.setColspan(2);
+                cTot.setColspan(3);
                 cTot.setBackgroundColor(HEADER_BG);
                 cTot.setPadding(4f);
                 table.addCell(cTot);
 
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, row.getNombreJoursConge() != null ? String.format(Locale.US, "%.1f j", row.getNombreJoursConge()) : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemniteConge()), Element.ALIGN_RIGHT, true);
@@ -2560,12 +2559,11 @@ public class EtatSynthesePaieService {
                 }
 
                 PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE LICENCIEMENT", FONT_TD_BOLD_MINI));
-                cTot.setColspan(2);
+                cTot.setColspan(3);
                 cTot.setBackgroundColor(HEADER_BG);
                 cTot.setPadding(4f);
                 table.addCell(cTot);
 
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, row.getAncienneteAnnees() != null ? String.format(Locale.US, "%.1f ans", row.getAncienneteAnnees()) : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemniteLicenciement()), Element.ALIGN_RIGHT, true);
@@ -2631,12 +2629,11 @@ public class EtatSynthesePaieService {
                 }
 
                 PdfPCell cTot = new PdfPCell(new Phrase("TOTAL INDEMNITÉ DE PRÉAVIS", FONT_TD_BOLD_MINI));
-                cTot.setColspan(2);
+                cTot.setColspan(3);
                 cTot.setBackgroundColor(HEADER_BG);
                 cTot.setPadding(4f);
                 table.addCell(cTot);
 
-                addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, formatMoney(row.getTotalBrutPeriode()), Element.ALIGN_RIGHT, true);
                 addTdMini(table, row.getDureePreavisMois() != null && row.getDureePreavisMois() > 0 ? row.getDureePreavisMois() + " mois" : "—", Element.ALIGN_CENTER, true);
                 addTdMini(table, formatMoney(row.getTotalIndemnitePreavis()), Element.ALIGN_RIGHT, true);
@@ -3442,7 +3439,7 @@ public class EtatSynthesePaieService {
                                    (i == 0 && c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "") + ";" +
                                    (i == 0 ? formatCsvMontant(c.getTotalIndemniteConge()) : ""));
                     }
-                    pw.println("TOTAL;;" + formatCsvMontant(c.getTotalBrutPeriode()) + ";" + formatCsvMontant(c.getTotalBrutPeriode()) + ";" + (c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "") + ";" + formatCsvMontant(c.getTotalIndemniteConge()));
+                    pw.println("TOTAL;;;" + formatCsvMontant(c.getTotalBrutPeriode()) + ";" + (c.getNombreJoursConge() != null ? c.getNombreJoursConge().toString() : "") + ";" + formatCsvMontant(c.getTotalIndemniteConge()));
                 }
             }
 
@@ -3462,7 +3459,7 @@ public class EtatSynthesePaieService {
                                    (i == 0 && l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "") + ";" +
                                    (i == 0 ? formatCsvMontant(l.getTotalIndemniteLicenciement()) : ""));
                     }
-                    pw.println("TOTAL;;" + formatCsvMontant(l.getTotalBrutPeriode()) + ";" + formatCsvMontant(l.getTotalBrutPeriode()) + ";" + (l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "") + ";" + formatCsvMontant(l.getTotalIndemniteLicenciement()));
+                    pw.println("TOTAL;;;" + formatCsvMontant(l.getTotalBrutPeriode()) + ";" + (l.getAncienneteAnnees() != null ? l.getAncienneteAnnees().toString() : "") + ";" + formatCsvMontant(l.getTotalIndemniteLicenciement()));
                 }
             }
 
@@ -3482,7 +3479,7 @@ public class EtatSynthesePaieService {
                                    (i == 0 && p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "") + ";" +
                                    (i == 0 ? formatCsvMontant(p.getTotalIndemnitePreavis()) : ""));
                     }
-                    pw.println("TOTAL;;" + formatCsvMontant(p.getTotalBrutPeriode()) + ";" + formatCsvMontant(p.getTotalBrutPeriode()) + ";" + (p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "") + ";" + formatCsvMontant(p.getTotalIndemnitePreavis()));
+                    pw.println("TOTAL;;;" + formatCsvMontant(p.getTotalBrutPeriode()) + ";" + (p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "") + ";" + formatCsvMontant(p.getTotalIndemnitePreavis()));
                 }
             }
         } else if ("ETAT_STC".equalsIgnoreCase(type) || "ETAT_SOLDE_TOUT_COMPTE".equalsIgnoreCase(type)) {
@@ -4160,8 +4157,9 @@ public class EtatSynthesePaieService {
                         }
                         Row totRow = sheet.createRow(rowIndex++);
                         createCell(totRow, 0, "TOTAL INDEMNITÉ DE CONGÉ", totalLabelStyle);
-                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
-                        createCell(totRow, 2, c.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 1, "", totalLabelStyle);
+                        createCell(totRow, 2, "", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 2));
                         createCell(totRow, 3, c.getTotalBrutPeriode(), totalNumStyle);
                         createCell(totRow, 4, c.getNombreJoursConge(), totalNumStyle);
                         createCell(totRow, 5, c.getTotalIndemniteConge(), totalNumStyle);
@@ -4191,8 +4189,9 @@ public class EtatSynthesePaieService {
                         }
                         Row totRow = sheet.createRow(rowIndex++);
                         createCell(totRow, 0, "TOTAL INDEMNITÉ DE LICENCIEMENT", totalLabelStyle);
-                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
-                        createCell(totRow, 2, l.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 1, "", totalLabelStyle);
+                        createCell(totRow, 2, "", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 2));
                         createCell(totRow, 3, l.getTotalBrutPeriode(), totalNumStyle);
                         createCell(totRow, 4, l.getAncienneteAnnees(), totalNumStyle);
                         createCell(totRow, 5, l.getTotalIndemniteLicenciement(), totalNumStyle);
@@ -4222,8 +4221,9 @@ public class EtatSynthesePaieService {
                         }
                         Row totRow = sheet.createRow(rowIndex++);
                         createCell(totRow, 0, "TOTAL INDEMNITÉ DE PRÉAVIS", totalLabelStyle);
-                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 1));
-                        createCell(totRow, 2, p.getTotalBrutPeriode(), totalNumStyle);
+                        createCell(totRow, 1, "", totalLabelStyle);
+                        createCell(totRow, 2, "", totalLabelStyle);
+                        sheet.addMergedRegion(new CellRangeAddress(totRow.getRowNum(), totRow.getRowNum(), 0, 2));
                         createCell(totRow, 3, p.getTotalBrutPeriode(), totalNumStyle);
                         createCell(totRow, 4, p.getDureePreavisMois() != null ? p.getDureePreavisMois().toString() : "0", tdCenterStyle);
                         createCell(totRow, 5, p.getTotalIndemnitePreavis(), totalNumStyle);
