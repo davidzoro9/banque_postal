@@ -513,10 +513,12 @@
               <tr [class.row-inactive]="!r.actif">
                 <td><code>{{ r.code }}</code></td>
                 <td>
-                  <strong>{{ r.libelle }}</strong>
-                  @if (r.description) {
-                    <span class="compte-desc">{{ r.description }}</span>
-                  }
+                  <div class="compte-libelle-cell">
+                    <strong>{{ r.libelle }}</strong>
+                    @if (r.description) {
+                      <span class="compte-desc">{{ r.description }}</span>
+                    }
+                  </div>
                 </td>
                 <td>
                   <span class="pill-classe" [class.badge-c6]="r.typeRubrique === 'GAIN'" [class.badge-c4]="r.typeRubrique === 'RETENUE'">
@@ -919,6 +921,24 @@
         </div>
 
         <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-full">
+              <label for="selectElem">Élément de salaire associé (Lecture automatique du libellé)</label>
+              <select
+                id="selectElem"
+                class="form-select"
+                [ngModel]="currentRubrique.salaryElementId"
+                (ngModelChange)="onSalaryElementChange($event)"
+              >
+                <option [ngValue]="null">— Saisie libre ou sélectionner un élément —</option>
+                @for (el of salaryElements; track el.id) {
+                  <option [value]="el.id">{{ el.name }} ({{ el.code }}) - {{ el.categoryName || el.type || 'Élément' }}</option>
+                }
+              </select>
+              <span class="field-hint">Sélectionnez un élément pour synchroniser immédiatement le code, libellé et type.</span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group col-half">
               <label for="codeRub">Code Rubrique <span class="req">*</span></label>

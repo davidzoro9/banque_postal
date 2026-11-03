@@ -51,6 +51,8 @@ export interface RubriqueOption {
   description?: string;
   ordre?: number;
   actif?: boolean;
+  salaryElementId?: number;
+  salaryElementName?: string;
 }
 
 export interface ParametresFormulaireCompte {
@@ -58,4 +60,5 @@ export interface ParametresFormulaireCompte {
   sens: SensEcritureOption[];
   journaux: JournalComptableOption[];
   rubriques: RubriqueOption[];
+  elements?: any[];
 }

@@ -35,6 +35,7 @@ export class ComptesComptablesComponent implements OnInit {
   sensOptions: SensEcritureOption[] = [];
   journauxOptions: JournalComptableOption[] = [];
   rubriqueOptions: RubriqueOption[] = [];
+  salaryElements: any[] = [];
 
   // Filtres Plan des Comptes
   searchQuery = '';
@@ -164,6 +165,7 @@ export class ComptesComptablesComponent implements OnInit {
         this.sensOptions = params.sens || [];
         this.journauxOptions = params.journaux || [];
         this.rubriqueOptions = params.rubriques || [];
+        this.salaryElements = params.elements || [];
         this.loadingParametres = false;
       },
       error: (err) => {
@@ -696,10 +698,38 @@ export class ComptesComptablesComponent implements OnInit {
         typeRubrique: 'GAIN',
         description: '',
         ordre: this.rubriqueOptions.length + 1,
-        actif: true
+        actif: true,
+        salaryElementId: undefined
       };
     }
     this.showRubriqueModal = true;
+  }
+
+  onSalaryElementChange(elementId: any): void {
+    const id = Number(elementId);
+    this.currentRubrique.salaryElementId = id || undefined;
+    if (!id) return;
+    const el = this.salaryElements.find(e => e.id === id);
+    if (el) {
+      this.currentRubrique.libelle = el.name;
+      if (!this.isEditingRubrique || !this.currentRubrique.code) {
+        this.currentRubrique.code = (el.code || '').toUpperCase().replace(/-/g, '_');
+      }
+      const type = (el.categoryName || el.type || '').toUpperCase();
+      if (type.includes('RETENUE') || type.includes('PRECOMPTE') || type.includes('IUTS')) {
+        this.currentRubrique.typeRubrique = 'RETENUE';
+        this.currentRubrique.sensSuggere = 'CREDIT';
+        this.currentRubrique.classeSuggeree = 'CLASSE_4';
+      } else if (type.includes('PATRON')) {
+        this.currentRubrique.typeRubrique = 'PATRONALE';
+        this.currentRubrique.sensSuggere = 'DEBIT';
+        this.currentRubrique.classeSuggeree = 'CLASSE_6';
+      } else {
+        this.currentRubrique.typeRubrique = 'GAIN';
+        this.currentRubrique.sensSuggere = 'DEBIT';
+        this.currentRubrique.classeSuggeree = 'CLASSE_6';
+      }
+    }
   }
 
   fermerModalRubrique(): void {

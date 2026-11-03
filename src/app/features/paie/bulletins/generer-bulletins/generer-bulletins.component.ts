@@ -2095,8 +2095,11 @@ export class GenererBulletinsComponent implements OnInit {
       // 13ème / 14ème mois / Gratification en priorité absolue pour ces sessions
       if (cd.includes('13') || cd.includes('14') || cd.includes('GRAT') || nm.includes('13') || nm.includes('14') || nm.includes('GRATIF')) return 1;
 
+      // Avoirs et Rappels prioritaires
+      if (cd.includes('AVOIR') || cd.includes('RAPPEL') || nm.includes('AVOIR') || nm.includes('RAPPEL') || l.typeLigne === 'AVOIR') return 9;
+
       // 3. Salaire de base, sur-salaire et prime d'ancienneté
-      if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP'))) return 1;
+      if (cd === 'SAL_BASE' || nm === 'SALAIRE DE BASE' || (nm.includes('SALAIRE DE BASE') && !nm.includes('TROP') && !nm.includes('RAPPEL') && !nm.includes('AVOIR'))) return 1;
       if (cd === 'SUR_SALAIRE' || nm.includes('SURSALAIRE') || nm.includes('SUR-SALAIRE')) return 2;
       if (((cd.includes('ANC') && !cd.includes('AVANCE') && !cd.includes('ASSURANCE')) || nm.includes('ANCIENNET')) && !cd.includes('AVANCE') && !nm.includes('AVANCE') && !cd.includes('ASSURANCE') && !nm.includes('ASSURANCE')) return 3;
       if (cd.includes('CAISSE') || nm.includes('CAISSE')) return 4;
