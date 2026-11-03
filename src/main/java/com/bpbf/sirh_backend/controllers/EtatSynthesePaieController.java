@@ -23,6 +23,15 @@ public class EtatSynthesePaieController {
         return ResponseEntity.ok(signataireConfigService.getSignataires());
     }
 
+    @GetMapping("/employes-eligibles")
+    public ResponseEntity<java.util.List<com.bpbf.sirh_backend.dtos.EmployeeDto>> getEligibleEmployees(
+            @RequestParam(required = false) String periode,
+            @RequestParam(required = false) String dateDebut,
+            @RequestParam(required = false) String dateFin,
+            @RequestParam(required = false) Long sessionPaieId) {
+        return ResponseEntity.ok(etatSynthesePaieService.getEligibleEmployees(periode, dateDebut, dateFin, sessionPaieId));
+    }
+
     @PutMapping("/signataires")
     public ResponseEntity<com.bpbf.sirh_backend.dtos.etatsynthese.SignatairesEtatDto> updateSignataires(
             @RequestBody com.bpbf.sirh_backend.dtos.etatsynthese.SignatairesEtatDto dto) {

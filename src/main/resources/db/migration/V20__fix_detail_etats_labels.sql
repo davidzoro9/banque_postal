@@ -10,3 +10,4 @@ WHERE code = 'ETAT_INDEMNITE_LICENCIEMENT';
 UPDATE etat_synthese_config 
 SET libelle = 'Détail Indemnité de Préavis' 
 WHERE code = 'ETAT_INDEMNITE_PREAVIS';
+

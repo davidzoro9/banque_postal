@@ -69,6 +69,7 @@ public class EtatSynthesePaieService {
     private final ParamPreavisService paramPreavisService;
     private final EmployeeRepository employeeRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
+    private final com.bpbf.sirh_backend.mappers.EmployeeMapper employeeMapper;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -335,6 +336,21 @@ public class EtatSynthesePaieService {
         return findBulletins(periodeFiltre, null, null, sessionPaieId, bulletinLotId, directionId, banqueNom);
     }
 
+    private boolean isSessionValideOrCloture(SessionPaie s) {
+        if (s == null) return false;
+        String st = s.getStatut();
+        return "VALIDE".equalsIgnoreCase(st) || "CLOTURE".equalsIgnoreCase(st);
+    }
+
+    private boolean isBulletinValideOrCloture(Bulletin b) {
+        if (b == null) return false;
+        if (b.getSessionPaie() != null) {
+            return isSessionValideOrCloture(b.getSessionPaie());
+        }
+        String st = b.getStatut();
+        return "VALIDE".equalsIgnoreCase(st) || "CLOTURE".equalsIgnoreCase(st);
+    }
+
     private List<Bulletin> findBulletins(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
         List<Bulletin> list = new ArrayList<>();
 
@@ -344,6 +360,7 @@ public class EtatSynthesePaieService {
                 LocalDate dFin = LocalDate.parse(dateFin.trim().substring(0, 10));
                 List<SessionPaie> matchingSessions = sessionPaieRepository.findAll().stream()
                         .filter(s -> {
+                            if (!isSessionValideOrCloture(s)) return false;
                             if (s.getDateFrom() != null && s.getDateTo() != null) {
                                 return !s.getDateFrom().isAfter(dFin) && !s.getDateTo().isBefore(dDebut);
                             }
@@ -364,6 +381,7 @@ public class EtatSynthesePaieService {
                 if (list.isEmpty()) {
                     list = bulletinRepository.findAll().stream()
                             .filter(b -> {
+                                if (!isBulletinValideOrCloture(b)) return false;
                                 LocalDate bFrom = b.getDateFrom();
                                 LocalDate bTo = b.getDateTo();
                                 if (bFrom == null || bTo == null) return false;
@@ -379,9 +397,9 @@ public class EtatSynthesePaieService {
         if (list.isEmpty()) {
 
         if (periodeFiltre != null && !periodeFiltre.isBlank() && !periodeFiltre.equalsIgnoreCase("TOUTES")) {
-            // Cumul de toutes les sessions correspondant à cette période (ex: Ordinaire + 13ème + 14ème + rappels)
+            // Cumul de toutes les sessions correspondant à cette période (VALIDE ou CLOTURE)
             List<SessionPaie> matchingSessions = sessionPaieRepository.findAll().stream()
-                    .filter(s -> isMatchingPeriode(s, periodeFiltre))
+                    .filter(s -> isSessionValideOrCloture(s) && isMatchingPeriode(s, periodeFiltre))
                     .toList();
             if (!matchingSessions.isEmpty()) {
                 for (SessionPaie s : matchingSessions) {
@@ -389,18 +407,17 @@ public class EtatSynthesePaieService {
                 }
             } else {
                 list = bulletinRepository.findAll().stream()
-                        .filter(b -> isBulletinMatchingPeriode(b, periodeFiltre))
+                        .filter(b -> isBulletinValideOrCloture(b) && isBulletinMatchingPeriode(b, periodeFiltre))
                         .collect(Collectors.toList());
             }
         } else if (sessionPaieId != null) {
-            // Si sessionPaieId est spécifié sans filtre de période explicite, on cumule toutes les sessions du même mois/année !
             SessionPaie ref = sessionPaieRepository.findById(sessionPaieId).orElse(null);
-            if (ref != null) {
+            if (ref != null && isSessionValideOrCloture(ref)) {
                 Integer refAnnee = ref.getAnnee();
                 String refMois = ref.getMois();
                 String refPer = ref.getPeriode();
                 List<SessionPaie> samePeriodeSessions = sessionPaieRepository.findAll().stream()
-                        .filter(s -> isSamePeriode(s, refAnnee, refMois, refPer))
+                        .filter(s -> isSessionValideOrCloture(s) && isSamePeriode(s, refAnnee, refMois, refPer))
                         .toList();
                 if (!samePeriodeSessions.isEmpty()) {
                     for (SessionPaie s : samePeriodeSessions) {
@@ -409,14 +426,21 @@ public class EtatSynthesePaieService {
                 } else {
                     list = bulletinRepository.findBySessionPaieId(sessionPaieId);
                 }
+            } else if (ref != null && !isSessionValideOrCloture(ref)) {
+                // Session non validée ni clôturée -> aucun bulletin éligible
+                list = Collections.emptyList();
             } else {
-                list = bulletinRepository.findBySessionPaieId(sessionPaieId);
+                list = Collections.emptyList();
             }
         } else if (bulletinLotId != null) {
-            list = bulletinRepository.findByBulletinLotId(bulletinLotId);
+            list = bulletinRepository.findByBulletinLotId(bulletinLotId).stream()
+                    .filter(this::isBulletinValideOrCloture)
+                    .collect(Collectors.toList());
         } else {
-            // Par défaut : toutes les sessions de la période la plus récente
-            List<SessionPaie> sessions = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
+            // Par défaut : toutes les sessions VALIDE ou CLOTURE de la période la plus récente
+            List<SessionPaie> sessions = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc().stream()
+                    .filter(this::isSessionValideOrCloture)
+                    .toList();
             if (!sessions.isEmpty()) {
                 SessionPaie latest = sessions.get(0);
                 Integer lAnnee = latest.getAnnee();
@@ -429,10 +453,13 @@ public class EtatSynthesePaieService {
                     list.addAll(bulletinRepository.findBySessionPaieId(s.getId()));
                 }
             } else {
-                list = bulletinRepository.findAll();
+                list = Collections.emptyList();
             }
         }
         }
+
+        // Sécurité supplémentaire : s'assurer qu'aucun bulletin n'appartient à une session brouillon/non validée
+        list = list.stream().filter(this::isBulletinValideOrCloture).collect(Collectors.toList());
 
         // Filtre Direction
         if (directionId != null) {
@@ -464,6 +491,26 @@ public class EtatSynthesePaieService {
         }));
 
         return listConsolidee;
+    }
+
+    /**
+     * Retourne la liste des employés ayant au moins un bulletin appartenant à une session de paie VALIDE ou CLOTURE
+     * selon les filtres (session, période, intervalle de dates).
+     */
+    @Transactional(readOnly = true)
+    public List<com.bpbf.sirh_backend.dtos.EmployeeDto> getEligibleEmployees(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId) {
+        List<Bulletin> bulletins = findBulletins(periodeFiltre, dateDebut, dateFin, sessionPaieId, null, null, null);
+        Map<Long, Employee> uniqueEmployees = new LinkedHashMap<>();
+        for (Bulletin b : bulletins) {
+            Employee emp = b.getEmployee();
+            if (emp != null && emp.getId() != null) {
+                uniqueEmployees.putIfAbsent(emp.getId(), emp);
+            }
+        }
+        return uniqueEmployees.values().stream()
+                .map(employeeMapper::toDto)
+                .sorted(Comparator.comparing(e -> (e.getNom() != null ? e.getNom() : "") + " " + (e.getPrenom() != null ? e.getPrenom() : "")))
+                .collect(Collectors.toList());
     }
 
     private boolean isSamePeriode(SessionPaie s, Integer annee, String mois, String periode) {
@@ -695,18 +742,13 @@ public class EtatSynthesePaieService {
                 return List.of(match.get());
             }
         }
-        List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId);
+        List<Bulletin> past = bulletinRepository.findByEmployeeIdOrderByDateCalculDesc(employeeId).stream()
+                .filter(this::isBulletinValideOrCloture)
+                .toList();
         if (past != null && !past.isEmpty()) {
             return List.of(past.get(0));
         }
-        if (employeeRepository != null) {
-            Optional<Employee> empOpt = employeeRepository.findById(employeeId);
-            if (empOpt.isPresent()) {
-                Bulletin synthetic = new Bulletin();
-                synthetic.setEmployee(empOpt.get());
-                return List.of(synthetic);
-            }
-        }
+        // Si aucun bulletin valide ou clôturé n'existe pour cet employé, ne pas générer d'état
         return Collections.emptyList();
     }
 
