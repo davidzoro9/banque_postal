@@ -777,9 +777,11 @@ public class EtatSynthesePaieService {
             BigDecimal totalBrut = details.stream().map(MoisBrutDto::getSalaireBrut).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (totalBrut.compareTo(BigDecimal.ZERO) <= 0 && b.getSalaireBrut() != null) totalBrut = b.getSalaireBrut();
 
+            // Nombre de jours arrondi à 1 décimale (valeur affichée) et utilisé tel quel dans le calcul.
+            // Indemnité = Total Brut x Nombre de jours / 360 (un seul arrondi final au franc).
+            BigDecimal nbJours = getJoursCongeAcquis(e != null ? e.getId() : null).setScale(1, RoundingMode.HALF_UP);
             BigDecimal smj = totalBrut.divide(new BigDecimal("360"), 2, RoundingMode.HALF_UP);
-            BigDecimal nbJours = getJoursCongeAcquis(e != null ? e.getId() : null);
-            BigDecimal totalIndemnite = money(smj.multiply(nbJours));
+            BigDecimal totalIndemnite = money(totalBrut.multiply(nbJours).divide(new BigDecimal("360"), 6, RoundingMode.HALF_UP));
 
             String detailsTexte = details.stream()
                     .map(m -> m.getMois() + ": " + formatMoney(m.getSalaireBrut()))
@@ -880,12 +882,14 @@ public class EtatSynthesePaieService {
             BigDecimal totalBrut = details.stream().map(MoisBrutDto::getSalaireBrut).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (totalBrut.compareTo(BigDecimal.ZERO) <= 0 && b.getSalaireBrut() != null) totalBrut = b.getSalaireBrut();
 
-            BigDecimal sgm = totalBrut.divide(BigDecimal.valueOf(Math.max(1, details.size())), 2, RoundingMode.HALF_UP);
+            BigDecimal nbMoisPreavis = BigDecimal.valueOf(Math.max(1, details.size()));
+            BigDecimal sgm = totalBrut.divide(nbMoisPreavis, 2, RoundingMode.HALF_UP);
             int dureePreavis = (e != null && e.getDureePreavis() != null && e.getDureePreavis() > 0)
                     ? e.getDureePreavis()
                     : (isCadre(e) ? 3 : 1);
 
-            BigDecimal totalIndemnite = money(sgm.multiply(BigDecimal.valueOf(dureePreavis)));
+            // Indemnité = (Total Brut / Nombre de mois) x Durée du préavis affichée (un seul arrondi final au franc)
+            BigDecimal totalIndemnite = money(totalBrut.multiply(BigDecimal.valueOf(dureePreavis)).divide(nbMoisPreavis, 6, RoundingMode.HALF_UP));
 
             String detailsTexte = details.stream()
                     .map(m -> m.getMois() + ": " + formatMoney(m.getSalaireBrut()))
