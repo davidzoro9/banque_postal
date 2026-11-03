@@ -28,9 +28,9 @@ export class EtatsSyntheseComponent implements OnInit {
     { code: 'ETAT_CRRAE_FAAM', libelle: 'Cotisations FAAM', categorie: 'Charges Sociales', icon: 'health_and_safety', ordre: 6, actif: true },
     { code: 'ETAT_IUTS', libelle: 'Retenues IUTS', categorie: 'Fiscalité', icon: 'receipt_long', ordre: 7, actif: true },
     { code: 'ETAT_FSP', libelle: 'Retenue Fonds de Solidarité', categorie: 'Cotisations Légales', icon: 'shield', ordre: 8, actif: true },
-    { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détaille Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
-    { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détaille Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détaille Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+    { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détail Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
+    { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détail Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
+    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
   ];
   selectedEtat: string = 'LIVRE_PAIE';
 
@@ -163,9 +163,9 @@ export class EtatsSyntheseComponent implements OnInit {
       next: (configs) => {
         const received = configs && configs.length > 0 ? configs : [];
         const mustHave: EtatSyntheseConfig[] = [
-          { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détaille Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
-          { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détaille Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détaille Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+          { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détail Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
+          { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détail Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
+          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
         ];
         mustHave.forEach(def => {
           if (!received.some(c => c.code === def.code)) {

@@ -119,9 +119,9 @@ export const MODULE_MENUS: Record<string, MenuItem[]> = {
         { id: 'etat-crrae-faam', label: 'Cotisations FAAM', icon: 'health_and_safety', route: '/paie/etats-synthese/crrae-faam' },
         { id: 'etat-iuts', label: 'Retenues IUTS', icon: 'receipt_long', route: '/paie/etats-synthese/iuts' },
         { id: 'etat-fsp', label: 'Retenue Fonds de Solidarité', icon: 'shield', route: '/paie/etats-synthese/fsp' },
-        { id: 'etat-indemnite-conge', label: 'Détaille Indemnité de Congé', icon: 'beach_access', route: '/paie/etats-synthese/indemnite-conge' },
-        { id: 'etat-indemnite-licenciement', label: 'Détaille Indemnité de Licenciement', icon: 'gavel', route: '/paie/etats-synthese/indemnite-licenciement' },
-        { id: 'etat-indemnite-preavis', label: 'Détaille Indemnité de Préavis', icon: 'event_busy', route: '/paie/etats-synthese/indemnite-preavis' }
+        { id: 'etat-indemnite-conge', label: 'Détail Indemnité de Congé', icon: 'beach_access', route: '/paie/etats-synthese/indemnite-conge' },
+        { id: 'etat-indemnite-licenciement', label: 'Détail Indemnité de Licenciement', icon: 'gavel', route: '/paie/etats-synthese/indemnite-licenciement' },
+        { id: 'etat-indemnite-preavis', label: 'Détail Indemnité de Préavis', icon: 'event_busy', route: '/paie/etats-synthese/indemnite-preavis' }
       ]
     },
     {
