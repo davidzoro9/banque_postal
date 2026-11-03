@@ -85,3 +85,4 @@ WHERE code IN ('PRET_EQUIP', 'AVANCE_SAL', 'PRET_SCOLAIRE', 'PRET_VEHICULE', 'RE
    OR name ILIKE 'Avance %'
    OR name ILIKE '%scolarité%'
    OR name ILIKE '%scolaire%';
+

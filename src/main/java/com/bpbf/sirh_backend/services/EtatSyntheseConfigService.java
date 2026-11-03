@@ -153,7 +153,7 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("RECAPITULATIF_GLOBAL", "Récapitulatif Global de la Paie", "Comptabilité & Paie",
                 "", "account_balance_wallet", 1, true, true));
 
-        defaults.add(createEntity("ETAT_BANQUE", "État de Virement des Salaires", "Bancaire", 
+        defaults.add(createEntity("ETAT_BANQUE", "Virement des Salaires", "Bancaire", 
                 "", "account_balance", 2, true, true));
 
         defaults.add(createEntity("LIVRE_PAIE", "Registre de Paie", "Paie Globale", 
@@ -168,20 +168,20 @@ public class EtatSyntheseConfigService {
         defaults.add(createEntity("ETAT_CRRAE_FAAM", "Cotisations FAAM", "Charges Sociales", 
                 "", "health_and_safety", 6, true, true));
 
-        defaults.add(createEntity("ETAT_IUTS", "État des Retenues IUTS", "Fiscalité", 
+        defaults.add(createEntity("ETAT_IUTS", "Retenues IUTS", "Fiscalité", 
                 "", "receipt_long", 7, true, true));
 
-        defaults.add(createEntity("ETAT_FSP", "État des Retenues - Retenue Fonds de Solidarité", "Cotisations Légales", 
+        defaults.add(createEntity("ETAT_FSP", "Retenue Fonds de Solidarité", "Cotisations Légales", 
                 "", "shield", 8, true, true));
 
         // ── ÉTATS DÉTAILLÉS DES INDEMNITÉS DE RUPTURE (POSITIONS 9, 10, 11) ──
-        defaults.add(createEntity("ETAT_INDEMNITE_CONGE", "État Détaillé Indemnité de Congé", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_CONGE", "Détaille Indemnité de Congé", "Indemnités de Rupture",
                 "", "beach_access", 9, true, true));
 
-        defaults.add(createEntity("ETAT_INDEMNITE_LICENCIEMENT", "État Détaillé Indemnité de Licenciement", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_LICENCIEMENT", "Détaille Indemnité de Licenciement", "Indemnités de Rupture",
                 "", "work_off", 10, true, true));
 
-        defaults.add(createEntity("ETAT_INDEMNITE_PREAVIS", "État Détaillé Indemnité de Préavis", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_PREAVIS", "Détaille Indemnité de Préavis", "Indemnités de Rupture",
                 "", "schedule", 11, true, true));
 
         // ── ÉTATS INTERNES COMPLÉMENTAIRES (DÉSACTIVÉS DU MENU LATÉRAL PAR DÉFAUT) ──

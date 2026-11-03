@@ -66,6 +66,7 @@ public class EtatSynthesePaieService {
     private final CompteComptableRepository compteComptableRepository;
     private final CongeWorkflowService congeWorkflowService;
     private final ParamTrancheLicenciementService paramTrancheLicenciementService;
+    private final ParamPreavisService paramPreavisService;
     private final EmployeeRepository employeeRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
 
@@ -884,9 +885,9 @@ public class EtatSynthesePaieService {
 
             BigDecimal nbMoisPreavis = BigDecimal.valueOf(Math.max(1, details.size()));
             BigDecimal sgm = totalBrut.divide(nbMoisPreavis, 2, RoundingMode.HALF_UP);
-            int dureePreavis = (e != null && e.getDureePreavis() != null && e.getDureePreavis() > 0)
-                    ? e.getDureePreavis()
-                    : (isCadre(e) ? 3 : 1);
+            int dureePreavis = paramPreavisService != null
+                    ? paramPreavisService.getDureePreavisForEmployee(e)
+                    : ((e != null && e.getDureePreavis() != null && e.getDureePreavis() > 0) ? e.getDureePreavis() : 1);
 
             // Indemnité = (Total Brut / Nombre de mois) x Durée du préavis affichée (un seul arrondi final au franc)
             BigDecimal totalIndemnite = money(totalBrut.multiply(BigDecimal.valueOf(dureePreavis)).divide(nbMoisPreavis, 6, RoundingMode.HALF_UP));

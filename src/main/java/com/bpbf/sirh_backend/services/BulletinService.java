@@ -53,6 +53,7 @@ public class BulletinService {
     private final EmployeeProcessService employeeProcessService;
     private final CongeWorkflowService congeWorkflowService;
     private final ParamTrancheLicenciementService paramTrancheLicenciementService;
+    private final ParamPreavisService paramPreavisService;
     private final TypeIndemniteRepository typeIndemniteRepository;
     private final SalaryElementRepository salaryElementRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
@@ -1434,17 +1435,10 @@ public class BulletinService {
                         : BigDecimal.ZERO;
             }
 
-            // 4. Indemnité ou Retenue de Préavis
-            boolean isCadre = false;
-            if (emp.getCategorieObj() != null && emp.getCategorieObj().getLibelle() != null) {
-                String cLib = emp.getCategorieObj().getLibelle().toUpperCase(Locale.ROOT);
-                isCadre = cLib.contains("CADRE") || cLib.contains("DIRECTION");
-            }
-            if (!isCadre && emp.getGradeObj() != null && emp.getGradeObj().getLibelle() != null) {
-                String gLib = emp.getGradeObj().getLibelle().toUpperCase(Locale.ROOT);
-                isCadre = gLib.contains("CADRE") || gLib.contains("DIRECTEUR") || gLib.contains("CHEF");
-            }
-            int moisPreavis = (emp.getDureePreavis() != null && emp.getDureePreavis() > 0) ? emp.getDureePreavis() : (isCadre ? 3 : 1);
+            // 4. Indemnité ou Retenue de Préavis (Règle V3 : Liée au Paramétrage Général)
+            int moisPreavis = paramPreavisService != null
+                    ? paramPreavisService.getDureePreavisForEmployee(emp)
+                    : ((emp.getDureePreavis() != null && emp.getDureePreavis() > 0) ? emp.getDureePreavis() : 1);
             BigDecimal montantPreavisCalcul = money(sgm.multiply(BigDecimal.valueOf(moisPreavis)));
 
             BigDecimal indemnitePreavis = BigDecimal.ZERO;
