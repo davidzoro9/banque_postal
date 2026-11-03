@@ -500,10 +500,9 @@
             <tr>
               <th style="width: 140px;">Code</th>
               <th>Libellé</th>
-              <th style="width: 110px;">Type</th>
+              <th style="width: 120px;">N° Compte</th>
               <th style="width: 90px;">Sens</th>
-              <th style="width: 120px;">Classe</th>
-              <th style="width: 110px;">N° Compte</th>
+              <th style="width: 150px;">Classe</th>
               <th style="width: 110px;">Statut</th>
               <th style="width: 110px; text-align: center;">Actions</th>
             </tr>
@@ -521,9 +520,7 @@
                   </div>
                 </td>
                 <td>
-                  <span class="pill-classe" [class.badge-c6]="r.typeRubrique === 'GAIN'" [class.badge-c4]="r.typeRubrique === 'RETENUE'">
-                    {{ r.typeRubrique || 'PAIE' }}
-                  </span>
+                  <strong>{{ r.numeroCompteDefaut || '—' }}</strong>
                 </td>
                 <td>
                   <span class="pill-sens" [class.pill-debit]="r.sensSuggere === 'DEBIT'" [class.pill-credit]="r.sensSuggere === 'CREDIT'">
@@ -534,9 +531,6 @@
                   <span class="pill-classe" [class.pill-c6]="r.classeSuggeree === 'CLASSE_6'" [class.pill-c4]="r.classeSuggeree === 'CLASSE_4'">
                     {{ getLibelleClasse(r.classeSuggeree) }}
                   </span>
-                </td>
-                <td>
-                  <strong>{{ r.numeroCompteDefaut || '—' }}</strong>
                 </td>
                 <td>
                   <button
@@ -651,6 +645,24 @@
         </div>
 
         <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-full">
+              <label for="selectElem">Élément de salaire associé (Lecture automatique du libellé)</label>
+              <select
+                id="selectElem"
+                class="form-select"
+                [ngModel]="currentRubrique.salaryElementId"
+                (ngModelChange)="onSalaryElementChange($event)"
+              >
+                <option [ngValue]="null">— Saisie libre ou sélectionner un élément —</option>
+                @for (el of salaryElements; track el.id) {
+                  <option [value]="el.id">{{ el.name }} ({{ el.code }}) - {{ el.categoryName || el.type || 'Élément' }}</option>
+                }
+              </select>
+              <span class="field-hint">Sélectionnez un élément pour synchroniser immédiatement le code, libellé et type.</span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group col-half">
               <label for="numCompte">Numéro de compte <span class="req">*</span></label>
@@ -779,6 +791,24 @@
 
         <div class="modal-body">
           <div class="form-row">
+            <div class="form-group col-full">
+              <label for="selectElem">Élément de salaire associé (Lecture automatique du libellé)</label>
+              <select
+                id="selectElem"
+                class="form-select"
+                [ngModel]="currentRubrique.salaryElementId"
+                (ngModelChange)="onSalaryElementChange($event)"
+              >
+                <option [ngValue]="null">— Saisie libre ou sélectionner un élément —</option>
+                @for (el of salaryElements; track el.id) {
+                  <option [value]="el.id">{{ el.name }} ({{ el.code }}) - {{ el.categoryName || el.type || 'Élément' }}</option>
+                }
+              </select>
+              <span class="field-hint">Sélectionnez un élément pour synchroniser immédiatement le code, libellé et type.</span>
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group col-half">
               <label for="numClasse">Numéro de la classe <span class="req">*</span></label>
               <input
@@ -850,6 +880,24 @@
         </div>
 
         <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-full">
+              <label for="selectElem">Élément de salaire associé (Lecture automatique du libellé)</label>
+              <select
+                id="selectElem"
+                class="form-select"
+                [ngModel]="currentRubrique.salaryElementId"
+                (ngModelChange)="onSalaryElementChange($event)"
+              >
+                <option [ngValue]="null">— Saisie libre ou sélectionner un élément —</option>
+                @for (el of salaryElements; track el.id) {
+                  <option [value]="el.id">{{ el.name }} ({{ el.code }}) - {{ el.categoryName || el.type || 'Élément' }}</option>
+                }
+              </select>
+              <span class="field-hint">Sélectionnez un élément pour synchroniser immédiatement le code, libellé et type.</span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group col-half">
               <label for="codeSens">Code du sens <span class="req">*</span></label>
@@ -1054,6 +1102,24 @@
         </div>
 
         <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-full">
+              <label for="selectElem">Élément de salaire associé (Lecture automatique du libellé)</label>
+              <select
+                id="selectElem"
+                class="form-select"
+                [ngModel]="currentRubrique.salaryElementId"
+                (ngModelChange)="onSalaryElementChange($event)"
+              >
+                <option [ngValue]="null">— Saisie libre ou sélectionner un élément —</option>
+                @for (el of salaryElements; track el.id) {
+                  <option [value]="el.id">{{ el.name }} ({{ el.code }}) - {{ el.categoryName || el.type || 'Élément' }}</option>
+                }
+              </select>
+              <span class="field-hint">Sélectionnez un élément pour synchroniser immédiatement le code, libellé et type.</span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group col-half">
               <label for="codeJ">Code Journal <span class="req">*</span></label>
