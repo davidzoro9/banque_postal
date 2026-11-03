@@ -175,13 +175,13 @@ public class EtatSyntheseConfigService {
                 "", "shield", 8, true, true));
 
         // ── ÉTATS DÉTAILLÉS DES INDEMNITÉS DE RUPTURE (POSITIONS 9, 10, 11) ──
-        defaults.add(createEntity("ETAT_INDEMNITE_CONGE", "Détaille Indemnité de Congé", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_CONGE", "Détail Indemnité de Congé", "Indemnités de Rupture",
                 "", "beach_access", 9, true, true));
 
-        defaults.add(createEntity("ETAT_INDEMNITE_LICENCIEMENT", "Détaille Indemnité de Licenciement", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_LICENCIEMENT", "Détail Indemnité de Licenciement", "Indemnités de Rupture",
                 "", "work_off", 10, true, true));
 
-        defaults.add(createEntity("ETAT_INDEMNITE_PREAVIS", "Détaille Indemnité de Préavis", "Indemnités de Rupture",
+        defaults.add(createEntity("ETAT_INDEMNITE_PREAVIS", "Détail Indemnité de Préavis", "Indemnités de Rupture",
                 "", "schedule", 11, true, true));
 
         // ── ÉTATS INTERNES COMPLÉMENTAIRES (DÉSACTIVÉS DU MENU LATÉRAL PAR DÉFAUT) ──
