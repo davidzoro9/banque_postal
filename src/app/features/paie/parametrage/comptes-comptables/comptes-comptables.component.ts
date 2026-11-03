@@ -686,7 +686,10 @@ export class ComptesComptablesComponent implements OnInit {
   ouvrirModalRubrique(r?: RubriqueOption): void {
     if (r) {
       this.isEditingRubrique = true;
-      this.currentRubrique = { ...r };
+      this.currentRubrique = { 
+        ...r,
+        code: r.salaryElementCode || r.code
+      };
     } else {
       this.isEditingRubrique = false;
       this.currentRubrique = {
@@ -712,9 +715,9 @@ export class ComptesComptablesComponent implements OnInit {
     const el = this.salaryElements.find(e => e.id === id);
     if (el) {
       this.currentRubrique.libelle = el.name;
-      if (!this.isEditingRubrique || !this.currentRubrique.code) {
-        this.currentRubrique.code = (el.code || '').toUpperCase().replace(/-/g, '_');
-      }
+      this.currentRubrique.salaryElementName = el.name;
+      this.currentRubrique.salaryElementCode = el.code;
+      this.currentRubrique.code = el.code;
       const type = (el.categoryName || el.type || '').toUpperCase();
       if (type.includes('RETENUE') || type.includes('PRECOMPTE') || type.includes('IUTS')) {
         this.currentRubrique.typeRubrique = 'RETENUE';
@@ -738,11 +741,11 @@ export class ComptesComptablesComponent implements OnInit {
 
   enregistrerRubrique(): void {
     if (!this.currentRubrique.code || !this.currentRubrique.code.trim()) {
-      alert('Veuillez renseigner le code de la rubrique (ex: SALAIRE_BASE).');
+      alert('Veuillez renseigner le code (ex: sal_base).');
       return;
     }
     if (!this.currentRubrique.libelle || !this.currentRubrique.libelle.trim()) {
-      alert('Veuillez renseigner le libellé de la rubrique.');
+      alert('Veuillez renseigner le libellé.');
       return;
     }
 
@@ -801,7 +804,7 @@ export class ComptesComptablesComponent implements OnInit {
 
   getLibelleRubrique(code?: string): string {
     if (!code) return '—';
-    const opt = this.rubriqueOptions.find(o => o.code === code);
+    const opt = this.rubriqueOptions.find(o => o.code === code || o.salaryElementCode === code);
     return opt ? opt.libelle : code;
   }
 

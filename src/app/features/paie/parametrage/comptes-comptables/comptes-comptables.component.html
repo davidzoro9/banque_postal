@@ -498,8 +498,8 @@
         <table class="comptes-table">
           <thead>
             <tr>
-              <th style="width: 140px;">Code Rubrique</th>
-              <th>Libellé de la rubrique</th>
+              <th style="width: 140px;">Code</th>
+              <th>Libellé</th>
               <th style="width: 110px;">Type</th>
               <th style="width: 90px;">Sens</th>
               <th style="width: 120px;">Classe</th>
@@ -511,7 +511,7 @@
           <tbody>
             @for (r of rubriqueOptions; track r.code) {
               <tr [class.row-inactive]="!r.actif">
-                <td><code>{{ r.code }}</code></td>
+                <td><code>{{ r.salaryElementCode || r.code }}</code></td>
                 <td>
                   <div class="compte-libelle-cell">
                     <strong>{{ r.libelle }}</strong>
@@ -941,23 +941,23 @@
 
           <div class="form-row">
             <div class="form-group col-half">
-              <label for="codeRub">Code Rubrique <span class="req">*</span></label>
+              <label for="codeRub">Code <span class="req">*</span></label>
               <input
                 id="codeRub"
                 type="text"
                 class="form-input"
-                placeholder="Ex: SALAIRE_BASE ou INDEMNITE_TRANSPORT"
+                placeholder="Ex: sal_base ou ind_log"
                 [(ngModel)]="currentRubrique.code"
               />
             </div>
 
             <div class="form-group col-half">
-              <label for="libRub">Libellé de la rubrique <span class="req">*</span></label>
+              <label for="libRub">Libellé <span class="req">*</span></label>
               <input
                 id="libRub"
                 type="text"
                 class="form-input"
-                placeholder="Ex: Salaire de base"
+                placeholder="Ex: SALAIRE DE BASE"
                 [(ngModel)]="currentRubrique.libelle"
               />
             </div>

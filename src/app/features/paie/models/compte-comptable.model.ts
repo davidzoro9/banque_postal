@@ -53,6 +53,7 @@ export interface RubriqueOption {
   actif?: boolean;
   salaryElementId?: number;
   salaryElementName?: string;
+  salaryElementCode?: string;
 }
 
 export interface ParametresFormulaireCompte {
