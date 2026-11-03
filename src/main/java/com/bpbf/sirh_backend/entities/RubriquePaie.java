@@ -24,6 +24,10 @@ public class RubriquePaie {
     @Column(nullable = false, length = 150)
     private String libelle;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "salary_element_id")
+    private SalaryElement salaryElement;
+
     @Column(length = 50)
     private String typeRubrique; // GAIN, RETENUE, PATRONALE, NET, REGULARISATION, AUTRE
 

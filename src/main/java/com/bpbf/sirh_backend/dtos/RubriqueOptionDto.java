@@ -20,4 +20,6 @@ public class RubriqueOptionDto {
     private String description;
     private Integer ordre;
     private Boolean actif;
+    private Long salaryElementId;
+    private String salaryElementName;
 }

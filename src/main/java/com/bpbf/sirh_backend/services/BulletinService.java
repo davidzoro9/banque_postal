@@ -973,9 +973,8 @@ public class BulletinService {
                     }
                     if (m.compareTo(BigDecimal.ZERO) > 0) {
                         totalAvoirs = totalAvoirs.add(m);
-                        String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
-                        String finalLibelle = (rawName != null && rawName.toUpperCase(Locale.ROOT).contains("RAPPEL"))
-                                ? rawName : ("Rappel " + (rawName != null ? rawName : "salaire"));
+                        String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Salaire");
+                        String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
                         BulletinLine avLine = new BulletinLine();
                         avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
                         avLine.setLibelle(finalLibelle);
@@ -1699,7 +1698,8 @@ public class BulletinService {
                     totalPrecomptesStc = totalPrecomptesStc.add(solde);
                     BulletinLine pLine = new BulletinLine();
                     pLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
-                    pLine.setLibelle((prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : "Précompte") + " - Solde Intégral STC");
+                    String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
+                    pLine.setLibelle(formatLigneVariableLibelle("Précompte", rawName) + " - Solde Intégral STC");
                     pLine.setTypeLigne("PRECOMPTE");
                     pLine.setBaseCalcul(prec.getAmount());
                     pLine.setMontant(solde);
@@ -1715,7 +1715,8 @@ public class BulletinService {
                     totalPrecomptesStc = totalPrecomptesStc.add(tp.getAmount());
                     BulletinLine tpLine = new BulletinLine();
                     tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
-                    tpLine.setLibelle("Régularisation Trop-Perçu STC");
+                    String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
+                    tpLine.setLibelle(formatLigneVariableLibelle("Trop-perçu", rawName) + " - Solde STC");
                     tpLine.setTypeLigne("RETENUE");
                     tpLine.setBaseCalcul(tp.getAmount());
                     tpLine.setMontant(tp.getAmount());
@@ -2643,9 +2644,8 @@ public class BulletinService {
                 if (av.getMontantRestant() != null && av.getMontantRestant().compareTo(BigDecimal.ZERO) > 0) {
                     m = m.min(av.getMontantRestant());
                 }
-                String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
-                String finalLibelle = (rawName != null && rawName.toUpperCase(Locale.ROOT).contains("RAPPEL"))
-                        ? rawName : ("Rappel " + (rawName != null ? rawName : "salaire"));
+                String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : (av.getMotif() != null && !av.getMotif().isBlank() ? av.getMotif() : "Salaire");
+                String finalLibelle = formatLigneVariableLibelle("Rappel", rawName);
                 BulletinLine avLine = new BulletinLine();
                 avLine.setCode(av.getSalaryElement() != null ? av.getSalaryElement().getCode() : "RAPPEL_" + av.getId());
                 avLine.setLibelle(finalLibelle);
@@ -2844,7 +2844,9 @@ public class BulletinService {
 
                 BulletinLine precLine = new BulletinLine();
                 precLine.setCode(prec.getSalaryElement() != null ? prec.getSalaryElement().getCode() : "PREC_" + prec.getId());
-                precLine.setLibelle(prec.getSalaryElement() != null ? (prec.getSalaryElement().getName() + (isStc ? " - Solde intégral" : "")) : (isStc ? "Précompte - Solde intégral" : "Précompte / Retenue"));
+                String rawName = prec.getSalaryElement() != null ? prec.getSalaryElement().getName() : (prec.getMotif() != null && !prec.getMotif().isBlank() ? prec.getMotif() : "Précompte");
+                String finalLibelle = formatLigneVariableLibelle("Précompte", rawName) + (isStc ? " - Solde intégral" : "");
+                precLine.setLibelle(finalLibelle);
                 precLine.setTypeLigne("PRECOMPTE");
                 precLine.setBaseCalcul(prec.getAmount());
                 precLine.setTaux(null);
@@ -2862,14 +2864,8 @@ public class BulletinService {
 
                 BulletinLine tpLine = new BulletinLine();
                 tpLine.setCode(tp.getSalaryElement() != null ? tp.getSalaryElement().getCode() : "RET_TROP_PERCU");
-                String elemName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : null;
-                String libelle = elemName != null ? ("Retenue Trop-perçu (" + elemName + ")") : "Retenue Trop-perçu";
-                if (tp.getMoisOrigine() != null && !tp.getMoisOrigine().isBlank()) {
-                    libelle += " - " + tp.getMoisOrigine();
-                }
-                if (tp.getMotif() != null && !tp.getMotif().isBlank()) {
-                    libelle += " - " + tp.getMotif();
-                }
+                String rawName = tp.getSalaryElement() != null ? tp.getSalaryElement().getName() : (tp.getMotif() != null && !tp.getMotif().isBlank() ? tp.getMotif() : "Trop-perçu");
+                String libelle = formatLigneVariableLibelle("Trop-perçu", rawName);
                 tpLine.setLibelle(libelle);
                 tpLine.setTypeLigne("RETENUE");
                 tpLine.setBaseCalcul(tp.getAmount());
@@ -4887,6 +4883,24 @@ public class BulletinService {
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
+    public static String formatLigneVariableLibelle(String prefix, String elementName) {
+        if (elementName == null || elementName.isBlank()) {
+            return prefix;
+        }
+        String cleanName = elementName.trim();
+        String normClean = cleanName.toLowerCase(Locale.ROOT)
+                .replace("é", "e").replace("è", "e").replace("ê", "e")
+                .replace("-", " ").replaceAll("\s+", " ").trim();
+        String normPrefix = prefix.toLowerCase(Locale.ROOT)
+                .replace("é", "e").replace("è", "e").replace("ê", "e")
+                .replace("-", " ").replaceAll("\s+", " ").trim();
+
+        if (normClean.startsWith(normPrefix)) {
+            return cleanName;
+        }
+        return prefix + " " + cleanName;
+    }
+
     private boolean isTropPercuForSession(TropPercu tp, SessionPaie session) {
         if (tp == null || tp.getMoisApplication() == null || session == null) return false;
         String app = tp.getMoisApplication().trim();
@@ -4896,14 +4910,24 @@ public class BulletinService {
 
         if (app.equalsIgnoreCase(sPeriode)) return true;
 
-        try {
-            int mNum = Integer.parseInt(sMois);
-            String fmt = String.format("%02d/%d", mNum, sAnnee);
-            if (app.equalsIgnoreCase(fmt)) return true;
-        } catch (Exception ignored) {}
+        int mNum = parseMoisSafe(sMois);
+        if (mNum > 0 && sAnnee != null) {
+            String fmt1 = String.format("%02d/%d", mNum, sAnnee);
+            String fmt2 = String.format("%d-%02d", sAnnee, mNum);
+            String fmt3 = String.format("%02d-%d", mNum, sAnnee);
+            String fmt4 = String.format("%d/%02d", sAnnee, mNum);
+            if (app.equalsIgnoreCase(fmt1) || app.equalsIgnoreCase(fmt2) || app.equalsIgnoreCase(fmt3) || app.equalsIgnoreCase(fmt4)) {
+                return true;
+            }
+        }
 
         if (sAnnee != null && app.contains(String.valueOf(sAnnee))) {
-            if (app.contains(sMois)) return true;
+            if (mNum > 0 && (app.contains(String.format("%02d", mNum)) || app.contains(String.valueOf(mNum)))) {
+                return true;
+            }
+            if (!sMois.isBlank() && app.toLowerCase(Locale.ROOT).contains(sMois.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
         }
         return false;
     }
@@ -5150,7 +5174,9 @@ public class BulletinService {
 
         // 3. Salaire de base, sur-salaire, gratifications 13e/14e mois et prime d'ancienneté
         if (c.contains("13") || c.contains("14") || c.contains("GRAT") || l.contains("13") || l.contains("14") || l.contains("GRATIFICATION")) return 1;
-        if (c.equals("SAL_BASE") || l.equals("SALAIRE DE BASE") || (l.contains("SALAIRE DE BASE") && !l.contains("TROP"))) return 1;
+        // Avoirs et Rappels prioritaires sur le matching de sous-chaîne
+        if (c.contains("AVOIR") || c.contains("RAPPEL") || l.contains("AVOIR") || l.contains("RAPPEL")) return 9;
+        if (c.equals("SAL_BASE") || l.equals("SALAIRE DE BASE") || (l.contains("SALAIRE DE BASE") && !l.contains("TROP") && !l.contains("RAPPEL") && !l.contains("AVOIR"))) return 1;
         if (c.equals("SUR_SALAIRE") || l.contains("SURSALAIRE") || l.contains("SUR-SALAIRE")) return 2;
         if (((c.contains("ANC") && !c.contains("AVANCE") && !c.contains("ASSURANCE")) || l.contains("ANCIENNET")) && !c.contains("AVANCE") && !c.contains("ASSURANCE")) return 3;
         if (c.contains("CAISSE") || l.contains("CAISSE")) return 4;

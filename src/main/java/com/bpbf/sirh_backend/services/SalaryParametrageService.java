@@ -22,6 +22,7 @@ public class SalaryParametrageService {
     private final SalaryCategoryRepository categoryRepository;
     private final SalaryElementRepository elementRepository;
     private final com.bpbf.sirh_backend.repositories.TypeIndemniteRepository typeIndemniteRepository;
+    private final com.bpbf.sirh_backend.repositories.RubriquePaieRepository rubriqueRepository;
     private final JdbcTemplate jdbcTemplate;
 
     // --- REFERENCE CODES GESTION ADMIN ---
@@ -181,6 +182,7 @@ public class SalaryParametrageService {
         el.setStatut(dto.getStatut() != null ? dto.getStatut() : "ACTIF");
 
         SalaryElement saved = elementRepository.saveAndFlush(el);
+        syncRubriquePaieLibelle(saved);
         return mapElementToDto(saved);
     }
 
@@ -240,7 +242,36 @@ public class SalaryParametrageService {
         if (dto.getStatut() != null) el.setStatut(dto.getStatut());
 
         SalaryElement saved = elementRepository.saveAndFlush(el);
+        syncRubriquePaieLibelle(saved);
         return mapElementToDto(saved);
+    }
+
+    private void syncRubriquePaieLibelle(SalaryElement el) {
+        if (el == null || el.getName() == null || el.getName().isBlank() || rubriqueRepository == null) return;
+        try {
+            if (el.getId() != null) {
+                rubriqueRepository.findAllBySalaryElementId(el.getId()).forEach(rp -> {
+                    rp.setLibelle(el.getName());
+                    rubriqueRepository.save(rp);
+                });
+            }
+            if (el.getCode() != null && !el.getCode().isBlank()) {
+                rubriqueRepository.findByCodeRubriqueIgnoreCase(el.getCode().trim()).ifPresent(rp -> {
+                    rp.setLibelle(el.getName());
+                    rp.setSalaryElement(el);
+                    rubriqueRepository.save(rp);
+                });
+            }
+            if (el.getCodeCorrespondant() != null && !el.getCodeCorrespondant().isBlank()) {
+                rubriqueRepository.findByCodeRubriqueIgnoreCase(el.getCodeCorrespondant().trim()).ifPresent(rp -> {
+                    rp.setLibelle(el.getName());
+                    rp.setSalaryElement(el);
+                    rubriqueRepository.save(rp);
+                });
+            }
+        } catch (Exception ex) {
+            log.warn("Notice synchronisation rubrique_paie pour element {}: {}", el.getCode(), ex.getMessage());
+        }
     }
 
     @Transactional

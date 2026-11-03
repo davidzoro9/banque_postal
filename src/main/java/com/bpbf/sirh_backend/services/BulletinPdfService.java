@@ -777,7 +777,7 @@ public class BulletinPdfService {
                 }
                 if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
                     String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
-                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
+                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), BulletinService.formatLigneVariableLibelle("Rappel", rawName).toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
         }
@@ -1019,7 +1019,7 @@ public class BulletinPdfService {
                 }
                 if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
                     String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
-                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), rawName.toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
+                    displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), BulletinService.formatLigneVariableLibelle("Rappel", rawName).toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
             }
         }

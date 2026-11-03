@@ -16,4 +16,5 @@ public class ParametresFormulaireCompteDto {
     private List<SensEcritureDto> sens;
     private List<JournalComptableDto> journaux;
     private List<RubriqueOptionDto> rubriques;
+    private List<com.bpbf.sirh_backend.dtos.paie.SalaryElementResponseDto> elements;
 }

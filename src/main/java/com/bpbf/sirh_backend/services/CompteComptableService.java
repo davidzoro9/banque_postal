@@ -21,6 +21,8 @@ public class CompteComptableService {
     private final SensEcritureRepository sensRepository;
     private final JournalComptableRepository journalRepository;
     private final RubriquePaieRepository rubriqueRepository;
+    private final SalaryElementRepository salaryElementRepository;
+    private final SalaryParametrageService salaryParametrageService;
 
     @Transactional(readOnly = true)
     public List<CompteComptableDto> getAll(boolean actifOnly) {
@@ -119,6 +121,7 @@ public class CompteComptableService {
                 .sens(getSens(true))
                 .journaux(getJournaux(true))
                 .rubriques(getRubriquesOptions(true))
+                .elements(salaryParametrageService.getAllElements())
                 .build();
     }
 
@@ -370,15 +373,46 @@ public class CompteComptableService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RubriqueOptionDto> getRubriquesOptions(boolean actifOnly) {
         List<RubriquePaie> list = actifOnly ? 
                 rubriqueRepository.findByActifTrueOrderByOrdreAsc() : 
                 rubriqueRepository.findAllByOrderByOrdreAsc();
-        return list.stream().map(r -> RubriqueOptionDto.builder()
+        List<SalaryElement> allElements = salaryElementRepository.findAll();
+        return list.stream().map(r -> toRubriqueOptionDto(r, allElements)).collect(Collectors.toList());
+    }
+
+    private RubriqueOptionDto toRubriqueOptionDto(RubriquePaie r, List<SalaryElement> allElements) {
+        String libelleFinal = r.getLibelle();
+        Long seId = null;
+        String seName = null;
+
+        if (r.getSalaryElement() != null) {
+            seId = r.getSalaryElement().getId();
+            seName = r.getSalaryElement().getName();
+            if (seName != null && !seName.isBlank()) {
+                libelleFinal = seName;
+            }
+        } else {
+            SalaryElement el = findMatchingSalaryElement(r.getCodeRubrique(), allElements);
+            if (el != null) {
+                seId = el.getId();
+                seName = el.getName();
+                if (seName != null && !seName.isBlank()) {
+                    libelleFinal = seName;
+                }
+                try {
+                    r.setSalaryElement(el);
+                    r.setLibelle(seName);
+                    rubriqueRepository.save(r);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        return RubriqueOptionDto.builder()
                 .id(r.getId())
                 .code(r.getCodeRubrique())
-                .libelle(r.getLibelle())
+                .libelle(libelleFinal)
                 .sensSuggere(r.getSensSuggere() != null ? r.getSensSuggere() : "DEBIT")
                 .classeSuggeree(r.getClasseSuggeree() != null ? r.getClasseSuggeree() : "CLASSE_6")
                 .numeroCompteDefaut(r.getNumeroCompteDefaut())
@@ -386,7 +420,79 @@ public class CompteComptableService {
                 .description(r.getDescription())
                 .ordre(r.getOrdre())
                 .actif(r.getActif())
-                .build()).collect(Collectors.toList());
+                .salaryElementId(seId)
+                .salaryElementName(seName)
+                .build();
+    }
+
+    private SalaryElement findMatchingSalaryElement(String codeRubrique, List<SalaryElement> allElements) {
+        if (codeRubrique == null || codeRubrique.isBlank() || allElements == null || allElements.isEmpty()) {
+            return null;
+        }
+        String cr = codeRubrique.trim().toLowerCase(java.util.Locale.ROOT);
+        String crClean = cr.replace("_", "").replace("-", "");
+
+        // 1. Égalité directe de code ou codeCorrespondant
+        for (SalaryElement el : allElements) {
+            if (el.getCode() != null) {
+                String ec = el.getCode().trim().toLowerCase(java.util.Locale.ROOT);
+                if (ec.equals(cr) || ec.replace("_", "").replace("-", "").equals(crClean)) {
+                    return el;
+                }
+            }
+            if (el.getCodeCorrespondant() != null) {
+                String cc = el.getCodeCorrespondant().trim().toLowerCase(java.util.Locale.ROOT);
+                if (cc.equals(cr) || cc.replace("_", "").replace("-", "").equals(crClean)) {
+                    return el;
+                }
+            }
+        }
+
+        // 2. Correspondance sémantique officielle BPBF
+        for (SalaryElement el : allElements) {
+            String ec = el.getCode() != null ? el.getCode().trim().toLowerCase(java.util.Locale.ROOT) : "";
+            String cc = el.getCodeCorrespondant() != null ? el.getCodeCorrespondant().trim().toLowerCase(java.util.Locale.ROOT) : "";
+
+            if (cr.equals("salaire_base") || cr.equals("sal_base")) {
+                if (ec.contains("base") || ec.contains("mensuel") || cc.contains("base")) return el;
+            } else if (cr.equals("sur_salaire") || cr.equals("sursalaire")) {
+                if (ec.contains("sursal") || cc.contains("sursal")) return el;
+            } else if (cr.equals("primes")) {
+                if (ec.equals("prime_anc") || ec.equals("prime_gratif") || ec.contains("prime")) return el;
+            } else if (cr.equals("indemnites")) {
+                if (ec.startsWith("ind") || cc.startsWith("ind")) return el;
+            } else if (cr.equals("heures_supp")) {
+                if (ec.contains("heure_sup") || ec.contains("heure")) return el;
+            } else if (cr.equals("conges_payes")) {
+                if (ec.contains("conge") || ec.contains("iccp")) return el;
+            } else if (cr.equals("cnss")) {
+                if (ec.equals("cotis_cnss") || ec.equals("cnss")) return el;
+            } else if (cr.equals("crrae")) {
+                if (ec.equals("cotis_crrae") || ec.equals("crrae")) return el;
+            } else if (cr.equals("iuts")) {
+                if (ec.equals("ret_iuts") || ec.equals("iuts")) return el;
+            } else if (cr.equals("fsp")) {
+                if (ec.equals("ret_fsp") || ec.equals("fsp")) return el;
+            } else if (cr.equals("cotisations_patronales")) {
+                if (ec.equals("cot_pat_cnss") || ec.equals("chg_pat_cnss")) return el;
+            } else if (cr.equals("crrae_patronale")) {
+                if (ec.equals("cot_crrae") || ec.equals("chg_pat_crrae")) return el;
+            } else if (cr.equals("tpa")) {
+                if (ec.startsWith("tpa")) return el;
+            } else if (cr.equals("net_a_payer")) {
+                if (ec.contains("net") || cc.contains("net")) return el;
+            } else if (cr.equals("acomptes")) {
+                if (ec.contains("avance") || ec.contains("acompte")) return el;
+            } else if (cr.equals("precomptes")) {
+                if (ec.contains("pret") || ec.contains("precompte")) return el;
+            } else if (cr.equals("trop_percus")) {
+                if (ec.contains("trop") || cc.contains("trop")) return el;
+            } else if (cr.equals("rappels")) {
+                if (ec.contains("rappel") || ec.contains("avoir")) return el;
+            }
+        }
+
+        return null;
     }
 
     @Transactional
@@ -394,13 +500,34 @@ public class CompteComptableService {
         if (dto.getCode() == null || dto.getCode().trim().isBlank()) {
             throw new IllegalArgumentException("Le code de la rubrique est obligatoire.");
         }
-        if (dto.getLibelle() == null || dto.getLibelle().trim().isBlank()) {
-            throw new IllegalArgumentException("Le libellé de la rubrique est obligatoire.");
-        }
-        String code = dto.getCode().trim().toUpperCase();
+        String code = dto.getCode().trim().toUpperCase(java.util.Locale.ROOT);
         RubriquePaie r = rubriqueRepository.findByCodeRubrique(code).orElseGet(() -> RubriquePaie.builder().codeRubrique(code).build());
-        r.setLibelle(dto.getLibelle().trim());
-        if (dto.getSensSuggere() != null) r.setSensSuggere(dto.getSensSuggere().trim().toUpperCase());
+        
+        List<SalaryElement> allElements = salaryElementRepository.findAll();
+        SalaryElement linkedEl = null;
+
+        if (dto.getSalaryElementId() != null) {
+            linkedEl = salaryElementRepository.findById(dto.getSalaryElementId()).orElse(null);
+        }
+        if (linkedEl == null) {
+            linkedEl = findMatchingSalaryElement(code, allElements);
+        }
+
+        if (linkedEl != null) {
+            r.setSalaryElement(linkedEl);
+            if (linkedEl.getName() != null && !linkedEl.getName().isBlank()) {
+                r.setLibelle(linkedEl.getName());
+            } else if (dto.getLibelle() != null && !dto.getLibelle().isBlank()) {
+                r.setLibelle(dto.getLibelle().trim());
+            }
+        } else {
+            if (dto.getLibelle() == null || dto.getLibelle().trim().isBlank()) {
+                throw new IllegalArgumentException("Le libellé de la rubrique est obligatoire.");
+            }
+            r.setLibelle(dto.getLibelle().trim());
+        }
+
+        if (dto.getSensSuggere() != null) r.setSensSuggere(dto.getSensSuggere().trim().toUpperCase(java.util.Locale.ROOT));
         if (dto.getClasseSuggeree() != null) r.setClasseSuggeree(dto.getClasseSuggeree().trim());
         if (dto.getNumeroCompteDefaut() != null) r.setNumeroCompteDefaut(dto.getNumeroCompteDefaut().trim());
         if (dto.getTypeRubrique() != null) r.setTypeRubrique(dto.getTypeRubrique().trim());
@@ -408,18 +535,7 @@ public class CompteComptableService {
         if (dto.getOrdre() != null) r.setOrdre(dto.getOrdre());
         if (dto.getActif() != null) r.setActif(dto.getActif());
         RubriquePaie saved = rubriqueRepository.save(r);
-        return RubriqueOptionDto.builder()
-                .id(saved.getId())
-                .code(saved.getCodeRubrique())
-                .libelle(saved.getLibelle())
-                .sensSuggere(saved.getSensSuggere())
-                .classeSuggeree(saved.getClasseSuggeree())
-                .numeroCompteDefaut(saved.getNumeroCompteDefaut())
-                .typeRubrique(saved.getTypeRubrique())
-                .description(saved.getDescription())
-                .ordre(saved.getOrdre())
-                .actif(saved.getActif())
-                .build();
+        return toRubriqueOptionDto(saved, allElements);
     }
 
     @Transactional
@@ -433,18 +549,7 @@ public class CompteComptableService {
                 .orElseThrow(() -> new RuntimeException("Rubrique de paie introuvable : " + id));
         r.setActif(r.getActif() == null || !r.getActif());
         RubriquePaie saved = rubriqueRepository.save(r);
-        return RubriqueOptionDto.builder()
-                .id(saved.getId())
-                .code(saved.getCodeRubrique())
-                .libelle(saved.getLibelle())
-                .sensSuggere(saved.getSensSuggere())
-                .classeSuggeree(saved.getClasseSuggeree())
-                .numeroCompteDefaut(saved.getNumeroCompteDefaut())
-                .typeRubrique(saved.getTypeRubrique())
-                .description(saved.getDescription())
-                .ordre(saved.getOrdre())
-                .actif(saved.getActif())
-                .build();
+        return toRubriqueOptionDto(saved, salaryElementRepository.findAll());
     }
 
     private String determineClasse(String num) {

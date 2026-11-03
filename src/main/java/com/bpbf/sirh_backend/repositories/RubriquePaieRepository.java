@@ -12,4 +12,7 @@ public interface RubriquePaieRepository extends JpaRepository<RubriquePaie, Long
     List<RubriquePaie> findAllByOrderByOrdreAsc();
     List<RubriquePaie> findByActifTrueOrderByOrdreAsc();
     Optional<RubriquePaie> findByCodeRubrique(String codeRubrique);
+    Optional<RubriquePaie> findByCodeRubriqueIgnoreCase(String codeRubrique);
+    Optional<RubriquePaie> findBySalaryElementId(Long salaryElementId);
+    List<RubriquePaie> findAllBySalaryElementId(Long salaryElementId);
 }
