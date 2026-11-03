@@ -3442,12 +3442,17 @@ public class BulletinService {
         session.setNombreValide(0);
         session = sessionPaieRepository.save(session);
 
-        // Recalculer les bulletins de la session : les variables de paie ne sont plus appliquées
-        for (Bulletin b : bulletins) {
-            Bulletin updatedB = computeAndSaveBulletin(session, b.getEmployee(), b.getWorkedDays(), b.getScheduledWorkingDays(), b);
-            updatedB.setStatut("GENERE");
-            updatedB.setDateValidation(null);
-            bulletinRepository.save(updatedB);
+        // Passer tous les bulletins de la session au statut GÉNÉRÉ directement
+        // sans manipuler les entités BulletinLine en mémoire pour éliminer tout risque
+        // d'erreur StaleObjectStateException / Row was updated or deleted by another transaction
+        try {
+            jdbcTemplate.update("UPDATE bulletin SET statut = 'GENERE', date_validation = NULL WHERE session_paie_id = ?", sessionPaieId);
+        } catch (Exception e) {
+            for (Bulletin b : bulletins) {
+                b.setStatut("GENERE");
+                b.setDateValidation(null);
+            }
+            bulletinRepository.saveAll(bulletins);
         }
 
         recalculerTotauxSession(session);
@@ -3463,7 +3468,7 @@ public class BulletinService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Impossible de supprimer une session " + session.getStatut().toLowerCase() + ". Veuillez d'abord réinitialiser son statut.");
         }
 
-        // Détacher d'éventuelles demandes de bulletins liées
+        // 1. Détacher d'éventuelles demandes de bulletins liées
         try {
             jdbcTemplate.update("UPDATE demande_bulletin SET session_id = NULL WHERE session_id = ?", sessionPaieId);
             jdbcTemplate.update("UPDATE demande_bulletin SET bulletin_id = NULL WHERE bulletin_id IN (SELECT id FROM bulletin WHERE session_paie_id = ?)", sessionPaieId);
@@ -3471,15 +3476,16 @@ public class BulletinService {
             log.debug("Détachement demande_bulletin (non bloquant): {}", e.getMessage());
         }
 
-        List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
-        if (!bulletins.isEmpty()) {
-            for (Bulletin b : bulletins) {
-                if (b.getLines() != null) {
-                    b.getLines().clear();
-                }
+        // 2. Supprimer directement via JDBC les lignes puis les bulletins pour éliminer tout conflit JPA orphanRemoval
+        try {
+            jdbcTemplate.update("DELETE FROM bulletin_line WHERE bulletin_id IN (SELECT id FROM bulletin WHERE session_paie_id = ?)", sessionPaieId);
+            jdbcTemplate.update("DELETE FROM bulletin WHERE session_paie_id = ?", sessionPaieId);
+        } catch (Exception e) {
+            log.warn("Nettoyage direct bulletin_line/bulletin: {}", e.getMessage());
+            List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
+            if (!bulletins.isEmpty()) {
+                bulletinRepository.deleteAll(bulletins);
             }
-            bulletinRepository.deleteAll(bulletins);
-            bulletinRepository.flush();
         }
         sessionPaieRepository.delete(session);
         sessionPaieRepository.flush();
