@@ -30,7 +30,8 @@ export class EtatsSyntheseComponent implements OnInit {
     { code: 'ETAT_FSP', libelle: 'Retenue Fonds de Solidarité', categorie: 'Cotisations Légales', icon: 'shield', ordre: 8, actif: true },
     { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détail Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
     { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détail Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+    { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true },
+    { code: 'ETAT_ECARTS_LIVRE_PAIE', libelle: 'Écarts sur Livre de Paie', categorie: 'Contrôle & Audit', icon: 'compare_arrows', ordre: 12, actif: true }
   ];
   selectedEtat: string = 'LIVRE_PAIE';
 
@@ -168,7 +169,8 @@ export class EtatsSyntheseComponent implements OnInit {
         const mustHave: EtatSyntheseConfig[] = [
           { code: 'ETAT_INDEMNITE_CONGE', libelle: 'Détail Indemnité de Congé', categorie: 'Indemnités de Rupture', icon: 'beach_access', ordre: 9, actif: true },
           { code: 'ETAT_INDEMNITE_LICENCIEMENT', libelle: 'Détail Indemnité de Licenciement', categorie: 'Indemnités de Rupture', icon: 'work_off', ordre: 10, actif: true },
-          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true }
+          { code: 'ETAT_INDEMNITE_PREAVIS', libelle: 'Détail Indemnité de Préavis', categorie: 'Indemnités de Rupture', icon: 'schedule', ordre: 11, actif: true },
+          { code: 'ETAT_ECARTS_LIVRE_PAIE', libelle: 'Écarts sur Livre de Paie', categorie: 'Contrôle & Audit', icon: 'compare_arrows', ordre: 12, actif: true }
         ];
         mustHave.forEach(def => {
           if (!received.some(c => c.code === def.code)) {
@@ -210,13 +212,13 @@ export class EtatsSyntheseComponent implements OnInit {
 
   // ─── CHARGEMENT DES FILTRES DEPUIS POSTGRESQL ────────────────────────────
   loadFiltersData(): void {
-    // 1. Charger les sessions et filtrer strictement les sessions VALIDE ou CLOTURE
+    // 1. Charger les sessions générées, validées ou clôturées (pas besoin de validation stricte pour consulter les états)
     this.http.get<any[]>(`${environment.apiUrl}/paie/sessions`).subscribe({
       next: (res) => {
         const raw = res || [];
         this.sessions = raw.filter(s => {
           const st = String(s.statut || s.status || '').toUpperCase();
-          return st === 'VALIDE' || st === 'CLOTURE' || st === 'CLÔTURÉ';
+          return st === 'GENERE' || st === 'GÉNÉRÉ' || st === 'VALIDE' || st === 'CLOTURE' || st === 'CLÔTURÉ';
         });
         this.buildPeriodesList();
         this.loadEligibleEmployees();
@@ -423,6 +425,10 @@ export class EtatsSyntheseComponent implements OnInit {
 
   loadEtatData(): void {
     if (!this.selectedEtat) return;
+    if (this.selectedEtat === 'ETAT_ECARTS_LIVRE_PAIE') {
+      this.loadEcartsLivrePaie();
+      return;
+    }
     if (this.isRuptureEtat && !this.selectedEmployeeId) {
       this.etatData = null;
       this.isLoading = false;
@@ -664,6 +670,8 @@ export class EtatsSyntheseComponent implements OnInit {
       'etat-indemnite-licenciement': 'ETAT_INDEMNITE_LICENCIEMENT',
       'indemnite-preavis': 'ETAT_INDEMNITE_PREAVIS',
       'etat-indemnite-preavis': 'ETAT_INDEMNITE_PREAVIS',
+      'ecarts-livre-paie': 'ETAT_ECARTS_LIVRE_PAIE',
+      'etat-ecarts-livre-paie': 'ETAT_ECARTS_LIVRE_PAIE',
       'stc': 'ETAT_INDEMNITE_LICENCIEMENT',
       'etat-stc': 'ETAT_INDEMNITE_LICENCIEMENT',
       'solde-tout-compte': 'ETAT_INDEMNITE_LICENCIEMENT',
@@ -701,6 +709,7 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_INDEMNITE_CONGE': 'indemnite-conge',
       'ETAT_INDEMNITE_LICENCIEMENT': 'indemnite-licenciement',
       'ETAT_INDEMNITE_PREAVIS': 'indemnite-preavis',
+      'ETAT_ECARTS_LIVRE_PAIE': 'ecarts-livre-paie',
       'ETAT_STC': 'indemnite-licenciement',
       'ETAT_SOLDE_TOUT_COMPTE': 'indemnite-licenciement'
     };
@@ -792,8 +801,66 @@ export class EtatsSyntheseComponent implements OnInit {
   }
 
   formatFcfa(val: number | null | undefined): string {
-    if (val === null || val === undefined) return '0 F';
-    return Math.round(val).toLocaleString('fr-FR') + ' F';
+    if (val === null || val === undefined) return '0';
+    return Math.round(val).toLocaleString('fr-FR').replace(/\u202F/g, ' ');
+  }
+
+  // ─── GESTION DES ÉCARTS SUR LE LIVRE DE PAIE ET JUSTIFICATIONS ───────────
+  ecartsLivrePaieData: any = null;
+  isSavingJustif: { [codeRubrique: string]: boolean } = {};
+  justifSavedSuccess: { [codeRubrique: string]: boolean } = {};
+
+  loadEcartsLivrePaie(): void {
+    this.isLoading = true;
+    let params: any = {};
+    if (this.selectedSessionId) {
+      params.sessionId = this.selectedSessionId;
+    }
+    if (this.selectedPeriode) {
+      params.periode = this.selectedPeriode;
+    }
+    this.http.get<any>(`${environment.apiUrl}/paie/etats-synthese/ecarts-livre-paie`, { params }).subscribe({
+      next: (res) => {
+        this.ecartsLivrePaieData = res;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement écarts livre de paie', err);
+        this.ecartsLivrePaieData = null;
+        this.isLoading = false;
+      }
+    });
+  }
+
+  saveJustification(item: any): void {
+    if (!item) return;
+    const sessId = this.ecartsLivrePaieData?.sessionId || this.selectedSessionId;
+    if (!sessId) {
+      alert("Veuillez sélectionner une session de paie.");
+      return;
+    }
+    this.isSavingJustif[item.codeRubrique] = true;
+    this.justifSavedSuccess[item.codeRubrique] = false;
+    this.http.post<any>(`${environment.apiUrl}/paie/etats-synthese/ecarts-livre-paie/justification`, {
+      sessionId: sessId,
+      codeRubrique: item.codeRubrique,
+      justification: item.justification
+    }).subscribe({
+      next: (saved) => {
+        item.justification = saved.justification;
+        item.updatedAt = saved.updatedAt;
+        item.updatedBy = saved.updatedBy;
+        this.isSavingJustif[item.codeRubrique] = false;
+        this.justifSavedSuccess[item.codeRubrique] = true;
+        setTimeout(() => {
+          this.justifSavedSuccess[item.codeRubrique] = false;
+        }, 3000);
+      },
+      error: (err) => {
+        alert("Erreur lors de l'enregistrement de la justification : " + (err?.error?.message || err.message));
+        this.isSavingJustif[item.codeRubrique] = false;
+      }
+    });
   }
 
   getSum(field: string): number {
@@ -823,6 +890,7 @@ export class EtatsSyntheseComponent implements OnInit {
       'ETAT_INDEMNITE_CONGE',
       'ETAT_INDEMNITE_LICENCIEMENT',
       'ETAT_INDEMNITE_PREAVIS',
+      'ETAT_ECARTS_LIVRE_PAIE',
       'ETAT_STC',
       'ETAT_SOLDE_TOUT_COMPTE'
     ];

@@ -993,6 +993,145 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- 12d. TABLEAU : ÉCARTS SUR LE LIVRE DE PAIE & JUSTIFICATIONS -->
+    <!-- ========================================== -->
+    <div *ngIf="!isLoading && selectedEtat === 'ETAT_ECARTS_LIVRE_PAIE'">
+      <!-- Bandeau comparatif des périodes -->
+      <div style="background: linear-gradient(135deg, #003366 0%, #0052cc 100%); color: #fff; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.15);">
+        <div>
+          <div style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">compare_arrows</mat-icon>
+            Analyse Comparative des Écarts sur le Livre de Paie
+          </div>
+          <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
+            Comparaison poste par poste : 
+            <strong>Mois en cours (M) : {{ ecartsLivrePaieData?.periodeActuelle || selectedPeriode || 'Actuel' }}</strong>
+            vs 
+            <strong>Mois précédent (M-1) : {{ ecartsLivrePaieData?.periodePrecedente || 'M-1' }}</strong>
+          </div>
+        </div>
+        <button mat-flat-button color="accent" (click)="loadEcartsLivrePaie()" [disabled]="isLoading" style="font-weight: 600; border-radius: 6px;">
+          <mat-icon>refresh</mat-icon> Actualiser
+        </button>
+      </div>
+
+      <!-- Résumé KPI des variations globales -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <!-- KPI BRUT -->
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Masse Salariale Brute</div>
+          <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-top: 4px;">{{ formatFcfa(ecartsLivrePaieData?.totalBrutActuel) }}</div>
+          <div style="font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <span [style.color]="(ecartsLivrePaieData?.ecartBrut || 0) >= 0 ? '#16a34a' : '#dc2626'" style="font-weight: 700;">
+              {{ (ecartsLivrePaieData?.ecartBrut || 0) >= 0 ? '+' : '' }}{{ formatFcfa(ecartsLivrePaieData?.ecartBrut) }}
+            </span>
+            <span style="color: #94a3b8;">vs M-1 ({{ formatFcfa(ecartsLivrePaieData?.totalBrutPrecedent) }})</span>
+          </div>
+        </div>
+
+        <!-- KPI RETENUES -->
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total des Retenues</div>
+          <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-top: 4px;">{{ formatFcfa(ecartsLivrePaieData?.totalRetenuesActuel) }}</div>
+          <div style="font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <span [style.color]="(ecartsLivrePaieData?.ecartRetenues || 0) >= 0 ? '#ea580c' : '#16a34a'" style="font-weight: 700;">
+              {{ (ecartsLivrePaieData?.ecartRetenues || 0) >= 0 ? '+' : '' }}{{ formatFcfa(ecartsLivrePaieData?.ecartRetenues) }}
+            </span>
+            <span style="color: #94a3b8;">vs M-1 ({{ formatFcfa(ecartsLivrePaieData?.totalRetenuesPrecedent) }})</span>
+          </div>
+        </div>
+
+        <!-- KPI NET -->
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Net à Payer</div>
+          <div style="font-size: 18px; font-weight: 800; color: #0060B3; margin-top: 4px;">{{ formatFcfa(ecartsLivrePaieData?.totalNetActuel) }}</div>
+          <div style="font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <span [style.color]="(ecartsLivrePaieData?.ecartNet || 0) >= 0 ? '#16a34a' : '#dc2626'" style="font-weight: 700;">
+              {{ (ecartsLivrePaieData?.ecartNet || 0) >= 0 ? '+' : '' }}{{ formatFcfa(ecartsLivrePaieData?.ecartNet) }}
+            </span>
+            <span style="color: #94a3b8;">vs M-1 ({{ formatFcfa(ecartsLivrePaieData?.totalNetPrecedent) }})</span>
+          </div>
+        </div>
+
+        <!-- KPI NOMBRE RUBRIQUES EN ECART -->
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Rubriques Comparées</div>
+          <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-top: 4px;">{{ ecartsLivrePaieData?.rubriques?.length || 0 }} rubriques</div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Session ref: <strong>{{ ecartsLivrePaieData?.codeSession || '—' }}</strong></div>
+        </div>
+      </div>
+
+      <!-- Tableau détaillé des rubriques avec justification -->
+      <div class="table-responsive">
+        <table class="bpbf-table font-compact">
+          <thead>
+            <tr>
+              <th style="width: 5%;" class="text-center">#</th>
+              <th style="width: 10%;">Code</th>
+              <th style="width: 20%;">Élément de Salaire</th>
+              <th style="width: 10%;" class="text-center">Nature</th>
+              <th style="width: 12%;" class="text-right">Mois M (Actuel)</th>
+              <th style="width: 12%;" class="text-right">Mois M-1</th>
+              <th style="width: 11%;" class="text-right">Écart (FCFA)</th>
+              <th style="width: 7%;" class="text-center">Var. %</th>
+              <th style="width: 20%;">Justification Précise</th>
+              <th style="width: 5%;" class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of ecartsLivrePaieData?.rubriques; let idx = index" [style.background]="(item.ecart !== 0) ? '#fffbeb' : 'transparent'">
+              <td class="text-center font-mono">{{ idx + 1 }}</td>
+              <td class="font-mono font-bold">{{ item.codeRubrique }}</td>
+              <td class="font-bold">{{ item.libelleRubrique }}</td>
+              <td class="text-center">
+                <span [style.background]="item.categorieRubrique === 'GAIN' ? '#ecfdf5' : '#fef2f2'"
+                      [style.color]="item.categorieRubrique === 'GAIN' ? '#065f46' : '#991b1b'"
+                      style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px;">
+                  {{ item.categorieRubrique }}
+                </span>
+              </td>
+              <td class="text-right font-mono font-bold">{{ formatFcfa(item.montantActuel) }}</td>
+              <td class="text-right font-mono text-muted">{{ formatFcfa(item.montantPrecedent) }}</td>
+              <td class="text-right font-mono font-bold"
+                  [style.color]="item.ecart > 0 ? '#16a34a' : (item.ecart < 0 ? '#dc2626' : '#64748b')">
+                {{ item.ecart > 0 ? '+' : '' }}{{ formatFcfa(item.ecart) }}
+              </td>
+              <td class="text-center font-mono font-bold"
+                  [style.color]="item.pourcentageVariation > 0 ? '#16a34a' : (item.pourcentageVariation < 0 ? '#dc2626' : '#64748b')">
+                <span *ngIf="item.pourcentageVariation !== null">{{ item.pourcentageVariation > 0 ? '+' : '' }}{{ item.pourcentageVariation }}%</span>
+                <span *ngIf="item.pourcentageVariation === null">—</span>
+              </td>
+              <td>
+                <textarea [(ngModel)]="item.justification"
+                          placeholder="Saisissez la justification précise de l'écart..."
+                          rows="2"
+                          style="width: 100%; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
+                <div *ngIf="item.updatedAt" style="font-size: 10px; color: #94a3b8; margin-top: 2px;">
+                  Modifié le {{ item.updatedAt }} <span *ngIf="item.updatedBy">par {{ item.updatedBy }}</span>
+                </div>
+              </td>
+              <td class="text-center" style="vertical-align: middle;">
+                <button mat-icon-button color="primary"
+                        (click)="saveJustification(item)"
+                        [disabled]="isSavingJustif[item.codeRubrique]"
+                        matTooltip="Enregistrer la justification">
+                  <mat-icon *ngIf="!isSavingJustif[item.codeRubrique] && !justifSavedSuccess[item.codeRubrique]">save</mat-icon>
+                  <mat-icon *ngIf="isSavingJustif[item.codeRubrique]" class="spinning">hourglass_empty</mat-icon>
+                  <mat-icon *ngIf="justifSavedSuccess[item.codeRubrique]" style="color: #16a34a;">check_circle</mat-icon>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!ecartsLivrePaieData?.rubriques || ecartsLivrePaieData?.rubriques.length === 0">
+              <td colspan="10" class="text-center" style="padding: 30px; color: #64748b;">
+                Aucune rubrique trouvée pour la session sélectionnée.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- 13. TABLEAU DYNAMIQUE : ÉTATS PERSONNALISÉS  -->
     <!-- ========================================== -->
     <div class="table-responsive" *ngIf="!isLoading && isCustomEtat && filteredRows.length > 0">

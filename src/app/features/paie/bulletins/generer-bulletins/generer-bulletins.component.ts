@@ -333,7 +333,7 @@ export class GenererBulletinsComponent implements OnInit {
     if (nat.includes('CONGE') || name.includes('CONGE') || code.includes('-CP-') || nat.includes('CONGÉ') || name.includes('CONGÉ')) return 'Congé Payé';
     if (nat.includes('STC') || name.includes('STC') || code.includes('STC') || nat.includes('SOLDE') || name.includes('SOLDE')) return 'Solde de Tout Compte';
     if (nat.includes('RETRAITE') || name.includes('RETRAITE') || code.includes('RETR')) return 'Indemnités Retraite';
-    if (nat.includes('RELIQUAT') || nat.includes('MATERNITE') || name.includes('RELIQUAT') || name.includes('MATERNITE') || code.includes('RELIQ') || code.includes('MAT')) return 'Reliquat';
+    if (nat.includes('RELIQUAT') || nat.includes('MATERNITE') || name.includes('RELIQUAT') || name.includes('MATERNITE') || code.includes('RELIQ') || code.includes('MAT')) return 'Différentiel congé de maternité';
     if (type === 'EXTRAORDINAIRE') return s.natureSession || s.name || 'Extraordinaire';
     return 'Ordinaire';
   }
@@ -346,6 +346,7 @@ export class GenererBulletinsComponent implements OnInit {
         return { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' };
       case 'Solde de Tout Compte':
         return { background: '#f3e8ff', color: '#7e22ce', border: '1px solid #e9d5ff' };
+      case 'Différentiel congé de maternité':
       case 'Reliquat':
         return { background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' };
       case 'Congé Payé':
@@ -587,8 +588,8 @@ export class GenererBulletinsComponent implements OnInit {
       this.newSessionForm.modeCible = 'SELECTION';
       this.changerModeCibleNouvelleSession('SELECTION');
     } else if (this.newSessionForm.natureExtraordinaire === 'RELIQUAT' || this.newSessionForm.natureExtraordinaire === 'DIFFERENTIEL_MATERNITE') {
-      this.newSessionForm.name = `Session Reliquat — ${nomMois} ${y}`;
-      this.newSessionForm.codeSession = `SESS-RELIQ-${y}-${m}`;
+      this.newSessionForm.name = `Différentiel Congé de Maternité — ${nomMois} ${y}`;
+      this.newSessionForm.codeSession = `SESS-MATERNITE-${y}-${m}`;
       this.newSessionForm.periode = `${nomMois} ${y}`;
       this.newSessionForm.modeCible = 'TOUS';
       this.chargerFemmesMaterniteEligibles();
@@ -796,7 +797,7 @@ export class GenererBulletinsComponent implements OnInit {
     }
 
     if (this.isCreationSessionMaternite && this.employesMaterniteEligibles.length === 0) {
-      alert(`Impossible de créer la Session Reliquat : aucune collaboratrice n'a de congé de maternité approuvé en cours pour ${this.newSessionForm.periode}.`);
+      alert(`Impossible de créer la session Différentiel congé de maternité : aucune collaboratrice n'a de congé de maternité approuvé en cours pour ${this.newSessionForm.periode}.`);
       return;
     }
 

@@ -412,9 +412,9 @@
         <mat-card style="border-radius: 14px; padding: 40px; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.05); margin-top: 16px;">
           <mat-icon style="font-size: 54px; width: 54px; height: 54px; color: #0284c7;">{{ isSessionMaternite ? 'child_care' : 'info' }}</mat-icon>
           @if (isSessionMaternite) {
-            <h3 style="margin-top: 14px; color: #1e293b; font-size: 18px; font-weight: 700;">Aucune collaboratrice éligible pour la Session Reliquat</h3>
+            <h3 style="margin-top: 14px; color: #1e293b; font-size: 18px; font-weight: 700;">Aucune collaboratrice éligible pour le Différentiel congé de maternité</h3>
             <p style="color: #64748b; font-size: 14px; max-width: 620px; margin: 10px auto 22px; line-height: 1.6;">
-              Conformément à la convention collective bancaire et aux règles de la CNSS, la <strong>Session Reliquat</strong> prend en charge le complément employeur excédant le plafond CNSS de 800&nbsp;000 FCFA uniquement pour les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur <strong>{{ periode }}</strong>.
+              Conformément à la convention collective bancaire et aux règles de la CNSS, la session <strong>Différentiel congé de maternité</strong> prend en charge le complément employeur excédant le plafond CNSS de 800&nbsp;000 FCFA uniquement pour les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur <strong>{{ periode }}</strong>.
               <br><br>
               Actuellement, <strong>aucune salariée n'a de congé de maternité approuvé en cours sur ce mois</strong> dans le système. Le calcul a donc produit <strong>0 bulletin</strong>.
             </p>
@@ -1253,7 +1253,7 @@
               <option value="CONGE_PAYE">Congé Payé</option>
               <option value="STC">Solde de Tout Compte</option>
               <option value="INDEMNITE_RETRAITE">Indemnités de Départ à la Retraite</option>
-              <option value="RELIQUAT">Reliquat</option>
+              <option value="RELIQUAT">Différentiel congé de maternité</option>
             </select>
           </div>
 
@@ -1333,7 +1333,7 @@
           <div style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; border-radius: 10px; padding: 12px 16px; margin-top: 14px; display: flex; align-items: center; gap: 12px;">
             <mat-icon style="color: #0284c7; font-size: 24px; width: 24px; height: 24px;">child_care</mat-icon>
             <div style="font-size: 13px; color: var(--on-surface);">
-              <strong>Session Reliquat :</strong> Seules les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur {{ newSessionForm.periode || 'cette période' }} sont éligibles.
+              <strong>Différentiel congé de maternité :</strong> Seules les collaboratrices ayant un <strong>congé de maternité validé et actif</strong> sur {{ newSessionForm.periode || 'cette période' }} sont éligibles.
               <div style="font-size: 12px; color: #0284c7; font-weight: 800; margin-top: 2px;">
                 @if (isLoadingMaterniteEligibles) {
                   Recherche des agentes en congé de maternité en cours...
@@ -1509,12 +1509,12 @@
         <div style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;">
           <mat-icon style="color: #0284c7; font-size: 26px; width: 26px; height: 26px;">child_care</mat-icon>
           <div style="font-size: 13px; color: var(--on-surface);">
-            <strong>Session Reliquat Maternité :</strong> Seules les collaboratrices en <strong>congé de maternité</strong> ayant une <strong>rémunération brute > 800 000 FCFA</strong> (plafond CNSS) sont ciblées. Le reliquat correspond au surplus pris en charge par l'employeur.
+            <strong>Différentiel Congé de Maternité :</strong> Seules les collaboratrices en <strong>congé de maternité</strong> ayant une <strong>rémunération brute > 800 000 FCFA</strong> (plafond CNSS) sont ciblées. Le différentiel correspond au surplus pris en charge par l'employeur.
             <div style="font-size: 12px; color: #0284c7; font-weight: 800; margin-top: 3px;">
               @if (isLoadingMaterniteEligibles) {
                 Recherche des collaboratrices éligibles (> 800 000 FCFA) en cours...
               } @else if (employesMaterniteEligibles.length > 0) {
-                {{ employesMaterniteEligibles.length }} collaboratrice(s) identifiée(s) avec un reliquat (surplus au-delà du plafond de 800 000 FCFA).
+                {{ employesMaterniteEligibles.length }} collaboratrice(s) identifiée(s) avec un différentiel (surplus au-delà du plafond de 800 000 FCFA).
               } @else {
                 0 collaboratrice en congé de maternité avec rémunération > 800 000 FCFA sur cette période (Prise en charge CNSS à 100%, 0 FCFA de charge banque).
               }
