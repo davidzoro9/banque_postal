@@ -59,6 +59,9 @@ public class BulletinService {
     private final InformationSalarialeRepository informationSalarialeRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     /**
      * Garde-fou d'intégrité V3 : interdit toute modification sur un bulletin ou une session validée/clôturée.
      */
@@ -1900,10 +1903,7 @@ public class BulletinService {
                 .toList();
 
         BigDecimal totalIndemnites = indemnites.stream()
-                .map(row -> {
-                    BigDecimal baseM = money(row.getMontant());
-                    return isIndemniteFonction(row) ? money(baseM.multiply(ratio)) : baseM;
-                })
+                .map(row -> money(money(row.getMontant()).multiply(ratio)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Prime d'ancienneté : 5% sur le SB à 3 ans, puis +1% par année supplémentaire
@@ -2061,7 +2061,7 @@ public class BulletinService {
         BigDecimal totalExonerations = BigDecimal.ZERO;
         for (IndemniteEmploye ind : indemnites) {
             BigDecimal baseM = money(ind.getMontant());
-            BigDecimal mIndem = isIndemniteFonction(ind) ? money(baseM.multiply(ratio)) : baseM;
+            BigDecimal mIndem = money(baseM.multiply(ratio));
             if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             TypeIndemnite type = ind.getTypeIndemnite();
@@ -2347,11 +2347,9 @@ public class BulletinService {
                     }
                     if (mCrrae.compareTo(BigDecimal.ZERO) > 0) {
                         BulletinLine crraeLine = new BulletinLine();
-                        crraeLine.setCode(se.getCode());
-                        crraeLine.setLibelle(se.getName() != null && !se.getName().isBlank() ? se.getName() : "COTISATION CRRAE");
-                        String catType = (se.getSalaryCategory() != null && se.getSalaryCategory().getType() != null && !se.getSalaryCategory().getType().isBlank())
-                                ? se.getSalaryCategory().getType() : "RETENUE_SOCIALE";
-                        crraeLine.setTypeLigne(catType);
+                        crraeLine.setCode(se.getCode() != null ? se.getCode() : "COTIS_CRRAE");
+                        crraeLine.setLibelle(se.getName() != null && !se.getName().isBlank() ? se.getName() : "COTISATION CRRAE/RCPNC");
+                        crraeLine.setTypeLigne("RETENUE_SOCIALE");
                         crraeLine.setBaseCalcul(baseCrrae);
                         crraeLine.setTaux(tx);
                         crraeLine.setMontant(mCrrae);
@@ -2493,16 +2491,15 @@ public class BulletinService {
             // 11. INDEMNITÉ DE L'AGENT (Gestion Admin -> IndemniteEmploye)
             IndemniteEmploye matchInd = findMatchingIndemnite(se, indemnites);
             if (matchInd != null && matchInd.getMontant() != null && matchInd.getMontant() > 0) {
-                boolean isFct = isIndemniteFonction(matchInd) || isSalaryElementFonction(se);
                 BigDecimal baseM = money(matchInd.getMontant());
-                BigDecimal mIndem = isFct ? money(baseM.multiply(ratio)) : baseM;
+                BigDecimal mIndem = money(baseM.multiply(ratio));
                 if (mIndem.compareTo(BigDecimal.ZERO) > 0) {
                     BulletinLine indLine = new BulletinLine();
                     indLine.setCode(se.getCode());
                     indLine.setLibelle(se.getName() != null && !se.getName().isBlank() ? se.getName() : matchInd.getLibelle());
                     indLine.setTypeLigne("GAIN");
                     indLine.setBaseCalcul(baseM);
-                    if (isFct && workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
+                    if (workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
                         indLine.setTaux(workedDays);
                     }
                     indLine.setMontant(money(mIndem));
@@ -2683,9 +2680,8 @@ public class BulletinService {
         // Indemnités de l'agent non mappées à un salary_element spécifique
         for (IndemniteEmploye ind : indemnites) {
             if (processedIndemniteIds.contains(ind.getId())) continue;
-            boolean isFct = isIndemniteFonction(ind);
             BigDecimal baseM = money(ind.getMontant());
-            BigDecimal mIndem = isFct ? money(baseM.multiply(ratio)) : baseM;
+            BigDecimal mIndem = money(baseM.multiply(ratio));
             if (mIndem.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             String indCode = ind.getTypeIndemnite() != null ? ind.getTypeIndemnite().getCode() : "INDEMNITE";
@@ -2697,7 +2693,7 @@ public class BulletinService {
             indLine.setLibelle(indLib);
             indLine.setTypeLigne("GAIN");
             indLine.setBaseCalcul(baseM);
-            if (isFct && workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
+            if (workedDays != null && scheduledDays != null && scheduledDays.compareTo(BigDecimal.ZERO) > 0) {
                 indLine.setTaux(workedDays);
             }
             indLine.setMontant(money(mIndem));
@@ -3456,7 +3452,12 @@ public class BulletinService {
         }
 
         recalculerTotauxSession(session);
-        return sessionPaieRepository.save(session);
+        SessionPaie saved = sessionPaieRepository.save(session);
+        if (entityManager != null) {
+            entityManager.flush();
+            entityManager.clear();
+        }
+        return saved;
     }
 
     @Transactional
@@ -3476,19 +3477,28 @@ public class BulletinService {
             log.debug("Détachement demande_bulletin (non bloquant): {}", e.getMessage());
         }
 
-        // 2. Supprimer directement via JDBC les lignes puis les bulletins pour éliminer tout conflit JPA orphanRemoval
+        // 2. Nettoyer le contexte JPA pour éviter les conflits StaleObjectStateException
+        if (entityManager != null) {
+            entityManager.clear();
+        }
+
+        // 3. Supprimer directement via JDBC les lignes puis les bulletins puis la session
         try {
             jdbcTemplate.update("DELETE FROM bulletin_line WHERE bulletin_id IN (SELECT id FROM bulletin WHERE session_paie_id = ?)", sessionPaieId);
             jdbcTemplate.update("DELETE FROM bulletin WHERE session_paie_id = ?", sessionPaieId);
+            jdbcTemplate.update("DELETE FROM session_paie WHERE id = ?", sessionPaieId);
         } catch (Exception e) {
             log.warn("Nettoyage direct bulletin_line/bulletin: {}", e.getMessage());
             List<Bulletin> bulletins = bulletinRepository.findBySessionPaieId(sessionPaieId);
             if (!bulletins.isEmpty()) {
                 bulletinRepository.deleteAll(bulletins);
             }
+            sessionPaieRepository.deleteById(sessionPaieId);
         }
-        sessionPaieRepository.delete(session);
-        sessionPaieRepository.flush();
+
+        if (entityManager != null) {
+            entityManager.clear();
+        }
     }
 
     @Transactional
@@ -3506,12 +3516,20 @@ public class BulletinService {
 
     @Transactional
     public int resetAllValidatedSessions() {
-        List<SessionPaie> list = sessionPaieRepository.findAll();
+        List<Long> sessionIds = sessionPaieRepository.findAll().stream()
+                .filter(s -> "VALIDE".equalsIgnoreCase(s.getStatut()))
+                .map(SessionPaie::getId)
+                .collect(Collectors.toList());
         int count = 0;
-        for (SessionPaie s : list) {
-            if ("VALIDE".equalsIgnoreCase(s.getStatut())) {
-                devaliderSession(s.getId());
+        for (Long id : sessionIds) {
+            try {
+                devaliderSession(id);
                 count++;
+            } catch (Exception e) {
+                log.warn("Erreur dévalidation session #{}: {}", id, e.getMessage());
+            }
+            if (entityManager != null) {
+                entityManager.clear();
             }
         }
         return count;
@@ -4041,7 +4059,10 @@ public class BulletinService {
         dto.setSurSalaire(b.getSurSalaire());
         dto.setJustificationEcart(b.getJustificationEcart());
 
-        boolean isStcSession = isStc(b.getSessionPaie());
+        boolean isStcSession = isStc(b.getSessionPaie())
+                || isStc(b.getNatureSession())
+                || isStc(b.getTypeSession())
+                || (b.getMotifRupture() != null && !b.getMotifRupture().isBlank());
         dto.setMotifRupture(isStcSession ? b.getMotifRupture() : null);
         dto.setStatutPreavis(isStcSession ? b.getStatutPreavis() : null);
         dto.setMontantIndemniteLicenciement(isStcSession ? b.getMontantIndemniteLicenciement() : BigDecimal.ZERO);
@@ -4899,7 +4920,7 @@ public class BulletinService {
             if (el.isEmpty()) {
                 el = salaryElementRepository.findByCodeCorrespondantIgnoreCase("ret_crrae");
             }
-            if (el.isPresent() && !"INACTIF".equalsIgnoreCase(el.get().getStatut()) && !isPatronal(el.get())) {
+            if (el.isPresent() && !isPatronal(el.get())) {
                 return el.get();
             }
             SalaryElement se = findSalaryElement("CAT_COTIS_SOC", "CRRAE", "cotis_crrae", "ret_crrae");

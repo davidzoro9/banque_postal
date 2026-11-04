@@ -23,6 +23,27 @@ public class EtatSynthesePaieController {
         return ResponseEntity.ok(signataireConfigService.getSignataires());
     }
 
+    @GetMapping("/ecarts-livre-paie")
+    public ResponseEntity<com.bpbf.sirh_backend.dtos.etatsynthese.LivrePaieEcartResponseDto> getEcartsLivrePaie(
+            @RequestParam(required = false) Long sessionId,
+            @RequestParam(required = false) String periode) {
+        return ResponseEntity.ok(etatSynthesePaieService.getEcartsLivrePaie(sessionId, periode));
+    }
+
+    @PostMapping("/ecarts-livre-paie/justification")
+    public ResponseEntity<?> saveJustification(
+            @RequestBody java.util.Map<String, Object> body,
+            java.security.Principal principal) {
+        if (body == null || !body.containsKey("sessionId") || !body.containsKey("codeRubrique")) {
+            return ResponseEntity.badRequest().body("sessionId et codeRubrique obligatoires");
+        }
+        Long sessionId = Long.valueOf(body.get("sessionId").toString());
+        String codeRubrique = body.get("codeRubrique").toString();
+        String justification = body.get("justification") != null ? body.get("justification").toString() : "";
+        String user = principal != null ? principal.getName() : "Gestionnaire Paie";
+        return ResponseEntity.ok(etatSynthesePaieService.saveJustification(sessionId, codeRubrique, justification, user));
+    }
+
     @GetMapping("/employes-eligibles")
     public ResponseEntity<java.util.List<com.bpbf.sirh_backend.dtos.EmployeeDto>> getEligibleEmployees(
             @RequestParam(required = false) String periode,

@@ -1050,6 +1050,7 @@ CREATE TABLE IF NOT EXISTS session_paie (
     effectif_paye INTEGER DEFAULT 0,
     effectif_en_erreur INTEGER DEFAULT 0
 );
+ALTER TABLE session_paie ADD COLUMN IF NOT EXISTS nature_extraordinaire VARCHAR(50);
 CREATE INDEX IF NOT EXISTS idx_session_paie_statut ON session_paie(statut);
 CREATE INDEX IF NOT EXISTS idx_session_paie_annee_mois ON session_paie(annee, mois);
 CREATE INDEX IF NOT EXISTS idx_session_paie_type ON session_paie(type_session, nature_extraordinaire);
@@ -1128,6 +1129,7 @@ CREATE TABLE IF NOT EXISTS bulletin (
     CONSTRAINT fk_bulletin_employee FOREIGN KEY (employee_id) REFERENCES employee(id) ON DELETE CASCADE,
     CONSTRAINT uk_bulletin_session_employee UNIQUE (session_paie_id, employee_id)
 );
+ALTER TABLE bulletin ADD COLUMN IF NOT EXISTS nature_extraordinaire VARCHAR(50);
 CREATE INDEX IF NOT EXISTS idx_bulletin_session ON bulletin(session_paie_id);
 CREATE INDEX IF NOT EXISTS idx_bulletin_employee ON bulletin(employee_id);
 CREATE INDEX IF NOT EXISTS idx_bulletin_matricule ON bulletin(matricule);

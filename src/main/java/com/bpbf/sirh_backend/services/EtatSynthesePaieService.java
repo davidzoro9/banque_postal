@@ -70,6 +70,7 @@ public class EtatSynthesePaieService {
     private final EmployeeRepository employeeRepository;
     private final InformationSalarialeRepository informationSalarialeRepository;
     private final com.bpbf.sirh_backend.mappers.EmployeeMapper employeeMapper;
+    private final LivrePaieEcartJustificationRepository livrePaieEcartJustificationRepository;
 
     private static final Color BPBF_BLUE = new Color(0, 96, 179);
     private static final Color BPBF_NAVY = new Color(15, 42, 74);
@@ -339,7 +340,8 @@ public class EtatSynthesePaieService {
     private boolean isSessionValideOrCloture(SessionPaie s) {
         if (s == null) return false;
         String st = s.getStatut();
-        return "VALIDE".equalsIgnoreCase(st) || "CLOTURE".equalsIgnoreCase(st);
+        // Règle formelle : pour les états de synthèse, pas besoin de valider les sessions (toutes les sessions calculées sont admises)
+        return st != null && !st.isBlank() && !"BROUILLON".equalsIgnoreCase(st) && !"NON_TRAITE".equalsIgnoreCase(st);
     }
 
     private boolean isBulletinValideOrCloture(Bulletin b) {
@@ -348,7 +350,7 @@ public class EtatSynthesePaieService {
             return isSessionValideOrCloture(b.getSessionPaie());
         }
         String st = b.getStatut();
-        return "VALIDE".equalsIgnoreCase(st) || "CLOTURE".equalsIgnoreCase(st);
+        return st != null && !st.isBlank() && !"BROUILLON".equalsIgnoreCase(st);
     }
 
     private List<Bulletin> findBulletins(String periodeFiltre, String dateDebut, String dateFin, Long sessionPaieId, Long bulletinLotId, Long directionId, String banqueNom) {
@@ -426,9 +428,6 @@ public class EtatSynthesePaieService {
                 } else {
                     list = bulletinRepository.findBySessionPaieId(sessionPaieId);
                 }
-            } else if (ref != null && !isSessionValideOrCloture(ref)) {
-                // Session non validée ni clôturée -> aucun bulletin éligible
-                list = Collections.emptyList();
             } else {
                 list = Collections.emptyList();
             }
@@ -1105,6 +1104,7 @@ public class EtatSynthesePaieService {
         if (b == null) return false;
         if (b.getSessionPaie() != null && BulletinService.isStc(b.getSessionPaie())) return true;
         if (b.getNatureSession() != null && BulletinService.isStc(b.getNatureSession())) return true;
+        if (b.getMotifRupture() != null && !b.getMotifRupture().isBlank()) return true;
         if (b.getLines() != null) {
             for (BulletinLine l : b.getLines()) {
                 String c = l.getCode() != null ? l.getCode().toUpperCase(Locale.ROOT) : "";
@@ -5077,5 +5077,212 @@ public class EtatSynthesePaieService {
         nf.setMinimumFractionDigits(0);
         nf.setMaximumFractionDigits(0);
         return nf.format(amount);
+    }
+
+    // ========================================================================
+    // ANALYSE DES ÉCARTS SUR LIVRE DE PAIE PAR ÉLÉMENT DE SALAIRE & JUSTIFICATION
+    // ========================================================================
+    @Transactional(readOnly = true)
+    public LivrePaieEcartResponseDto getEcartsLivrePaie(Long sessionId, String periodeFiltre) {
+        SessionPaie currentSession = null;
+        if (sessionId != null) {
+            currentSession = sessionPaieRepository.findById(sessionId).orElse(null);
+        }
+        if (currentSession == null && periodeFiltre != null && !periodeFiltre.isBlank() && !"TOUTES".equalsIgnoreCase(periodeFiltre)) {
+            List<SessionPaie> sList = sessionPaieRepository.findAll().stream()
+                    .filter(s -> periodeFiltre.equalsIgnoreCase(s.getPeriode()) || periodeFiltre.equalsIgnoreCase(s.getCodeSession()))
+                    .toList();
+            if (!sList.isEmpty()) currentSession = sList.get(0);
+        }
+        if (currentSession == null) {
+            List<SessionPaie> all = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
+            if (!all.isEmpty()) currentSession = all.get(0);
+        }
+        if (currentSession == null) {
+            return LivrePaieEcartResponseDto.builder()
+                    .items(Collections.emptyList())
+                    .build();
+        }
+
+        // Trouver la session précédente (Mois M-1)
+        SessionPaie prevSession = findPreviousSession(currentSession);
+
+        List<Bulletin> currentBulletins = bulletinRepository.findBySessionPaieId(currentSession.getId());
+        List<Bulletin> prevBulletins = prevSession != null ? bulletinRepository.findBySessionPaieId(prevSession.getId()) : Collections.emptyList();
+
+        // Récupérer les justifications déjà sauvegardées en base
+        Map<String, LivrePaieEcartJustification> savedJustifs = livrePaieEcartJustificationRepository
+                .findBySessionId(currentSession.getId())
+                .stream()
+                .collect(Collectors.toMap(LivrePaieEcartJustification::getCodeRubrique, j -> j, (a, b) -> a));
+
+        // Agréger les éléments de salaire par code/libellé
+        Map<String, AggregatedElement> elementMap = new LinkedHashMap<>();
+
+        // Traiter les bulletins actuels
+        for (Bulletin b : currentBulletins) {
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().trim().toUpperCase(Locale.ROOT) : "RUBRIQUE";
+                    if ("REM_BRUTE".equalsIgnoreCase(code) || "TOTAL_BRUT".equalsIgnoreCase(code) || "NET_A_PAYER".equalsIgnoreCase(code)) {
+                        continue;
+                    }
+                    String lib = l.getLibelle() != null ? l.getLibelle().trim() : code;
+                    String typeLigne = l.getTypeLigne() != null ? l.getTypeLigne() : "GAIN";
+                    BigDecimal mnt = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+
+                    AggregatedElement agg = elementMap.computeIfAbsent(code, k -> new AggregatedElement(k, lib, typeLigne));
+                    agg.addActuel(mnt);
+                }
+            }
+        }
+
+        // Traiter les bulletins précédents
+        for (Bulletin b : prevBulletins) {
+            if (b.getLines() != null) {
+                for (BulletinLine l : b.getLines()) {
+                    String code = l.getCode() != null ? l.getCode().trim().toUpperCase(Locale.ROOT) : "RUBRIQUE";
+                    if ("REM_BRUTE".equalsIgnoreCase(code) || "TOTAL_BRUT".equalsIgnoreCase(code) || "NET_A_PAYER".equalsIgnoreCase(code)) {
+                        continue;
+                    }
+                    String lib = l.getLibelle() != null ? l.getLibelle().trim() : code;
+                    String typeLigne = l.getTypeLigne() != null ? l.getTypeLigne() : "GAIN";
+                    BigDecimal mnt = l.getMontant() != null ? l.getMontant() : BigDecimal.ZERO;
+
+                    AggregatedElement agg = elementMap.computeIfAbsent(code, k -> new AggregatedElement(k, lib, typeLigne));
+                    agg.addPrecedent(mnt);
+                }
+            }
+        }
+
+        List<LivrePaieEcartDto> items = new ArrayList<>();
+        int countEcart = 0;
+
+        for (AggregatedElement agg : elementMap.values()) {
+            BigDecimal mAct = agg.montantActuel;
+            BigDecimal mPrev = agg.montantPrecedent;
+            BigDecimal ecart = mAct.subtract(mPrev);
+            Double pctVar = 0.0;
+            if (mPrev.compareTo(BigDecimal.ZERO) > 0) {
+                pctVar = ecart.multiply(BigDecimal.valueOf(100)).divide(mPrev, 2, RoundingMode.HALF_UP).doubleValue();
+            } else if (mAct.compareTo(BigDecimal.ZERO) > 0) {
+                pctVar = 100.0;
+            }
+
+            if (ecart.compareTo(BigDecimal.ZERO) != 0) {
+                countEcart++;
+            }
+
+            LivrePaieEcartJustification j = savedJustifs.get(agg.code);
+            String justifText = j != null && j.getJustification() != null ? j.getJustification() : "";
+
+            items.add(LivrePaieEcartDto.builder()
+                    .codeRubrique(agg.code)
+                    .libelle(agg.libelle)
+                    .typeLigne(agg.typeLigne)
+                    .montantActuel(mAct)
+                    .montantPrecedent(mPrev)
+                    .ecart(ecart)
+                    .pourcentageVariation(pctVar)
+                    .justification(justifText)
+                    .nombreBeneficiairesActuel(agg.countActuel)
+                    .nombreBeneficiairesPrecedent(agg.countPrecedent)
+                    .build());
+        }
+
+        // Tri par écart décroissant en valeur absolue
+        items.sort((a, b) -> b.getEcart().abs().compareTo(a.getEcart().abs()));
+
+        BigDecimal totBrutAct = currentBulletins.stream().map(b -> b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totBrutPrev = prevBulletins.stream().map(b -> b.getSalaireBrut() != null ? b.getSalaireBrut() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totRetAct = currentBulletins.stream().map(b -> b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totRetPrev = prevBulletins.stream().map(b -> b.getTotalRetenues() != null ? b.getTotalRetenues() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totNetAct = currentBulletins.stream().map(b -> b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totNetPrev = prevBulletins.stream().map(b -> b.getSalaireNet() != null ? b.getSalaireNet() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return LivrePaieEcartResponseDto.builder()
+                .sessionId(currentSession.getId())
+                .sessionCode(currentSession.getCodeSession())
+                .sessionPeriode(currentSession.getPeriode() != null ? currentSession.getPeriode() : currentSession.getName())
+                .previousSessionId(prevSession != null ? prevSession.getId() : null)
+                .previousSessionCode(prevSession != null ? prevSession.getCodeSession() : null)
+                .previousSessionPeriode(prevSession != null ? (prevSession.getPeriode() != null ? prevSession.getPeriode() : prevSession.getName()) : "Aucune période précédente")
+                .totalBrutActuel(totBrutAct)
+                .totalBrutPrecedent(totBrutPrev)
+                .ecartBrut(totBrutAct.subtract(totBrutPrev))
+                .totalRetenuesActuel(totRetAct)
+                .totalRetenuesPrecedent(totRetPrev)
+                .ecartRetenues(totRetAct.subtract(totRetPrev))
+                .totalNetActuel(totNetAct)
+                .totalNetPrecedent(totNetPrev)
+                .ecartNet(totNetAct.subtract(totNetPrev))
+                .nbRubriquesEnEcart(countEcart)
+                .items(items)
+                .build();
+    }
+
+    @Transactional
+    public LivrePaieEcartJustification saveJustification(Long sessionId, String codeRubrique, String justification, String currentUser) {
+        if (sessionId == null || codeRubrique == null || codeRubrique.isBlank()) {
+            throw new IllegalArgumentException("Session ID et Code Rubrique obligatoires");
+        }
+        LivrePaieEcartJustification entity = livrePaieEcartJustificationRepository
+                .findBySessionIdAndCodeRubrique(sessionId, codeRubrique)
+                .orElseGet(() -> LivrePaieEcartJustification.builder()
+                        .sessionId(sessionId)
+                        .codeRubrique(codeRubrique)
+                        .build());
+        entity.setJustification(justification);
+        entity.setUpdatedBy(currentUser != null ? currentUser : "Gestionnaire Paie");
+        entity.setUpdatedAt(java.time.LocalDateTime.now());
+        return livrePaieEcartJustificationRepository.save(entity);
+    }
+
+    private SessionPaie findPreviousSession(SessionPaie current) {
+        if (current == null) return null;
+        List<SessionPaie> list = sessionPaieRepository.findAllByOrderByAnneeDescMoisDesc();
+        int idx = -1;
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getId().equals(current.getId())) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0 && idx + 1 < list.size()) {
+            return list.get(idx + 1);
+        }
+        return null;
+    }
+
+    private static class AggregatedElement {
+        String code;
+        String libelle;
+        String typeLigne;
+        BigDecimal montantActuel = BigDecimal.ZERO;
+        BigDecimal montantPrecedent = BigDecimal.ZERO;
+        int countActuel = 0;
+        int countPrecedent = 0;
+
+        AggregatedElement(String code, String libelle, String typeLigne) {
+            this.code = code;
+            this.libelle = libelle;
+            this.typeLigne = typeLigne;
+        }
+
+        void addActuel(BigDecimal m) {
+            if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                this.montantActuel = this.montantActuel.add(m);
+                this.countActuel++;
+            }
+        }
+
+        void addPrecedent(BigDecimal m) {
+            if (m != null && m.compareTo(BigDecimal.ZERO) > 0) {
+                this.montantPrecedent = this.montantPrecedent.add(m);
+                this.countPrecedent++;
+            }
+        }
     }
 }

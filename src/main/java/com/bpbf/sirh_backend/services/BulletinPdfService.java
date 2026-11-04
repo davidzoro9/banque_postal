@@ -604,6 +604,9 @@ public class BulletinPdfService {
                 || BulletinService.is13Ou14emeMois(b.getTypeSession())
                 || BulletinService.is13Ou14emeMois(b.getNatureSession())
                 || (b.getSessionPaie() != null && BulletinService.is13Ou14emeMois(b.getSessionPaie().getCodeSession()));
+        boolean isExtra = is13Ou14
+                || "EXTRAORDINAIRE".equalsIgnoreCase(b.getTypeSession())
+                || (b.getSessionPaie() != null && "EXTRAORDINAIRE".equalsIgnoreCase(b.getSessionPaie().getTypeSession()));
         String daysStr = b.getWorkedDays() != null ? b.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
         List<BulletinLine> existingLines = b.getLines() != null ? b.getLines() : List.of();
@@ -782,6 +785,18 @@ public class BulletinPdfService {
             }
         }
 
+        // Garantir la ligne CRRAE si session ordinaire et absente
+        if (!isExtra && !hasCrraeLine) {
+            BigDecimal mntCrrae = extractCrraeFromBulletin(b);
+            if (mntCrrae.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal baseCrrae = BigDecimal.ZERO;
+                if (b.getSalaireBase() != null) baseCrrae = baseCrrae.add(b.getSalaireBase());
+                if (b.getSurSalaire() != null) baseCrrae = baseCrrae.add(b.getSurSalaire());
+                displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 22));
+                hasCrraeLine = true;
+            }
+        }
+
         // Déduplication de sécurité finale
         List<DisplayLine> uniqueLines = new ArrayList<>();
         for (DisplayLine dl : displayLines) {
@@ -835,6 +850,8 @@ public class BulletinPdfService {
                 || BulletinService.is13Ou14emeMois(dto.getTypeSession())
                 || BulletinService.is13Ou14emeMois(dto.getNatureSession())
                 || BulletinService.is13Ou14emeMois(dto.getSessionPeriode());
+        boolean isExtra = is13Ou14
+                || "EXTRAORDINAIRE".equalsIgnoreCase(dto.getTypeSession());
         String daysStr = dto.getWorkedDays() != null ? dto.getWorkedDays().stripTrailingZeros().toPlainString() : "30";
         List<DisplayLine> displayLines = new ArrayList<>();
         List<com.bpbf.sirh_backend.dtos.BulletinLineDto> dLines = dto.getLines() != null ? dto.getLines() : List.of();
@@ -1021,6 +1038,18 @@ public class BulletinPdfService {
                     String rawName = av.getSalaryElement() != null ? av.getSalaryElement().getName() : "Rappel salaire";
                     displayLines.add(new DisplayLine("RAPPEL_" + av.getId(), BulletinService.formatLigneVariableLibelle("Rappel", rawName).toUpperCase(Locale.ROOT), formatMoney(av.getAmount()), "", m, null, 9));
                 }
+            }
+        }
+
+        // Garantir la ligne CRRAE si session ordinaire et absente
+        if (!isExtra && !hasCrraeLine) {
+            BigDecimal mntCrrae = extractCrraeFromDto(dto);
+            if (mntCrrae.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal baseCrrae = BigDecimal.ZERO;
+                if (dto.getSalaireBase() != null) baseCrrae = baseCrrae.add(dto.getSalaireBase());
+                if (dto.getSurSalaire() != null) baseCrrae = baseCrrae.add(dto.getSurSalaire());
+                displayLines.add(new DisplayLine("COTIS_CRRAE", "COTISATION CRRAE/RCPNC", formatMoney(baseCrrae), "6 %", null, mntCrrae, 22));
+                hasCrraeLine = true;
             }
         }
 

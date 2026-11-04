@@ -127,8 +127,34 @@ public class PayrollDataInitializer implements CommandLineRunner {
                 jdbcTemplate.execute("UPDATE retenue SET base_calcul = 'REMUNERATION_BRUTE', libelle = 'COTISATION CNSS' WHERE (UPPER(code) LIKE '%CNSS%' OR UPPER(libelle) LIKE '%CNSS%') AND base_calcul != 'REMUNERATION_BRUTE'");
                 jdbcTemplate.execute("UPDATE information_salariale_retenue SET base_calcul = 'REMUNERATION_BRUTE', libelle = 'COTISATION CNSS' WHERE retenue_id IN (SELECT id FROM retenue WHERE UPPER(code) LIKE '%CNSS%' OR UPPER(libelle) LIKE '%CNSS%')");
                 jdbcTemplate.execute("UPDATE retenue SET libelle = 'RETENUE FONDS DE SOLIDARITE' WHERE UPPER(code) LIKE '%SOLIDAR%' OR UPPER(libelle) LIKE '%SOLIDAR%' OR UPPER(code) LIKE '%FSP%'");
+                // Activation obligatoire de la CRRAE dans salary_element et retenue pour calcul ordinaire
+                jdbcTemplate.execute("UPDATE salary_element SET statut = 'ACTIF' WHERE UPPER(code) LIKE '%CRRAE%' OR UPPER(name) LIKE '%CRRAE%' OR UPPER(code_correspondant) LIKE '%CRRAE%'");
+                jdbcTemplate.execute("UPDATE retenue SET statut = 'ACTIF' WHERE UPPER(code) LIKE '%CRRAE%' OR UPPER(libelle) LIKE '%CRRAE%'");
             } catch (Exception ex) {
                 log.debug("Auto-migration contrainte retenue base_calcul (non bloquant): {}", ex.getMessage());
+            }
+
+            // Table de justification des écarts sur livre de paie
+            try {
+                jdbcTemplate.execute("""
+                    CREATE TABLE IF NOT EXISTS livre_paie_ecart_justification (
+                        id BIGSERIAL PRIMARY KEY,
+                        session_id BIGINT NOT NULL,
+                        code_rubrique VARCHAR(100) NOT NULL,
+                        libelle_rubrique VARCHAR(255),
+                        categorie_rubrique VARCHAR(100),
+                        montant_actuel NUMERIC(18,2),
+                        montant_precedent NUMERIC(18,2),
+                        ecart NUMERIC(18,2),
+                        pourcentage_variation DOUBLE PRECISION,
+                        justification VARCHAR(1000),
+                        updated_at TIMESTAMP,
+                        updated_by VARCHAR(100),
+                        CONSTRAINT uk_session_rubrique UNIQUE (session_id, code_rubrique)
+                    )
+                """);
+            } catch (Exception ex) {
+                log.debug("Auto-migration table livre_paie_ecart_justification: {}", ex.getMessage());
             }
 
             // Taux d'exonération : Respect strict des valeurs configurées par l'administrateur en base
